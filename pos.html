@@ -657,34 +657,355 @@ function stopPanelCountdown() { if (bedCountdownInterval) clearInterval(bedCount
 function showAppModal(title, msg, icon = '') { document.getElementById('app-modal-title').innerText = title; document.getElementById('app-modal-msg').innerHTML = msg; document.getElementById('app-modal-icon').innerText = icon; document.getElementById('app-modal').classList.remove('hidden'); }
 function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); var parts = timeStr.split(':'); d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0); return d; }
 
-// --- HISTORY & REVENUE (CLIENT SIDE) ---
+// =========================================================
+// --- HISTORY & REVENUE (PHIÊN BẢN FULL TÍNH NĂNG - FIREBASE) ---
+// =========================================================
+
+// --- 1. XEM LỊCH SỬ (FULL CHI TIẾT) ---
 function openHistory() {
     document.getElementById('loading-overlay').style.display = 'flex';
     switchView('history');
-    db.ref('orders').limitToLast(50).once('value', snap => {
+    
+    // Lấy 100 đơn mới nhất từ Firebase
+    db.ref('orders').limitToLast(100).once('value', snap => {
         document.getElementById('loading-overlay').style.display = 'none';
         const data = snap.val();
-        historyData = data ? Object.values(data).map(o => ({...o, dateStr: new Date(o.createdAt).toLocaleDateString(), timeStr: new Date(o.createdAt).toLocaleTimeString(), fullTime: new Date(o.createdAt).toLocaleString()})).reverse() : [];
+        if(!data) {
+            historyData = [];
+        } else {
+            // Chuyển Object thành Array và xử lý dữ liệu
+            historyData = Object.keys(data).map(key => {
+                const o = data[key];
+                const d = new Date(o.createdAt);
+                return {
+                    ...o,
+                    id: key, // Lưu lại key của Firebase để dùng khi cần
+                    dateStr: d.toLocaleDateString('en-GB'), // dd/mm/yyyy
+                    timeStr: d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}),
+                    fullTime: d.toLocaleString('en-GB'),
+                    // Tính lại điểm nếu trong db chưa lưu
+                    points: o.points || calculatePointsFromTotal(o.total) 
+                };
+            }).reverse(); // Đảo ngược để thấy mới nhất
+        }
         renderHistoryList(historyData);
     });
 }
-function renderHistoryList(data) { const grouped = data.reduce((acc, obj) => { const key = obj.dateStr; if (!acc[key]) acc[key] = []; acc [key].push(obj); return acc; }, {}); let html = ""; for (const date in grouped) { html += `<div class="mb-4 text-left"><h3 class="brand-font text-[#006241] text-[10px] uppercase tracking-widest mb-2 ml-1 text-left">📅 Ngày ${date}</h3><div class="space-y-1.5 text-left">`; grouped[date].forEach(h => { const valColor = h.total < 0? 'text-red-500': 'text-[#006241]'; html += `<div onclick="selectBill('${h.createdAt}')" class="p-3 bg-white rounded-2xl border-2 border-transparent shadow-sm flex justify-between items-center cursor-pointer active:scale-95 text-xs text-left"><div class="min-w-0 text-left"><p class="font-black text-[#1e3932] uppercase text-left">${h.timeStr}</p><p class="text-[8px] text-gray-400 font-bold truncate w-20 text-left">${h.sdt}</p></div><p class="font-black ${valColor} text-right">${h.total.toLocaleString()}</p></div>`; }); html += '</div></div>'; } document.getElementById('history-container').innerHTML = html; }
-function selectBill(id) { 
-    // Logic xem chi tiết bill (đơn giản hóa)
-    alert("Chi tiết đơn hàng đang cập nhật...");
+
+// Hàm tính điểm tạm (nếu db thiếu)
+function calculatePointsFromTotal(total) {
+    return Math.floor(Number(total)/1000); 
 }
+
+function renderHistoryList(data) { 
+    const grouped = data.reduce((acc, obj) => { 
+        const key = obj.dateStr; if (!acc[key]) acc[key] = []; acc [key].push(obj); return acc; 
+    }, {}); 
+    
+    let html = ""; 
+    for (const date in grouped) { 
+        html += `<div class="mb-4 text-left"><h3 class="brand-font text-[#006241] text-[10px] uppercase tracking-widest mb-2 ml-1 text-left">📅 Ngày ${date}</h3><div class="space-y-1.5 text-left">`; 
+        grouped[date].forEach((h, idx) => { 
+            // Lưu ý: idx này là index trong nhóm ngày, ta cần tìm index trong mảng gốc historyData
+            const realIdx = historyData.indexOf(h);
+            const valColor = h.total < 0? 'text-red-500': 'text-[#006241]'; 
+            html += `<div id="h-item-${realIdx}" onclick="selectBill(${realIdx})" class="p-3 bg-white rounded-2xl border-2 border-transparent shadow-sm flex justify-between items-center cursor-pointer active:scale-95 text-xs text-left">
+                <div class="min-w-0 text-left">
+                    <p class="font-black text-[#1e3932] uppercase text-left">${h.timeStr}</p>
+                    <p class="text-[8px] text-gray-400 font-bold truncate w-20 text-left">${h.sdt}</p>
+                </div>
+                <p class="font-black ${valColor} text-right">${Number(h.total).toLocaleString()}</p>
+            </div>`; 
+        }); 
+        html += '</div></div>'; 
+    } 
+    document.getElementById('history-container').innerHTML = html; 
+}
+
+// --- HÀM HIỂN THỊ CHI TIẾT BILL (KHÔI PHỤC TỪ GWA) ---
+function selectBill(idx) { 
+    selectedRefundItems = []; 
+    // Highlight item được chọn
+    document.querySelectorAll('[id^="h-item-"]').forEach(el => el.classList.remove('history-item-active')); 
+    const el = document.getElementById(`h-item-${idx}`);
+    if(el) el.classList.add('history-item-active'); 
+
+    const h = historyData[idx]; 
+    const items = h.items ? h.items.split(',') : []; 
+    let tQty = 0; 
+    const isAlreadyRefund = h.total < 0; 
+
+    // Parse từng món trong chuỗi items (VD: "Cafe(M)x2")
+    const itemsHtml = items.map((item, i) => { 
+        const raw = item.trim(); 
+        const lastX = raw.lastIndexOf('x'); 
+        if (lastX === -1) return ''; 
+        
+        const namePartFull = raw.substring(0, lastX).trim(); 
+        const qty = parseInt(raw.substring(lastX + 1)) || 1; 
+        tQty += qty; 
+        
+        let nameOnly = namePartFull, sizePart = ""; 
+        if (namePartFull.includes('(')) { 
+            const lb = namePartFull.lastIndexOf('('); 
+            nameOnly = namePartFull.substring(0, lb).trim(); 
+            sizePart = namePartFull.substring(lb + 1, namePartFull.lastIndexOf(')')); 
+        } 
+        
+        // Tìm giá gốc trong Menu để hiển thị
+        const m = menu.find(mi => mi.name.toLowerCase() === nameOnly.toLowerCase()); 
+        const uP = m ? (sizePart === 'L'? m.priceL: m.priceM): 0; 
+        const subTotal = uP * qty; 
+        
+        return `<div class="receipt-line p-2 rounded-xl transition-all border-l-4 border-transparent hover:bg-gray-50 text-left">
+            <div class="flex-1 mr-4 text-left">
+                <div class="flex items-start gap-2 text-left">
+                    <span class="font-black text-[#006241] text-lg text-left">${qty}x</span>
+                    <div class="flex flex-col text-left">
+                        <span class="font-black text-[#1e3932] text-sm capitalize-first leading-tight text-left">${nameOnly} ${sizePart ? `<span class="text-green-500 font-black text-[12px] ml-1">[${sizePart}]</span>`: ""}</span>
+                        <span class="text-[9px] text-gray-400 font-bold italic text-left">Đơn giá: ${uP.toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="text-right font-black text-[#1e3932] text-base pt-1 text-right">${subTotal.toLocaleString()}</div>
+        </div>`; 
+    }).join(''); 
+
+    // Hiển thị Panel Chi Tiết
+    document.getElementById('history-detail-empty').classList.add('hidden'); 
+    const detail = document.getElementById('history-detail-content'); 
+    detail.classList.remove('hidden'); 
+    
+    detail.innerHTML = `
+    <div class="grid grid-cols-12 gap-3 h-full overflow-hidden text-left">
+        <div class="col-span-4 border-r border-gray-100 pr-3 flex flex-col pt-2 text-left">
+            <h3 class="brand-font text-3xl text-[#006241] leading-none mb-1 text-left">The cafe 33</h3>
+            <p class="text-[8px] text-gray-400 font-bold uppercase mb-4 tracking-widest text-left">Hóa đơn điện tử</p>
+            <div class="space-y-2 text-left">
+                <div class="p-2 bg-gray-50 rounded-xl text-left">
+                    <p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thời gian</p>
+                    <p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.fullTime}</p>
+                </div>
+                <div class="p-2 bg-gray-50 rounded-xl text-left">
+                    <p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Khách hàng</p>
+                    <p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.sdt}</p>
+                </div>
+                <div class="p-2 bg-gray-50 rounded-xl border-l-4 ${h.total < 0? 'border-red-500 text-left': 'border-[#006241] text-left'} text-left">
+                    <p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thanh toán</p>
+                    <p class="font-black ${h.total < 0? 'text-red-500 text-left': 'text-[#006241] text-left'} text-[10px] uppercase text-left">${h.method}</p>
+                </div>
+            </div>
+            <div class="p-3 bg-amber-50 rounded-xl text-center border-2 border-amber-100 mt-auto mb-2 text-center">
+                <p class="text-amber-600 font-black text-[9px] uppercase italic tracking-tighter text-center"> +${h.points || 0} ĐIỂM</p>
+            </div>
+        </div>
+        <div class="col-span-8 flex flex-col h-full pt-2 overflow-hidden text-left">
+            <div id="refund-items-list" class="flex-1 overflow-y-auto pr-1 space-y-0.5 text-left">${itemsHtml}</div>
+            <div class="mt-4 pt-4 border-t-2 border-[#006241] flex flex-col items-end flex-shrink-0 text-right">
+                <div class="flex justify-between w-full items-center mb-1 text-left">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase italic text-left">Số lượng: ${tQty} món</span>
+                    <span class="brand-font text-[#1e3932] text-xl uppercase font-black opacity-30 text-right">Tổng bill</span>
+                </div>
+                <div class="font-black text-3xl leading-none text-right ${h.total < 0? 'text-red-500 text-right': 'text-[#006241] text-right'}">
+                    ${Number(h.total).toLocaleString()}<span class="text-lg ml-1 text-right">đ</span>
+                </div>
+            </div>
+        </div>
+    </div>`; 
+}
+
+// --- 2. DOANH THU & BIỂU ĐỒ (LOGIC TÍNH TOÁN CLIENT-SIDE) ---
 function openRevenue() {
     document.getElementById('loading-overlay').style.display = 'flex';
     switchView('revenue');
+    loadRevenue('week'); // Mặc định load tuần
+}
+
+function loadRevenue(type) {
+    // 1. Lấy toàn bộ đơn hàng
     db.ref('orders').once('value', snap => {
         document.getElementById('loading-overlay').style.display = 'none';
         const data = snap.val();
-        const orders = data ? Object.values(data) : [];
-        let total = 0;
-        orders.forEach(o => total += (Number(o.total) || 0));
-        document.getElementById('history-container').innerHTML = `<div class="p-5 bg-white rounded-2xl text-center"><p>Tổng doanh thu ghi nhận:</p><h1 class="text-3xl font-black text-[#006241]">${total.toLocaleString()}đ</h1></div>`;
+        if (!data) return;
+
+        // 2. Chuyển thành mảng để tính toán
+        const allOrders = Object.values(data);
+        
+        // 3. Tính toán thống kê
+        const stats = calculateStats(allOrders, type);
+        
+        // 4. Vẽ lại giao diện
+        renderDailyRevenueList(stats.dailyList);
+        renderRevenueDashboard(stats, type);
     });
 }
-</script>
-</body>
-</html>
+
+function calculateStats(orders, filterType) {
+    const now = new Date();
+    let startTime, endTime;
+    
+    // Logic xác định khoảng thời gian (Tuần, Tháng, Range)
+    if (filterType === 'range') {
+        const f = document.getElementById('rev-from').value;
+        const t = document.getElementById('rev-to').value;
+        if(f && t) {
+            startTime = new Date(f); startTime.setHours(0,0,0,0);
+            endTime = new Date(t); endTime.setHours(23,59,59,999);
+        } else filterType = 'week';
+    }
+    
+    if (filterType === 'month') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), 1);
+        endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    } 
+    
+    if (filterType === 'week') {
+        const day = now.getDay() || 7; 
+        startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
+        endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999);
+    }
+
+    // Khởi tạo Stats
+    let stats = { drinkTotal: 0, snackTotal: 0, labels: [], chartData: [], dailyList: {}, today: 0, yesterday: 0 };
+    
+    // Tạo labels cho biểu đồ
+    if (filterType === 'week') {
+        stats.labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+        stats.chartData = [0,0,0,0,0,0,0];
+    } else if (filterType === 'month') {
+        const days = endTime.getDate();
+        stats.labels = Array.from({length: days}, (_, i) => i + 1);
+        stats.chartData = new Array(days).fill(0);
+    }
+
+    const todayStr = now.toLocaleDateString('en-GB');
+    const yest = new Date(now); yest.setDate(now.getDate() - 1);
+    const yestStr = yest.toLocaleDateString('en-GB');
+
+    // Duyệt qua từng đơn hàng để cộng dồn
+    orders.forEach(o => {
+        const d = new Date(o.createdAt);
+        const dateKey = d.toLocaleDateString('en-GB');
+        const amount = Number(o.total) || 0;
+        
+        // Tính tổng hôm nay/hôm qua
+        if (dateKey === todayStr) stats.today += amount;
+        if (dateKey === yestStr) stats.yesterday += amount;
+
+        // Chỉ tính chi tiết nếu nằm trong khoảng thời gian lọc
+        if (d >= startTime && d <= endTime) {
+            // Cộng tổng đồ uống/ăn vặt (Phân tích chuỗi items)
+            let isSnack = false; // Logic đơn giản: coi như drink hết trừ khi phát hiện snack
+            const itemsArr = o.items ? o.items.split(',') : [];
+            itemsArr.forEach(it => {
+                // Logic phân loại sơ bộ (cần cải thiện nếu muốn chính xác tuyệt đối)
+                if(it.toLowerCase().includes('hạt') || it.toLowerCase().includes('bánh')) isSnack = true;
+            });
+            
+            if(isSnack) stats.snackTotal += amount; else stats.drinkTotal += amount;
+
+            // Cộng vào Daily List
+            if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
+            stats.dailyList[dateKey].drink += amount;
+
+            // Cộng vào Chart Data
+            let idx = -1;
+            if (filterType === 'week') idx = (d.getDay() + 6) % 7;
+            else if (filterType === 'month') idx = d.getDate() - 1;
+            
+            if (idx >= 0 && stats.chartData[idx] !== undefined) stats.chartData[idx] += amount;
+        }
+    });
+    
+    return stats;
+}
+
+function renderDailyRevenueList(list) { 
+    let html = '<div class="mb-4 text-left"><h3 class="brand-font text-[#006241] text-[10px] uppercase tracking-widest mb-2 ml-1 text-left">Doanh thu</h3><div class="space-y-1.5 text-left">'; 
+    // Sắp xếp ngày giảm dần
+    Object.keys(list).sort((a,b) => {
+        const da = a.split('/').reverse().join('');
+        const db = b.split('/').reverse().join('');
+        return db.localeCompare(da);
+    }).forEach(date => { 
+        const valColor = list[date].drink < 0 ? 'text-red-500': 'text-[#006241]'; 
+        html += `<div class="p-3 bg-white rounded-2xl shadow-sm text-left"><p class="font-black text-[#1e3932] text-[10px] uppercase text-left">📅 ${date}</p><p class="text-[11px] font-black ${valColor} mt-1 text-left">${list[date].drink.toLocaleString()}đ</p></div>`; 
+    }); 
+    html += '</div></div>'; 
+    document.getElementById('history-container').innerHTML = html; 
+}
+
+function renderRevenueDashboard(data, type) { 
+    document.getElementById('history-detail-empty').classList.add('hidden'); 
+    const detail = document.getElementById('history-detail-content'); 
+    detail.classList.remove('hidden'); 
+    
+    const diff = data.today - data.yesterday; 
+    const dColor = diff >= 0 ? 'text-green-500': 'text-red-500'; 
+    const dIcon = diff >= 0 ? '▲': '▼'; 
+    
+    detail.innerHTML = `
+    <div class="flex flex-col h-full space-y-4 text-left">
+        <div class="flex gap-2 items-center text-left">
+            <button onclick="loadRevenue('week')" class="px-3 py-1.5 bg-gray-100 rounded-lg font-black text-[9px] uppercase text-left hover:bg-[#006241] hover:text-white transition">Tuần</button>
+            <button onclick="loadRevenue('month')" class="px-3 py-1.5 bg-gray-100 rounded-lg font-black text-[9px] uppercase text-left hover:bg-[#006241] hover:text-white transition">Tháng</button>
+            <input type="date" id="rev-from" class="p-1 border rounded text-[9px] font-bold outline-none text-left">
+            <input type="date" id="rev-to" class="p-1 border rounded text-[9px] font-bold outline-none text-left">
+            <button onclick="loadRevenue('range')" class="px-3 py-1.5 sb-green text-white rounded-lg font-black text-[9px] uppercase text-left">Lọc</button>
+        </div>
+        <div class="grid grid-cols-3 gap-3 text-left">
+            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-[#006241] text-center">
+                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Nước (Tổng)</p>
+                <p class="brand-font text-2xl text-[#006241] text-center">${data.drinkTotal.toLocaleString()}</p>
+            </div>
+            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-amber-400 text-center">
+                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Ăn vặt</p>
+                <p class="brand-font text-xl text-amber-600 text-center">${data.snackTotal.toLocaleString()}</p>
+            </div>
+            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-blue-400 text-center">
+                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Vs Hôm qua</p>
+                <p class="font-black text-sm ${dColor} text-center">${dIcon} ${Math.abs(diff).toLocaleString()}</p>
+            </div>
+        </div>
+        <div class="flex-1 bg-white p-4 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col relative overflow-hidden text-left">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>`; 
+    
+    setTimeout(() => renderChart(data.labels, data.chartData, type), 200); 
+}
+
+function renderChart(labels, chartData, type) { 
+    const ctx = document.getElementById('revenueChart').getContext('2d'); 
+    if (myChart) myChart.destroy(); 
+    
+    // Highlight cột hôm nay
+    const todayIdx = (type === 'month') ? (new Date().getDate() - 1): ((new Date().getDay() + 6) % 7); 
+    const colors = chartData.map((_, i) => i === todayIdx? '#006241': '#f1f5f9'); 
+    
+    myChart = new Chart(ctx, { 
+        type: 'bar', 
+        plugins: [ChartDataLabels], 
+        data: { 
+            labels, 
+            datasets: [{ 
+                data: chartData, 
+                backgroundColor: colors, 
+                borderRadius: 6 
+            }] 
+        }, 
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+                legend: { display: false }, 
+                datalabels: { anchor: 'end', align: 'top', formatter: (v) => v != 0 ? (v/1000).toFixed(0) + 'k': '', font: { weight: 'bold', size: 9 }, color: '#006241'} 
+            }, 
+            scales: { 
+                y: { display: false }, 
+                x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 8} } } 
+            } 
+        } 
+    }); 
+}
+// =========================================================
