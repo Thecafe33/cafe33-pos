@@ -751,7 +751,7 @@ function showBedDetail(bedId) { var booking = null; if (bedId && bedId != 0) boo
 function finalizeBedCheckIn(bedId) { if (!pendingBedOrder) return; const isBusy = currentBedList.find(b => (b.status.includes('đang dùng') || b.status.includes('active')) && b.bedId == bedId); if (isBusy) return alert("Bed này đang có khách!"); var now = new Date(); var startObj = parseTimeObj(pendingBedOrder.start); var endObj = parseTimeObj(pendingBedOrder.end); var newEndTimeStr = pendingBedOrder.end; if (startObj && endObj) { var diffMinutes = (now - startObj) / 60000; if (diffMinutes < 0) { endObj.setMinutes(endObj.getMinutes() + Math.round(diffMinutes)); newEndTimeStr = ("0" + endObj.getHours()).slice(-2) + ":" + ("0" + endObj.getMinutes()).slice(-2); } } document.getElementById('bed-select-modal').classList.add('hidden'); document.getElementById('loading-overlay').style.display = 'flex'; db.ref('beds/' + pendingBedOrder.key).update({status: 'active', bedId: bedId, end: newEndTimeStr}, (err) => { document.getElementById('loading-overlay').style.display = 'none'; if(!err) { if (diffMinutes < 0) alert(`Khách đến sớm ${Math.abs(Math.round(diffMinutes))} phút.\nGiờ trả Bed đã được đẩy sớm lên: ${newEndTimeStr}`); pendingBedOrder = null; isPaymentMode = false; openBedManager(); } }); }
 function openBookingModal() { document.getElementById('modal-add-booking').classList.remove('hidden'); document.getElementById('new_cust_name').value = "Khách vãng lai"; document.getElementById('new_cust_phone').value = ""; document.getElementById('new_cust_phone').focus(); switchTimeMode('duration'); }
 function closeBookingModal() { document.getElementById('modal-add-booking').classList.add('hidden'); }
-function function autoFillCustomer() {
+function autoFillCustomer() {
     // 1. Lấy SĐT từ ô nhập liệu
     var phoneInput = document.getElementById('new_cust_phone');
     var phone = phoneInput.value.toString().trim();
@@ -871,6 +871,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
