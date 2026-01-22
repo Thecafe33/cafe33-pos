@@ -521,49 +521,97 @@ function renderHistoryList(data) {
     });
     document.getElementById('history-container').innerHTML = html; 
 }
+// --- HÀM SELECT BILL ĐÃ FIX (CÓ NÚT HỦY/HOÀN) ---
+function selectBill(idx) {
+    // 1. Reset highlight cũ
+    selectedRefundItems = [];
+    document.querySelectorAll('[id^="h-item-"]').forEach(el => el.classList.remove('history-item-active'));
+    document.getElementById(`h-item-${idx}`).classList.add('history-item-active');
 
-function selectBill(idx) { 
-    // Reset highlight
-    document.querySelectorAll('[id^="h-item-"]').forEach(el => el.classList.remove('history-item-active')); 
-    const el = document.getElementById(`h-item-${idx}`);
-    if(el) el.classList.add('history-item-active'); 
-
-    const h = historyData[idx]; 
-    const items = h.items ? String(h.items).split(',') : []; 
-    let tQty = 0; 
+    // 2. Lấy dữ liệu đơn hàng
+    const h = historyData[idx];
+    const items = h.items.split(',');
+    let tQty = 0;
     
-    const itemsHtml = items.map((item) => { 
-        const raw = item.trim(); 
-        const lastX = raw.lastIndexOf('x'); 
-        if (lastX === -1) return ''; 
+    // Kiểm tra xem đơn đã hoàn chưa (Tiền âm = đã hoàn)
+    const isAlreadyRefund = h.total < 0;
+
+    // 3. Xử lý danh sách món ăn
+    const itemsHtml = items.map((item, i) => {
+        const raw = item.trim();
+        const lastX = raw.lastIndexOf('x');
+        if (lastX === -1) return '';
+
+        const namePartFull = raw.substring(0, lastX).trim();
+        const qty = parseInt(raw.substring(lastX + 1)) || 1;
+        tQty += qty;
+
+        let nameOnly = namePartFull, sizePart = "";
+        if (namePartFull.includes('(')) {
+            const lb = namePartFull.lastIndexOf('(');
+            nameOnly = namePartFull.substring(0, lb).trim();
+            sizePart = namePartFull.substring(lb + 1, namePartFull.lastIndexOf(')'));
+        }
+
+        const m = menu.find(mi => mi.name.toLowerCase() === nameOnly.toLowerCase());
+        const uP = m ? (sizePart === 'L' ? m.priceL : m.priceM) : 0;
+        const subTotal = uP * qty;
         
-        const namePartFull = raw.substring(0, lastX).trim(); 
-        const qty = parseInt(raw.substring(lastX + 1)) || 1; 
-        tQty += qty; 
-        
-        let nameOnly = namePartFull, sizePart = ""; 
-        if (namePartFull.includes('(')) { 
-            const lb = namePartFull.lastIndexOf('('); 
-            nameOnly = namePartFull.substring(0, lb).trim(); 
-            sizePart = namePartFull.substring(lb + 1, namePartFull.lastIndexOf(')')); 
-        } 
-        
-        const m = menu.find(mi => mi.name.toLowerCase() === nameOnly.toLowerCase()); 
-        const uP = m ? (sizePart === 'L'? m.priceL: m.priceM): 0; 
-        const subTotal = uP * qty; 
-        
-        return `<div class="receipt-line p-2 rounded-xl transition-all border-l-4 border-transparent hover:bg-gray-50 text-left">
+        // Tính điểm để phục vụ việc hoàn trả
+        const pts = (m && m.type === 'ăn vặt') ? Math.floor((subTotal/100)*0.4) : Math.floor(subTotal/100);
+        const itData = JSON.stringify({ name: nameOnly, size: sizePart, qty, subTotal, itemPoints: pts });
+
+        // Render dòng sản phẩm
+        return `<div id="refund-row-${i}" onclick='${isAlreadyRefund ? "" : `toggleRefundItem(${i}, ${itData})`}' class="receipt-line p-2 rounded-xl transition-all border-l-4 border-transparent ${isAlreadyRefund ? "opacity-50 text-left" : "cursor-pointer hover:bg-gray-50 text-left"}">
             <div class="flex-1 mr-4 text-left">
                 <div class="flex items-start gap-2 text-left">
                     <span class="font-black text-[#006241] text-lg text-left">${qty}x</span>
                     <div class="flex flex-col text-left">
-                        <span class="font-black text-[#1e3932] text-sm capitalize-first leading-tight text-left">${nameOnly} ${sizePart ? `<span class="text-green-500 font-black text-[12px] ml-1">[${sizePart}]</span>`: ""}</span>
+                        <span class="font-black text-[#1e3932] text-sm capitalize-first leading-tight text-left">${nameOnly} ${sizePart ? `<span class="text-green-500 font-black text-[12px] ml-1">[${sizePart}]</span>` : ""}</span>
                         <span class="text-[9px] text-gray-400 font-bold italic text-left">Đơn giá: ${uP.toLocaleString()}</span>
                     </div>
                 </div>
             </div>
             <div class="text-right font-black text-[#1e3932] text-base pt-1 text-right">${subTotal.toLocaleString()}</div>
-        </div>`; 
+        </div>`;
+    }).join('');
+
+    // 4. Hiển thị Panel Chi tiết
+    document.getElementById('history-detail-empty').classList.add('hidden');
+    const detail = document.getElementById('history-detail-content');
+    detail.classList.remove('hidden');
+
+    // 5. VẼ GIAO DIỆN CHI TIẾT (ĐÃ BỔ SUNG NÚT BẤM)
+    detail.innerHTML = `
+    <div class="grid grid-cols-12 gap-3 h-full overflow-hidden text-left">
+        <div class="col-span-4 border-r border-gray-100 pr-3 flex flex-col pt-2 text-left">
+            <h3 class="brand-font text-3xl text-[#006241] leading-none mb-1 text-left">The cafe 33</h3>
+            <p class="text-[8px] text-gray-400 font-bold uppercase mb-4 tracking-widest text-left">Hóa đơn điện tử</p>
+
+            <div class="space-y-2 text-left">
+                <div class="p-2 bg-gray-50 rounded-xl text-left"><p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thời gian</p><p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.fullTime}</p></div>
+                <div class="p-2 bg-gray-50 rounded-xl text-left"><p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Khách hàng</p><p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.sdt}</p></div>
+                <div class="p-2 bg-gray-50 rounded-xl border-l-4 ${h.total < 0 ? 'border-red-500 text-left' : 'border-[#006241] text-left'} text-left"><p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thanh toán</p><p class="font-black ${h.total < 0 ? 'text-red-500 text-left' : 'text-[#006241] text-left'} text-[10px] uppercase text-left">${h.method}</p></div>
+            </div>
+
+            ${isAlreadyRefund ?
+                '<div class="mt-10 text-center"><p class="text-[10px] font-black text-red-400 uppercase italic text-center">Hóa đơn hoàn trả</p></div>' :
+                `<div class="mt-4 space-y-2 text-center">
+                    <button onclick="executeRefundAction(${idx}, true)" class="w-full py-3 bg-red-500 text-white rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-all text-center">Hủy toàn bộ</button>
+                    <button id="btn-refund-selected" onclick="executeRefundAction(${idx}, false)" class="hidden w-full py-3 border-2 border-red-500 text-red-500 rounded-xl font-black text-[10px] uppercase active:scale-95 transition-all text-center">Hoàn món đã chọn</button>
+                </div>`
+            }
+            <div class="mt-auto mb-2 text-center text-center"><p class="text-amber-600 font-black text-[9px] uppercase italic tracking-tighter text-center"> +${h.points} ĐIỂM</p></div>
+        </div>
+
+        <div class="col-span-8 flex flex-col h-full pt-2 overflow-hidden text-left">
+            <div id="refund-items-list" class="flex-1 overflow-y-auto pr-1 space-y-0.5 text-left">${itemsHtml}</div>
+            <div class="mt-4 pt-4 border-t-2 border-[#006241] flex flex-col items-end flex-shrink-0 text-right">
+                <div class="flex justify-between w-full items-center mb-1 text-left"><span class="text-[10px] font-bold text-gray-400 uppercase italic text-left">Số lượng: ${tQty} món</span><span class="brand-font text-[#1e3932] text-xl uppercase font-black opacity-30 text-right">Tổng bill</span></div>
+                <div class="font-black text-3xl leading-none text-right ${h.total < 0 ? 'text-red-500 text-right' : 'text-[#006241] text-right'}">${h.total.toLocaleString()}<span class="text-lg ml-1 text-right">đ</span></div>
+            </div>
+        </div>
+    </div>`;
     }).join(''); 
 
     document.getElementById('history-detail-empty').classList.add('hidden'); 
@@ -871,6 +919,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
