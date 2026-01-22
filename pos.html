@@ -2,6 +2,10 @@
 <html>
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#006241">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -10,63 +14,45 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
 <style>
-/* --- GIỮ NGUYÊN CSS GỐC --- */
-html, body { overscroll-behavior-y: none; touch-action: pan-x pan-y; margin: 0; padding: 0; height: 100%; width: 100%; }
-body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; height: 100vh; overflow: hidden; transition: background-color 0.5s ease; -webkit-font-smoothing: antialiased; }
+/* CSS CHỐNG RELOAD & ZOOM */
+html, body { overscroll-behavior-y: none; touch-action: pan-x pan-y; margin: 0; padding: 0; height: 100%; width: 100%; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; transition: background-color 0.5s ease; }
 .brand-font { font-family: 'League Spartan', sans-serif; }
 .sb-green { background-color: #006241; }
 .tab-active { background-color: #006241 !important; color: white !important; font-weight: 900; }
 .category-tab { padding: 6px 16px; font-size: 0.85rem; font-weight: 800; border-radius: 12px; border: 2px solid #f3f4f6; white-space: nowrap; }
-#loading-overlay { display: flex; position: fixed; inset: 0; background: rgba(255,255,255,0.85); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
+#loading-overlay { display: flex; position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
 .capitalize-first { text-transform: lowercase; display: inline-block; } .capitalize-first::first-letter { text-transform: uppercase; }
 .history-item-active { border-color: #006241 !important; background-color: #f0fdf4 !important; }
 .menu-item-name { text-transform: uppercase; font-size: 1rem; font-weight: 900; line-height: 1.1; }
 .receipt-line { border-bottom: 1px dashed #f1f3f5; padding: 10px 0; display: flex; justify-content: space-between; align-items: flex-start; }
 .refund-selected { background-color: #fee2e2 !important; border-left: 5px solid #ef4444 !important; }
 .modal-active { display: flex !important; }
-input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {-webkit-appearance: none; margin: 0; }
-/* DARK MODE FOR BED ORDER */
 .dark-theme { background-color: #1a1a1a !important; color: #e5e5e5; }
 .dark-theme #view-payment { background-color: #262626 !important; }
 .dark-theme h2, .dark-theme p, .dark-theme label { color: #e5e5e5 !important; }
 .dark-theme #cash-paid { background-color: #333 !important; color: #4ade80 !important; }
 .dark-theme #cash-detail-box { background-color: #333 !important; }
 .dark-theme #btn-cash, .dark-theme #btn-bank { background-color: #333 !important; border-color: #4ade80 !important; color: #4ade80 !important; }
-/* BED LAYOUT */
 .bed-box { aspect-ratio: 1; border-radius: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: all 0.3s; position: relative; }
 .bed-free { background-color: #f0fdf4; border: 4px solid #f0fdf4; color: #006241; }
 .bed-busy { background-color: #1a1a1a; border: 4px solid #006241; color: white; }
 .bed-selected { border-color: #ef4444; transform: scale(0.95); }
-.bed-card.expired { background-color: #e0e0e0 !important; opacity: 0.7; border: 2px dashed #999; }
-.bed-card.expired .card-title { color: #666; text-decoration: line-through; }
-/* APPLE THEME OVERRIDE */
-body, #app, #view-pos, #view-menu, .view-section { background-color: #F2F2F7 !important; }
-.card, .product-item, .menu-item { border-radius: 20px !important; border: 1px solid rgba(0,0,0,0.05) !important; box-shadow: 0 4px 12px rgba(0,0,0,0.03) !important; background-color: #FFFFFF !important; transition: all 0.2s ease !important; overflow: hidden; }
-.card:active, .product-item:active { transform: scale(0.96); }
-#sidebar-cart, #cart-panel { background-color: #FFFFFF !important; border-radius: 24px !important; box-shadow: -5px 0 20px rgba(0,0,0,0.05) !important; border-left: 1px solid rgba(0,0,0,0.05) !important; margin: 10px !important; height: calc(100vh - 20px) !important; overflow: hidden !important; }
-button, .btn { border-radius: 16px !important; font-weight: 700 !important; letter-spacing: -0.01em !important; }
-.btn-primary, .bg-primary { background-color: #1e3932 !important; border-color: #1e3932 !important; }
-input, select, textarea, .form-control { border-radius: 12px !important; background-color: #F2F2F7 !important; border: 1px solid transparent !important; padding: 10px 15px !important; }
-input:focus, select:focus { background-color: #FFFFFF !important; box-shadow: 0 0 0 2px #1e3932 !important; }
-.nav-pills .nav-link, .category-btn { border-radius: 50px !important; margin-right: 5px !important; font-weight: 600 !important; }
-.nav-pills .nav-link.active { background-color: #1e3932 !important; box-shadow: 0 4px 10px rgba(30, 57, 50, 0.3) !important; }
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #8E8E93; }
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
 
 <div id="loading-overlay">
-    <div class="w-14 h-14 border-4 border-[#006241] border-t-transparent rounded-full animate-spin"></div>
-    <p class="brand-font text-[#006241] text-xl font-black tracking-widest animate-pulse">The cafe 33</p>
-    <p id="loading-msg" class="text-xs text-gray-400 font-bold mt-2">Đang kết nối dữ liệu...</p>
+    <div class="w-16 h-16 border-4 border-[#006241] border-t-transparent rounded-full animate-spin"></div>
+    <p class="brand-font text-[#006241] text-2xl font-black tracking-widest animate-pulse">The cafe 33</p>
+    <p class="text-xs text-gray-400 font-bold" id="loading-text">Đang kết nối dữ liệu...</p>
 </div>
 
 <div class="flex-1 bg-white rounded-[2.5rem] shadow-xl overflow-hidden flex flex-col relative border-2 border-white transition-colors duration-500" id="main-container">
-
-    <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-white z-10 text-left transition-colors duration-500" id="header-bar">
+    <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-white z-10" id="header-bar">
         <div class="flex items-center gap-6">
             <h2 class="brand-font text-3xl text-[#006241] whitespace-nowrap cursor-pointer hover:opacity-70 transition-all" onclick="switchView('menu')">The cafe 33</h2>
             <div class="flex gap-2">
@@ -78,17 +64,16 @@ input:focus, select:focus { background-color: #FFFFFF !important; box-shadow: 0 
         <p id="clock" class="text-[10px] font-black text-gray-300"></p>
     </div>
 
-    <div id="category-bar" class="px-6 py-2 border-b border-gray-50 bg-gray-50/30 flex gap-2 overflow-x-auto text-left"><div id="tabs-container" class="flex gap-2"></div></div>
+    <div id="category-bar" class="px-6 py-2 border-b border-gray-50 bg-gray-50/30 flex gap-2 overflow-x-auto"><div id="tabs-container" class="flex gap-2"></div></div>
 
     <div class="flex-1 overflow-hidden relative">
-
         <div id="view-menu" class="h-full p-5 overflow-y-auto text-center"><div id="menu-grid" class="grid grid-cols-3 gap-4"></div></div>
 
         <div id="view-payment" class="hidden h-full p-8 bg-gray-50 flex flex-col animate-fade-in text-left">
             <div class="flex justify-between items-center mb-6"><h2 class="brand-font text-4xl text-[#006241] uppercase font-black text-center w-full">Thanh toán</h2><button onclick="switchView('menu')" class="text-gray-400 font-bold uppercase text-xs border-b-2 absolute right-10">Quay lại</button></div>
             <div class="grid grid-cols-2 gap-6 flex-1">
                 <div class="space-y-4">
-                    <button id="btn-cash" onclick="setMethod('Tiền mặt')" class="w-full p-6 rounded-3xl border-4 border-[#006241] bg-white text-xl font-bold text-[#006241] flex justify-between items-center shadow-md">Tiền mặt ✓</button>
+                    <button id="btn-cash" onclick="setMethod('Tiền mặt')" class="w-full p-6 rounded-3xl border-4 border-[#006241] bg-white text-xl font-bold text-[#006241] flex justify-between items-center shadow-md">Tiền mặt ✓</button> 
                     <button id="btn-bank" onclick="setMethod('Chuyển khoản')" class="w-full p-6 rounded-3xl border-4 border-transparent bg-white text-xl font-bold text-gray-300 flex justify-between items-center shadow-md uppercase tracking-tighter">Chuyển khoản</button>
                 </div>
                 <div id="cash-detail-box" class="bg-white p-6 rounded-[2.5rem] shadow-md flex flex-col justify-center text-center">
@@ -156,7 +141,7 @@ input:focus, select:focus { background-color: #FFFFFF !important; box-shadow: 0 
                 </div>
             </div>
             <div class="w-[20%] flex flex-col gap-3">
-                <button onclick="openBookingModal()" class="w-full bg-[#006241] hover:bg-[#004f32] text-white py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span class="text-xs uppercase tracking-wider">Đặt Mới</span></button>
+                <button onclick="openBookingModal()" class="w-full bg-[#006241] hover:bg-[#004f32] text-white py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1"><span class="text-xs uppercase tracking-wider">Đặt Mới</span></button>
                 <div class="flex-1 bg-white rounded-[20px] shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden"><h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3><div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div></div>
             </div>
         </div>
@@ -186,7 +171,6 @@ input:focus, select:focus { background-color: #FFFFFF !important; box-shadow: 0 
         <button onclick="document.getElementById('bed-select-modal').classList.add('hidden')" class="text-gray-400 text-xs font-bold uppercase underline">Bỏ qua (Chỉ tính tiền)</button>
     </div>
 </div>
-
 <div id="walk-in-modal" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl text-center"><h3 class="brand-font text-xl text-[#006241] mb-4 uppercase font-black">Khách vãng lai</h3><input type="tel" id="walkin-phone" placeholder="Nhập SĐT khách..." class="w-full p-4 bg-gray-50 rounded-2xl text-center font-bold mb-3 outline-none border focus:border-[#006241]"><input type="number" id="walkin-hours" placeholder="Số giờ (1, 2, 3...)" class="w-full p-4 bg-gray-50 rounded-2xl text-center font-bold mb-6 outline-none border focus:border-[#006241]"><div class="flex gap-3"><button onclick="document.getElementById('walk-in-modal').classList.add('hidden')" class="flex-1 py-4 bg-gray-100 text-gray-400 font-black rounded-2xl uppercase text-xs">Huỷ</button><button onclick="submitWalkIn()" class="flex-1 py-4 sb-green text-white font-black rounded-2xl uppercase text-xs shadow-lg">Tạo đơn</button></div></div></div>
 <div id="app-modal" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl text-center"><div id="app-modal-icon" class="text-5xl mb-4"></div><h3 id="app-modal-title" class="brand-font text-xl text-[#006241] mb-2 uppercase font-black text-center">Thông báo</h3><div id="app-modal-msg" class="text-sm text-[#1e3932] font-bold mb-8 brand-font text-center"></div><button onclick="document.getElementById('app-modal').classList.add('hidden')" class="w-full py-4 sb-green text-white font-black rounded-2xl uppercase shadow-lg">Xác nhận</button></div></div>
 <div id="confirm-modal" class="fixed inset-0 bg-black/40 z-[10000] hidden flex items-center justify-center p-6 backdrop-blur-sm"><div class="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl text-center border-t-8 border-red-500"><div class="text-5xl mb-4">⚠️</div><h3 class="brand-font text-xl text-red-600 mb-2 uppercase font-black text-center">Xác nhận</h3><div id="confirm-msg" class="text-sm text-[#1e3932] font-bold mb-8 brand-font text-center"></div><div class="grid grid-cols-2 gap-4"><button onclick="document.getElementById('confirm-modal').classList.add('hidden')" class="py-4 bg-gray-100 text-gray-500 rounded-2xl font-black uppercase text-xs">Quay lại</button><button id="confirm-btn-yes" class="py-4 bg-red-500 text-white rounded-2xl font-black uppercase text-xs shadow-lg active:scale-95">Đồng ý</button></div></div></div>
@@ -232,35 +216,36 @@ var bedCountdownInterval = null;
 var pendingBedOrder = null;
 var activeOrderingBedId = null;
 
-// Đồng hồ
+// Đồng hồ hệ thống
 setInterval(() => {
     const el = document.getElementById('clock');
     if(el) el.innerText = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }, 1000);
 
 // =========================================================
-// 3. KHỞI ĐỘNG APP (FIX LỖI TREO & LẶP)
+// 3. KHỞI ĐỘNG APP (CÓ CƠ CHẾ CHỐNG TREO)
 // =========================================================
 window.onload = function() {
     console.log("🚀 App đang khởi động...");
 
-    // 1. Cài đặt "Lối thoát hiểm": Tự tắt loading sau 7 giây nếu mạng lag
+    // A. Cài đặt "Lối thoát hiểm": Tự tắt loading sau 5 giây nếu Firebase không phản hồi
     const safetyTimer = setTimeout(() => {
         const ol = document.getElementById('loading-overlay');
         if(ol && ol.style.display !== 'none') {
             ol.style.display = 'none';
-            console.warn("⚠️ Loading quá lâu, tự động vào trang.");
+            console.warn("⚠️ Loading quá lâu, tự động bỏ qua.");
         }
-    }, 7000);
+    }, 5000);
 
-    // 2. Lắng nghe Menu từ Firebase
+    // B. Lắng nghe Menu từ Firebase
     db.ref('menu').on('value', (snapshot) => {
-        clearTimeout(safetyTimer); // Hủy bộ đếm thoát hiểm vì đã kết nối thành công
+        clearTimeout(safetyTimer); // Hủy bộ đếm thoát hiểm vì đã kết nối được
         const data = snapshot.val();
         
         if (data) {
             menu = Array.isArray(data) ? data : Object.values(data);
             console.log(`✅ Đã tải ${menu.length} món.`);
+            // Vẽ giao diện
             renderTabs();
             renderMenu();
         } else {
@@ -274,7 +259,7 @@ window.onload = function() {
         alert("Lỗi kết nối: " + error.message);
     });
 
-    // 3. Lắng nghe Bed (Chạy ngầm để update realtime)
+    // C. Lắng nghe Bed (Chạy ngầm)
     db.ref('beds').on('value', (snapshot) => {
         const data = snapshot.val();
         currentBedList = [];
@@ -294,7 +279,7 @@ window.onload = function() {
 };
 
 // =========================================================
-// 4. MENU & GIỎ HÀNG (CORE FUNCTIONS)
+// 4. MENU & GIỎ HÀNG (CORE)
 // =========================================================
 function renderTabs() { 
     if (!menu || menu.length === 0) return;
@@ -745,355 +730,6 @@ function stopPanelCountdown() { if (bedCountdownInterval) clearInterval(bedCount
 function switchTimeMode(mode) { var btnDur = document.getElementById('tab-duration'); var btnFix = document.getElementById('tab-fixed'); var divDur = document.getElementById('mode-duration'); var divFix = document.getElementById('mode-fixed'); if (mode === 'duration') { btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#1e3932]"; btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divDur.classList.remove('hidden'); divFix.classList.add('hidden'); document.getElementById('final_duration_minutes').value = 60; } else { btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#1e3932]"; btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divFix.classList.remove('hidden'); divDur.classList.add('hidden'); var now = new Date(); now.setMinutes(now.getMinutes() + 90); var hh = ("0" + now.getHours()).slice(-2); var mm = ("0" + now.getMinutes()).slice(-2); document.getElementById('custom_end_time').value = `${hh}:${mm}`; calculateDurationFromTime(); } }
 function selectDuration(minutes, btn) { document.getElementById('final_duration_minutes').value = minutes; document.querySelectorAll('.duration-btn').forEach(el => el.className = "duration-btn bg-white border border-gray-200 text-gray-600 font-bold py-2 rounded-lg text-xs hover:bg-gray-100"); btn.className = "duration-btn bg-[#1e3932] text-white border border-[#1e3932] font-bold py-2 rounded-lg text-xs shadow-md"; }
 function calculateDurationFromTime() { var timeStr = document.getElementById('custom_end_time').value; if (!timeStr) return; var now = new Date(); var parts = timeStr.split(':'); var end = new Date(); end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0); var diffMins = Math.floor((end - now) / 60000); if (diffMins <= 0) { document.getElementById('calculated-time-hint').innerText = "⚠️ Giờ về phải sau giờ hiện tại"; document.getElementById('final_duration_minutes').value = 0; } else { document.getElementById('calculated-time-hint').innerText = `Tổng cộng: ${Math.floor(diffMins/60)}h ${diffMins%60}p`; document.getElementById('final_duration_minutes').value = diffMins; } }
-=================================================
-// --- HISTORY & REVENUE (PHIÊN BẢN FULL TÍNH NĂNG - FIREBASE) ---
-// =========================================================
-
-// --- 1. XEM LỊCH SỬ (FULL CHI TIẾT) ---
-function openHistory() {
-    document.getElementById('loading-overlay').style.display = 'flex';
-    switchView('history');
-    
-    // Lấy 100 đơn mới nhất từ Firebase
-    db.ref('orders').limitToLast(100).once('value', snap => {
-        document.getElementById('loading-overlay').style.display = 'none';
-        const data = snap.val();
-        if(!data) {
-            historyData = [];
-        } else {
-            // Chuyển Object thành Array và xử lý dữ liệu
-            historyData = Object.keys(data).map(key => {
-                const o = data[key];
-                const d = new Date(o.createdAt);
-                return {
-                    ...o,
-                    id: key, // Lưu lại key của Firebase để dùng khi cần
-                    dateStr: d.toLocaleDateString('en-GB'), // dd/mm/yyyy
-                    timeStr: d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}),
-                    fullTime: d.toLocaleString('en-GB'),
-                    // Tính lại điểm nếu trong db chưa lưu
-                    points: o.points || calculatePointsFromTotal(o.total) 
-                };
-            }).reverse(); // Đảo ngược để thấy mới nhất
-        }
-        renderHistoryList(historyData);
-    });
-}
-
-// Hàm tính điểm tạm (nếu db thiếu)
-function calculatePointsFromTotal(total) {
-    return Math.floor(Number(total)/1000); 
-}
-
-function renderHistoryList(data) { 
-    const grouped = data.reduce((acc, obj) => { 
-        const key = obj.dateStr; if (!acc[key]) acc[key] = []; acc [key].push(obj); return acc; 
-    }, {}); 
-    
-    let html = ""; 
-    for (const date in grouped) { 
-        html += `<div class="mb-4 text-left"><h3 class="brand-font text-[#006241] text-[10px] uppercase tracking-widest mb-2 ml-1 text-left">📅 Ngày ${date}</h3><div class="space-y-1.5 text-left">`; 
-        grouped[date].forEach((h, idx) => { 
-            // Lưu ý: idx này là index trong nhóm ngày, ta cần tìm index trong mảng gốc historyData
-            const realIdx = historyData.indexOf(h);
-            const valColor = h.total < 0? 'text-red-500': 'text-[#006241]'; 
-            html += `<div id="h-item-${realIdx}" onclick="selectBill(${realIdx})" class="p-3 bg-white rounded-2xl border-2 border-transparent shadow-sm flex justify-between items-center cursor-pointer active:scale-95 text-xs text-left">
-                <div class="min-w-0 text-left">
-                    <p class="font-black text-[#1e3932] uppercase text-left">${h.timeStr}</p>
-                    <p class="text-[8px] text-gray-400 font-bold truncate w-20 text-left">${h.sdt}</p>
-                </div>
-                <p class="font-black ${valColor} text-right">${Number(h.total).toLocaleString()}</p>
-            </div>`; 
-        }); 
-        html += '</div></div>'; 
-    } 
-    document.getElementById('history-container').innerHTML = html; 
-}
-
-// --- HÀM HIỂN THỊ CHI TIẾT BILL (KHÔI PHỤC TỪ GWA) ---
-function selectBill(idx) { 
-    selectedRefundItems = []; 
-    // Highlight item được chọn
-    document.querySelectorAll('[id^="h-item-"]').forEach(el => el.classList.remove('history-item-active')); 
-    const el = document.getElementById(`h-item-${idx}`);
-    if(el) el.classList.add('history-item-active'); 
-
-    const h = historyData[idx]; 
-    const items = h.items ? h.items.split(',') : []; 
-    let tQty = 0; 
-    const isAlreadyRefund = h.total < 0; 
-
-    // Parse từng món trong chuỗi items (VD: "Cafe(M)x2")
-    const itemsHtml = items.map((item, i) => { 
-        const raw = item.trim(); 
-        const lastX = raw.lastIndexOf('x'); 
-        if (lastX === -1) return ''; 
-        
-        const namePartFull = raw.substring(0, lastX).trim(); 
-        const qty = parseInt(raw.substring(lastX + 1)) || 1; 
-        tQty += qty; 
-        
-        let nameOnly = namePartFull, sizePart = ""; 
-        if (namePartFull.includes('(')) { 
-            const lb = namePartFull.lastIndexOf('('); 
-            nameOnly = namePartFull.substring(0, lb).trim(); 
-            sizePart = namePartFull.substring(lb + 1, namePartFull.lastIndexOf(')')); 
-        } 
-        
-        // Tìm giá gốc trong Menu để hiển thị
-        const m = menu.find(mi => mi.name.toLowerCase() === nameOnly.toLowerCase()); 
-        const uP = m ? (sizePart === 'L'? m.priceL: m.priceM): 0; 
-        const subTotal = uP * qty; 
-        
-        return `<div class="receipt-line p-2 rounded-xl transition-all border-l-4 border-transparent hover:bg-gray-50 text-left">
-            <div class="flex-1 mr-4 text-left">
-                <div class="flex items-start gap-2 text-left">
-                    <span class="font-black text-[#006241] text-lg text-left">${qty}x</span>
-                    <div class="flex flex-col text-left">
-                        <span class="font-black text-[#1e3932] text-sm capitalize-first leading-tight text-left">${nameOnly} ${sizePart ? `<span class="text-green-500 font-black text-[12px] ml-1">[${sizePart}]</span>`: ""}</span>
-                        <span class="text-[9px] text-gray-400 font-bold italic text-left">Đơn giá: ${uP.toLocaleString()}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="text-right font-black text-[#1e3932] text-base pt-1 text-right">${subTotal.toLocaleString()}</div>
-        </div>`; 
-    }).join(''); 
-
-    // Hiển thị Panel Chi Tiết
-    document.getElementById('history-detail-empty').classList.add('hidden'); 
-    const detail = document.getElementById('history-detail-content'); 
-    detail.classList.remove('hidden'); 
-    
-    detail.innerHTML = `
-    <div class="grid grid-cols-12 gap-3 h-full overflow-hidden text-left">
-        <div class="col-span-4 border-r border-gray-100 pr-3 flex flex-col pt-2 text-left">
-            <h3 class="brand-font text-3xl text-[#006241] leading-none mb-1 text-left">The cafe 33</h3>
-            <p class="text-[8px] text-gray-400 font-bold uppercase mb-4 tracking-widest text-left">Hóa đơn điện tử</p>
-            <div class="space-y-2 text-left">
-                <div class="p-2 bg-gray-50 rounded-xl text-left">
-                    <p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thời gian</p>
-                    <p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.fullTime}</p>
-                </div>
-                <div class="p-2 bg-gray-50 rounded-xl text-left">
-                    <p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Khách hàng</p>
-                    <p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.sdt}</p>
-                </div>
-                <div class="p-2 bg-gray-50 rounded-xl border-l-4 ${h.total < 0? 'border-red-500 text-left': 'border-[#006241] text-left'} text-left">
-                    <p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thanh toán</p>
-                    <p class="font-black ${h.total < 0? 'text-red-500 text-left': 'text-[#006241] text-left'} text-[10px] uppercase text-left">${h.method}</p>
-                </div>
-            </div>
-            <div class="p-3 bg-amber-50 rounded-xl text-center border-2 border-amber-100 mt-auto mb-2 text-center">
-                <p class="text-amber-600 font-black text-[9px] uppercase italic tracking-tighter text-center"> +${h.points || 0} ĐIỂM</p>
-            </div>
-        </div>
-        <div class="col-span-8 flex flex-col h-full pt-2 overflow-hidden text-left">
-            <div id="refund-items-list" class="flex-1 overflow-y-auto pr-1 space-y-0.5 text-left">${itemsHtml}</div>
-            <div class="mt-4 pt-4 border-t-2 border-[#006241] flex flex-col items-end flex-shrink-0 text-right">
-                <div class="flex justify-between w-full items-center mb-1 text-left">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase italic text-left">Số lượng: ${tQty} món</span>
-                    <span class="brand-font text-[#1e3932] text-xl uppercase font-black opacity-30 text-right">Tổng bill</span>
-                </div>
-                <div class="font-black text-3xl leading-none text-right ${h.total < 0? 'text-red-500 text-right': 'text-[#006241] text-right'}">
-                    ${Number(h.total).toLocaleString()}<span class="text-lg ml-1 text-right">đ</span>
-                </div>
-            </div>
-        </div>
-    </div>`; 
-}
-
-// --- 2. DOANH THU & BIỂU ĐỒ (LOGIC TÍNH TOÁN CLIENT-SIDE) ---
-function openRevenue() {
-    document.getElementById('loading-overlay').style.display = 'flex';
-    switchView('revenue');
-    loadRevenue('week'); // Mặc định load tuần
-}
-
-function loadRevenue(type) {
-    // 1. Lấy toàn bộ đơn hàng
-    db.ref('orders').once('value', snap => {
-        document.getElementById('loading-overlay').style.display = 'none';
-        const data = snap.val();
-        if (!data) return;
-
-        // 2. Chuyển thành mảng để tính toán
-        const allOrders = Object.values(data);
-        
-        // 3. Tính toán thống kê
-        const stats = calculateStats(allOrders, type);
-        
-        // 4. Vẽ lại giao diện
-        renderDailyRevenueList(stats.dailyList);
-        renderRevenueDashboard(stats, type);
-    });
-}
-
-function calculateStats(orders, filterType) {
-    const now = new Date();
-    let startTime, endTime;
-    
-    // Logic xác định khoảng thời gian (Tuần, Tháng, Range)
-    if (filterType === 'range') {
-        const f = document.getElementById('rev-from').value;
-        const t = document.getElementById('rev-to').value;
-        if(f && t) {
-            startTime = new Date(f); startTime.setHours(0,0,0,0);
-            endTime = new Date(t); endTime.setHours(23,59,59,999);
-        } else filterType = 'week';
-    }
-    
-    if (filterType === 'month') {
-        startTime = new Date(now.getFullYear(), now.getMonth(), 1);
-        endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    } 
-    
-    if (filterType === 'week') {
-        const day = now.getDay() || 7; 
-        startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
-        endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999);
-    }
-
-    // Khởi tạo Stats
-    let stats = { drinkTotal: 0, snackTotal: 0, labels: [], chartData: [], dailyList: {}, today: 0, yesterday: 0 };
-    
-    // Tạo labels cho biểu đồ
-    if (filterType === 'week') {
-        stats.labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-        stats.chartData = [0,0,0,0,0,0,0];
-    } else if (filterType === 'month') {
-        const days = endTime.getDate();
-        stats.labels = Array.from({length: days}, (_, i) => i + 1);
-        stats.chartData = new Array(days).fill(0);
-    }
-
-    const todayStr = now.toLocaleDateString('en-GB');
-    const yest = new Date(now); yest.setDate(now.getDate() - 1);
-    const yestStr = yest.toLocaleDateString('en-GB');
-
-    // Duyệt qua từng đơn hàng để cộng dồn
-    orders.forEach(o => {
-        const d = new Date(o.createdAt);
-        const dateKey = d.toLocaleDateString('en-GB');
-        const amount = Number(o.total) || 0;
-        
-        // Tính tổng hôm nay/hôm qua
-        if (dateKey === todayStr) stats.today += amount;
-        if (dateKey === yestStr) stats.yesterday += amount;
-
-        // Chỉ tính chi tiết nếu nằm trong khoảng thời gian lọc
-        if (d >= startTime && d <= endTime) {
-            // Cộng tổng đồ uống/ăn vặt (Phân tích chuỗi items)
-            let isSnack = false; // Logic đơn giản: coi như drink hết trừ khi phát hiện snack
-            const itemsArr = o.items ? o.items.split(',') : [];
-            itemsArr.forEach(it => {
-                // Logic phân loại sơ bộ (cần cải thiện nếu muốn chính xác tuyệt đối)
-                if(it.toLowerCase().includes('hạt') || it.toLowerCase().includes('bánh')) isSnack = true;
-            });
-            
-            if(isSnack) stats.snackTotal += amount; else stats.drinkTotal += amount;
-
-            // Cộng vào Daily List
-            if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
-            stats.dailyList[dateKey].drink += amount;
-
-            // Cộng vào Chart Data
-            let idx = -1;
-            if (filterType === 'week') idx = (d.getDay() + 6) % 7;
-            else if (filterType === 'month') idx = d.getDate() - 1;
-            
-            if (idx >= 0 && stats.chartData[idx] !== undefined) stats.chartData[idx] += amount;
-        }
-    });
-    
-    return stats;
-}
-
-function renderDailyRevenueList(list) { 
-    let html = '<div class="mb-4 text-left"><h3 class="brand-font text-[#006241] text-[10px] uppercase tracking-widest mb-2 ml-1 text-left">Doanh thu</h3><div class="space-y-1.5 text-left">'; 
-    // Sắp xếp ngày giảm dần
-    Object.keys(list).sort((a,b) => {
-        const da = a.split('/').reverse().join('');
-        const db = b.split('/').reverse().join('');
-        return db.localeCompare(da);
-    }).forEach(date => { 
-        const valColor = list[date].drink < 0 ? 'text-red-500': 'text-[#006241]'; 
-        html += `<div class="p-3 bg-white rounded-2xl shadow-sm text-left"><p class="font-black text-[#1e3932] text-[10px] uppercase text-left">📅 ${date}</p><p class="text-[11px] font-black ${valColor} mt-1 text-left">${list[date].drink.toLocaleString()}đ</p></div>`; 
-    }); 
-    html += '</div></div>'; 
-    document.getElementById('history-container').innerHTML = html; 
-}
-
-function renderRevenueDashboard(data, type) { 
-    document.getElementById('history-detail-empty').classList.add('hidden'); 
-    const detail = document.getElementById('history-detail-content'); 
-    detail.classList.remove('hidden'); 
-    
-    const diff = data.today - data.yesterday; 
-    const dColor = diff >= 0 ? 'text-green-500': 'text-red-500'; 
-    const dIcon = diff >= 0 ? '▲': '▼'; 
-    
-    detail.innerHTML = `
-    <div class="flex flex-col h-full space-y-4 text-left">
-        <div class="flex gap-2 items-center text-left">
-            <button onclick="loadRevenue('week')" class="px-3 py-1.5 bg-gray-100 rounded-lg font-black text-[9px] uppercase text-left hover:bg-[#006241] hover:text-white transition">Tuần</button>
-            <button onclick="loadRevenue('month')" class="px-3 py-1.5 bg-gray-100 rounded-lg font-black text-[9px] uppercase text-left hover:bg-[#006241] hover:text-white transition">Tháng</button>
-            <input type="date" id="rev-from" class="p-1 border rounded text-[9px] font-bold outline-none text-left">
-            <input type="date" id="rev-to" class="p-1 border rounded text-[9px] font-bold outline-none text-left">
-            <button onclick="loadRevenue('range')" class="px-3 py-1.5 sb-green text-white rounded-lg font-black text-[9px] uppercase text-left">Lọc</button>
-        </div>
-        <div class="grid grid-cols-3 gap-3 text-left">
-            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-[#006241] text-center">
-                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Nước (Tổng)</p>
-                <p class="brand-font text-2xl text-[#006241] text-center">${data.drinkTotal.toLocaleString()}</p>
-            </div>
-            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-amber-400 text-center">
-                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Ăn vặt</p>
-                <p class="brand-font text-xl text-amber-600 text-center">${data.snackTotal.toLocaleString()}</p>
-            </div>
-            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-blue-400 text-center">
-                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Vs Hôm qua</p>
-                <p class="font-black text-sm ${dColor} text-center">${dIcon} ${Math.abs(diff).toLocaleString()}</p>
-            </div>
-        </div>
-        <div class="flex-1 bg-white p-4 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col relative overflow-hidden text-left">
-            <canvas id="revenueChart"></canvas>
-        </div>
-    </div>`; 
-    
-    setTimeout(() => renderChart(data.labels, data.chartData, type), 200); 
-}
-
-function renderChart(labels, chartData, type) { 
-    const ctx = document.getElementById('revenueChart').getContext('2d'); 
-    if (myChart) myChart.destroy(); 
-    
-    // Highlight cột hôm nay
-    const todayIdx = (type === 'month') ? (new Date().getDate() - 1): ((new Date().getDay() + 6) % 7); 
-    const colors = chartData.map((_, i) => i === todayIdx? '#006241': '#f1f5f9'); 
-    
-    myChart = new Chart(ctx, { 
-        type: 'bar', 
-        plugins: [ChartDataLabels], 
-        data: { 
-            labels, 
-            datasets: [{ 
-                data: chartData, 
-                backgroundColor: colors, 
-                borderRadius: 6 
-            }] 
-        }, 
-        options: { 
-            responsive: true, 
-            maintainAspectRatio: false, 
-            plugins: { 
-                legend: { display: false }, 
-                datalabels: { anchor: 'end', align: 'top', formatter: (v) => v != 0 ? (v/1000).toFixed(0) + 'k': '', font: { weight: 'bold', size: 9 }, color: '#006241'} 
-            }, 
-            scales: { 
-                y: { display: false }, 
-                x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 8} } } 
-            } 
-        } 
-    }); 
-}
-    </script>
+</script>
+</body>
+</html>
