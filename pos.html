@@ -239,16 +239,7 @@ setInterval(() => {
 // 3. KHỞI ĐỘNG APP (CÓ CƠ CHẾ CHỐNG TREO)
 // =========================================================
     // === FIX ID SĐT: walkin-phone -> kh-sdt ===
-document.addEventListener("DOMContentLoaded", () => {
-    const walk = document.getElementById("walkin-phone");
-    if (walk) {
-        walk.id = "kh-sdt";     // đổi ID cho khớp hệ thống POS
-    }
-});
-document.addEventListener("DOMContentLoaded", () => {
-    const input = document.getElementById("walkin-phone");
-    if(input) input.id = "kh-sdt";
-});
+
 
 window.onload = function() {
     console.log("🚀 App đang khởi động...");
@@ -263,7 +254,7 @@ window.onload = function() {
     }, 5000);
 
     // B. Lắng nghe Menu từ Firebase
-    db.ref("customers").on("value", snap=>{
+    db.ref("customers").on("value", snap={
     customerMap = snap.val() || {};
     console.log("Customers:", Object.keys(customerMap).length);
 });
@@ -762,7 +753,7 @@ function openBookingModal() { document.getElementById('modal-add-booking').class
 function closeBookingModal() { document.getElementById('modal-add-booking').classList.add('hidden'); }
 function autoFillCustomer() { var phone = document.getElementById('new_cust_phone').value; if (!phone || phone.length < 9) return; document.getElementById('search-loading').classList.remove('hidden'); db.ref('members').orderByChild('phone').equalTo(phone).once('value', snap => { document.getElementById('search-loading').classList.add('hidden'); if(snap.exists()) { const m = Object.values(snap.val())[0]; document.getElementById('new_cust_name').value = m.name; document.getElementById('new_comp_name').value = m.compName || ""; document.getElementById('new_comp_phone').value = m.compPhone || ""; } }); }
 function submitNewBooking() { var phone = document.getElementById('new_cust_phone').value; var name = document.getElementById('new_cust_name').value; var compName = document.getElementById('new_comp_name').value; var compPhone = document.getElementById('new_comp_phone').value; var duration = document.getElementById('final_duration_minutes').value; if (!phone || !name) return alert("Vui lòng nhập SĐT và Tên!"); var btn = document.getElementById('btn-submit-booking'); btn.innerHTML = "⏳ Đang tạo..."; btn.disabled = true; const now = new Date(); const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const endObj = new Date(now.getTime() + duration*60000); const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const newBed = { phone: phone, name: name, date: new Date().toISOString().split('T')[0], start: startStr, end: endStr, compName: compName, compPhone: compPhone, status: "chờ khách", bedId: "", type: "walk-in" }; db.ref('beds').push(newBed, (err) => { btn.innerHTML = "XÁC NHẬN & GỌI MÓN"; btn.disabled = false; if(!err) { closeBookingModal(); openBedManager(); } }); }
-function submitWalkIn() { var phone = document.getElementById('walkin-phone').value; var hours = document.getElementById('walkin-hours').value; if(!phone || !hours) return; document.getElementById('walk-in-modal').classList.add('hidden'); document.getElementById('loading-overlay').style.display = 'flex'; db.ref('beds').push({ phone: phone, name: "Khách vãng lai", duration: hours*60, type: "walk-in", status: "chờ khách" }); document.getElementById('loading-overlay').style.display = 'none'; openBedManager(); }
+function submitWalkIn() { var phone = normalizePhone(document.getElementById('walkin-phone').value); var hours = document.getElementById('walkin-hours').value; if(!phone || !hours) return; document.getElementById('walk-in-modal').classList.add('hidden'); document.getElementById('loading-overlay').style.display = 'flex'; db.ref('beds').push({ phone: phone, name: "Khách vãng lai", duration: hours*60, type: "walk-in", status: "chờ khách" }); document.getElementById('loading-overlay').style.display = 'none'; openBedManager(); }
 function checkSdtLive() { const sdt = document.getElementById('kh-sdt').value; if (sdt.length >= 10) { db.ref('members').orderByChild('phone').equalTo(sdt).once('value', snap => { const status = document.getElementById('sdt-status'); if(snap.exists()) { const m = Object.values(snap.val())[0]; status.innerText = "★ THÀNH VIÊN: " + m.name; status.className = "text-[8px] font-black text-green-500 uppercase mt-1 text-center"; } else { status.innerText = "★ KHÁCH MỚI"; status.className = "text-[8px] font-black text-amber-500 uppercase mt-1 text-center"; } }); } }
 function showAppModal(title, msg, icon = '') { document.getElementById('app-modal-title').innerText = title; document.getElementById('app-modal-msg').innerHTML = msg; document.getElementById('app-modal-icon').innerText = icon; document.getElementById('app-modal').classList.remove('hidden'); }
 function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); var parts = timeStr.split(':'); d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0); return d; }
@@ -784,7 +775,7 @@ function findCustomerByPhone(phone){
 }
 
 function checkCustomer(){
-    const input = document.getElementById("kh-sdt");
+    const input = document.getElementById("walkin-phone");
     if(!input) return;
 
     const sdt = normalizePhone(input.value);
@@ -812,5 +803,6 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
