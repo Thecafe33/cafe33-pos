@@ -522,14 +522,20 @@ function renderHistoryList(data) {
     document.getElementById('history-container').innerHTML = html; 
 }
 // --- HÀM SELECT BILL ĐÃ FIX (CÓ NÚT HỦY/HOÀN) ---
+// --- HÀM SELECT BILL ĐẦY ĐỦ VÀ CHUẨN CÚ PHÁP ---
 function selectBill(idx) {
     // 1. Reset highlight cũ
     selectedRefundItems = [];
     document.querySelectorAll('[id^="h-item-"]').forEach(el => el.classList.remove('history-item-active'));
-    document.getElementById(`h-item-${idx}`).classList.add('history-item-active');
+    
+    // Highlight dòng được chọn
+    var rowEl = document.getElementById(`h-item-${idx}`);
+    if (rowEl) rowEl.classList.add('history-item-active');
 
     // 2. Lấy dữ liệu đơn hàng
     const h = historyData[idx];
+    if (!h) return;
+
     const items = h.items.split(',');
     let tQty = 0;
     
@@ -557,11 +563,13 @@ function selectBill(idx) {
         const uP = m ? (sizePart === 'L' ? m.priceL : m.priceM) : 0;
         const subTotal = uP * qty;
         
-        // Tính điểm để phục vụ việc hoàn trả
+        // Tính điểm
         const pts = (m && m.type === 'ăn vặt') ? Math.floor((subTotal/100)*0.4) : Math.floor(subTotal/100);
+        
+        // Chuẩn bị dữ liệu để truyền vào hàm hoàn trả
         const itData = JSON.stringify({ name: nameOnly, size: sizePart, qty, subTotal, itemPoints: pts });
 
-        // Render dòng sản phẩm
+        // Render HTML cho từng dòng món ăn
         return `<div id="refund-row-${i}" onclick='${isAlreadyRefund ? "" : `toggleRefundItem(${i}, ${itData})`}' class="receipt-line p-2 rounded-xl transition-all border-l-4 border-transparent ${isAlreadyRefund ? "opacity-50 text-left" : "cursor-pointer hover:bg-gray-50 text-left"}">
             <div class="flex-1 mr-4 text-left">
                 <div class="flex items-start gap-2 text-left">
@@ -581,7 +589,7 @@ function selectBill(idx) {
     const detail = document.getElementById('history-detail-content');
     detail.classList.remove('hidden');
 
-    // 5. VẼ GIAO DIỆN CHI TIẾT (ĐÃ BỔ SUNG NÚT BẤM)
+    // 5. VẼ GIAO DIỆN CHI TIẾT (Bao gồm nút bấm)
     detail.innerHTML = `
     <div class="grid grid-cols-12 gap-3 h-full overflow-hidden text-left">
         <div class="col-span-4 border-r border-gray-100 pr-3 flex flex-col pt-2 text-left">
@@ -601,6 +609,7 @@ function selectBill(idx) {
                     <button id="btn-refund-selected" onclick="executeRefundAction(${idx}, false)" class="hidden w-full py-3 border-2 border-red-500 text-red-500 rounded-xl font-black text-[10px] uppercase active:scale-95 transition-all text-center">Hoàn món đã chọn</button>
                 </div>`
             }
+
             <div class="mt-auto mb-2 text-center text-center"><p class="text-amber-600 font-black text-[9px] uppercase italic tracking-tighter text-center"> +${h.points} ĐIỂM</p></div>
         </div>
 
@@ -920,6 +929,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
