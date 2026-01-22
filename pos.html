@@ -25,6 +25,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
 <style>
 /* CSS CHỐNG RELOAD & ZOOM */
@@ -229,6 +231,19 @@ async function callAPI(action, data = {}) {
     }
 }
 
+/// --- KẾT NỐI FIREBASE (Đã thêm mới) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain: "the-cafe-33.firebaseapp.com",
+  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "the-cafe-33",
+  storageBucket: "the-cafe-33.appspot.com",
+  messagingSenderId: "...",
+  appId: "..."
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 // --- BIẾN TOÀN CỤC ---
 let menu = []; 
 let historyData = []; 
@@ -236,6 +251,25 @@ let cart = [];
 let currentTotal = 0; 
 let currentTab = "Tất cả";
 let isPaymentMode = false; 
+
+// --- TỰ ĐỘNG TẢI MENU TỪ FIREBASE ---
+db.ref('menu').on('value', (snapshot) => {
+  const data = snapshot.val();
+  if (data) {
+    // Chuyển đổi dữ liệu Firebase thành mảng
+    menu = Array.isArray(data) ? data : Object.values(data);
+    console.log("🔥 Đã tải Menu từ Firebase:", menu);
+    
+    // Vẽ lại giao diện ngay lập tức
+    if (typeof renderTabs === 'function') renderTabs();
+    if (typeof renderMenu === 'function') renderMenu();
+    
+    // Tắt loading nếu đang hiện
+    document.getElementById('loading-overlay').style.display = 'none';
+  } else {
+    console.log("Firebase chưa có dữ liệu menu.");
+  }
+});
 let myChart = null;
 let selectedRefundItems = [];
 
@@ -253,28 +287,15 @@ setInterval(() => {
 
 // --- HÀM KHỞI ĐỘNG (QUAN TRỌNG) ---
 async function loadPosData() {
+    // Chúng ta không gọi getPosData để lấy Menu nữa vì Firebase đã lo việc đó.
+    // Hàm này chỉ giữ lại để lấy lịch sử đơn hàng nếu cần.
     const overlay = document.getElementById('loading-overlay');
     try {
-        const res = await callAPI('getPosData');
-        if (res.status === 'success') {
-            menu = res.menu || [];
-            historyData = res.history || [];
-            
-            // KIỂM TRA NHANH: Nếu mảng rỗng thì báo ngay lên màn hình
-            if (menu.length === 0) {
-                alert("Dữ liệu Menu bị rỗng. Kiểm tra lại tên Sheet 'Menu'!");
-            }
-            
-            renderTabs();
-            renderMenu();
-            overlay.style.display = 'none';
-        } else {
-            alert("Lỗi từ GWA: " + res.message);
-            overlay.style.display = 'none';
-        }
+        // Chỉ gọi history nếu cần, hoặc bỏ qua.
+        // Tạm thời ta chỉ ẩn overlay đi vì Firebase sẽ tự tắt overlay khi load xong menu.
+        console.log("Web App đã khởi động cùng Firebase.");
     } catch (e) {
-        alert("Không kết nối được API. Kiểm tra API_URL!");
-        overlay.style.display = 'none';
+        console.error(e);
     }
 }
 
@@ -644,6 +665,7 @@ function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); 
 </body>
 
 </html>
+
 
 
 
