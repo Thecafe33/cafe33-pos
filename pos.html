@@ -754,7 +754,38 @@ function closeBookingModal() { document.getElementById('modal-add-booking').clas
 function autoFillCustomer() { var phone = document.getElementById('new_cust_phone').value; if (!phone || phone.length < 9) return; document.getElementById('search-loading').classList.remove('hidden'); db.ref('members').orderByChild('phone').equalTo(phone).once('value', snap => { document.getElementById('search-loading').classList.add('hidden'); if(snap.exists()) { const m = Object.values(snap.val())[0]; document.getElementById('new_cust_name').value = m.name; document.getElementById('new_comp_name').value = m.compName || ""; document.getElementById('new_comp_phone').value = m.compPhone || ""; } }); }
 function submitNewBooking() { var phone = document.getElementById('new_cust_phone').value; var name = document.getElementById('new_cust_name').value; var compName = document.getElementById('new_comp_name').value; var compPhone = document.getElementById('new_comp_phone').value; var duration = document.getElementById('final_duration_minutes').value; if (!phone || !name) return alert("Vui lòng nhập SĐT và Tên!"); var btn = document.getElementById('btn-submit-booking'); btn.innerHTML = "⏳ Đang tạo..."; btn.disabled = true; const now = new Date(); const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const endObj = new Date(now.getTime() + duration*60000); const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const newBed = { phone: phone, name: name, date: new Date().toISOString().split('T')[0], start: startStr, end: endStr, compName: compName, compPhone: compPhone, status: "chờ khách", bedId: "", type: "walk-in" }; db.ref('beds').push(newBed, (err) => { btn.innerHTML = "XÁC NHẬN & GỌI MÓN"; btn.disabled = false; if(!err) { closeBookingModal(); openBedManager(); } }); }
 function submitWalkIn() { var phone = normalizePhone(document.getElementById('walkin-phone').value); var hours = document.getElementById('walkin-hours').value; if(!phone || !hours) return; document.getElementById('walk-in-modal').classList.add('hidden'); document.getElementById('loading-overlay').style.display = 'flex'; db.ref('beds').push({ phone: phone, name: "Khách vãng lai", duration: hours*60, type: "walk-in", status: "chờ khách" }); document.getElementById('loading-overlay').style.display = 'none'; openBedManager(); }
-function checkSdtLive() { const sdt = document.getElementById('kh-sdt').value; if (sdt.length >= 10) { db.ref('members').orderByChild('phone').equalTo(sdt).once('value', snap => { const status = document.getElementById('sdt-status'); if(snap.exists()) { const m = Object.values(snap.val())[0]; status.innerText = "★ THÀNH VIÊN: " + m.name; status.className = "text-[8px] font-black text-green-500 uppercase mt-1 text-center"; } else { status.innerText = "★ KHÁCH MỚI"; status.className = "text-[8px] font-black text-amber-500 uppercase mt-1 text-center"; } }); } }
+function checkSdtLive() {
+    // 1. Lấy giá trị từ ô input
+    const sdtInput = document.getElementById('kh-sdt');
+    const sdt = sdtInput.value.toString().trim(); // Xóa khoảng trắng thừa cho chắc
+    const status = document.getElementById('sdt-status');
+
+    // 2. Reset nếu xóa trắng hoặc chưa đủ số
+    if (sdt.length < 3) { // Để 3 hoặc 10 tùy bạn, thường reset sớm cho đẹp
+        status.innerText = "";
+        return;
+    }
+
+    // 3. KIỂM TRA TRONG RAM (Siêu nhanh, không cần gọi db.ref nữa)
+    // Vì key của customerMap chính là SĐT, ta chỉ cần "nhặt" nó ra
+    const m = customerMap[sdt];
+
+    if (m) {
+        // --- TÌM THẤY ---
+        // Lưu ý: m chính là object {name: "...", points: ...} luôn, không cần Object.values gì cả
+        status.innerText = "★ THÀNH VIÊN: " + m.name;
+        status.className = "text-[8px] font-black text-green-500 uppercase mt-1 text-center";
+    } else {
+        // --- KHÔNG TÌM THẤY ---
+        // Chỉ báo khách mới khi đã nhập đủ dài (ví dụ 10 số) để đỡ nháy loạn xạ
+        if (sdt.length >= 10) {
+            status.innerText = "★ KHÁCH MỚI";
+            status.className = "text-[8px] font-black text-amber-500 uppercase mt-1 text-center";
+        } else {
+            status.innerText = ""; // Chưa nhập xong thì chưa báo gì
+        }
+    }
+}
 function showAppModal(title, msg, icon = '') { document.getElementById('app-modal-title').innerText = title; document.getElementById('app-modal-msg').innerHTML = msg; document.getElementById('app-modal-icon').innerText = icon; document.getElementById('app-modal').classList.remove('hidden'); }
 function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); var parts = timeStr.split(':'); d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0); return d; }
 function startPanelCountdown(endTimeStr) { stopPanelCountdown(); var clockEl = document.getElementById('detail-countdown'); if(!clockEl) return; var timeParts = endTimeStr.split(':'); if(timeParts.length < 2) return; var endDate = new Date(); endDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0); bedCountdownInterval = setInterval(function() { var diff = endDate - new Date(); var isOver = diff < 0; diff = Math.abs(diff); var h = Math.floor(diff / 3600000); var m = Math.floor((diff % 3600000) / 60000); var s = Math.floor((diff % 60000) / 1000); var fmt = v => v < 10 ? "0"+v : v; clockEl.innerText = (isOver ? '-' : '') + fmt(h) + ":" + fmt(m) + ":" + fmt(s); clockEl.className = isOver ? "text-3xl font-black text-red-500 font-mono tracking-tighter" : "text-3xl font-black text-[#006241] font-mono tracking-tighter"; }, 1000); }
@@ -803,6 +834,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
