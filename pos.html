@@ -287,14 +287,16 @@ setInterval(() => {
 
 // --- HÀM KHỞI ĐỘNG (QUAN TRỌNG) ---
 async function loadPosData() {
-    // Chúng ta không gọi API cũ nữa để tránh xung đột
-    console.log("Web App đang chạy chế độ Firebase Realtime.");
-    
-    // Chỉ tắt loading overlay khi Firebase đã tải xong (đã xử lý ở đoạn code Firebase phía trên)
-    // Nếu muốn chắc chắn, có thể thêm dòng này để ẩn loading sau 3 giây phòng hờ:
+    // Không cần làm gì cả vì Firebase tự động chạy rồi.
+    // Chỉ cần tắt loading nếu quá lâu (phòng hờ mạng lag)
+    console.log("App started.");
     setTimeout(() => {
-       document.getElementById('loading-overlay').style.display = 'none';
-    }, 3000);
+        const overlay = document.getElementById('loading-overlay');
+        if(overlay && overlay.style.display !== 'none') {
+             overlay.style.display = 'none';
+             if(menu.length === 0) alert("Không tải được menu. Kiểm tra mạng hoặc Firebase.");
+        }
+    }, 5000); // Tăng lên 5s cho chắc
 }
 
 // Tự động chạy khi mở App
@@ -659,10 +661,112 @@ function renderChart(labels, chartData, type) { const ctx = document.getElementB
 function showAppModal(title, msg, icon = '') { document.getElementById('app-modal-title').innerText = title; document.getElementById('app-modal-msg').innerHTML = msg; document.getElementById('app-modal-icon').innerText = icon; document.getElementById('app-modal').classList.remove('hidden'); }
 // --- HELPER TIME PARSE ---
 function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); var parts = timeStr.split(':'); d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0); return d; }
+// --- CÁC HÀM VẼ GIAO DIỆN (BỔ SUNG) ---
+
+// 1. Vẽ Tabs (Danh mục)
+function renderTabs() {
+    if (!menu || menu.length === 0) return;
+    const cats = ["Tất cả", ...new Set(menu.map(m => m.type))];
+    document.getElementById('tabs-container').innerHTML = cats.map(c => 
+        `<button onclick="filterTab('${c}')" class="category-tab ${c === currentTab ? 'tab-active' : 'bg-white text-gray-400'} capitalize-first">${c}</button>`
+    ).join('');
+}
+
+// 2. Lọc Tab
+function filterTab(c) {
+    currentTab = c;
+    renderTabs();
+    renderMenu();
+}
+
+// 3. Vẽ Menu (Lưới sản phẩm)
+function renderMenu() {
+    const list = document.getElementById('menu-grid');
+    if (!list) return;
+    
+    const filtered = currentTab === "Tất cả" ? menu : menu.filter(m => m.type === currentTab);
+    
+    if (filtered.length === 0) {
+        list.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-10">Không có món nào.</div>';
+        return;
+    }
+
+    list.innerHTML = filtered.map(m => `
+        <div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})" class="bg-white p-5 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col justify-center items-center text-center h-32 active:scale-95 cursor-pointer transition-all">
+            <p class="font-bold text-[#1e3932] menu-item-name text-center text-sm leading-tight mb-2">${m.name}</p>
+            <p class="text-[10px] font-bold text-[#006241]">${m.priceM > 0 ? m.priceM.toLocaleString() : m.priceL.toLocaleString()}đ</p>
+        </div>
+    `).join('');
+}
+
+// 4. Xử lý khi bấm vào món
+function handleItemClick(name, pM, pL) {
+    if(isPaymentMode) return;
+    const vM = Number(pM), vL = Number(pL);
+    if (vM > 0 && vL > 0) {
+        document.getElementById('modal-item-name').innerText = name;
+        document.getElementById('price-m').innerText = vM.toLocaleString() + 'đ';
+        document.getElementById('price-l').innerText = vL.toLocaleString() + 'đ';
+        document.getElementById('btn-size-m').onclick = () => { addToCart(name, 'M', vM); closeSize(); };
+        document.getElementById('btn-size-l').onclick = () => { addToCart(name, 'L', vL); closeSize(); };
+        document.getElementById('size-modal').classList.add('modal-active');
+    } else if (vM > 0) {
+        addToCart(name, 'M', vM);
+    } else if (vL > 0) {
+        addToCart(name, 'L', vL);
+    }
+}
+
+function closeSize() { document.getElementById('size-modal').classList.remove('modal-active'); }
+
+// 5. Thêm vào giỏ hàng
+function addToCart(name, size, price) {
+    const ex = cart.find(i => i.name === name && i.size === size);
+    if (ex) ex.qty++;
+    else cart.push({ name, size, price, qty: 1 });
+    renderCart();
+}
+
+// 6. Vẽ giỏ hàng
+function renderCart() {
+    const list = document.getElementById('cart-list');
+    currentTotal = 0;
+    list.innerHTML = cart.map((i, idx) => {
+        currentTotal += i.price * i.qty;
+        return `<div class="bg-gray-50 p-2.5 rounded-xl flex justify-between items-center shadow-sm border border-white text-xs mb-2">
+            <div class="flex-1 pr-2 text-left"><p class="font-black text-[#1e3932] truncate capitalize-first">${i.name} (${i.size})</p></div>
+            <div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-gray-100">
+                <button onclick="updateQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center font-black text-gray-300 text-lg ${isPaymentMode ? 'hidden': ''}">-</button>
+                <span class="font-black text-[#006241] text-[11px] w-5 text-center">${isPaymentMode?'x': ''}${i.qty}</span>
+                <button onclick="updateQty(${idx}, 1)" class="w-6 h-6 flex items-center justify-center font-black text-[#006241] text-lg ${isPaymentMode ? 'hidden' : ''}">+</button>
+            </div>
+        </div>`;
+    }).join('');
+    document.getElementById('total-price').innerText = currentTotal.toLocaleString() + 'đ';
+    updateSuggestions();
+}
+
+function updateQty(idx, d) {
+    if(isPaymentMode) return;
+    cart[idx].qty += d;
+    if (cart[idx].qty <= 0) cart.splice(idx, 1);
+    renderCart();
+}
+
+function updateSuggestions() {
+    const vals = [50000, 100000, 200000, 500000].filter(v => v >= currentTotal).slice(0, 3);
+    document.getElementById('cash-suggestions').innerHTML = vals.map(v => `<button onclick="quickPaid(${v})" class="bg-white border-2 border-gray-100 px-3 py-1.5 rounded-xl text-[10px] font-bold text-gray-400 text-center">${v.toLocaleString()}</button>`).join('');
+}
+
+function quickPaid(v) { document.getElementById('cash-paid').value = v; calcChange(); }
+function calcChange() { const paid = Number(document.getElementById('cash-paid').value) || currentTotal; document.getElementById('cash-change').innerText = (paid - currentTotal > 0 ? (paid - currentTotal).toLocaleString(): 0) + 'đ'; }
+function setMethod(m) { const isBank = (m === 'Chuyển khoản'); document.getElementById('btn-cash').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${!isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`; document.getElementById('btn-bank').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`; const box = document.getElementById('cash-detail-box'); document.getElementById('cash-paid').value = currentTotal; if (isBank) box.style.pointerEvents = "none"; else box.style.pointerEvents = "auto"; calcChange(); }
+function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart(); }
 </script>
 </body>
 
 </html>
+
 
 
 
