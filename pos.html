@@ -194,7 +194,9 @@ input:focus, select:focus { background-color: #FFFFFF !important; box-shadow: 0 
 <div id="modal-add-booking" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center transition-all"><div class="bg-white w-full max-w-lg rounded-[24px] shadow-2xl overflow-hidden transform scale-100 p-6 max-h-[90vh] overflow-y-auto custom-scrollbar"><div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-4"><div><h3 class="text-xl font-black text-[#1e3932]">Check-in Khách Hàng</h3><p class="text-xs text-gray-400">Vui lòng nhập đầy đủ thông tin theo nội quy</p></div><button onclick="closeBookingModal()" class="bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-full p-2 transition"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button></div><div class="space-y-5"><div class="bg-blue-50 p-4 rounded-xl border border-blue-100 relative"><p class="text-[10px] font-bold text-blue-500 uppercase mb-2 tracking-wider">1. Thông tin người đặt (Bắt buộc)</p><div class="grid grid-cols-3 gap-3"><div class="col-span-1"><label class="block text-xs font-bold text-gray-500 mb-1">SĐT</label><input type="text" id="new_cust_phone" onchange="autoFillCustomer()" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none" placeholder="Nhập SĐT..."></div><div class="col-span-2 relative"><label class="block text-xs font-bold text-gray-500 mb-1">Họ tên</label><input type="text" id="new_cust_name" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold focus:border-blue-500 outline-none" placeholder="Nhập tên khách..."><div id="search-loading" class="hidden absolute right-3 top-8"><svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div></div></div></div><div class="bg-gray-50 p-4 rounded-xl border border-gray-100"><p class="text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wider">2. Người đi cùng (Nếu có)</p><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs font-bold text-gray-500 mb-1">Họ tên</label><input type="text" id="new_comp_name" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-gray-400 outline-none" placeholder="Tên bạn đi cùng"></div><div><label class="block text-xs font-bold text-gray-500 mb-1">SĐT</label><input type="text" id="new_comp_phone" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:border-gray-400 outline-none" placeholder="SĐT bạn..."></div></div></div><div class="bg-amber-50 p-4 rounded-xl border border-amber-100"><p class="text-[10px] font-bold text-amber-600 uppercase mb-2 tracking-wider">3. Thời gian sử dụng</p><div class="flex gap-2 mb-3 bg-white/50 p-1 rounded-lg"><button onclick="switchTimeMode('duration')" id="tab-duration" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#1e3932]">Theo Tiếng</button><button onclick="switchTimeMode('fixed')" id="tab-fixed" class="flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50">Chọn Giờ Về</button></div><div id="mode-duration" class="grid grid-cols-3 gap-2"><button type="button" onclick="selectDuration(60, this)" class="duration-btn bg-[#1e3932] text-white border border-[#1e3932] font-bold py-2 rounded-lg text-xs shadow-md">1 Giờ</button><button type="button" onclick="selectDuration(120, this)" class="duration-btn bg-white border border-gray-200 text-gray-600 font-bold py-2 rounded-lg text-xs hover:bg-gray-100">2 Giờ</button><button type="button" onclick="selectDuration(180, this)" class="duration-btn bg-white border border-gray-200 text-gray-600 font-bold py-2 rounded-lg text-xs hover:bg-gray-100">3 Giờ</button></div><div id="mode-fixed" class="hidden"><div class="flex items-center gap-3"><label class="text-xs font-bold text-gray-600">Khách sẽ về lúc:</label><input type="time" id="custom_end_time" onchange="calculateDurationFromTime()" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-amber-500 focus:border-amber-500 block w-full p-2.5 font-bold" required></div><p class="text-[10px] text-amber-600 mt-2 font-medium italic text-right" id="calculated-time-hint">-- phút sử dụng</p></div><input type="hidden" id="final_duration_minutes" value="60"></div><button onclick="submitNewBooking()" id="btn-submit-booking" class="w-full bg-[#006241] hover:bg-[#004f32] text-white font-bold py-4 rounded-xl shadow-lg transform active:scale-95 transition mt-2 flex justify-center items-center gap-2"><span>XÁC NHẬN & GỌI MÓN</span></button></div></div></div>
 
 <script>
-// --- 1. KẾT NỐI FIREBASE ---
+// =========================================================
+// 1. CẤU HÌNH & KẾT NỐI FIREBASE
+// =========================================================
 const firebaseConfig = {
   apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
   authDomain: "the-cafe-33.firebaseapp.com",
@@ -204,10 +206,16 @@ const firebaseConfig = {
   messagingSenderId: "...",
   appId: "..."
 };
-firebase.initializeApp(firebaseConfig);
+
+// Khởi tạo Firebase an toàn
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const db = firebase.database();
 
-// --- 2. GLOBAL DATA ---
+// =========================================================
+// 2. BIẾN TOÀN CỤC
+// =========================================================
 let menu = []; 
 let historyData = [];
 let cart = [];
@@ -217,62 +225,56 @@ let isPaymentMode = false;
 let myChart = null;
 let selectedRefundItems = [];
 
-// BED VARIABLES
+// Biến quản lý Bed
 var currentBedList = [];
 var selectedBedIndex = -1;
 var bedCountdownInterval = null;
 var pendingBedOrder = null;
 var activeOrderingBedId = null;
 
-// CLOCK
+// Đồng hồ
 setInterval(() => {
-    document.getElementById('clock').innerText = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    const el = document.getElementById('clock');
+    if(el) el.innerText = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }, 1000);
 
-// --- 3. INIT APP & LISTEN FIREBASE ---
+// =========================================================
+// 3. KHỞI ĐỘNG APP (FIX LỖI TREO & LẶP)
+// =========================================================
 window.onload = function() {
-  // --- 3. INIT APP & LISTEN FIREBASE (BẢN FIX LỖI TREO) ---
-window.onload = function() {
-    console.log("🚀 App bắt đầu khởi động...");
+    console.log("🚀 App đang khởi động...");
 
-    // 1. Cài đặt bộ đếm ngược: Nếu 7 giây không tải được thì tự tắt loading và báo lỗi
-    const safetyTimeout = setTimeout(() => {
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay && overlay.style.display !== 'none') {
-            overlay.style.display = 'none';
-            alert("⚠️ Lỗi: Không thể kết nối Firebase sau 7 giây!\n\nHãy kiểm tra:\n1. Tab 'Rules' trên Firebase đã mở chưa?\n2. Mạng internet của bạn.");
+    // 1. Cài đặt "Lối thoát hiểm": Tự tắt loading sau 7 giây nếu mạng lag
+    const safetyTimer = setTimeout(() => {
+        const ol = document.getElementById('loading-overlay');
+        if(ol && ol.style.display !== 'none') {
+            ol.style.display = 'none';
+            console.warn("⚠️ Loading quá lâu, tự động vào trang.");
         }
     }, 7000);
 
     // 2. Lắng nghe Menu từ Firebase
     db.ref('menu').on('value', (snapshot) => {
-        clearTimeout(safetyTimeout); // Nếu tải được thì hủy bộ đếm lỗi
+        clearTimeout(safetyTimer); // Hủy bộ đếm thoát hiểm vì đã kết nối thành công
         const data = snapshot.val();
         
         if (data) {
-            // Xử lý dữ liệu
             menu = Array.isArray(data) ? data : Object.values(data);
-            console.log("✅ Menu đã tải:", menu.length, "món");
-            
-            // Vẽ giao diện
-            if (typeof renderTabs === 'function') renderTabs();
-            if (typeof renderMenu === 'function') renderMenu();
-            
-            // Tắt Loading
-            document.getElementById('loading-overlay').style.display = 'none';
+            console.log(`✅ Đã tải ${menu.length} món.`);
+            renderTabs();
+            renderMenu();
         } else {
-            console.warn("⚠️ Firebase kết nối được nhưng KHÔNG CÓ dữ liệu Menu!");
-            document.getElementById('loading-overlay').style.display = 'none';
-            alert("Dữ liệu Menu trống! Hãy chạy hàm đồng bộ trên Google Sheet.");
+            console.log("⚠️ Menu trên Firebase đang trống!");
         }
-    }, (error) => {
-        // Nếu Firebase báo lỗi (Permission Denied v.v...)
-        console.error("❌ Lỗi Firebase:", error);
+        // Tắt màn hình loading
         document.getElementById('loading-overlay').style.display = 'none';
-        alert("Lỗi quyền truy cập Firebase: " + error.message + "\n\nBạn đã chỉnh Rules thành 'true' chưa?");
+    }, (error) => {
+        console.error("❌ Lỗi Firebase Menu:", error);
+        document.getElementById('loading-overlay').style.display = 'none';
+        alert("Lỗi kết nối: " + error.message);
     });
 
-    // 3. Lắng nghe Bed (Không chặn loading, cứ chạy ngầm)
+    // 3. Lắng nghe Bed (Chạy ngầm để update realtime)
     db.ref('beds').on('value', (snapshot) => {
         const data = snapshot.val();
         currentBedList = [];
@@ -283,36 +285,399 @@ window.onload = function() {
                 currentBedList.push(item);
             });
         }
-        // Nếu đang mở view Bed thì vẽ lại
+        // Nếu đang mở tab Bed thì vẽ lại ngay
         const viewBed = document.getElementById('view-bed');
         if(viewBed && !viewBed.classList.contains('hidden')) {
-            if (typeof renderLeftColumnList === 'function') renderLeftColumnList();
-            if (typeof renderRightColumnMap === 'function') renderRightColumnMap();
+            renderBedBookings(currentBedList);
         }
     });
 };
 
-    // Tải Bed từ Firebase (để cập nhật realtime)
-    db.ref('beds').on('value', (snapshot) => {
-        const data = snapshot.val();
-        // Chuyển data thành mảng và giữ lại key để update sau này
-        currentBedList = [];
-        if(data) {
-            Object.keys(data).forEach(key => {
-                let item = data[key];
-                item.key = key; // Lưu key firebase
-                currentBedList.push(item);
-            });
-        }
-        // Nếu đang mở view Bed thì vẽ lại
-        if(!document.getElementById('view-bed').classList.contains('hidden')) {
-            renderLeftColumnList();
-            renderRightColumnMap();
+// =========================================================
+// 4. MENU & GIỎ HÀNG (CORE FUNCTIONS)
+// =========================================================
+function renderTabs() { 
+    if (!menu || menu.length === 0) return;
+    const cats = ["Tất cả", ...new Set(menu.map(m => m.type))];
+    const container = document.getElementById('tabs-container');
+    if(container) {
+        container.innerHTML = cats.map(c => 
+            `<button onclick="filterTab('${c}')" class="category-tab ${c === currentTab? 'tab-active': 'bg-white text-gray-400'} capitalize-first">${c}</button>`
+        ).join(''); 
+    }
+}
+
+function filterTab(c) { 
+    currentTab = c; renderTabs(); renderMenu(); 
+}
+
+function renderMenu() { 
+    const filtered = currentTab === "Tất cả"? menu: menu.filter(m => m.type === currentTab);
+    const grid = document.getElementById('menu-grid');
+    if (!grid) return;
+    
+    if (filtered.length === 0) { 
+        grid.innerHTML = '<div class="col-span-3 text-center text-gray-400 py-10">Không có món nào.</div>'; 
+        return; 
+    }
+    
+    grid.innerHTML = filtered.map(m => 
+        `<div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})" class="bg-white p-5 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col justify-center items-center text-center h-32 active:scale-95 cursor-pointer transition-all">
+            <p class="font-bold text-[#1e3932] menu-item-name text-center">${m.name}</p>
+            <p class="text-[10px] font-bold text-[#006241] mt-2 text-center">${m.priceM > 0 ? m.priceM.toLocaleString() : m.priceL.toLocaleString()}</p>
+        </div>`
+    ).join('');
+}
+
+function handleItemClick(name, pM, pL) { 
+    if(isPaymentMode) return; 
+    const vM = Number(pM), vL = Number(pL);
+    if (vM > 0 && vL > 0) { 
+        document.getElementById('modal-item-name').innerText = name; 
+        document.getElementById('price-m').innerText = vM.toLocaleString() + 'đ';
+        document.getElementById('price-l').innerText = vL.toLocaleString() + 'đ'; 
+        document.getElementById('btn-size-m').onclick = () => { addToCart(name, 'M', vM); closeSize(); };
+        document.getElementById('btn-size-l').onclick = () => { addToCart(name, 'L', vL); closeSize(); }; 
+        document.getElementById('size-modal').classList.add('modal-active'); 
+    } else if (vM > 0) addToCart(name, 'M', vM); else if (vL > 0) addToCart(name, 'L', vL); 
+}
+
+function closeSize() { document.getElementById('size-modal').classList.remove('modal-active'); }
+
+function addToCart(name, size, price) { 
+    const ex = cart.find(i => i.name === name && i.size === size); 
+    if (ex) ex.qty++; else cart.push({ name, size, price, qty: 1 }); 
+    renderCart(); 
+}
+
+function renderCart() { 
+    const list = document.getElementById('cart-list'); 
+    if (!list) return; 
+    currentTotal = 0;
+    list.innerHTML = cart.map((i, idx) => { 
+        currentTotal += i.price * i.qty; 
+        return `<div class="bg-gray-50 p-2.5 rounded-xl flex justify-between items-center shadow-sm border border-white text-xs mb-1">
+            <div class="flex-1 pr-2 text-left"><p class="font-black text-[#1e3932] truncate capitalize-first">${i.name} (${i.size})</p></div>
+            <div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-gray-100">
+                <button onclick="updateQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center font-black text-gray-300 text-lg ${isPaymentMode ? 'hidden': ''}">-</button>
+                <span class="font-black text-[#006241] text-[11px] w-5 text-center">${isPaymentMode?'x': ''}${i.qty}</span>
+                <button onclick="updateQty(${idx}, 1)" class="w-6 h-6 flex items-center justify-center font-black text-[#006241] text-lg ${isPaymentMode ? 'hidden' : ''}">+</button>
+            </div>
+        </div>`; 
+    }).join('');
+    document.getElementById('total-price').innerText = currentTotal.toLocaleString() + 'đ'; 
+    updateSuggestions(); 
+}
+
+function updateQty(idx, d) { 
+    if(isPaymentMode) return; 
+    cart[idx].qty += d; 
+    if (cart[idx].qty <= 0) cart.splice(idx, 1); 
+    renderCart(); 
+}
+
+// =========================================================
+// 5. THANH TOÁN (PAYMENT)
+// =========================================================
+function completeOrder() {
+    if (cart.length === 0) return showAppModal("Hic!", "Chưa có món nào!", '🛒');
+    let pVal = document.getElementById('cash-paid').value;
+    if (pVal === "" || pVal === "0") pVal = currentTotal;
+    const paid = Number(pVal);
+    if (paid < currentTotal) return alert("Tiền khách đưa chưa đủ!");
+
+    document.getElementById('loading-overlay').style.display = 'flex';
+    var bedIdToSend = ""; var custNameToSend = "Khách vãng lai";
+    if (pendingBedOrder) { bedIdToSend = pendingBedOrder.bedId || "WAITING"; custNameToSend = pendingBedOrder.name; } 
+    else if (activeOrderingBedId) { bedIdToSend = activeOrderingBedId; }
+
+    const orderData = {
+        sdt: document.getElementById('kh-sdt').value || "Khách vãng lai",
+        total: currentTotal, paid: paid, change: Math.max(0, paid - currentTotal),
+        method: document.getElementById('btn-bank').classList.contains('border-[#006241]') ? 'Chuyển khoản' : 'Tiền mặt',
+        items: cart.map(i => `${i.name}(${i.size})x${i.qty}`).join(', '),
+        itemsArray: cart,
+        bedId: bedIdToSend, customerName: custNameToSend,
+        createdAt: new Date().toISOString(),
+        status: "pending_sync"
+    };
+
+    // Đẩy đơn hàng lên Firebase (vào nhánh 'orders')
+    db.ref('orders').push(orderData, (error) => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        if(error) alert("Lỗi Firebase: " + error.message);
+        else {
+            // Reset
+            cart = []; document.getElementById('kh-sdt').value = ""; document.getElementById('sdt-status').innerText = ""; 
+            renderCart();
+            
+            // Xử lý sau khi lưu
+            if (pendingBedOrder) {
+                if (!pendingBedOrder.bedId || pendingBedOrder.bedId == 0) document.getElementById('bed-select-modal').classList.remove('hidden');
+                else { showAppModal("Thành công!", "Đã thêm món cho " + pendingBedOrder.name, '✅'); openBedManager(); }
+            } else {
+                switchView('menu'); 
+                setTimeout(() => { showAppModal("Xong!", "Thanh toán thành công!", '✅'); }, 150);
+            }
         }
     });
-};
+}
 
-// --- 4. NAVIGATION ---
+// Các hàm bổ trợ thanh toán
+function setMethod(m) { 
+    const isBank = (m === 'Chuyển khoản'); 
+    document.getElementById('btn-cash').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${!isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`;
+    document.getElementById('btn-bank').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`;
+    const box = document.getElementById('cash-detail-box'); 
+    document.getElementById('cash-paid').value = currentTotal; 
+    if (isBank) box.style.pointerEvents = "none"; else box.style.pointerEvents = "auto"; 
+    calcChange(); 
+}
+function updateSuggestions() { 
+    const vals = [50000, 100000, 200000, 500000].filter(v => v >= currentTotal).slice(0, 3); 
+    document.getElementById('cash-suggestions').innerHTML = vals.map(v => `<button onclick="quickPaid(${v})" class="bg-white border-2 border-gray-100 px-3 py-1.5 rounded-xl text-[10px] font-bold text-gray-400 text-center">${v.toLocaleString()}</button>`).join(''); 
+}
+function quickPaid(v) { document.getElementById('cash-paid').value = v; calcChange(); }
+function calcChange() { const paid = Number(document.getElementById('cash-paid').value) || currentTotal; document.getElementById('cash-change').innerText = (paid - currentTotal > 0 ? (paid - currentTotal).toLocaleString(): 0) + 'đ'; }
+function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart(); }
+
+// =========================================================
+// 6. LỊCH SỬ & DOANH THU (ĐÃ SỬA LỖI HIỂN THỊ)
+// =========================================================
+function openHistory() {
+    document.getElementById('loading-overlay').style.display = 'flex';
+    switchView('history');
+    
+    // Tìm cả 'orders' và 'order' đề phòng bạn lưu nhầm tên
+    db.ref('orders').limitToLast(100).once('value', snap => {
+        if(!snap.exists()) {
+             // Thử tìm nhánh 'order' nếu 'orders' không có
+             db.ref('order').limitToLast(100).once('value', snap2 => {
+                 processHistoryData(snap2.val());
+             });
+        } else {
+             processHistoryData(snap.val());
+        }
+    });
+}
+
+function processHistoryData(data) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    if(!data) {
+        historyData = [];
+        document.getElementById('history-container').innerHTML = "<div class='text-center text-gray-400 mt-10'>Chưa có đơn hàng nào</div>";
+    } else {
+        // Chuyển đổi dữ liệu
+        historyData = Object.keys(data).map(key => {
+            const o = data[key];
+            const d = new Date(o.createdAt || Date.now());
+            return {
+                ...o,
+                id: key,
+                dateStr: d.toLocaleDateString('en-GB'),
+                timeStr: d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}),
+                fullTime: d.toLocaleString('en-GB'),
+                points: o.points || Math.floor((Number(o.total)||0)/1000)
+            };
+        }).reverse();
+        renderHistoryList(historyData);
+    }
+}
+
+function renderHistoryList(data) { 
+    if(!data || data.length === 0) return;
+    const grouped = data.reduce((acc, obj) => { 
+        const key = obj.dateStr; if (!acc[key]) acc[key] = []; acc [key].push(obj); return acc; 
+    }, {}); 
+    
+    let html = ""; 
+    Object.keys(grouped).sort((a,b) => {
+         const da = a.split('/').reverse().join(''); const db = b.split('/').reverse().join(''); return db.localeCompare(da);
+    }).forEach(date => { 
+        html += `<div class="mb-4 text-left"><h3 class="brand-font text-[#006241] text-[10px] uppercase tracking-widest mb-2 ml-1 text-left">📅 Ngày ${date}</h3><div class="space-y-1.5 text-left">`; 
+        grouped[date].forEach((h) => { 
+            const realIdx = historyData.findIndex(item => item.id === h.id);
+            const valColor = h.total < 0? 'text-red-500': 'text-[#006241]'; 
+            html += `<div id="h-item-${realIdx}" onclick="selectBill(${realIdx})" class="p-3 bg-white rounded-2xl border-2 border-transparent shadow-sm flex justify-between items-center cursor-pointer active:scale-95 text-xs text-left">
+                <div class="min-w-0 text-left">
+                    <p class="font-black text-[#1e3932] uppercase text-left">${h.timeStr}</p>
+                    <p class="text-[8px] text-gray-400 font-bold truncate w-20 text-left">${h.sdt}</p>
+                </div>
+                <p class="font-black ${valColor} text-right">${Number(h.total).toLocaleString()}</p>
+            </div>`; 
+        }); 
+        html += '</div></div>'; 
+    });
+    document.getElementById('history-container').innerHTML = html; 
+}
+
+function selectBill(idx) { 
+    // Reset highlight
+    document.querySelectorAll('[id^="h-item-"]').forEach(el => el.classList.remove('history-item-active')); 
+    const el = document.getElementById(`h-item-${idx}`);
+    if(el) el.classList.add('history-item-active'); 
+
+    const h = historyData[idx]; 
+    const items = h.items ? String(h.items).split(',') : []; 
+    let tQty = 0; 
+    
+    const itemsHtml = items.map((item) => { 
+        const raw = item.trim(); 
+        const lastX = raw.lastIndexOf('x'); 
+        if (lastX === -1) return ''; 
+        
+        const namePartFull = raw.substring(0, lastX).trim(); 
+        const qty = parseInt(raw.substring(lastX + 1)) || 1; 
+        tQty += qty; 
+        
+        let nameOnly = namePartFull, sizePart = ""; 
+        if (namePartFull.includes('(')) { 
+            const lb = namePartFull.lastIndexOf('('); 
+            nameOnly = namePartFull.substring(0, lb).trim(); 
+            sizePart = namePartFull.substring(lb + 1, namePartFull.lastIndexOf(')')); 
+        } 
+        
+        const m = menu.find(mi => mi.name.toLowerCase() === nameOnly.toLowerCase()); 
+        const uP = m ? (sizePart === 'L'? m.priceL: m.priceM): 0; 
+        const subTotal = uP * qty; 
+        
+        return `<div class="receipt-line p-2 rounded-xl transition-all border-l-4 border-transparent hover:bg-gray-50 text-left">
+            <div class="flex-1 mr-4 text-left">
+                <div class="flex items-start gap-2 text-left">
+                    <span class="font-black text-[#006241] text-lg text-left">${qty}x</span>
+                    <div class="flex flex-col text-left">
+                        <span class="font-black text-[#1e3932] text-sm capitalize-first leading-tight text-left">${nameOnly} ${sizePart ? `<span class="text-green-500 font-black text-[12px] ml-1">[${sizePart}]</span>`: ""}</span>
+                        <span class="text-[9px] text-gray-400 font-bold italic text-left">Đơn giá: ${uP.toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="text-right font-black text-[#1e3932] text-base pt-1 text-right">${subTotal.toLocaleString()}</div>
+        </div>`; 
+    }).join(''); 
+
+    document.getElementById('history-detail-empty').classList.add('hidden'); 
+    const detail = document.getElementById('history-detail-content'); 
+    detail.classList.remove('hidden'); 
+    
+    detail.innerHTML = `
+    <div class="grid grid-cols-12 gap-3 h-full overflow-hidden text-left">
+        <div class="col-span-4 border-r border-gray-100 pr-3 flex flex-col pt-2 text-left">
+            <h3 class="brand-font text-3xl text-[#006241] leading-none mb-1 text-left">The cafe 33</h3>
+            <p class="text-[8px] text-gray-400 font-bold uppercase mb-4 tracking-widest text-left">Hóa đơn điện tử</p>
+            <div class="space-y-2 text-left">
+                <div class="p-2 bg-gray-50 rounded-xl text-left"><p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thời gian</p><p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.fullTime}</p></div>
+                <div class="p-2 bg-gray-50 rounded-xl text-left"><p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Khách hàng</p><p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.sdt}</p></div>
+                <div class="p-2 bg-gray-50 rounded-xl border-l-4 ${h.total < 0? 'border-red-500 text-left': 'border-[#006241] text-left'} text-left"><p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thanh toán</p><p class="font-black ${h.total < 0? 'text-red-500 text-left': 'text-[#006241] text-left'} text-[10px] uppercase text-left">${h.method}</p></div>
+            </div>
+            <div class="p-3 bg-amber-50 rounded-xl text-center border-2 border-amber-100 mt-auto mb-2 text-center"><p class="text-amber-600 font-black text-[9px] uppercase italic tracking-tighter text-center"> +${h.points} ĐIỂM</p></div>
+        </div>
+        <div class="col-span-8 flex flex-col h-full pt-2 overflow-hidden text-left">
+            <div id="refund-items-list" class="flex-1 overflow-y-auto pr-1 space-y-0.5 text-left">${itemsHtml}</div>
+            <div class="mt-4 pt-4 border-t-2 border-[#006241] flex flex-col items-end flex-shrink-0 text-right">
+                <div class="flex justify-between w-full items-center mb-1 text-left"><span class="text-[10px] font-bold text-gray-400 uppercase italic text-left">Số lượng: ${tQty} món</span><span class="brand-font text-[#1e3932] text-xl uppercase font-black opacity-30 text-right">Tổng bill</span></div>
+                <div class="font-black text-3xl leading-none text-right ${h.total < 0? 'text-red-500 text-right': 'text-[#006241] text-right'}">${Number(h.total).toLocaleString()}<span class="text-lg ml-1 text-right">đ</span></div>
+            </div>
+        </div>
+    </div>`; 
+}
+
+function openRevenue() {
+    document.getElementById('loading-overlay').style.display = 'flex';
+    switchView('revenue');
+    
+    // Gọi cả 2 nhánh 'orders' và 'order' để gộp dữ liệu tính toán
+    Promise.all([
+        db.ref('orders').once('value'),
+        db.ref('order').once('value')
+    ]).then(snapshots => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        let allOrders = [];
+        snapshots.forEach(snap => {
+            if(snap.exists()) allOrders = allOrders.concat(Object.values(snap.val()));
+        });
+        
+        const stats = calculateStats(allOrders, 'week');
+        renderDailyRevenueList(stats.dailyList);
+        renderRevenueDashboard(stats, 'week');
+    });
+}
+
+// Logic tính toán doanh thu (như cũ)
+function calculateStats(orders, filterType) {
+    const now = new Date();
+    let startTime, endTime;
+    const day = now.getDay() || 7; 
+    startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
+    endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999);
+
+    let stats = { drinkTotal: 0, snackTotal: 0, labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'], chartData: [0,0,0,0,0,0,0], dailyList: {}, today: 0, yesterday: 0 };
+    const todayStr = now.toLocaleDateString('en-GB');
+    const yest = new Date(now); yest.setDate(now.getDate() - 1); const yestStr = yest.toLocaleDateString('en-GB');
+
+    orders.forEach(o => {
+        const d = new Date(o.createdAt || Date.now());
+        const dateKey = d.toLocaleDateString('en-GB');
+        const amount = Number(o.total) || 0;
+        if (amount <= 0) return;
+
+        if (dateKey === todayStr) stats.today += amount;
+        if (dateKey === yestStr) stats.yesterday += amount;
+
+        if (d >= startTime && d <= endTime) {
+            let isSnack = false; if(String(o.items).toLowerCase().match(/hạt|bánh|snack/)) isSnack = true;
+            if(isSnack) stats.snackTotal += amount; else stats.drinkTotal += amount;
+            if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
+            stats.dailyList[dateKey].drink += amount;
+            let idx = (d.getDay() + 6) % 7;
+            if (idx >= 0) stats.chartData[idx] += amount;
+        }
+    });
+    return stats;
+}
+
+function renderDailyRevenueList(list) { 
+    let html = '<div class="mb-4 text-left"><h3 class="brand-font text-[#006241] text-[10px] uppercase tracking-widest mb-2 ml-1 text-left">Doanh thu</h3><div class="space-y-1.5 text-left">'; 
+    Object.keys(list).sort((a,b) => { const da = a.split('/').reverse().join(''); const db = b.split('/').reverse().join(''); return db.localeCompare(da); }).forEach(date => { 
+        html += `<div class="p-3 bg-white rounded-2xl shadow-sm text-left"><p class="font-black text-[#1e3932] text-[10px] uppercase text-left">📅 ${date}</p><p class="text-[11px] font-black text-[#006241] mt-1 text-left">${list[date].drink.toLocaleString()}đ</p></div>`; 
+    }); 
+    html += '</div></div>'; 
+    document.getElementById('history-container').innerHTML = html; 
+}
+
+function renderRevenueDashboard(data, type) { 
+    document.getElementById('history-detail-empty').classList.add('hidden'); 
+    const detail = document.getElementById('history-detail-content'); 
+    detail.classList.remove('hidden'); 
+    const diff = data.today - data.yesterday; 
+    const dColor = diff >= 0 ? 'text-green-500': 'text-red-500'; 
+    const dIcon = diff >= 0 ? '▲': '▼'; 
+    
+    detail.innerHTML = `
+    <div class="flex flex-col h-full space-y-4 text-left">
+        <div class="flex gap-2 items-center text-left"><button class="px-3 py-1.5 bg-[#006241] text-white rounded-lg font-black text-[9px] uppercase text-left">Tuần</button></div>
+        <div class="grid grid-cols-3 gap-3 text-left">
+            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-[#006241] text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Nước (Tổng)</p><p class="brand-font text-2xl text-[#006241] text-center">${data.drinkTotal.toLocaleString()}</p></div>
+            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-amber-400 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Ăn vặt</p><p class="brand-font text-xl text-amber-600 text-center">${data.snackTotal.toLocaleString()}</p></div>
+            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-blue-400 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Vs Hôm qua</p><p class="font-black text-sm ${dColor} text-center">${dIcon} ${Math.abs(diff).toLocaleString()}</p></div>
+        </div>
+        <div class="flex-1 bg-white p-4 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col relative overflow-hidden text-left"><canvas id="revenueChart"></canvas></div>
+    </div>`; 
+    setTimeout(() => renderChart(data.labels, data.chartData, type), 200); 
+}
+
+function renderChart(labels, chartData, type) { 
+    const ctx = document.getElementById('revenueChart').getContext('2d'); 
+    if (myChart) myChart.destroy(); 
+    myChart = new Chart(ctx, { 
+        type: 'bar', plugins: [ChartDataLabels], 
+        data: { labels, datasets: [{ data: chartData, backgroundColor: '#006241', borderRadius: 6 }] }, 
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', formatter: (v) => v != 0 ? (v/1000).toFixed(0) + 'k': '', font: { weight: 'bold', size: 9 }, color: '#006241'} }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 8} } } } } 
+    }); 
+}
+
+// =========================================================
+// 7. CÁC HÀM KHÁC (NAV, SWITCH VIEW...)
+// =========================================================
 function switchView(v) {
     isPaymentMode = (v === 'payment');
     ['menu', 'payment', 'history', 'bed'].forEach(id => {
@@ -321,7 +686,6 @@ function switchView(v) {
         let btn = document.getElementById('btn-nav-' + id);
         if(btn) btn.className = 'bg-gray-100 text-gray-400 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-all';
     });
-
     let activeBtnClass = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
     if (v === 'revenue' || v === 'history') {
         document.getElementById('view-history').classList.remove('hidden');
@@ -333,10 +697,9 @@ function switchView(v) {
     } else {
         document.getElementById('view-' + v).classList.remove('hidden');
     }
-
     document.getElementById('sidebar-cart').classList.toggle('hidden', v !== 'menu' && v !== 'payment');
     document.getElementById('category-bar').classList.toggle('hidden', v !== 'menu');
-
+    
     if (v !== 'payment') {
         document.body.classList.remove('dark-theme');
         document.getElementById('header-bar')?.classList.remove('dark-theme');
@@ -351,360 +714,38 @@ function switchView(v) {
     }
 }
 
-// --- 5. MENU & CART FUNCTIONS ---
-function renderTabs() { 
-    if (!menu || menu.length === 0) return;
-    const cats = ["Tất cả", ...new Set(menu.map(m => m.type))];
-    document.getElementById('tabs-container').innerHTML = cats.map(c => `<button onclick="filterTab('${c}')" class="category-tab ${c === currentTab? 'tab-active': 'bg-white text-gray-400'} capitalize-first">${c}</button>`).join(''); 
-}
-function filterTab(c) { currentTab = c; renderTabs(); renderMenu(); }
-function renderMenu() { 
-    const filtered = currentTab === "Tất cả"? menu: menu.filter(m => m.type === currentTab);
-    document.getElementById('menu-grid').innerHTML = filtered.map(m => `<div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})" class="bg-white p-5 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col justify-center items-center text-center h-32 active:scale-95 cursor-pointer transition-all"><p class="font-bold text-[#1e3932] menu-item-name text-center">${m.name}</p><p class="text-[10px] font-bold text-[#006241] mt-2 text-center">${m.priceM > 0 ? m.priceM.toLocaleString() : m.priceL.toLocaleString()}</p></div>`).join('');
-}
-function handleItemClick(name, pM, pL) { 
-    if(isPaymentMode) return; 
-    const vM = Number(pM), vL = Number(pL);
-    if (vM > 0 && vL > 0) { 
-        document.getElementById('modal-item-name').innerText = name; 
-        document.getElementById('price-m').innerText = vM.toLocaleString() + 'đ';
-        document.getElementById('price-l').innerText = vL.toLocaleString() + 'đ'; 
-        document.getElementById('btn-size-m').onclick = () => { addToCart(name, 'M', vM); closeSize(); };
-        document.getElementById('btn-size-l').onclick = () => { addToCart(name, 'L', vL); closeSize(); }; 
-        document.getElementById('size-modal').classList.add('modal-active'); 
-    } else if (vM > 0) addToCart(name, 'M', vM); else if (vL > 0) addToCart(name, 'L', vL); 
-}
-function closeSize() { document.getElementById('size-modal').classList.remove('modal-active'); }
-function addToCart(name, size, price) { const ex = cart.find(i => i.name === name && i.size === size); if (ex) ex.qty++; else cart.push({ name, size, price, qty: 1 }); renderCart(); }
-function renderCart() { 
-    const list = document.getElementById('cart-list'); currentTotal = 0;
-    list.innerHTML = cart.map((i, idx) => { currentTotal += i.price * i.qty; return `<div class="bg-gray-50 p-2.5 rounded-xl flex justify-between items-center shadow-sm border border-white text-xs mb-1"><div class="flex-1 pr-2 text-left"><p class="font-black text-[#1e3932] truncate capitalize-first">${i.name} (${i.size})</p></div><div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-gray-100"><button onclick="updateQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center font-black text-gray-300 text-lg ${isPaymentMode ? 'hidden': ''}">-</button><span class="font-black text-[#006241] text-[11px] w-5 text-center">${isPaymentMode?'x': ''}${i.qty}</span><button onclick="updateQty(${idx}, 1)" class="w-6 h-6 flex items-center justify-center font-black text-[#006241] text-lg ${isPaymentMode ? 'hidden' : ''}">+</button></div></div>`; }).join('');
-    document.getElementById('total-price').innerText = currentTotal.toLocaleString() + 'đ'; updateSuggestions(); 
-}
-function updateQty(idx, d) { if(isPaymentMode) return; cart[idx].qty += d; if (cart[idx].qty <= 0) cart.splice(idx, 1); renderCart(); }
-function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart(); }
-function setMethod(m) { const isBank = (m === 'Chuyển khoản'); document.getElementById('btn-cash').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${!isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`; document.getElementById('btn-bank').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`; const box = document.getElementById('cash-detail-box'); document.getElementById('cash-paid').value = currentTotal; if (isBank) box.style.pointerEvents = "none"; else box.style.pointerEvents = "auto"; calcChange(); }
-function updateSuggestions() { const vals = [50000, 100000, 200000, 500000].filter(v => v >= currentTotal).slice(0, 3); document.getElementById('cash-suggestions').innerHTML = vals.map(v => `<button onclick="quickPaid(${v})" class="bg-white border-2 border-gray-100 px-3 py-1.5 rounded-xl text-[10px] font-bold text-gray-400 text-center">${v.toLocaleString()}</button>`).join(''); }
-function quickPaid(v) { document.getElementById('cash-paid').value = v; calcChange(); }
-function calcChange() { const paid = Number(document.getElementById('cash-paid').value) || currentTotal; document.getElementById('cash-change').innerText = (paid - currentTotal > 0 ? (paid - currentTotal).toLocaleString(): 0) + 'đ'; }
-function checkSdtLive() { const sdt = document.getElementById('kh-sdt').value; if (sdt.length >= 10) { 
-    // Thay thế google.script.run bằng Firebase query
-    db.ref('members').orderByChild('phone').equalTo(sdt).once('value', snap => {
-        const status = document.getElementById('sdt-status');
-        if(snap.exists()) {
-            const m = Object.values(snap.val())[0];
-            status.innerText = "★ THÀNH VIÊN: " + m.name; status.className = "text-[8px] font-black text-green-500 uppercase mt-1 text-center"; 
-        } else {
-            status.innerText = "★ KHÁCH MỚI"; status.className = "text-[8px] font-black text-amber-500 uppercase mt-1 text-center"; 
-        }
-    });
-} }
-
-// --- 6. BED MANAGER ---
+// Bed Functions
 function openBedManager() {
     document.getElementById('loading-overlay').style.display = 'flex';
     switchView('bed');
     var dateEl = document.getElementById('today-date-display');
     if(dateEl) dateEl.innerText = new Date().toLocaleDateString('vi-VN');
-    
-    // Load data from Firebase (Realtime, already listening in window.onload)
-    // Just refresh rendering
     db.ref('beds').once('value').then(() => {
         document.getElementById('loading-overlay').style.display = 'none';
         renderBedBookings(currentBedList);
     });
 }
-
-function renderBedBookings(list) {
-    // Lọc bed cho ngày hôm nay nếu cần (tạm thời hiển thị hết)
-    selectedBedIndex = -1;
-    document.getElementById('detail-empty-state')?.classList.remove('hidden');
-    document.getElementById('detail-content-panel')?.classList.add('hidden');
-    stopPanelCountdown();
-    renderLeftColumnList();
-    renderRightColumnMap();
-}
-
-function renderLeftColumnList() {
-    var container = document.getElementById('col-left-list');
-    if(!container) return;
-    if (!currentBedList || currentBedList.length === 0) { container.innerHTML = '<div class="text-center text-gray-300 text-[10px] py-10">Trống</div>'; return; }
-    container.innerHTML = currentBedList.map(function(b, index) {
-        var isDone = (b.status && b.status.includes('đã xong'));
-        var isCancelled = (b.status && b.status.includes('đã hủy'));
-        var isActive = (index === selectedBedIndex);
-        var hasBed = (b.bedId && b.bedId.toString().trim() !== "");
-        var wrapperClass = "cursor-pointer p-3 rounded-xl transition-all mb-2 border " + (isActive ? "bg-[#1e3932] border-[#1e3932] text-white shadow-md scale-[1.02]" : (isCancelled ? "bg-red-50 border-red-100 text-red-800 opacity-80" : (isDone ? "bg-gray-100 border-transparent text-gray-400" : "bg-white border-gray-100 text-gray-600 hover:bg-gray-50")));
-        var statusDot = isCancelled ? "bg-red-500" : (isDone ? "bg-gray-400" : (hasBed ? "bg-green-500" : "bg-amber-400 animate-pulse"));
-        var timeDisplay = isDone ? `Đã trả: ${b.end}` : (isCancelled ? `ĐÃ HỦY LỊCH` : `${b.start} - ${b.end}`);
-        return `<div onclick="selectBedItem(${index})" class="${wrapperClass}"><div class="flex justify-between items-center mb-1"><span class="font-bold text-xs opacity-80">${hasBed ? `BED ${b.bedId}` : `CHỜ XẾP`}</span><div class="w-2 h-2 rounded-full ${statusDot}"></div></div><div class="font-bold text-sm truncate ${isDone || isCancelled ? 'opacity-60':''}">${b.name}</div><div class="text-[10px] font-mono flex justify-between opacity-70"><span>${timeDisplay}</span></div></div>`;
-    }).join('');
-}
-
-function renderRightColumnMap() {
-    var container = document.getElementById('vertical-map-container');
-    if(!container) return;
-    var html = '';
-    for (var i = 1; i <= 4; i++) {
-        var booking = currentBedList.find(b => b.bedId == i && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy'));
-        var boxStyle = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "bg-green-500 border-green-600 text-white shadow-md ring-2 ring-green-100 hover:scale-105 cursor-pointer" : "bg-amber-50 border-amber-300 text-amber-500 hover:scale-105 cursor-pointer") : "bg-gray-50 border-gray-200 text-gray-300";
-        var label = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "ACTIVE" : "ĐẶT") : "TRỐNG";
-        var actionAttr = booking ? `onclick="selectBedFromMap(${i})"` : "";
-        html += `<div ${actionAttr} class="flex-1 rounded-xl border-2 border-dashed ${boxStyle} flex flex-col items-center justify-center transition-all min-h-[50px] mb-2 relative group"><span class="text-lg font-black">0${i}</span><span class="text-[8px] font-bold tracking-wider">${label}</span>${booking ? `<div class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity"><span class="text-[10px] font-bold text-white">Xem</span></div>` : ''}</div>`;
-    }
-    container.innerHTML = html;
-}
-
-function selectBedFromMap(bedId) {
-    var index = currentBedList.findIndex(b => b.bedId == bedId && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy'));
-    if (index !== -1) { selectBedItem(index); var listItem = document.getElementById('col-left-list').children[index]; if(listItem) listItem.scrollIntoView({behavior: 'smooth', block: 'center'}); }
-}
-
-function selectBedItem(index) {
-    selectedBedIndex = index; renderLeftColumnList();
-    var data = currentBedList[index];
-    var panel = document.getElementById('detail-content-panel');
-    var empty = document.getElementById('detail-empty-state');
-    var isDone = (data.status && data.status.includes('đã xong'));
-    var isCancelled = (data.status && data.status.includes('đã hủy'));
-    var isActive = (data.status && (data.status.includes('đang dùng') || data.status.includes('active')));
-    var hasBed = (data.bedId && data.bedId.toString().trim() !== "");
-
-    if(empty) empty.classList.add('hidden');
-    if(panel) { panel.classList.remove('hidden'); panel.classList.add('flex'); }
-
-    document.getElementById('detail-bed-name').innerText = hasBed ? `BED ${data.bedId}` : "CHỜ XẾP";
-    document.getElementById('detail-status-badge').innerText = isDone ? "ĐÃ XONG" : (isCancelled ? "ĐÃ HỦY" : (isActive ? "ACTIVE" : "CHỜ KHÁCH"));
-    document.getElementById('detail-cust-name').innerText = data.name;
-    document.getElementById('detail-cust-phone').innerText = data.phone;
-    document.getElementById('detail-start').innerText = data.start;
-    document.getElementById('detail-end').innerText = data.end;
-    document.getElementById('detail-comp-name').innerText = data.compName || "Chưa có";
-    document.getElementById('detail-comp-phone').innerText = data.compPhone || "--";
-
-    var rowCheckout = document.getElementById('row-checkout-time');
-    var actionBtns = document.getElementById('detail-action-buttons');
-    var timerBox = document.getElementById('detail-timer-box');
-    var wrapperCancel = document.getElementById('wrapper-btn-cancel');
-
-    if (isDone || isCancelled) {
-        if(rowCheckout) { rowCheckout.classList.remove('hidden'); document.getElementById('detail-real-end').innerText = isCancelled ? "Đã hủy" : data.end; }
-        if(actionBtns) actionBtns.classList.add('hidden');
-        if(timerBox) timerBox.classList.add('hidden');
-        if(wrapperCancel) wrapperCancel.classList.add('hidden');
-        stopPanelCountdown();
-    } else {
-        if(rowCheckout) rowCheckout.classList.add('hidden');
-        if(actionBtns) actionBtns.classList.remove('hidden');
-        if(wrapperCancel) wrapperCancel.classList.remove('hidden');
-        
-        var btnOrder = document.getElementById('btn-action-order');
-        var btnCheckout = document.getElementById('btn-action-checkout');
-        var canInteract = true;
-        var timeMsg = "";
-
-        if (!isActive) {
-            var now = new Date(); var startObj = parseTimeObj(data.start);
-            if (startObj) {
-                var diffMinutes = (now - startObj) / 60000;
-                if (diffMinutes < -30) { canInteract = false; timeMsg = `(Sớm ${Math.abs(Math.round(diffMinutes))}p)`; }
-                else if (diffMinutes > 50) { canInteract = false; timeMsg = `(Quá ${Math.round(diffMinutes)}p)`; }
-            }
-        }
-
-        if (btnOrder) {
-            btnOrder.disabled = !canInteract;
-            btnOrder.className = canInteract ? "py-3 rounded-xl bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 transition text-xs flex justify-center items-center gap-1" : "py-3 rounded-xl bg-gray-100 text-gray-400 font-bold cursor-not-allowed text-xs flex justify-center items-center gap-1";
-            var span = btnOrder.querySelector('span'); if(span) span.innerText = canInteract ? "☕ Gọi Món" : "⛔ " + timeMsg;
-            btnOrder.onclick = function() { showBedDetail(data.bedId); };
-        }
-
-        if (btnCheckout) {
-            if (!hasBed) {
-                 btnCheckout.disabled = !canInteract;
-                 btnCheckout.innerHTML = canInteract ? '<span>🛏️ Xếp Bed Ngay</span>' : `<span>⛔ ${timeMsg}</span>`;
-                 btnCheckout.onclick = function() { if(!canInteract) return; pendingBedOrder = data; document.getElementById('bed-select-modal').classList.remove('hidden'); };
-            } else {
-                 btnCheckout.disabled = false;
-                 btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
-                 btnCheckout.onclick = function() {
-                    if (confirm(`Xác nhận khách đã xong và thanh toán?`)) {
-                        btnCheckout.innerHTML = 'Wait...';
-                        // UPDATE FIREBASE
-                        db.ref('beds/' + data.key).update({status: 'đã xong', endTime: new Date().toLocaleTimeString()}, (err) => {
-                            if(!err) openBedManager();
-                        });
-                    }
-                };
-            }
-        }
-        if (hasBed && data.end) { if(timerBox) timerBox.classList.remove('hidden'); startPanelCountdown(data.end); } else { stopPanelCountdown(); }
-    }
-    
-    var btnCancel = document.getElementById('btn-action-cancel');
-    if(btnCancel) {
-        btnCancel.onclick = function() {
-            if (confirm(`⚠️ CẢNH BÁO: Hủy lịch của khách ${data.name}?\n(Sẽ không tính doanh thu)`)) {
-                btnCancel.innerHTML = "Đang hủy..."; btnCancel.disabled = true;
-                db.ref('beds/' + data.key).update({status: 'đã hủy'}, (err) => {
-                    if(!err) openBedManager();
-                });
-            }
-        };
-    }
-}
-
-// --- 7. ORDER & PAYMENT ---
-function showBedDetail(bedId) {
-    var booking = null;
-    if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId);
-    if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex];
-    if (!booking) { alert("Vui lòng chọn khách hàng trong danh sách trước!"); return; }
-
-    activeOrderingBedId = bedId; pendingBedOrder = booking; 
-    switchView('menu');
-
-    setTimeout(function() {
-        var cartInfo = document.getElementById('cart-bed-info');
-        var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between');
-        if (!cartInfo && headerContainer) { cartInfo = document.createElement('div'); cartInfo.id = 'cart-bed-info'; headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling); }
-        if (cartInfo) {
-            var guestName = booking.name || "Khách hàng";
-            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1";
-            if (booking.bedId && booking.bedId != 0) { cartInfo.innerText = `🟢 BED 0${booking.bedId} - ${guestName}`; cartInfo.style.color = "#006241"; } 
-            else { cartInfo.innerText = `🟠 KHÁCH CHỜ - ${guestName}`; cartInfo.style.color = "#d97706"; }
-        }
-    }, 50);
-}
-
-function completeOrder() {
-    if (cart.length === 0) return showAppModal("Hic!", "Chưa có món nào!", '🛒');
-    let pVal = document.getElementById('cash-paid').value;
-    if (pVal === "" || pVal === "0") pVal = currentTotal;
-    const paid = Number(pVal);
-    if (paid < currentTotal) return alert("Tiền khách đưa chưa đủ!");
-
-    document.getElementById('loading-overlay').style.display = 'flex';
-    var bedIdToSend = ""; var custNameToSend = "Khách vãng lai";
-    if (pendingBedOrder) { bedIdToSend = pendingBedOrder.bedId || "WAITING"; custNameToSend = pendingBedOrder.name; } 
-    else if (activeOrderingBedId) { bedIdToSend = activeOrderingBedId; }
-
-    const order = {
-        sdt: document.getElementById('kh-sdt').value || "Khách vãng lai",
-        total: currentTotal, paid: paid, change: Math.max(0, paid - currentTotal),
-        method: document.getElementById('btn-bank').classList.contains('border-[#006241]') ? 'Chuyển khoản' : 'Tiền mặt',
-        items: cart.map(i => `${i.name}(${i.size})x${i.qty}`).join(', '),
-        itemsArray: cart,
-        bedId: bedIdToSend, customerName: custNameToSend,
-        createdAt: new Date().toISOString()
-    };
-
-    // PUSH FIREBASE
-    db.ref('orders').push(order, (error) => {
-        document.getElementById('loading-overlay').style.display = 'none';
-        if (error) alert("Lỗi: " + error.message);
-        else {
-            cart = []; document.getElementById('kh-sdt').value = ""; document.getElementById('sdt-status').innerText = ""; renderCart();
-            if (pendingBedOrder) {
-                if (!pendingBedOrder.bedId || pendingBedOrder.bedId == 0) document.getElementById('bed-select-modal').classList.remove('hidden');
-                else { showAppModal("Thành công!", "Đã thêm món cho " + pendingBedOrder.name, '✅'); openBedManager(); }
-            } else {
-                switchView('menu'); setTimeout(() => { showAppModal("Xong!", "Thanh toán thành công!", '✅'); }, 150);
-            }
-        }
-    });
-}
-
-function finalizeBedCheckIn(bedId) {
-    if (!pendingBedOrder) return;
-    const isBusy = currentBedList.find(b => (b.status.includes('đang dùng') || b.status.includes('active')) && b.bedId == bedId);
-    if (isBusy) return alert("Bed này đang có khách!");
-
-    var now = new Date(); var startObj = parseTimeObj(pendingBedOrder.start); var endObj = parseTimeObj(pendingBedOrder.end);
-    var newEndTimeStr = pendingBedOrder.end; 
-
-    if (startObj && endObj) {
-        var diffMinutes = (now - startObj) / 60000;
-        if (diffMinutes < 0) {
-            endObj.setMinutes(endObj.getMinutes() + Math.round(diffMinutes));
-            newEndTimeStr = ("0" + endObj.getHours()).slice(-2) + ":" + ("0" + endObj.getMinutes()).slice(-2);
-        }
-    }
-
-    document.getElementById('bed-select-modal').classList.add('hidden');
-    document.getElementById('loading-overlay').style.display = 'flex';
-
-    // Update Firebase
-    db.ref('beds/' + pendingBedOrder.key).update({status: 'active', bedId: bedId, end: newEndTimeStr}, (err) => {
-        document.getElementById('loading-overlay').style.display = 'none';
-        if(!err) {
-            if (diffMinutes < 0) alert(`Khách đến sớm ${Math.abs(Math.round(diffMinutes))} phút.\nGiờ trả Bed đã được đẩy sớm lên: ${newEndTimeStr}`);
-            pendingBedOrder = null; isPaymentMode = false; openBedManager();
-        }
-    });
-}
-
+function renderBedBookings(list) { selectedBedIndex = -1; document.getElementById('detail-empty-state')?.classList.remove('hidden'); document.getElementById('detail-content-panel')?.classList.add('hidden'); stopPanelCountdown(); renderLeftColumnList(); renderRightColumnMap(); }
+function renderLeftColumnList() { var container = document.getElementById('col-left-list'); if(!container) return; if (!currentBedList || currentBedList.length === 0) { container.innerHTML = '<div class="text-center text-gray-300 text-[10px] py-10">Trống</div>'; return; } container.innerHTML = currentBedList.map(function(b, index) { var isDone = (b.status && b.status.includes('đã xong')); var isCancelled = (b.status && b.status.includes('đã hủy')); var isActive = (index === selectedBedIndex); var hasBed = (b.bedId && b.bedId.toString().trim() !== ""); var wrapperClass = "cursor-pointer p-3 rounded-xl transition-all mb-2 border " + (isActive ? "bg-[#1e3932] border-[#1e3932] text-white shadow-md scale-[1.02]" : (isCancelled ? "bg-red-50 border-red-100 text-red-800 opacity-80" : (isDone ? "bg-gray-100 border-transparent text-gray-400" : "bg-white border-gray-100 text-gray-600 hover:bg-gray-50"))); var statusDot = isCancelled ? "bg-red-500" : (isDone ? "bg-gray-400" : (hasBed ? "bg-green-500" : "bg-amber-400 animate-pulse")); var timeDisplay = isDone ? `Đã trả: ${b.end}` : (isCancelled ? `ĐÃ HỦY LỊCH` : `${b.start} - ${b.end}`); return `<div onclick="selectBedItem(${index})" class="${wrapperClass}"><div class="flex justify-between items-center mb-1"><span class="font-bold text-xs opacity-80">${hasBed ? `BED ${b.bedId}` : `CHỜ XẾP`}</span><div class="w-2 h-2 rounded-full ${statusDot}"></div></div><div class="font-bold text-sm truncate ${isDone || isCancelled ? 'opacity-60':''}">${b.name}</div><div class="text-[10px] font-mono flex justify-between opacity-70"><span>${timeDisplay}</span></div></div>`; }).join(''); }
+function renderRightColumnMap() { var container = document.getElementById('vertical-map-container'); if(!container) return; var html = ''; for (var i = 1; i <= 4; i++) { var booking = currentBedList.find(b => b.bedId == i && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); var boxStyle = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "bg-green-500 border-green-600 text-white shadow-md ring-2 ring-green-100 hover:scale-105 cursor-pointer" : "bg-amber-50 border-amber-300 text-amber-500 hover:scale-105 cursor-pointer") : "bg-gray-50 border-gray-200 text-gray-300"; var label = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "ACTIVE" : "ĐẶT") : "TRỐNG"; var actionAttr = booking ? `onclick="selectBedFromMap(${i})"` : ""; html += `<div ${actionAttr} class="flex-1 rounded-xl border-2 border-dashed ${boxStyle} flex flex-col items-center justify-center transition-all min-h-[50px] mb-2 relative group"><span class="text-lg font-black">0${i}</span><span class="text-[8px] font-bold tracking-wider">${label}</span>${booking ? `<div class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity"><span class="text-[10px] font-bold text-white">Xem</span></div>` : ''}</div>`; } container.innerHTML = html; }
+function selectBedFromMap(bedId) { var index = currentBedList.findIndex(b => b.bedId == bedId && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); if (index !== -1) { selectBedItem(index); var listItem = document.getElementById('col-left-list').children[index]; if(listItem) listItem.scrollIntoView({behavior: 'smooth', block: 'center'}); } }
+function selectBedItem(index) { selectedBedIndex = index; renderLeftColumnList(); var data = currentBedList[index]; var panel = document.getElementById('detail-content-panel'); var empty = document.getElementById('detail-empty-state'); var isDone = (data.status && data.status.includes('đã xong')); var isCancelled = (data.status && data.status.includes('đã hủy')); var isActive = (data.status && (data.status.includes('đang dùng') || data.status.includes('active'))); var hasBed = (data.bedId && data.bedId.toString().trim() !== ""); if(empty) empty.classList.add('hidden'); if(panel) { panel.classList.remove('hidden'); panel.classList.add('flex'); } document.getElementById('detail-bed-name').innerText = hasBed ? `BED ${data.bedId}` : "CHỜ XẾP"; document.getElementById('detail-status-badge').innerText = isDone ? "ĐÃ XONG" : (isCancelled ? "ĐÃ HỦY" : (isActive ? "ACTIVE" : "CHỜ KHÁCH")); document.getElementById('detail-cust-name').innerText = data.name; document.getElementById('detail-cust-phone').innerText = data.phone; document.getElementById('detail-start').innerText = data.start; document.getElementById('detail-end').innerText = data.end; document.getElementById('detail-comp-name').innerText = data.compName || "Chưa có"; document.getElementById('detail-comp-phone').innerText = data.compPhone || "--"; var rowCheckout = document.getElementById('row-checkout-time'); var actionBtns = document.getElementById('detail-action-buttons'); var timerBox = document.getElementById('detail-timer-box'); var wrapperCancel = document.getElementById('wrapper-btn-cancel'); if (isDone || isCancelled) { if(rowCheckout) { rowCheckout.classList.remove('hidden'); document.getElementById('detail-real-end').innerText = isCancelled ? "Đã hủy" : data.end; } if(actionBtns) actionBtns.classList.add('hidden'); if(timerBox) timerBox.classList.add('hidden'); if(wrapperCancel) wrapperCancel.classList.add('hidden'); stopPanelCountdown(); } else { if(rowCheckout) rowCheckout.classList.add('hidden'); if(actionBtns) actionBtns.classList.remove('hidden'); if(wrapperCancel) wrapperCancel.classList.remove('hidden'); var btnOrder = document.getElementById('btn-action-order'); var btnCheckout = document.getElementById('btn-action-checkout'); var canInteract = true; var timeMsg = ""; if (!isActive) { var now = new Date(); var startObj = parseTimeObj(data.start); if (startObj) { var diffMinutes = (now - startObj) / 60000; if (diffMinutes < -30) { canInteract = false; timeMsg = `(Sớm ${Math.abs(Math.round(diffMinutes))}p)`; } else if (diffMinutes > 50) { canInteract = false; timeMsg = `(Quá ${Math.round(diffMinutes)}p)`; } } } if (btnOrder) { btnOrder.disabled = !canInteract; btnOrder.className = canInteract ? "py-3 rounded-xl bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 transition text-xs flex justify-center items-center gap-1" : "py-3 rounded-xl bg-gray-100 text-gray-400 font-bold cursor-not-allowed text-xs flex justify-center items-center gap-1"; var span = btnOrder.querySelector('span'); if(span) span.innerText = canInteract ? "☕ Gọi Món" : "⛔ " + timeMsg; btnOrder.onclick = function() { showBedDetail(data.bedId); }; } if (btnCheckout) { if (!hasBed) { btnCheckout.disabled = !canInteract; btnCheckout.innerHTML = canInteract ? '<span>🛏️ Xếp Bed Ngay</span>' : `<span>⛔ ${timeMsg}</span>`; btnCheckout.onclick = function() { if(!canInteract) return; pendingBedOrder = data; document.getElementById('bed-select-modal').classList.remove('hidden'); }; } else { btnCheckout.disabled = false; btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>'; btnCheckout.onclick = async function() { if (confirm(`Xác nhận khách đã xong và thanh toán?`)) { btnCheckout.innerHTML = 'Wait...'; db.ref('beds/' + data.key).update({status: 'đã xong', endTime: new Date().toLocaleTimeString()}, (err) => { if(!err) openBedManager(); }); } }; } } if (hasBed && data.end) { if(timerBox) timerBox.classList.remove('hidden'); startPanelCountdown(data.end); } else { stopPanelCountdown(); } } var btnCancel = document.getElementById('btn-action-cancel'); if(btnCancel) { btnCancel.onclick = function() { if (confirm(`⚠️ CẢNH BÁO: Hủy lịch của khách ${data.name}?\n(Sẽ không tính doanh thu)`)) { btnCancel.innerHTML = "Đang hủy..."; btnCancel.disabled = true; db.ref('beds/' + data.key).update({status: 'đã hủy'}, (err) => { if(!err) openBedManager(); }); } }; } }
+function showBedDetail(bedId) { var booking = null; if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId); if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex]; if (!booking) { alert("Vui lòng chọn khách hàng trong danh sách trước!"); return; } activeOrderingBedId = bedId; pendingBedOrder = booking; switchView('menu'); setTimeout(function() { var cartInfo = document.getElementById('cart-bed-info'); var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between'); if (!cartInfo && headerContainer) { cartInfo = document.createElement('div'); cartInfo.id = 'cart-bed-info'; headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling); } if (cartInfo) { var guestName = booking.name || "Khách hàng"; cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1"; if (booking.bedId && booking.bedId != 0) { cartInfo.innerText = `🟢 BED 0${booking.bedId} - ${guestName}`; cartInfo.style.color = "#006241"; } else { cartInfo.innerText = `🟠 KHÁCH CHỜ - ${guestName}`; cartInfo.style.color = "#d97706"; } } }, 50); }
+function finalizeBedCheckIn(bedId) { if (!pendingBedOrder) return; const isBusy = currentBedList.find(b => (b.status.includes('đang dùng') || b.status.includes('active')) && b.bedId == bedId); if (isBusy) return alert("Bed này đang có khách!"); var now = new Date(); var startObj = parseTimeObj(pendingBedOrder.start); var endObj = parseTimeObj(pendingBedOrder.end); var newEndTimeStr = pendingBedOrder.end; if (startObj && endObj) { var diffMinutes = (now - startObj) / 60000; if (diffMinutes < 0) { endObj.setMinutes(endObj.getMinutes() + Math.round(diffMinutes)); newEndTimeStr = ("0" + endObj.getHours()).slice(-2) + ":" + ("0" + endObj.getMinutes()).slice(-2); } } document.getElementById('bed-select-modal').classList.add('hidden'); document.getElementById('loading-overlay').style.display = 'flex'; db.ref('beds/' + pendingBedOrder.key).update({status: 'active', bedId: bedId, end: newEndTimeStr}, (err) => { document.getElementById('loading-overlay').style.display = 'none'; if(!err) { if (diffMinutes < 0) alert(`Khách đến sớm ${Math.abs(Math.round(diffMinutes))} phút.\nGiờ trả Bed đã được đẩy sớm lên: ${newEndTimeStr}`); pendingBedOrder = null; isPaymentMode = false; openBedManager(); } }); }
 function openBookingModal() { document.getElementById('modal-add-booking').classList.remove('hidden'); document.getElementById('new_cust_name').value = "Khách vãng lai"; document.getElementById('new_cust_phone').value = ""; document.getElementById('new_cust_phone').focus(); switchTimeMode('duration'); }
 function closeBookingModal() { document.getElementById('modal-add-booking').classList.add('hidden'); }
-function autoFillCustomer() {
-    var phone = document.getElementById('new_cust_phone').value;
-    if (!phone || phone.length < 9) return;
-    document.getElementById('search-loading').classList.remove('hidden');
-    db.ref('members').orderByChild('phone').equalTo(phone).once('value', snap => {
-        document.getElementById('search-loading').classList.add('hidden');
-        if(snap.exists()) {
-            const m = Object.values(snap.val())[0];
-            document.getElementById('new_cust_name').value = m.name;
-            document.getElementById('new_comp_name').value = m.compName || "";
-            document.getElementById('new_comp_phone').value = m.compPhone || "";
-        }
-    });
-}
-
-function submitNewBooking() {
-    var phone = document.getElementById('new_cust_phone').value;
-    var name = document.getElementById('new_cust_name').value;
-    var compName = document.getElementById('new_comp_name').value;
-    var compPhone = document.getElementById('new_comp_phone').value;
-    var duration = document.getElementById('final_duration_minutes').value;
-    if (!phone || !name) return alert("Vui lòng nhập SĐT và Tên!");
-
-    var btn = document.getElementById('btn-submit-booking');
-    btn.innerHTML = "⏳ Đang tạo..."; btn.disabled = true;
-
-    // Tính giờ
-    const now = new Date();
-    const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-    const endObj = new Date(now.getTime() + duration*60000);
-    const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-
-    const newBed = {
-        phone: phone, name: name, date: new Date().toISOString().split('T')[0],
-        start: startStr, end: endStr, compName: compName, compPhone: compPhone,
-        status: "chờ khách", bedId: "", type: "walk-in"
-    };
-
-    db.ref('beds').push(newBed, (err) => {
-        btn.innerHTML = "XÁC NHẬN & GỌI MÓN"; btn.disabled = false;
-        if(!err) { closeBookingModal(); openBedManager(); }
-    });
-}
-
-// --- 8. HELPER FUNCTIONS ---
-function switchTimeMode(mode) { 
-    var btnDur = document.getElementById('tab-duration'); var btnFix = document.getElementById('tab-fixed'); var divDur = document.getElementById('mode-duration'); var divFix = document.getElementById('mode-fixed');
-    if (mode === 'duration') { btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#1e3932]"; btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divDur.classList.remove('hidden'); divFix.classList.add('hidden'); document.getElementById('final_duration_minutes').value = 60; } 
-    else { btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#1e3932]"; btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divFix.classList.remove('hidden'); divDur.classList.add('hidden'); var now = new Date(); now.setMinutes(now.getMinutes() + 90); var hh = ("0" + now.getHours()).slice(-2); var mm = ("0" + now.getMinutes()).slice(-2); document.getElementById('custom_end_time').value = `${hh}:${mm}`; calculateDurationFromTime(); }
-}
-function selectDuration(minutes, btn) { document.getElementById('final_duration_minutes').value = minutes; document.querySelectorAll('.duration-btn').forEach(el => el.className = "duration-btn bg-white border border-gray-200 text-gray-600 font-bold py-2 rounded-lg text-xs hover:bg-gray-100"); btn.className = "duration-btn bg-[#1e3932] text-white border border-[#1e3932] font-bold py-2 rounded-lg text-xs shadow-md"; }
-function calculateDurationFromTime() { var timeStr = document.getElementById('custom_end_time').value; if (!timeStr) return; var now = new Date(); var parts = timeStr.split(':'); var end = new Date(); end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0); var diffMins = Math.floor((end - now) / 60000); if (diffMins <= 0) { document.getElementById('calculated-time-hint').innerText = "⚠️ Giờ về phải sau giờ hiện tại"; document.getElementById('final_duration_minutes').value = 0; } else { document.getElementById('calculated-time-hint').innerText = `Tổng cộng: ${Math.floor(diffMins/60)}h ${diffMins%60}p`; document.getElementById('final_duration_minutes').value = diffMins; } }
-function startPanelCountdown(endTimeStr) { stopPanelCountdown(); var clockEl = document.getElementById('detail-countdown'); if(!clockEl) return; var timeParts = endTimeStr.split(':'); if(timeParts.length < 2) return; var endDate = new Date(); endDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0); bedCountdownInterval = setInterval(function() { var diff = endDate - new Date(); var isOver = diff < 0; diff = Math.abs(diff); var h = Math.floor(diff / 3600000); var m = Math.floor((diff % 3600000) / 60000); var s = Math.floor((diff % 60000) / 1000); var fmt = v => v < 10 ? "0"+v : v; clockEl.innerText = (isOver ? '-' : '') + fmt(h) + ":" + fmt(m) + ":" + fmt(s); clockEl.className = isOver ? "text-3xl font-black text-red-500 font-mono tracking-tighter" : "text-3xl font-black text-[#006241] font-mono tracking-tighter"; }, 1000); }
-function stopPanelCountdown() { if (bedCountdownInterval) clearInterval(bedCountdownInterval); }
+function autoFillCustomer() { var phone = document.getElementById('new_cust_phone').value; if (!phone || phone.length < 9) return; document.getElementById('search-loading').classList.remove('hidden'); db.ref('members').orderByChild('phone').equalTo(phone).once('value', snap => { document.getElementById('search-loading').classList.add('hidden'); if(snap.exists()) { const m = Object.values(snap.val())[0]; document.getElementById('new_cust_name').value = m.name; document.getElementById('new_comp_name').value = m.compName || ""; document.getElementById('new_comp_phone').value = m.compPhone || ""; } }); }
+function submitNewBooking() { var phone = document.getElementById('new_cust_phone').value; var name = document.getElementById('new_cust_name').value; var compName = document.getElementById('new_comp_name').value; var compPhone = document.getElementById('new_comp_phone').value; var duration = document.getElementById('final_duration_minutes').value; if (!phone || !name) return alert("Vui lòng nhập SĐT và Tên!"); var btn = document.getElementById('btn-submit-booking'); btn.innerHTML = "⏳ Đang tạo..."; btn.disabled = true; const now = new Date(); const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const endObj = new Date(now.getTime() + duration*60000); const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const newBed = { phone: phone, name: name, date: new Date().toISOString().split('T')[0], start: startStr, end: endStr, compName: compName, compPhone: compPhone, status: "chờ khách", bedId: "", type: "walk-in" }; db.ref('beds').push(newBed, (err) => { btn.innerHTML = "XÁC NHẬN & GỌI MÓN"; btn.disabled = false; if(!err) { closeBookingModal(); openBedManager(); } }); }
+function submitWalkIn() { var phone = document.getElementById('walkin-phone').value; var hours = document.getElementById('walkin-hours').value; if(!phone || !hours) return; document.getElementById('walk-in-modal').classList.add('hidden'); document.getElementById('loading-overlay').style.display = 'flex'; db.ref('beds').push({ phone: phone, name: "Khách vãng lai", duration: hours*60, type: "walk-in", status: "chờ khách" }); document.getElementById('loading-overlay').style.display = 'none'; openBedManager(); }
+function checkSdtLive() { const sdt = document.getElementById('kh-sdt').value; if (sdt.length >= 10) { db.ref('members').orderByChild('phone').equalTo(sdt).once('value', snap => { const status = document.getElementById('sdt-status'); if(snap.exists()) { const m = Object.values(snap.val())[0]; status.innerText = "★ THÀNH VIÊN: " + m.name; status.className = "text-[8px] font-black text-green-500 uppercase mt-1 text-center"; } else { status.innerText = "★ KHÁCH MỚI"; status.className = "text-[8px] font-black text-amber-500 uppercase mt-1 text-center"; } }); } }
 function showAppModal(title, msg, icon = '') { document.getElementById('app-modal-title').innerText = title; document.getElementById('app-modal-msg').innerHTML = msg; document.getElementById('app-modal-icon').innerText = icon; document.getElementById('app-modal').classList.remove('hidden'); }
 function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); var parts = timeStr.split(':'); d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0); return d; }
-
-// =========================================================
-// =========================================================
+function startPanelCountdown(endTimeStr) { stopPanelCountdown(); var clockEl = document.getElementById('detail-countdown'); if(!clockEl) return; var timeParts = endTimeStr.split(':'); if(timeParts.length < 2) return; var endDate = new Date(); endDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0); bedCountdownInterval = setInterval(function() { var diff = endDate - new Date(); var isOver = diff < 0; diff = Math.abs(diff); var h = Math.floor(diff / 3600000); var m = Math.floor((diff % 3600000) / 60000); var s = Math.floor((diff % 60000) / 1000); var fmt = v => v < 10 ? "0"+v : v; clockEl.innerText = (isOver ? '-' : '') + fmt(h) + ":" + fmt(m) + ":" + fmt(s); clockEl.className = isOver ? "text-3xl font-black text-red-500 font-mono tracking-tighter" : "text-3xl font-black text-[#006241] font-mono tracking-tighter"; }, 1000); }
+function stopPanelCountdown() { if (bedCountdownInterval) clearInterval(bedCountdownInterval); }
+function switchTimeMode(mode) { var btnDur = document.getElementById('tab-duration'); var btnFix = document.getElementById('tab-fixed'); var divDur = document.getElementById('mode-duration'); var divFix = document.getElementById('mode-fixed'); if (mode === 'duration') { btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#1e3932]"; btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divDur.classList.remove('hidden'); divFix.classList.add('hidden'); document.getElementById('final_duration_minutes').value = 60; } else { btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#1e3932]"; btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divFix.classList.remove('hidden'); divDur.classList.add('hidden'); var now = new Date(); now.setMinutes(now.getMinutes() + 90); var hh = ("0" + now.getHours()).slice(-2); var mm = ("0" + now.getMinutes()).slice(-2); document.getElementById('custom_end_time').value = `${hh}:${mm}`; calculateDurationFromTime(); } }
+function selectDuration(minutes, btn) { document.getElementById('final_duration_minutes').value = minutes; document.querySelectorAll('.duration-btn').forEach(el => el.className = "duration-btn bg-white border border-gray-200 text-gray-600 font-bold py-2 rounded-lg text-xs hover:bg-gray-100"); btn.className = "duration-btn bg-[#1e3932] text-white border border-[#1e3932] font-bold py-2 rounded-lg text-xs shadow-md"; }
+function calculateDurationFromTime() { var timeStr = document.getElementById('custom_end_time').value; if (!timeStr) return; var now = new Date(); var parts = timeStr.split(':'); var end = new Date(); end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0); var diffMins = Math.floor((end - now) / 60000); if (diffMins <= 0) { document.getElementById('calculated-time-hint').innerText = "⚠️ Giờ về phải sau giờ hiện tại"; document.getElementById('final_duration_minutes').value = 0; } else { document.getElementById('calculated-time-hint').innerText = `Tổng cộng: ${Math.floor(diffMins/60)}h ${diffMins%60}p`; document.getElementById('final_duration_minutes').value = diffMins; } }
+</script>=================================================
 // --- HISTORY & REVENUE (PHIÊN BẢN FULL TÍNH NĂNG - FIREBASE) ---
 // =========================================================
 
@@ -1056,5 +1097,6 @@ function renderChart(labels, chartData, type) {
     }); 
 }
 // =========================================================
+
 
 
