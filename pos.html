@@ -751,7 +751,44 @@ function showBedDetail(bedId) { var booking = null; if (bedId && bedId != 0) boo
 function finalizeBedCheckIn(bedId) { if (!pendingBedOrder) return; const isBusy = currentBedList.find(b => (b.status.includes('đang dùng') || b.status.includes('active')) && b.bedId == bedId); if (isBusy) return alert("Bed này đang có khách!"); var now = new Date(); var startObj = parseTimeObj(pendingBedOrder.start); var endObj = parseTimeObj(pendingBedOrder.end); var newEndTimeStr = pendingBedOrder.end; if (startObj && endObj) { var diffMinutes = (now - startObj) / 60000; if (diffMinutes < 0) { endObj.setMinutes(endObj.getMinutes() + Math.round(diffMinutes)); newEndTimeStr = ("0" + endObj.getHours()).slice(-2) + ":" + ("0" + endObj.getMinutes()).slice(-2); } } document.getElementById('bed-select-modal').classList.add('hidden'); document.getElementById('loading-overlay').style.display = 'flex'; db.ref('beds/' + pendingBedOrder.key).update({status: 'active', bedId: bedId, end: newEndTimeStr}, (err) => { document.getElementById('loading-overlay').style.display = 'none'; if(!err) { if (diffMinutes < 0) alert(`Khách đến sớm ${Math.abs(Math.round(diffMinutes))} phút.\nGiờ trả Bed đã được đẩy sớm lên: ${newEndTimeStr}`); pendingBedOrder = null; isPaymentMode = false; openBedManager(); } }); }
 function openBookingModal() { document.getElementById('modal-add-booking').classList.remove('hidden'); document.getElementById('new_cust_name').value = "Khách vãng lai"; document.getElementById('new_cust_phone').value = ""; document.getElementById('new_cust_phone').focus(); switchTimeMode('duration'); }
 function closeBookingModal() { document.getElementById('modal-add-booking').classList.add('hidden'); }
-function autoFillCustomer() { var phone = document.getElementById('new_cust_phone').value; if (!phone || phone.length < 9) return; document.getElementById('search-loading').classList.remove('hidden'); db.ref('members').orderByChild('phone').equalTo(phone).once('value', snap => { document.getElementById('search-loading').classList.add('hidden'); if(snap.exists()) { const m = Object.values(snap.val())[0]; document.getElementById('new_cust_name').value = m.name; document.getElementById('new_comp_name').value = m.compName || ""; document.getElementById('new_comp_phone').value = m.compPhone || ""; } }); }
+function function autoFillCustomer() {
+    // 1. Lấy SĐT từ ô nhập liệu
+    var phoneInput = document.getElementById('new_cust_phone');
+    var phone = phoneInput.value.toString().trim();
+
+    // 2. Nếu chưa nhập đủ số thì chưa làm gì cả (ví dụ dưới 3 số)
+    if (!phone || phone.length < 3) return;
+
+    // 3. TRA CỨU NGAY TRONG RAM (Không cần gọi Server, không cần Loading spinner)
+    var customer = customerMap[phone];
+
+    // Lấy các ô nhập liệu cần điền
+    var elName = document.getElementById('new_cust_name');
+    var elCompName = document.getElementById('new_comp_name');
+    var elCompPhone = document.getElementById('new_comp_phone');
+
+    if (customer) {
+        // --- TÌM THẤY: ĐIỀN DỮ LIỆU TỰ ĐỘNG ---
+        
+        // Điền tên
+        elName.value = customer.name || "";
+        
+        // Điền thông tin người đi cùng (Kiểm tra cả 2 trường hợp tên key cho chắc)
+        elCompName.value = customer.companionName || customer.compName || ""; 
+        elCompPhone.value = customer.companionPhone || customer.compPhone || "";
+
+        // Hiệu ứng nháy màu xanh báo hiệu đã tìm thấy
+        elName.classList.add('bg-green-50', 'text-green-700');
+        setTimeout(() => elName.classList.remove('bg-green-50', 'text-green-700'), 1000);
+        
+        console.log("Auto-fill thành công cho:", customer.name);
+    } else {
+        // --- KHÔNG TÌM THẤY ---
+        // Có thể để trống để nhân viên tự nhập, hoặc log ra console
+        // Không nên xóa trắng ngay vì lỡ nhân viên đang gõ dở
+        console.log("Chưa có dữ liệu cho SĐT này (Khách mới)");
+    }
+}
 function submitNewBooking() { var phone = document.getElementById('new_cust_phone').value; var name = document.getElementById('new_cust_name').value; var compName = document.getElementById('new_comp_name').value; var compPhone = document.getElementById('new_comp_phone').value; var duration = document.getElementById('final_duration_minutes').value; if (!phone || !name) return alert("Vui lòng nhập SĐT và Tên!"); var btn = document.getElementById('btn-submit-booking'); btn.innerHTML = "⏳ Đang tạo..."; btn.disabled = true; const now = new Date(); const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const endObj = new Date(now.getTime() + duration*60000); const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const newBed = { phone: phone, name: name, date: new Date().toISOString().split('T')[0], start: startStr, end: endStr, compName: compName, compPhone: compPhone, status: "chờ khách", bedId: "", type: "walk-in" }; db.ref('beds').push(newBed, (err) => { btn.innerHTML = "XÁC NHẬN & GỌI MÓN"; btn.disabled = false; if(!err) { closeBookingModal(); openBedManager(); } }); }
 function submitWalkIn() { var phone = normalizePhone(document.getElementById('walkin-phone').value); var hours = document.getElementById('walkin-hours').value; if(!phone || !hours) return; document.getElementById('walk-in-modal').classList.add('hidden'); document.getElementById('loading-overlay').style.display = 'flex'; db.ref('beds').push({ phone: phone, name: "Khách vãng lai", duration: hours*60, type: "walk-in", status: "chờ khách" }); document.getElementById('loading-overlay').style.display = 'none'; openBedManager(); }
 function checkSdtLive() {
@@ -834,6 +871,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
