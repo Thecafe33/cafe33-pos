@@ -522,7 +522,7 @@ function renderHistoryList(data) {
     document.getElementById('history-container').innerHTML = html; 
 }
 // --- HÀM SELECT BILL ĐÃ FIX (CÓ NÚT HỦY/HOÀN) ---
-// --- HÀM SELECT BILL ĐẦY ĐỦ VÀ CHUẨN CÚ PHÁP ---
+// --- COPY TỪ ĐÂY ---
 function selectBill(idx) {
     // 1. Reset highlight cũ
     selectedRefundItems = [];
@@ -543,7 +543,9 @@ function selectBill(idx) {
     const isAlreadyRefund = h.total < 0;
 
     // 3. Xử lý danh sách món ăn
-    const itemsHtml = items.map((item, i) => {
+    // --- ĐÂY LÀ DÒNG BẠN ĐANG BỊ THIẾU ---
+    const itemsHtml = items.map((item, i) => { 
+    // -------------------------------------
         const raw = item.trim();
         const lastX = raw.lastIndexOf('x');
         if (lastX === -1) return '';
@@ -566,10 +568,9 @@ function selectBill(idx) {
         // Tính điểm
         const pts = (m && m.type === 'ăn vặt') ? Math.floor((subTotal/100)*0.4) : Math.floor(subTotal/100);
         
-        // Chuẩn bị dữ liệu để truyền vào hàm hoàn trả
         const itData = JSON.stringify({ name: nameOnly, size: sizePart, qty, subTotal, itemPoints: pts });
 
-        // Render HTML cho từng dòng món ăn
+        // Render dòng sản phẩm
         return `<div id="refund-row-${i}" onclick='${isAlreadyRefund ? "" : `toggleRefundItem(${i}, ${itData})`}' class="receipt-line p-2 rounded-xl transition-all border-l-4 border-transparent ${isAlreadyRefund ? "opacity-50 text-left" : "cursor-pointer hover:bg-gray-50 text-left"}">
             <div class="flex-1 mr-4 text-left">
                 <div class="flex items-start gap-2 text-left">
@@ -582,14 +583,14 @@ function selectBill(idx) {
             </div>
             <div class="text-right font-black text-[#1e3932] text-base pt-1 text-right">${subTotal.toLocaleString()}</div>
         </div>`;
-    }).join('');
+    }).join(''); // <--- Dấu } này bây giờ sẽ khớp với dấu { ở dòng items.map bên trên
 
     // 4. Hiển thị Panel Chi tiết
     document.getElementById('history-detail-empty').classList.add('hidden');
     const detail = document.getElementById('history-detail-content');
     detail.classList.remove('hidden');
 
-    // 5. VẼ GIAO DIỆN CHI TIẾT (Bao gồm nút bấm)
+    // 5. VẼ GIAO DIỆN CHI TIẾT
     detail.innerHTML = `
     <div class="grid grid-cols-12 gap-3 h-full overflow-hidden text-left">
         <div class="col-span-4 border-r border-gray-100 pr-3 flex flex-col pt-2 text-left">
@@ -621,32 +622,8 @@ function selectBill(idx) {
             </div>
         </div>
     </div>`;
-    }
-    document.getElementById('history-detail-empty').classList.add('hidden'); 
-    const detail = document.getElementById('history-detail-content'); 
-    detail.classList.remove('hidden'); 
-    
-    detail.innerHTML = `
-    <div class="grid grid-cols-12 gap-3 h-full overflow-hidden text-left">
-        <div class="col-span-4 border-r border-gray-100 pr-3 flex flex-col pt-2 text-left">
-            <h3 class="brand-font text-3xl text-[#006241] leading-none mb-1 text-left">The cafe 33</h3>
-            <p class="text-[8px] text-gray-400 font-bold uppercase mb-4 tracking-widest text-left">Hóa đơn điện tử</p>
-            <div class="space-y-2 text-left">
-                <div class="p-2 bg-gray-50 rounded-xl text-left"><p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thời gian</p><p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.fullTime}</p></div>
-                <div class="p-2 bg-gray-50 rounded-xl text-left"><p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Khách hàng</p><p class="font-black text-[#1e3932] text-[10px] leading-tight text-left">${h.sdt}</p></div>
-                <div class="p-2 bg-gray-50 rounded-xl border-l-4 ${h.total < 0? 'border-red-500 text-left': 'border-[#006241] text-left'} text-left"><p class="text-[8px] text-gray-400 font-bold uppercase mb-0.5 text-left">Thanh toán</p><p class="font-black ${h.total < 0? 'text-red-500 text-left': 'text-[#006241] text-left'} text-[10px] uppercase text-left">${h.method}</p></div>
-            </div>
-            <div class="p-3 bg-amber-50 rounded-xl text-center border-2 border-amber-100 mt-auto mb-2 text-center"><p class="text-amber-600 font-black text-[9px] uppercase italic tracking-tighter text-center"> +${h.points} ĐIỂM</p></div>
-        </div>
-        <div class="col-span-8 flex flex-col h-full pt-2 overflow-hidden text-left">
-            <div id="refund-items-list" class="flex-1 overflow-y-auto pr-1 space-y-0.5 text-left">${itemsHtml}</div>
-            <div class="mt-4 pt-4 border-t-2 border-[#006241] flex flex-col items-end flex-shrink-0 text-right">
-                <div class="flex justify-between w-full items-center mb-1 text-left"><span class="text-[10px] font-bold text-gray-400 uppercase italic text-left">Số lượng: ${tQty} món</span><span class="brand-font text-[#1e3932] text-xl uppercase font-black opacity-30 text-right">Tổng bill</span></div>
-                <div class="font-black text-3xl leading-none text-right ${h.total < 0? 'text-red-500 text-right': 'text-[#006241] text-right'}">${Number(h.total).toLocaleString()}<span class="text-lg ml-1 text-right">đ</span></div>
-            </div>
-        </div>
-    </div>`; 
 }
+// --- ĐẾN ĐÂY ---
 
 function openRevenue() {
     document.getElementById('loading-overlay').style.display = 'flex';
@@ -927,6 +904,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
