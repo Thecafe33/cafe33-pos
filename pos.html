@@ -231,20 +231,66 @@ setInterval(() => {
 
 // --- 3. INIT APP & LISTEN FIREBASE ---
 window.onload = function() {
-    // Tải Menu từ Firebase
+  // --- 3. INIT APP & LISTEN FIREBASE (BẢN FIX LỖI TREO) ---
+window.onload = function() {
+    console.log("🚀 App bắt đầu khởi động...");
+
+    // 1. Cài đặt bộ đếm ngược: Nếu 7 giây không tải được thì tự tắt loading và báo lỗi
+    const safetyTimeout = setTimeout(() => {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay && overlay.style.display !== 'none') {
+            overlay.style.display = 'none';
+            alert("⚠️ Lỗi: Không thể kết nối Firebase sau 7 giây!\n\nHãy kiểm tra:\n1. Tab 'Rules' trên Firebase đã mở chưa?\n2. Mạng internet của bạn.");
+        }
+    }, 7000);
+
+    // 2. Lắng nghe Menu từ Firebase
     db.ref('menu').on('value', (snapshot) => {
+        clearTimeout(safetyTimeout); // Nếu tải được thì hủy bộ đếm lỗi
         const data = snapshot.val();
+        
         if (data) {
+            // Xử lý dữ liệu
             menu = Array.isArray(data) ? data : Object.values(data);
-            console.log("Menu loaded:", menu.length);
-            renderTabs();
-            renderMenu();
+            console.log("✅ Menu đã tải:", menu.length, "món");
+            
+            // Vẽ giao diện
+            if (typeof renderTabs === 'function') renderTabs();
+            if (typeof renderMenu === 'function') renderMenu();
+            
+            // Tắt Loading
             document.getElementById('loading-overlay').style.display = 'none';
         } else {
-            console.log("Chưa có menu trên Firebase.");
+            console.warn("⚠️ Firebase kết nối được nhưng KHÔNG CÓ dữ liệu Menu!");
             document.getElementById('loading-overlay').style.display = 'none';
+            alert("Dữ liệu Menu trống! Hãy chạy hàm đồng bộ trên Google Sheet.");
+        }
+    }, (error) => {
+        // Nếu Firebase báo lỗi (Permission Denied v.v...)
+        console.error("❌ Lỗi Firebase:", error);
+        document.getElementById('loading-overlay').style.display = 'none';
+        alert("Lỗi quyền truy cập Firebase: " + error.message + "\n\nBạn đã chỉnh Rules thành 'true' chưa?");
+    });
+
+    // 3. Lắng nghe Bed (Không chặn loading, cứ chạy ngầm)
+    db.ref('beds').on('value', (snapshot) => {
+        const data = snapshot.val();
+        currentBedList = [];
+        if(data) {
+            Object.keys(data).forEach(key => {
+                let item = data[key];
+                item.key = key; 
+                currentBedList.push(item);
+            });
+        }
+        // Nếu đang mở view Bed thì vẽ lại
+        const viewBed = document.getElementById('view-bed');
+        if(viewBed && !viewBed.classList.contains('hidden')) {
+            if (typeof renderLeftColumnList === 'function') renderLeftColumnList();
+            if (typeof renderRightColumnMap === 'function') renderRightColumnMap();
         }
     });
+};
 
     // Tải Bed từ Firebase (để cập nhật realtime)
     db.ref('beds').on('value', (snapshot) => {
@@ -1010,4 +1056,5 @@ function renderChart(labels, chartData, type) {
     }); 
 }
 // =========================================================
+
 
