@@ -571,100 +571,88 @@ function selectBill(idx) {
     </div>`; 
 }
 
+let myChart = null;
+
 function openRevenue() {
-    document.getElementById('loading-overlay').style.display = 'flex';
-    switchView('revenue');
-    
-    // Gọi cả 2 nhánh 'orders' và 'order' để gộp dữ liệu tính toán
-    Promise.all([
-        db.ref('orders').once('value'),
-        db.ref('order').once('value')
-    ]).then(snapshots => {
-        document.getElementById('loading-overlay').style.display = 'none';
-        let allOrders = [];
-        snapshots.forEach(snap => {
-            if(snap.exists()) allOrders = allOrders.concat(Object.values(snap.val()));
-        });
-        
-        const stats = calculateStats(allOrders, 'week');
-        renderDailyRevenueList(stats.dailyList);
-        renderRevenueDashboard(stats, 'week');
-    });
+    switchView('history');
+    loadRevenue('week'); // default tuần như gốc
 }
 
-// Logic tính toán doanh thu (như cũ)
-function calculateStats(orders, filterType) {
-    const now = new Date();
-    let startTime, endTime;
-    const day = now.getDay() || 7; 
-    startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
-    endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999);
+function loadRevenue(type = 'week') {
+    document.getElementById('loading-overlay').style.display = 'flex';
+    
+    let from, to;
+    if (type === 'range') {
+        from = document.getElementById('rev-from').value;
+        to = document.getElementById('rev-to').value;
+        if (!from || !to) {
+            alert("Chọn ngày đầy đủ!");
+            document.getElementById('loading-overlay').style.display = 'none';
+            return;
+        }
+    }
 
-    let stats = { drinkTotal: 0, snackTotal: 0, labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'], chartData: [0,0,0,0,0,0,0], dailyList: {}, today: 0, yesterday: 0 };
-    const todayStr = now.toLocaleDateString('en-GB');
-    const yest = new Date(now); yest.setDate(now.getDate() - 1); const yestStr = yest.toLocaleDateString('en-GB');
+    google.script.run.withSuccessHandler(data => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        
+        const diff = data.todayDrink - data.yesterdayDrink;
+        const dColor = diff >= 0 ? 'text-green-500' : 'text-red-500';
+        const dIcon = diff >= 0 ? '▲' : '▼';
 
-    orders.forEach(o => {
-        const d = new Date(o.createdAt || Date.now());
-        const dateKey = d.toLocaleDateString('en-GB');
-        const amount = Number(o.total) || 0;
-        if (amount <= 0) return;
+        // Thêm so sánh tuần trước (nếu backend trả prevWeekTotal)
+        let weekDiffHtml = '';
+        if (data.prevWeekTotal !== undefined) {
+            const weekDiff = data.todayTotal - data.prevWeekTotal;
+            const weekColor = weekDiff >= 0 ? 'text-green-500' : 'text-red-500';
+            const weekIcon = weekDiff >= 0 ? '▲' : '▼';
+            const percent = data.prevWeekTotal ? ((weekDiff / data.prevWeekTotal) * 100).toFixed(1) + '%' : 'N/A';
+            weekDiffHtml = `<div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-purple-400 text-center">
+                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Vs Tuần Trước</p>
+                <p class="font-black text-lg ${weekColor}">${weekIcon} ${Math.abs(weekDiff).toLocaleString()} <span class="text-sm">(${percent})</span></p>
+            </div>`;
+        }
 
-        if (dateKey === todayStr) stats.today += amount;
-        if (dateKey === yestStr) stats.yesterday += amount;
+        document.getElementById('history-detail-content').innerHTML = `
+        <div class="flex flex-col h-full space-y-4 text-left">
+            <div class="flex gap-2 items-center text-left">
+                <button onclick="loadRevenue('week')" class="px-3 py-1.5 ${type==='week' ? 'bg-[#006241] text-white' : 'bg-gray-100'} rounded-lg font-black text-[9px] uppercase">Tuần</button>
+                <button onclick="loadRevenue('month')" class="px-3 py-1.5 ${type==='month' ? 'bg-[#006241] text-white' : 'bg-gray-100'} rounded-lg font-black text-[9px] uppercase">Tháng</button>
+                <input type="date" id="rev-from" class="p-1 border rounded text-[9px] font-bold outline-none">
+                <input type="date" id="rev-to" class="p-1 border rounded text-[9px] font-bold outline-none">
+                <button onclick="loadRevenue('range')" class="px-3 py-1.5 sb-green text-white rounded-lg font-black text-[9px] uppercase">Lọc</button>
+            </div>
+            <div class="grid grid-cols-${weekDiffHtml ? '4' : '3'} gap-3 text-left">
+                <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-[#006241] text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Nước (Tổng)</p><p class="brand-font text-2xl text-[#006241] text-center">${data.drinkTotal.toLocaleString()}</p></div>
+                <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-amber-400 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Ăn vặt</p><p class="brand-font text-xl text-amber-600 text-center">${data.snackTotal.toLocaleString()}</p></div>
+                <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-blue-400 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Vs Hôm qua</p><p class="font-black text-sm ${dColor} text-center">${dIcon} ${Math.abs(diff).toLocaleString()}</p></div>
+                ${weekDiffHtml}
+            </div>
+            <div class="flex-1 bg-white p-4 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col relative overflow-hidden text-left"><canvas id="revenueChart"></canvas></div>
+        </div>`;
 
-        if (d >= startTime && d <= endTime) {
-            let isSnack = false; if(String(o.items).toLowerCase().match(/hạt|bánh|snack/)) isSnack = true;
-            if(isSnack) stats.snackTotal += amount; else stats.drinkTotal += amount;
-            if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
-            stats.dailyList[dateKey].drink += amount;
-            let idx = (d.getDay() + 6) % 7;
-            if (idx >= 0) stats.chartData[idx] += amount;
+        setTimeout(() => renderChart(data.labels, data.chartData, type), 200);
+    }).getRevenueData(type, from, to);
+}
+
+function renderChart(labels, chartData, type) {
+    const ctx = document.getElementById('revenueChart').getContext('2d');
+    if (myChart) myChart.destroy();
+    
+    const todayIdx = (type === 'month') ? (new Date().getDate() - 1) : ((new Date().getDay() + 6) % 7);
+    const colors = chartData.map((_, i) => i === todayIdx ? '#006241' : '#f1f5f9');
+    
+    myChart = new Chart(ctx, {
+        type: 'bar',
+        plugins: [ChartDataLabels],
+        data: { labels, datasets: [{ data: chartData, backgroundColor: colors, borderRadius: 6 }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', formatter: v => v ? (v/1000).toFixed(0) + 'k' : '', font: { weight: 'bold', size: 9 }, color: '#006241' } },
+            scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 8 } } }
         }
     });
-    return stats;
 }
-
-function renderDailyRevenueList(list) { 
-    let html = '<div class="mb-4 text-left"><h3 class="brand-font text-[#006241] text-[10px] uppercase tracking-widest mb-2 ml-1 text-left">Doanh thu</h3><div class="space-y-1.5 text-left">'; 
-    Object.keys(list).sort((a,b) => { const da = a.split('/').reverse().join(''); const db = b.split('/').reverse().join(''); return db.localeCompare(da); }).forEach(date => { 
-        html += `<div class="p-3 bg-white rounded-2xl shadow-sm text-left"><p class="font-black text-[#1e3932] text-[10px] uppercase text-left">📅 ${date}</p><p class="text-[11px] font-black text-[#006241] mt-1 text-left">${list[date].drink.toLocaleString()}đ</p></div>`; 
-    }); 
-    html += '</div></div>'; 
-    document.getElementById('history-container').innerHTML = html; 
-}
-
-function renderRevenueDashboard(data, type) { 
-    document.getElementById('history-detail-empty').classList.add('hidden'); 
-    const detail = document.getElementById('history-detail-content'); 
-    detail.classList.remove('hidden'); 
-    const diff = data.today - data.yesterday; 
-    const dColor = diff >= 0 ? 'text-green-500': 'text-red-500'; 
-    const dIcon = diff >= 0 ? '▲': '▼'; 
-    
-    detail.innerHTML = `
-    <div class="flex flex-col h-full space-y-4 text-left">
-        <div class="flex gap-2 items-center text-left"><button class="px-3 py-1.5 bg-[#006241] text-white rounded-lg font-black text-[9px] uppercase text-left">Tuần</button></div>
-        <div class="grid grid-cols-3 gap-3 text-left">
-            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-[#006241] text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Nước (Tổng)</p><p class="brand-font text-2xl text-[#006241] text-center">${data.drinkTotal.toLocaleString()}</p></div>
-            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-amber-400 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Ăn vặt</p><p class="brand-font text-xl text-amber-600 text-center">${data.snackTotal.toLocaleString()}</p></div>
-            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-blue-400 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Vs Hôm qua</p><p class="font-black text-sm ${dColor} text-center">${dIcon} ${Math.abs(diff).toLocaleString()}</p></div>
-        </div>
-        <div class="flex-1 bg-white p-4 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col relative overflow-hidden text-left"><canvas id="revenueChart"></canvas></div>
-    </div>`; 
-    setTimeout(() => renderChart(data.labels, data.chartData, type), 200); 
-}
-
-function renderChart(labels, chartData, type) { 
-    const ctx = document.getElementById('revenueChart').getContext('2d'); 
-    if (myChart) myChart.destroy(); 
-    myChart = new Chart(ctx, { 
-        type: 'bar', plugins: [ChartDataLabels], 
-        data: { labels, datasets: [{ data: chartData, backgroundColor: '#006241', borderRadius: 6 }] }, 
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', formatter: (v) => v != 0 ? (v/1000).toFixed(0) + 'k': '', font: { weight: 'bold', size: 9 }, color: '#006241'} }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 8} } } } } 
-    }); 
-}
-
 // =========================================================
 // 7. CÁC HÀM KHÁC (NAV, SWITCH VIEW...)
 // =========================================================
@@ -738,5 +726,6 @@ function calculateDurationFromTime() { var timeStr = document.getElementById('cu
 </script>
 </body>
 </html>
+
 
 
