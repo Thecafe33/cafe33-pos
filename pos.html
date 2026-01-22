@@ -901,10 +901,164 @@ function quickPaid(v) { document.getElementById('cash-paid').value = v; calcChan
 function calcChange() { const paid = Number(document.getElementById('cash-paid').value) || currentTotal; document.getElementById('cash-change').innerText = (paid - currentTotal > 0 ? (paid - currentTotal).toLocaleString(): 0) + 'đ'; }
 function setMethod(m) { const isBank = (m === 'Chuyển khoản'); document.getElementById('btn-cash').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${!isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`; document.getElementById('btn-bank').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`; const box = document.getElementById('cash-detail-box'); document.getElementById('cash-paid').value = currentTotal; if (isBank) box.style.pointerEvents = "none"; else box.style.pointerEvents = "auto"; calcChange(); }
 function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart(); }
+// =========================================================
+// --- LOGIC LỊCH SỬ & DOANH THU (CHẠY TRỰC TIẾP VỚI FIREBASE) ---
+// =========================================================
+
+// 1. Xem Lịch Sử (Lấy 50 đơn mới nhất từ Firebase)
+function openHistory() {
+    document.getElementById('loading-overlay').style.display = 'flex';
+    switchView('history');
+
+    // Gọi Firebase thay vì gọi API Google
+    db.ref('orders').limitToLast(50).once('value', (snapshot) => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        const data = snapshot.val();
+        
+        if (!data) {
+            historyData = [];
+        } else {
+            // Chuyển đổi object Firebase thành mảng và sắp xếp mới nhất lên đầu
+            historyData = Object.values(data).map(order => {
+                const d = new Date(order.createdAt || Date.now());
+                return {
+                    ...order,
+                    dateStr: d.toLocaleDateString('en-GB'), // dd/mm/yyyy
+                    timeStr: d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}),
+                    fullTime: d.toLocaleString('en-GB'),
+                    // Đảm bảo các trường không bị thiếu
+                    total: Number(order.total) || 0,
+                    points: calculatePoints(order.total) // Tính tạm điểm nếu thiếu
+                };
+            }).reverse(); // Đảo ngược để thấy đơn mới nhất
+        }
+        
+        renderHistoryList(historyData);
+    });
+}
+
+// 2. Hàm tính điểm tạm thời (nếu trong db chưa có)
+function calculatePoints(total) {
+    return Math.floor(total / 1000); // Ví dụ: 1000đ = 1 điểm
+}
+
+// 3. Xem Doanh Thu (Tính toán trực tiếp từ Firebase)
+function openRevenue() {
+    document.getElementById('loading-overlay').style.display = 'flex';
+    switchView('revenue');
+    loadRevenue('week'); // Mặc định load tuần này
+}
+
+function loadRevenue(type) {
+    // Lấy toàn bộ đơn hàng để tính toán
+    db.ref('orders').once('value', (snapshot) => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        const data = snapshot.val();
+        if (!data) return;
+
+        const orders = Object.values(data);
+        const stats = calculateRevenueStats(orders, type);
+        
+        renderDailyRevenueList(stats.dailyList);
+        renderRevenueDashboard(stats, type);
+    });
+}
+
+// 4. Hàm logic tính toán doanh thu (Thay thế logic của Google Script)
+function calculateRevenueStats(orders, filterType) {
+    const now = new Date();
+    let startTime, endTime;
+    
+    // Xác định khung giờ lọc
+    if (filterType === 'month') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), 1);
+        endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    } else if (filterType === 'range') {
+        const fromVal = document.getElementById('rev-from').value;
+        const toVal = document.getElementById('rev-to').value;
+        if(fromVal && toVal) {
+            startTime = new Date(fromVal); startTime.setHours(0,0,0);
+            endTime = new Date(toVal); endTime.setHours(23,59,59);
+        } else {
+            // Mặc định tuần nếu chưa chọn ngày
+            filterType = 'week'; 
+        }
+    }
+    
+    if (filterType === 'week') {
+        const day = now.getDay() || 7; 
+        startTime = new Date(now);
+        startTime.setDate(now.getDate() - day + 1); // Thứ 2
+        startTime.setHours(0,0,0,0);
+        endTime = new Date(startTime);
+        endTime.setDate(startTime.getDate() + 6); // CN
+        endTime.setHours(23,59,59,999);
+    }
+
+    // Khởi tạo biến thống kê
+    let stats = { 
+        drinkTotal: 0, snackTotal: 0, orderCount: 0, 
+        labels: [], chartData: [], 
+        dailyList: {}, 
+        todayDrink: 0, yesterdayDrink: 0 
+    };
+
+    // Chuẩn bị Labels biểu đồ
+    if (filterType === 'week') {
+        stats.labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+        stats.chartData = [0,0,0,0,0,0,0];
+    } else if (filterType === 'month') {
+        const daysInMonth = endTime.getDate();
+        stats.labels = Array.from({length: daysInMonth}, (_, i) => (i + 1).toString());
+        stats.chartData = new Array(daysInMonth).fill(0);
+    }
+
+    const todayStr = now.toLocaleDateString('en-GB');
+    const yest = new Date(now); yest.setDate(now.getDate() - 1);
+    const yestStr = yest.toLocaleDateString('en-GB');
+
+    // Duyệt qua từng đơn hàng để cộng dồn
+    orders.forEach(o => {
+        const d = new Date(o.createdAt || Date.now());
+        const dateKey = d.toLocaleDateString('en-GB');
+        const amount = Number(o.total) || 0;
+
+        // Bỏ qua đơn lỗi/test
+        if (amount <= 0) return;
+
+        // Tính tổng ngày hôm nay và hôm qua
+        if (dateKey === todayStr) stats.todayDrink += amount;
+        if (dateKey === yestStr) stats.yesterdayDrink += amount;
+
+        // Ghi vào danh sách chi tiết ngày
+        if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0, snack: 0 };
+        stats.dailyList[dateKey].drink += amount; // Tạm thời gộp hết vào drinkTotal để đơn giản
+        
+        stats.drinkTotal += amount; // Tổng doanh thu
+
+        // Nếu nằm trong khoảng thời gian lọc thì đưa vào biểu đồ
+        if (d >= startTime && d <= endTime) {
+            stats.orderCount++;
+            let idx = -1;
+            if (filterType === 'week') {
+                idx = (d.getDay() + 6) % 7; // 0=T2, ... 6=CN
+            } else if (filterType === 'month') {
+                idx = d.getDate() - 1;
+            }
+            
+            if (idx >= 0 && stats.chartData[idx] !== undefined) {
+                stats.chartData[idx] += amount;
+            }
+        }
+    });
+
+    return stats;
+}
 </script>
 </body>
 
 </html>
+
 
 
 
