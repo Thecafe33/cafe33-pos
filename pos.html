@@ -254,24 +254,27 @@ setInterval(() => {
 // --- HÀM KHỞI ĐỘNG (QUAN TRỌNG) ---
 async function loadPosData() {
     const overlay = document.getElementById('loading-overlay');
-    overlay.style.display = 'flex';
-    document.getElementById('loading-text').innerText = "Đang tải Menu & Dữ liệu...";
-
     try {
         const res = await callAPI('getPosData');
         if (res.status === 'success') {
             menu = res.menu || [];
             historyData = res.history || [];
+            
+            // KIỂM TRA NHANH: Nếu mảng rỗng thì báo ngay lên màn hình
+            if (menu.length === 0) {
+                alert("Dữ liệu Menu bị rỗng. Kiểm tra lại tên Sheet 'Menu'!");
+            }
+            
             renderTabs();
             renderMenu();
-            overlay.style.display = 'none'; // Chỉ ẩn khi thành công
+            overlay.style.display = 'none';
         } else {
-            alert("Lỗi server: " + res.message);
-            overlay.style.display = 'none'; // Phải ẩn đi để người dùng thao tác
+            alert("Lỗi từ GWA: " + res.message);
+            overlay.style.display = 'none';
         }
-    } catch (error) {
-        console.error("Lỗi kết nối:", error);
-        overlay.style.display = 'none'; // Phải ẩn đi khi lỗi mạng
+    } catch (e) {
+        alert("Không kết nối được API. Kiểm tra API_URL!");
+        overlay.style.display = 'none';
     }
 }
 
@@ -641,6 +644,7 @@ function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); 
 </body>
 
 </html>
+
 
 
 
