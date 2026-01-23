@@ -503,17 +503,48 @@ function completeOrder() {
         document.getElementById('loading-overlay').style.display = 'none';
         if(error) alert("Lỗi Firebase: " + error.message);
         else {
-            // Reset
-            cart = []; document.getElementById('kh-sdt').value = ""; document.getElementById('sdt-status').innerText = ""; 
-            renderCart();
-            
-            // Xử lý sau khi lưu
-            if (pendingBedOrder) {
-                if (!pendingBedOrder.bedId || pendingBedOrder.bedId == 0) document.getElementById('bed-select-modal').classList.remove('hidden');
-                else { showAppModal("Thành công!", "Đã thêm món cho " + pendingBedOrder.name, '✅'); openBedManager(); }
+            /// --- LOGIC MỚI: KIỂM TRA ĐỂ ĐÓNG BED ---
+            if (isCheckoutFlow && pendingBedOrder) {
+                // Nếu đây là quy trình TRẢ BED -> Cập nhật trạng thái Bed thành "đã xong"
+                var bookingId = pendingBedOrder.id || pendingBedOrder.key;
+                
+                db.ref('bedBookings/' + bookingId).update({
+                    status: 'đã xong',
+                    realEndTime: new Date().toLocaleTimeString('en-GB')
+                });
+
+                // Reset cờ hiệu
+                isCheckoutFlow = false;
+                
+                // Reset biến tạm
+                pendingBedOrder = null;
+                activeOrderingBedId = null;
+
+                // Xóa giỏ hàng & form
+                cart = []; 
+                document.getElementById('kh-sdt').value = ""; 
+                document.getElementById('sdt-status').innerText = "";
+                renderCart();
+                
+                // Quay về trang Bed
+                openBedManager();
+                setTimeout(() => { showAppModal("Hoàn tất!", "Đã thanh toán và TRẢ BED thành công!", '🏁'); }, 150);
+
             } else {
-                switchView('menu'); 
-                setTimeout(() => { showAppModal("Xong!", "Thanh toán thành công!", '✅'); }, 150);
+                // --- TRƯỜNG HỢP CŨ: Mua nước bình thường hoặc Đặt Bed mới ---
+                
+                // Reset
+                cart = []; document.getElementById('kh-sdt').value = ""; document.getElementById('sdt-status').innerText = "";
+                renderCart();
+
+                // Xử lý sau khi lưu
+                if (pendingBedOrder) {
+                    if (!pendingBedOrder.bedId || pendingBedOrder.bedId == 0) document.getElementById('bed-select-modal').classList.remove('hidden');
+                    else { showAppModal("Thành công!", "Đã thêm món cho " + pendingBedOrder.name, '✅'); openBedManager(); }
+                } else {
+                    switchView('menu');
+                    setTimeout(() => { showAppModal("Xong!", "Thanh toán thành công!", '✅'); }, 150);
+                }
             }
         }
     });
@@ -1714,6 +1745,7 @@ function processCheckoutFirebase(booking) {
 </div>
 </body>
 </html>
+
 
 
 
