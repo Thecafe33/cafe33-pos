@@ -190,10 +190,12 @@ body { font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; 
                 <h3 class="text-white text-lg font-bold tracking-wide">Đặt Bed Mới</h3>
                 <p class="text-green-100/70 text-xs mt-0.5">Nhập thông tin khách vãng lai</p>
             </div>
-            <button onclick="document.getElementById('modal-add-booking').classList.add('hidden')" 
-                class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
-            </button>
+            <button type="button" onclick="closeBookingModal()" 
+    class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition cursor-pointer z-50">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+    </svg>
+</button>
         </div>
 
         <div class="p-6 space-y-5 overflow-y-auto custom-scrollbar">
@@ -253,7 +255,7 @@ body { font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; 
         </div>
 
         <div class="p-6 pt-0 mt-auto">
-            <button onclick="confirmBedBooking()" class="w-full bg-[#1e3932] text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-900/20 active:scale-[0.98] transition-all flex justify-center items-center gap-2">
+            <button onclick="submitNewBooking()" class="w-full bg-[#1e3932] text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-900/20 active:scale-[0.98] transition-all flex justify-center items-center gap-2">
                 <span>TẠO LỊCH & CHỜ XẾP</span>
             </button>
         </div>
@@ -1316,51 +1318,72 @@ function autoFillCustomer() {
 }
 // --- HÀM TẠO LỊCH BED MỚI (ĐÃ FIX ĐƯỜNG DẪN + NGÀY GIỜ) ---
 // --- HÀM TẠO LỊCH BED MỚI (CHUẨN CÚ PHÁP) ---
+// --- HÀM TẠO LỊCH MỚI (ĐÃ KHỚP VỚI GIAO DIỆN IOS) ---
 function submitNewBooking() {
-    // 1. Lấy dữ liệu
+    // 1. Lấy thông tin khách
     var phone = document.getElementById('new_cust_phone').value;
     var name = document.getElementById('new_cust_name').value;
     var compName = document.getElementById('new_comp_name').value;
     var compPhone = document.getElementById('new_comp_phone').value;
-    var duration = document.getElementById('final_duration_minutes').value;
 
     if (!phone || !name) return alert("Vui lòng nhập SĐT và Tên!");
 
-    // 2. Hiệu ứng nút bấm
-    var btn = document.getElementById('btn-submit-booking');
-    btn.innerHTML = "⏳ Đang tạo...";
-    btn.disabled = true;
-
-    // 3. Xử lý thời gian (dd/mm/yyyy)
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-GB'); // Ví dụ: 23/01/2026
+    // 2. Tính thời gian từ giao diện mới
+    var durationMinutes = 60; // Mặc định 1 tiếng
     
+    // Kiểm tra xem đang chọn tab nào (Theo tiếng hay Chọn giờ về)
+    var boxDur = document.getElementById('mode-duration-box');
+    
+    if (boxDur && !boxDur.classList.contains('hidden')) {
+        // Tab: Theo tiếng (1h, 2h, 3h)
+        // Biến selectedDurationHours lấy từ đoạn script cuối file
+        durationMinutes = (typeof selectedDurationHours !== 'undefined' ? selectedDurationHours : 1) * 60;
+    } else {
+        // Tab: Chọn giờ về
+        var timeStr = document.getElementById('manual-end-time').value;
+        if (!timeStr) return alert("Vui lòng chọn giờ về!");
+        
+        var now = new Date();
+        var parts = timeStr.split(':');
+        var end = new Date();
+        end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
+        
+        // Nếu chọn giờ nhỏ hơn giờ hiện tại -> coi như là qua ngày hôm sau hoặc báo lỗi
+        if (end <= now) return alert("Giờ về phải lớn hơn giờ hiện tại!");
+        
+        durationMinutes = Math.floor((end - now) / 60000);
+    }
+
+    // 3. Hiệu ứng nút bấm
+    var btn = document.querySelector('button[onclick="submitNewBooking()"]');
+    if(btn) { btn.innerHTML = "⏳ Đang tạo..."; btn.disabled = true; }
+
+    // 4. Tính toán giờ hiển thị
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-GB'); 
     const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-    const endObj = new Date(now.getTime() + duration * 60000);
+    
+    const endObj = new Date(now.getTime() + durationMinutes * 60000);
     const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
-    // 4. Tạo object dữ liệu
-    const newBed = {
+    // 5. Gửi lên Firebase
+    db.ref('bedBookings').push({
         phone: phone,
         name: name,
-        date: dateStr,      
+        date: dateStr,
         start: startStr,
         end: endStr,
         compName: compName,
         compPhone: compPhone,
-        status: "chờ khách", 
-        bedId: "",          
+        status: "chờ khách",
+        bedId: "",
         type: "walk-in"
-    };
-
-    // 5. Gửi lên Firebase
-    db.ref('bedBookings').push(newBed, (err) => {
-        btn.innerHTML = "XÁC NHẬN & GỌI MÓN";
-        btn.disabled = false;
+    }, (err) => {
+        if(btn) { btn.innerHTML = "TẠO LỊCH & CHỜ XẾP"; btn.disabled = false; }
         
         if (!err) {
-            closeBookingModal();
-            openBedManager(); // Load lại danh sách
+            closeBookingModal(); // Đóng popup
+            openBedManager();    // Load lại danh sách
         } else {
             alert("Lỗi: " + err.message);
         }
@@ -1508,6 +1531,7 @@ function selectDuration(hours) {
 </div>
 </body>
 </html>
+
 
 
 
