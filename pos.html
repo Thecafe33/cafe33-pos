@@ -912,6 +912,7 @@ function renderChart(labels, chartData, type) {
 // 7. CÁC HÀM KHÁC (NAV, SWITCH VIEW...)
 // =========================================================
 // --- HÀM CHUYỂN VIEW (CẬP NHẬT LOGIC LUXURY THEME) ---
+// --- HÀM CHUYỂN VIEW (ĐÃ FIX: ẨN NÚT 'THANH TOÁN' Ở SIDEBAR KHI ĐANG THANH TOÁN) ---
 function switchView(v) {
     isPaymentMode = (v === 'payment');
 
@@ -920,7 +921,6 @@ function switchView(v) {
         document.getElementById('view-' + id)?.classList.add('hidden');
         document.getElementById('btn-nav-' + id)?.classList.remove('tab-active');
         
-        // Reset nút nav về mặc định
         let btn = document.getElementById('btn-nav-' + id);
         if(btn) btn.className = 'bg-gray-100 text-gray-400 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-all';
     });
@@ -943,18 +943,23 @@ function switchView(v) {
     document.getElementById('sidebar-cart').classList.toggle('hidden', v !== 'menu' && v !== 'payment');
     document.getElementById('category-bar').classList.toggle('hidden', v !== 'menu');
 
-    // 4. --- LOGIC LUXURY THEME (SỬA Ở ĐÂY) ---
-    // Kiểm tra xem có đang phục vụ khách Bed không
+    // === [MỚI] ẨN NÚT "THANH TOÁN" Ở SIDEBAR NẾU ĐANG Ở MÀN HÌNH THANH TOÁN ===
+    // Lý do: Bên màn hình chính đã có nút "HOÀN TẤT" rồi, để nút này thừa.
+    var sidebarPayBtn = document.getElementById('sidebar-pay-btn');
+    if (sidebarPayBtn) {
+        if (v === 'payment') sidebarPayBtn.classList.add('hidden'); // Ẩn đi
+        else sidebarPayBtn.classList.remove('hidden'); // Hiện lại (khi ở Menu)
+    }
+    // =======================================================================
+
+    // 4. LOGIC LUXURY THEME
     const isServingBed = (pendingBedOrder || (activeOrderingBedId && activeOrderingBedId != 0));
 
-    // Chỉ bật theme Luxury khi đang ở màn hình Menu hoặc Payment VÀ đang phục vụ Bed
     if (isServingBed && (v === 'menu' || v === 'payment')) {
         document.body.classList.add('luxury-theme');
-        // Đổi màu title header cho đồng bộ
         var headerTitle = document.querySelector('#header-bar h2');
-        if(headerTitle) headerTitle.classList.add('text-[#D4AF37]'); // Ép màu vàng
+        if(headerTitle) headerTitle.classList.add('text-[#D4AF37]');
     } else {
-        // Tắt theme Luxury khi về Bed manager, History hoặc order khách thường
         document.body.classList.remove('luxury-theme');
     }
 
@@ -1950,6 +1955,7 @@ function renderBedSelection() {
 </div>
 </body>
 </html>
+
 
 
 
