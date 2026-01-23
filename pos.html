@@ -1222,29 +1222,24 @@ function selectBedItem(index) {
         }
 
         // --- NÚT TRẢ BED / XẾP BED ---
+        // --- NÚT TRẢ BED / XẾP BED ---
         if (btnCheckout) {
-            btnCheckout.onclick = null;
+            btnCheckout.onclick = null; // Reset sự kiện cũ
+
             if (!hasBed) {
-                // XẾP BED
+                // TRƯỜNG HỢP 1: XẾP BED (Bed đang trống -> Xếp khách vào)
                 btnCheckout.innerHTML = '<span>🛏️ Xếp Bed Ngay</span>';
-                btnCheckout.onclick = function() { 
-                    pendingBedOrder = data; 
-                    document.getElementById('bed-select-modal').classList.remove('hidden'); 
+                btnCheckout.onclick = function() {
+                    pendingBedOrder = data;
+                    document.getElementById('bed-select-modal').classList.remove('hidden');
                 };
             } else {
-                // TRẢ BED
+                // TRƯỜNG HỢP 2: TRẢ BED (Bed đang có khách -> Tính tiền)
                 btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
-                btnCheckout.onclick = function() { 
-                    showIOSConfirm(`Xác nhận khách ${data.name} trả Bed và thanh toán?`, () => {
-                        btnCheckout.innerHTML = 'Wait...';
-                        db.ref('bedBookings/' + bookingId).update({
-                            status: 'đã xong',
-                            realEndTime: new Date().toLocaleTimeString('en-GB')
-                        }, (err) => { 
-                            if(!err) openBedManager(); 
-                            else { alert("Lỗi: " + err.message); btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>'; }
-                        }); 
-                    });
+                
+                // --- SỬA Ở ĐÂY: Gọi hàm xử lý thông minh mới ---
+                btnCheckout.onclick = function() {
+                    handleBedCheckout(data); 
                 };
             }
         }
@@ -1558,6 +1553,117 @@ function submitCancelBooking(type) {
         }
     });
 }
+    // =========================================================
+// XỬ LÝ TRẢ BED & TÍNH PHÍ LỐ GIỜ (THÔNG MINH)
+// =========================================================
+function handleBedCheckout(booking) {
+    if (!booking) return;
+
+    // 1. Tính toán thời gian
+    const now = new Date();
+    
+    // Lấy giờ kết thúc theo lịch
+    let endParts = booking.end.split(':');
+    let endTime = new Date();
+    endTime.setHours(parseInt(endParts[0]), parseInt(endParts[1]), 0);
+    
+    // Tính phút chênh lệch (Lố bao nhiêu phút)
+    // Nếu diff > 0 là lố, diff < 0 là trả sớm
+    let diffMinutes = Math.floor((now - endTime) / 60000);
+
+    // 2. LOGIC XỬ LÝ
+    if (diffMinutes <= 5) {
+        // --- TRƯỜNG HỢP A: TRẢ ĐÚNG GIỜ HOẶC LỐ ÍT (< 5p) ---
+        // Hiện popup xác nhận trả bed bình thường
+        showIOSConfirm(`Xác nhận trả Bed 0${booking.bedId}?`, () => {
+            processCheckoutFirebase(booking);
+        });
+    } else {
+        // --- TRƯỜNG HỢP B: LỐ GIỜ (> 5p) -> TÍNH TIỀN ---
+        
+        // Tính số giờ phải thu thêm (Làm tròn lên: 6p -> 1h, 65p -> 2h)
+        let extraHoursQty = Math.ceil(diffMinutes / 60);
+        
+        // Tính thời gian khách ĐÃ MUA trước đó (để biết đang ở giờ thứ mấy)
+        // Ví dụ: Đặt 2h30p -> Hệ thống tính là 3h (Math.ceil)
+        let startParts = booking.start.split(':');
+        let startTime = new Date();
+        startTime.setHours(parseInt(startParts[0]), parseInt(startParts[1]), 0);
+        
+        // Tổng phút đã đặt ban đầu
+        let bookedMinutes = (endTime - startTime) / 60000;
+        // Quy đổi ra giờ đã trả tiền (Ví dụ 2.5h -> 3h)
+        let paidHours = Math.ceil(bookedMinutes / 60);
+
+        let msg = `⚠️ KHÁCH QUÁ GIỜ: ${diffMinutes} PHÚT\n\nHệ thống sẽ tự động cộng thêm ${extraHoursQty} giờ vào Bill.\n(Bấm Đồng ý để chuyển sang Menu)`;
+
+        showIOSConfirm(msg, () => {
+            // --- THUẬT TOÁN TỰ ĐỘNG CHỌN MÓN (1h thường vs 1h từ h5) ---
+            
+            // Duyệt qua từng giờ lố để xem nó thuộc khung giá nào
+            for (let i = 1; i <= extraHoursQty; i++) {
+                // Giờ hiện tại đang tính = Giờ đã trả + Giờ lố thứ i
+                let currentHourIndex = paidHours + i;
+
+                if (currentHourIndex <= 4) {
+                    // Nếu là giờ thứ 4 trở xuống -> Giá thường
+                    autoAddMenuItemToCart("1h bed"); 
+                } else {
+                    // Nếu là giờ thứ 5 trở lên -> Giá cao
+                    autoAddMenuItemToCart("1h bed từ h5");
+                }
+            }
+
+            // Chuyển hướng sang màn hình Menu/Thanh toán
+            // Gán bed hiện tại vào biến đang order để lát thanh toán nó biết trừ bed nào
+            activeOrderingBedId = booking.bedId;
+            pendingBedOrder = booking; 
+            
+            // Cập nhật giao diện giỏ hàng
+            switchView('menu');
+            
+            // Hiện thông báo nhỏ
+            setTimeout(() => {
+                showAppModal("Đã tính phí lố giờ", `Đã thêm ${extraHoursQty}h vào hóa đơn. Vui lòng kiểm tra và thanh toán!`, "💰");
+            }, 300);
+        });
+    }
+}
+
+// Hàm phụ: Tìm món trong menu và ném vào giỏ
+function autoAddMenuItemToCart(itemName) {
+    // Tìm món trong mảng menu toàn cục
+    // (Lưu ý: So sánh chữ thường để tránh lỗi viết hoa/thường)
+    const item = menu.find(m => m.name.toLowerCase() === itemName.toLowerCase());
+    
+    if (item) {
+        // Nếu thấy -> Thêm vào giỏ (dùng hàm addToCart có sẵn của bà)
+        // item.priceM hoặc priceL tuỳ bà set trong menu, ở đây tui lấy đại priceM
+        let price = item.priceM > 0 ? item.priceM : item.priceL;
+        addToCart(item.name, 'M', price); 
+    } else {
+        console.warn(`Không tìm thấy món "${itemName}" trong Menu! Kiểm tra lại tên món.`);
+    }
+}
+
+// Hàm phụ: Gọi Firebase checkout (Tách ra từ code cũ cho gọn)
+function processCheckoutFirebase(booking) {
+    let btnCheckout = document.getElementById('btn-action-checkout');
+    if(btnCheckout) btnCheckout.innerHTML = 'Wait...';
+    
+    let bookingId = booking.id || booking.key;
+    
+    db.ref('bedBookings/' + bookingId).update({
+        status: 'đã xong',
+        realEndTime: new Date().toLocaleTimeString('en-GB')
+    }, (err) => { 
+        if(!err) openBedManager(); 
+        else {
+            alert("Lỗi: " + err.message);
+            if(btnCheckout) btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
+        }
+    }); 
+}
 </script>
 <div id="ios-confirm-modal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-300">
     <div class="bg-white/90 backdrop-blur-xl w-[300px] md:w-[320px] rounded-[14px] shadow-2xl transform scale-100 transition-all text-center overflow-hidden">
@@ -1608,6 +1714,7 @@ function submitCancelBooking(type) {
 </div>
 </body>
 </html>
+
 
 
 
