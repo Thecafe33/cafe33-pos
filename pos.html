@@ -99,7 +99,8 @@ body { font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; 
             <div class="w-[30%] flex flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden">
                 <div class="px-4 py-3 border-b border-gray-50 bg-white sticky top-0 z-10 flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Danh sách</span>
-                    <span id="today-date-display" class="text-[10px] font-bold text-[#1e3932] bg-green-50 px-2 py-1 rounded-md">Hôm nay</span>
+                    <input type="date" id="date-picker-btn" onchange="changeBedDate(this.value)" 
+       class="text-[10px] font-bold text-[#1e3932] bg-green-50 px-2 py-1 rounded-md border-none outline-none cursor-pointer hover:bg-green-100 transition-colors">
                 </div>
                 <div id="col-left-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
             </div>
@@ -758,67 +759,93 @@ function switchView(v) {
 
 // Bed Functions
 // --- HÀM OPEN BED MANAGER (ĐÃ SỬA LỖI NGÀY GIỜ) ---
-// --- HÀM OPEN BED MANAGER (ĐÃ SỬA: CHỈ HIỆN LỊCH HÔM NAY) ---
+// =========================================================
+// QUẢN LÝ BED & LỊCH (ĐÃ NÂNG CẤP: CHỌN NGÀY)
+// =========================================================
+
+// Biến lưu trữ toàn bộ lịch (để không phải tải lại khi đổi ngày)
+var globalAllBookings = []; 
+var currentFilterDateStr = ""; // Lưu ngày đang chọn (dạng dd/mm/yyyy)
+
 function openBedManager() {
     document.getElementById('loading-overlay').style.display = 'flex';
     switchView('bed');
     
-    // 1. Lấy ngày hôm nay chuẩn định dạng dd/mm/yyyy (Ví dụ: 23/01/2026)
-    const todayObj = new Date();
-    const todayStr = todayObj.toLocaleDateString('en-GB'); 
+    // 1. Mặc định chọn ngày hôm nay
+    const today = new Date();
+    // Format yyyy-mm-dd cho ô input
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const todayInputFormat = `${yyyy}-${mm}-${dd}`;
     
-    var dateEl = document.getElementById('today-date-display');
-    if(dateEl) dateEl.innerText = todayStr;
+    // Set giá trị cho ô chọn ngày
+    const picker = document.getElementById('date-picker-btn');
+    if(picker) picker.value = todayInputFormat;
     
+    // 2. Tải dữ liệu từ Firebase
     db.ref('bedBookings').on('value', snap => {
         const data = snap.val() || {};
         
-        // 2. Xử lý và Chuẩn hóa dữ liệu
-        let allBookings = Object.keys(data).map(k => {
+        // Chuẩn hóa dữ liệu thô
+        globalAllBookings = Object.keys(data).map(k => {
             const item = data[k];
             
-            // Lấy giờ
-            let sTime = item.start || item.startTime || "--:--";
-            let eTime = item.end || item.endTime || "--:--";
-            
-            // Lấy ngày (Chấp nhận nhiều tên biến)
+            // Xử lý ngày: Chuyển hết về dạng dd/mm/yyyy để so sánh
             let rawDate = item.date || item.bookingDate || "";
-            
-            // --- QUAN TRỌNG: CHUẨN HÓA NGÀY VỀ DẠNG dd/mm/yyyy ---
-            // Nếu dữ liệu đang là yyyy-mm-dd (do app tạo) thì phải xoay ngược lại
-            if (rawDate.includes('-')) {
-                const parts = rawDate.split('-'); // 2026-01-23
-                if (parts[0].length === 4) {
-                    rawDate = `${parts[2]}/${parts[1]}/${parts[0]}`; // Thành 23/01/2026
-                }
+            // Nếu là yyyy-mm-dd (2026-01-23) -> đổi thành 23/01/2026
+            if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
+                const p = rawDate.split('-'); 
+                rawDate = `${p[2]}/${p[1]}/${p[0]}`;
             }
-            // -----------------------------------------------------
 
             return {
                 id: k,
                 ...item,
-                start: sTime, 
-                end: eTime,
-                displayDate: rawDate // Lưu lại ngày đã chuẩn hóa
+                start: item.start || item.startTime || "--:--", 
+                end: item.end || item.endTime || "--:--",
+                displayDate: rawDate 
             };
-        });
-
-        // 3. BỘ LỌC (FILTER): Chỉ giữ lại đơn trùng ngày hôm nay
-        currentBedList = allBookings.filter(b => {
-            // Logic: Nếu ngày trong đơn trùng với ngày hôm nay -> Giữ lại
-            // Hoặc đơn đó có trạng thái 'active' (đang dùng) thì luôn hiện dù khác ngày (phòng trường hợp qua đêm)
-            return b.displayDate === todayStr || (b.status && b.status.includes('active'));
         });
 
         document.getElementById('loading-overlay').style.display = 'none';
         
-        // 4. Kiểm tra xem có đơn nào không?
-        if (currentBedList.length === 0) {
-            console.log("Không có lịch cho ngày: " + todayStr);
-        }
-
-        renderBedBookings(currentBedList);
+        // 3. Gọi hàm lọc theo ngày hiện tại của ô input
+        changeBedDate(picker ? picker.value : todayInputFormat);
     });
+}
+
+// Hàm xử lý khi bà bấm chọn ngày khác
+function changeBedDate(dateInputValue) {
+    if (!dateInputValue) return;
+
+    // dateInputValue đang là: 2026-01-25 (yyyy-mm-dd)
+    // Cần đổi sang: 25/01/2026 (dd/mm/yyyy) để khớp với dữ liệu
+    const parts = dateInputValue.split('-');
+    const targetDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    
+    currentFilterDateStr = targetDateStr; // Lưu lại để dùng nếu cần
+
+    console.log("📅 Đang xem lịch ngày:", targetDateStr);
+
+    // Lọc danh sách từ kho dữ liệu đã tải (globalAllBookings)
+    // Logic: 
+    // 1. Khớp ngày
+    // 2. HOẶC đang 'active' (đang dùng) thì hiện luôn (để nhỡ qua đêm còn thấy)
+    currentBedList = globalAllBookings.filter(b => {
+        // Chỉ hiện active nếu xem ngày hôm nay, còn xem quá khứ thì chỉ hiện đúng ngày đó
+        const isToday = (targetDateStr === new Date().toLocaleDateString('en-GB'));
+        
+        if (isToday) {
+             return b.displayDate === targetDateStr || (b.status && b.status.includes('active'));
+        } else {
+             // Xem quá khứ/tương lai thì cứ đúng ngày là hiện
+             return b.displayDate === targetDateStr;
+        }
+    });
+
+    // Vẽ lại giao diện
+    renderBedBookings(currentBedList);
 }
 function renderBedBookings(list) { selectedBedIndex = -1; document.getElementById('detail-empty-state')?.classList.remove('hidden'); document.getElementById('detail-content-panel')?.classList.add('hidden'); stopPanelCountdown(); renderLeftColumnList(); renderRightColumnMap(); }
 // --- SỬA HÀM VẼ DANH SÁCH (HIỆN ĐẦY ĐỦ TRẠNG THÁI) ---
@@ -1252,6 +1279,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
