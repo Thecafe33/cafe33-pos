@@ -1005,6 +1005,7 @@ function closeIOSModal() {
     onConfirmAction = null;
 }
 // --- HÀM SELECT ITEM: ĐÃ GỘP TẤT CẢ LOGIC (KHÔNG BỊ ĐƠ NỮA) ---
+// --- HÀM SELECT ITEM: ĐÃ SỬA LỖI DẤU NGOẶC + POPUP IPHONE ---
 function selectBedItem(index) {
     selectedBedIndex = index;
     renderLeftColumnList(); // Vẽ lại để highlight
@@ -1018,7 +1019,7 @@ function selectBedItem(index) {
     var isCancelled = (data.status && data.status.includes('đã hủy'));
     var isActive = (data.status && (data.status.includes('active') || data.status.includes('đang dùng')));
     var hasBed = (data.bedId && data.bedId != "WAITING");
-    // Lấy ID chuẩn (dùng id hoặc key)
+    // Lấy ID chuẩn
     var bookingId = data.id || data.key;
 
     // 1. Hiển thị Panel
@@ -1084,23 +1085,22 @@ function selectBedItem(index) {
             if(timerBox) timerBox.classList.add('hidden');
         }
 
-        // 4. GÁN SỰ KIỆN CHO CÁC NÚT (QUAN TRỌNG NHẤT)
+        // 4. GÁN SỰ KIỆN CHO CÁC NÚT (ĐÃ DÙNG POPUP IPHONE)
 
         // --- NÚT HỦY ---
         if(btnCancel) {
-            // Xóa sự kiện cũ để tránh bị double click
             btnCancel.onclick = null;
             btnCancel.onclick = function() {
-              // GỌI POPUP IPHONE
-              showIOSConfirm(`Xác nhận khách ${data.name} hủy lịch và KHÔNG đến?`, () => {
-                 // Hành động khi bấm Đồng ý
-                 btnCancel.innerHTML = "Đang hủy...";
-                 btnCancel.disabled = true;
-                 db.ref('bedBookings/' + bookingId).update({status: 'đã hủy'}, (err) => {
-                   if(!err) openBedManager();
-                 });
-               });
-             };
+                // Dùng Popup iPhone thay cho confirm thường
+                showIOSConfirm(`Xác nhận khách ${data.name} hủy lịch và KHÔNG đến?`, () => {
+                    btnCancel.innerHTML = "Đang hủy...";
+                    btnCancel.disabled = true;
+                    db.ref('bedBookings/' + bookingId).update({status: 'đã hủy'}, (err) => {
+                        if(!err) openBedManager();
+                    });
+                });
+            };
+        }
 
         // --- NÚT GỌI MÓN ---
         if (btnOrder) {
@@ -1116,32 +1116,30 @@ function selectBedItem(index) {
             btnCheckout.onclick = null; // Reset
             
             if (!hasBed) {
-                // TRƯỜNG HỢP 1: CHƯA CÓ BED -> HIỆN NÚT XẾP BED
+                // TRƯỜNG HỢP 1: XẾP BED (Không cần Popup iPhone, hiện Modal chọn giường)
                 btnCheckout.innerHTML = '<span>🛏️ Xếp Bed Ngay</span>';
                 btnCheckout.onclick = function() { 
-                    pendingBedOrder = data; // Lưu đơn hàng vào biến tạm
+                    pendingBedOrder = data; 
                     document.getElementById('bed-select-modal').classList.remove('hidden'); 
                 };
             } else {
-                // TRƯỜNG HỢP 2: ĐÃ CÓ BED -> HIỆN NÚT TRẢ BED
+                // TRƯỜNG HỢP 2: TRẢ BED (Dùng Popup iPhone)
                 btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
                 btnCheckout.onclick = function() { 
-    // GỌI POPUP IPHONE
-    showIOSConfirm(`Xác nhận khách ${data.name} trả Bed và thanh toán?`, () => {
-        // Hành động khi bấm Đồng ý
-        btnCheckout.innerHTML = 'Wait...';
-        db.ref('bedBookings/' + bookingId).update({
-            status: 'đã xong',
-            realEndTime: new Date().toLocaleTimeString('en-GB')
-        }, (err) => { 
-            if(!err) openBedManager(); 
-            else {
-                alert("Lỗi: " + err.message);
-                btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
-            }
-        });
-    });
-};
+                    showIOSConfirm(`Xác nhận khách ${data.name} trả Bed và thanh toán?`, () => {
+                        btnCheckout.innerHTML = 'Wait...';
+                        db.ref('bedBookings/' + bookingId).update({
+                            status: 'đã xong',
+                            realEndTime: new Date().toLocaleTimeString('en-GB')
+                        }, (err) => { 
+                            if(!err) openBedManager(); 
+                            else {
+                                alert("Lỗi: " + err.message);
+                                btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
+                            }
+                        }); 
+                    });
+                };
             }
         }
     }
@@ -1392,6 +1390,7 @@ function checkCustomer(){
 </div>
 </body>
 </html>
+
 
 
 
