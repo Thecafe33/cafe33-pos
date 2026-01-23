@@ -305,12 +305,14 @@ let isPaymentMode = false;
 let myChart = null;
 let selectedRefundItems = [];
 
+
 // Biến quản lý Bed
 var currentBedList = [];
 var selectedBedIndex = -1;
 var bedCountdownInterval = null;
 var pendingBedOrder = null;
 var activeOrderingBedId = null;
+var isCheckoutFlow = false; // Biến đánh dấu: Có phải đang trả Bed không?
 
 // Đồng hồ hệ thống
 setInterval(() => {
@@ -1613,21 +1615,19 @@ function handleBedCheckout(booking) {
                     autoAddMenuItemToCart("1h bed từ h5");
                 }
             }
-
-            // Chuyển hướng sang màn hình Menu/Thanh toán
-            // Gán bed hiện tại vào biến đang order để lát thanh toán nó biết trừ bed nào
             activeOrderingBedId = booking.bedId;
-            pendingBedOrder = booking; 
-            
-            // Cập nhật giao diện giỏ hàng
-            switchView('menu');
-            
-            // Hiện thông báo nhỏ
-            setTimeout(() => {
-                showAppModal("Đã tính phí lố giờ", `Đã thêm ${extraHoursQty}h vào hóa đơn. Vui lòng kiểm tra và thanh toán!`, "💰");
-            }, 300);
-        });
-    }
+        pendingBedOrder = booking; 
+        
+        isCheckoutFlow = true; // <--- QUAN TRỌNG: BẬT CỜ HIỆU LÊN!
+        
+        // Cập nhật giao diện giỏ hàng
+        switchView('menu');
+        
+        setTimeout(() => {
+            showAppModal("Đã tính phí lố giờ", `Đã thêm ${extraHoursQty}h vào hóa đơn. Vui lòng kiểm tra và thanh toán!`, "💰");
+        }, 300);
+            });
+}
 }
 
 // Hàm phụ: Tìm món trong menu và ném vào giỏ
@@ -1714,6 +1714,7 @@ function processCheckoutFirebase(booking) {
 </div>
 </body>
 </html>
+
 
 
 
