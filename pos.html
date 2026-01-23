@@ -868,8 +868,9 @@ function autoFillCustomer() {
     }
 }
 // --- HÀM TẠO LỊCH BED MỚI (ĐÃ FIX ĐƯỜNG DẪN + NGÀY GIỜ) ---
+// --- HÀM TẠO LỊCH BED MỚI (CHUẨN CÚ PHÁP) ---
 function submitNewBooking() {
-    // 1. Lấy dữ liệu từ Form nhập
+    // 1. Lấy dữ liệu
     var phone = document.getElementById('new_cust_phone').value;
     var name = document.getElementById('new_cust_name').value;
     var compName = document.getElementById('new_comp_name').value;
@@ -883,25 +884,19 @@ function submitNewBooking() {
     btn.innerHTML = "⏳ Đang tạo...";
     btn.disabled = true;
 
-    // 3. Xử lý thời gian (Quan trọng nhất)
+    // 3. Xử lý thời gian (dd/mm/yyyy)
     const now = new Date();
+    const dateStr = now.toLocaleDateString('en-GB'); // Ví dụ: 23/01/2026
     
-    // --> SỬA 1: Định dạng ngày thành dd/mm/yyyy (Ví dụ: 23/01/2026)
-    // Để khớp với bộ lọc hiển thị mà chúng ta vừa làm
-    const dateStr = now.toLocaleDateString('en-GB'); 
-    
-    // Giờ bắt đầu
     const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-    
-    // Tính giờ kết thúc
     const endObj = new Date(now.getTime() + duration * 60000);
     const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
-    // 4. Tạo đối tượng dữ liệu
+    // 4. Tạo object dữ liệu
     const newBed = {
         phone: phone,
         name: name,
-        date: dateStr,      // Đã sửa thành dd/mm/yyyy
+        date: dateStr,      
         start: startStr,
         end: endStr,
         compName: compName,
@@ -911,21 +906,16 @@ function submitNewBooking() {
         type: "walk-in"
     };
 
-    // 5. --> SỬA 2: Đẩy vào đúng nhánh 'bedBookings' (Thay vì 'beds')
+    // 5. Gửi lên Firebase
     db.ref('bedBookings').push(newBed, (err) => {
-        // Reset nút bấm
-        btn.innerHTML = "TẠO LỊCH MỚI
+        btn.innerHTML = "XÁC NHẬN & GỌI MÓN";
         btn.disabled = false;
         
         if (!err) {
-      ƠI      closeBookingModal();
-            // Gọi lại hàm hiển thị để thấy ngay lập tức
-            openBedManager(); 
-            
-            // Thông báo thành công
-            // alert("Đã xếp lịch thành công! Vui lòng chọn Bed ở cột bên trái.");
+            closeBookingModal();
+            openBedManager(); // Load lại danh sách
         } else {
-            alert("Lỗi Firebase: " + err.message);
+            alert("Lỗi: " + err.message);
         }
     });
 }
@@ -1010,6 +1000,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
