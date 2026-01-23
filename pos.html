@@ -612,6 +612,7 @@ function updateQty(idx, d) {
 // 5. THANH TOÁN (PAYMENT)
 // =========================================================
 // --- HÀM THANH TOÁN (ĐÃ SỬA: RESET SẠCH SẼ THÔNG TIN KHÁCH) ---
+// --- HÀM THANH TOÁN (ĐÃ FIX LỖI RESET BIẾN TRƯỚC KHI ĐÓNG BED) ---
 function completeOrder() {
     if (cart.length === 0) return showAppModal("Hic!", "Chưa có món nào!", '🛒');
     
@@ -622,7 +623,11 @@ function completeOrder() {
 
     document.getElementById('loading-overlay').style.display = 'flex';
     
-    // Lấy thông tin Bed/Khách lần cuối để lưu đơn
+    // === [FIX] BƯỚC 1: LƯU LẠI ID BED CẦN ĐÓNG NGAY LẬP TỨC ===
+    // Phải lưu vào biến cục bộ ngay lúc này, vì lát nữa pendingBedOrder sẽ bị reset về null
+    var bookingKeyToClose = (pendingBedOrder) ? (pendingBedOrder.id || pendingBedOrder.key) : null;
+    
+    // Lấy thông tin Bed/Khách để lưu đơn hàng
     var bedIdToSend = ""; 
     var custNameToSend = "Khách vãng lai";
     if (pendingBedOrder) { 
@@ -652,45 +657,44 @@ function completeOrder() {
         
         if(error) alert("Lỗi Firebase: " + error.message);
         else {
-            // === PHẦN QUAN TRỌNG: DỌN DẸP CHIẾN TRƯỜNG ===
-            
-            // 1. Xóa sạch ô nhập SĐT và trạng thái khách
+            // === DỌN DẸP DỮ LIỆU ===
             document.getElementById('kh-sdt').value = ""; 
             document.getElementById('sdt-status').innerText = "";
-            
-            // 2. Xóa cái dòng chữ màu cam/xanh (Khách chờ - Tên khách) nếu có
             var cartInfo = document.getElementById('cart-bed-info');
             if (cartInfo) cartInfo.remove();
 
-            // 3. Reset biến lưu khách (Để đơn sau không bị dính khách cũ)
+            // Reset biến toàn cục (Lúc này pendingBedOrder sẽ thành null)
             pendingBedOrder = null;
             activeOrderingBedId = null;
 
-            // 4. Xóa giỏ hàng
             cart = [];
             renderCart();
 
-            // === LOGIC ĐÓNG BED HOẶC CHUYỂN HƯỚNG ===
-            if (isCheckoutFlow && bedIdToSend) {
-                // Nếu là trả Bed lố giờ -> Đóng Bed luôn
-                db.ref('bedBookings/' + pendingBedOrder.id).update({
+            // === [FIX] BƯỚC 2: SỬ DỤNG ID ĐÃ LƯU ĐỂ ĐÓNG BED ===
+            // Kiểm tra: Có cờ isCheckoutFlow VÀ có ID đã lưu từ trước
+            if (isCheckoutFlow && bookingKeyToClose) {
+                console.log("Đang đóng Bed ID:", bookingKeyToClose);
+                
+                // Cập nhật trạng thái "đã xong"
+                db.ref('bedBookings/' + bookingKeyToClose).update({
                     status: 'đã xong',
                     realEndTime: new Date().toLocaleTimeString('en-GB')
                 });
+
+                // Reset cờ sau khi dùng xong
                 isCheckoutFlow = false;
+                
+                // Quay về trang quản lý Bed
                 openBedManager();
                 setTimeout(() => { showAppModal("Hoàn tất!", "Đã thanh toán và TRẢ BED thành công!", '🏁'); }, 150);
             } 
             else {
-                // Nếu là mua thường hoặc tạo Bed mới
-                // Kiểm tra lại pendingBedOrder (Lưu ý: ở trên đã reset null, nên check bedIdToSend)
+                // --- TRƯỜNG HỢP KHÔNG PHẢI TRẢ BED (MUA THÊM, MUA MANG VỀ) ---
+                
+                // Logic giữ nguyên màn hình chọn Bed nếu đang dở dang
                 if ((!bedIdToSend || bedIdToSend == "WAITING" || bedIdToSend == 0) && document.getElementById('bed-select-modal').classList.contains('hidden') === false) {
-                     // Đang mở modal chọn bed thì giữ nguyên
+                     // Không làm gì, giữ nguyên modal
                 } else if (bedIdToSend == "WAITING") {
-                    // Nếu là đơn Bed mới tạo -> Hiện bảng chọn Bed
-                    // (Phải phục hồi pendingBedOrder tạm để chọn bed)
-                    // Logic này hơi phức tạp, tốt nhất là cho chọn bed xong xuôi mới reset.
-                    // Nhưng an toàn nhất: Nếu là bed mới, hiện bảng chọn.
                      renderBedSelection();
                      document.getElementById('bed-select-modal').classList.remove('hidden');
                 } else {
@@ -2258,6 +2262,7 @@ function renderBedSelection() {
 </div>
 </body>
 </html>
+
 
 
 
