@@ -914,25 +914,73 @@ function renderDailyRevenueList(list) {
     document.getElementById('history-container').innerHTML = html; 
 }
 
-function renderRevenueDashboard(data, type) { 
-    document.getElementById('history-detail-empty').classList.add('hidden'); 
-    const detail = document.getElementById('history-detail-content'); 
-    detail.classList.remove('hidden'); 
-    const diff = data.today - data.yesterday; 
-    const dColor = diff >= 0 ? 'text-green-500': 'text-red-500'; 
-    const dIcon = diff >= 0 ? '▲': '▼'; 
+// --- HÀM VẼ DASHBOARD DOANH THU (STYLE APPLE: SÁNG, SẠCH, XANH THƯƠNG HIỆU) ---
+function renderRevenueDashboard(data, mode) {
+    document.getElementById('history-detail-empty').classList.add('hidden');
+    const detail = document.getElementById('history-detail-content');
+    detail.classList.remove('hidden');
     
+    const diff = data.today - data.yesterday;
+    const dColor = diff >= 0 ? 'text-green-500': 'text-red-500';
+    const dIcon = diff >= 0 ? '▲': '▼';
+
+    // Style nút bấm chuẩn iOS Segmented Control
+    // Active: Nền Xanh, Chữ Trắng, Bóng đổ nhẹ
+    const activeBtn = "bg-[#006241] text-white shadow-md font-bold";
+    // Inactive: Nền trong suốt, Chữ xám
+    const inactiveBtn = "text-gray-500 hover:bg-gray-200 font-medium";
+
     detail.innerHTML = `
     <div class="flex flex-col h-full space-y-4 text-left">
-        <div class="flex gap-2 items-center text-left"><button class="px-3 py-1.5 bg-[#006241] text-white rounded-lg font-black text-[9px] uppercase text-left">Tuần</button></div>
-        <div class="grid grid-cols-3 gap-3 text-left">
-            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-[#006241] text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Nước (Tổng)</p><p class="brand-font text-2xl text-[#006241] text-center">${data.drinkTotal.toLocaleString()}</p></div>
-            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-amber-400 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Ăn vặt</p><p class="brand-font text-xl text-amber-600 text-center">${data.snackTotal.toLocaleString()}</p></div>
-            <div class="p-5 bg-gray-50 rounded-3xl border-b-4 border-blue-400 text-center"><p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest text-center">Vs Hôm qua</p><p class="font-black text-sm ${dColor} text-center">${dIcon} ${Math.abs(diff).toLocaleString()}</p></div>
+        
+        <div class="flex flex-col sm:flex-row gap-3 items-center justify-between p-1.5 bg-gray-100/80 rounded-2xl border border-gray-200">
+            
+            <div class="flex bg-gray-200 p-1 rounded-xl w-full sm:w-auto">
+                <button onclick="openRevenue('week')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase transition-all duration-200 ${mode==='week'?activeBtn:inactiveBtn}">Tuần</button>
+                <button onclick="openRevenue('month')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase transition-all duration-200 ${mode==='month'?activeBtn:inactiveBtn}">Tháng</button>
+                <button onclick="openRevenue('year')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase transition-all duration-200 ${mode==='year'?activeBtn:inactiveBtn}">Năm</button>
+            </div>
+            
+            <div class="flex gap-2 items-center w-full sm:w-auto justify-end px-2">
+                <div class="flex items-center gap-1 bg-white px-2 py-1.5 rounded-xl border border-gray-200 shadow-sm">
+                    <input type="date" id="rev-start" class="text-[10px] font-bold text-[#1e3932] outline-none bg-transparent w-20 uppercase">
+                    <span class="text-gray-300">-</span>
+                    <input type="date" id="rev-end" class="text-[10px] font-bold text-[#1e3932] outline-none bg-transparent w-20 uppercase">
+                </div>
+                <button onclick="openRevenue('custom')" class="w-8 h-8 bg-[#006241] text-white rounded-xl flex items-center justify-center shadow-lg shadow-green-900/10 active:scale-95 transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                </button>
+            </div>
         </div>
-        <div class="flex-1 bg-white p-4 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col relative overflow-hidden text-left"><canvas id="revenueChart"></canvas></div>
-    </div>`; 
-    setTimeout(() => renderChart(data.labels, data.chartData, type), 200); 
+
+        <div class="grid grid-cols-3 gap-3 text-left">
+            <div class="p-4 bg-white rounded-[24px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center">
+                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng thu</p>
+                <p class="brand-font text-lg sm:text-xl text-[#006241]">${(data.drinkTotal + data.snackTotal).toLocaleString()}</p>
+            </div>
+            
+            <div class="p-4 bg-white rounded-[24px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center">
+                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ăn vặt</p>
+                <p class="brand-font text-lg sm:text-xl text-amber-500">${data.snackTotal.toLocaleString()}</p>
+            </div>
+            
+            <div class="p-4 bg-white rounded-[24px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center">
+                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">So hôm qua</p>
+                <div class="flex items-center gap-1">
+                    <span class="text-[10px] ${dColor}">${dIcon}</span>
+                    <span class="font-black text-sm ${dColor}">${Math.abs(diff).toLocaleString()}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 bg-white p-5 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col relative overflow-hidden">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>`;
+
+    setTimeout(() => {
+        renderChart(data.labels, data.chartData, mode);
+    }, 200);
 }
 
 function renderChart(labels, chartData, type) { 
@@ -1992,6 +2040,7 @@ function renderBedSelection() {
 </div>
 </body>
 </html>
+
 
 
 
