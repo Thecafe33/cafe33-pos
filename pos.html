@@ -626,14 +626,51 @@ function completeOrder() {
 }
 
 // Các hàm bổ trợ thanh toán
-function setMethod(m) { 
-    const isBank = (m === 'Chuyển khoản'); 
-    document.getElementById('btn-cash').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${!isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`;
-    document.getElementById('btn-bank').className = `w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md ${isBank? 'border-[#006241] text-[#006241]': 'border-transparent text-gray-300'}`;
-    const box = document.getElementById('cash-detail-box'); 
-    document.getElementById('cash-paid').value = currentTotal; 
-    if (isBank) box.style.pointerEvents = "none"; else box.style.pointerEvents = "auto"; 
-    calcChange(); 
+// --- HÀM CHỌN PHƯƠNG THỨC THANH TOÁN (ĐÃ FIX: LÀM MỜ Ô TIỀN MẶT KHI CK) ---
+function setMethod(m) {
+    const isBank = (m === 'Chuyển khoản');
+    
+    // 1. Cập nhật giao diện nút bấm
+    // Nếu là Bank: Nút Bank sáng, Nút Cash xám
+    // Nếu là Cash: Nút Cash sáng, Nút Bank xám
+    
+    // Class cho nút đang Active (Có viền xanh/đen tùy theme)
+    const activeClass = "w-full p-6 rounded-3xl border-4 bg-white text-xl font-bold flex justify-between items-center shadow-md border-[#006241] text-[#006241] sb-green";
+    
+    // Class cho nút Inactive (Mờ, không viền)
+    const inactiveClass = "w-full p-6 rounded-3xl border-4 border-transparent bg-white text-xl font-bold text-gray-300 flex justify-between items-center shadow-md";
+
+    // Cập nhật class cho 2 nút
+    document.getElementById('btn-cash').className = isBank ? inactiveClass : activeClass;
+    document.getElementById('btn-bank').className = isBank ? activeClass : inactiveClass;
+
+    // 2. XỬ LÝ Ô NHẬP TIỀN "KHÁCH ĐƯA"
+    const box = document.getElementById('cash-detail-box');
+    const input = document.getElementById('cash-paid');
+
+    // Luôn reset giá trị về tổng bill trước đã
+    input.value = currentTotal;
+
+    if (isBank) {
+        // --- CHẾ ĐỘ CHUYỂN KHOẢN ---
+        // Vô hiệu hóa click
+        box.style.pointerEvents = "none";
+        // Làm mờ đi (50%)
+        box.style.opacity = "0.4";
+        // Chuyển sang trắng đen cho nó chìm hẳn
+        box.style.filter = "grayscale(100%)";
+    } else {
+        // --- CHẾ ĐỘ TIỀN MẶT ---
+        // Cho phép click lại
+        box.style.pointerEvents = "auto";
+        // Sáng rõ trở lại
+        box.style.opacity = "1";
+        // Bỏ trắng đen
+        box.style.filter = "none";
+    }
+
+    // Tính lại tiền thừa (về 0)
+    calcChange();
 }
 function updateSuggestions() { 
     const vals = [50000, 100000, 200000, 500000].filter(v => v >= currentTotal).slice(0, 3); 
@@ -1955,6 +1992,7 @@ function renderBedSelection() {
 </div>
 </body>
 </html>
+
 
 
 
