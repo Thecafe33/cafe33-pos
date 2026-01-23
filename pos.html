@@ -821,10 +821,169 @@ function openBedManager() {
     });
 }
 function renderBedBookings(list) { selectedBedIndex = -1; document.getElementById('detail-empty-state')?.classList.remove('hidden'); document.getElementById('detail-content-panel')?.classList.add('hidden'); stopPanelCountdown(); renderLeftColumnList(); renderRightColumnMap(); }
-function renderLeftColumnList() { var container = document.getElementById('col-left-list'); if(!container) return; if (!currentBedList || currentBedList.length === 0) { container.innerHTML = '<div class="text-center text-gray-300 text-[10px] py-10">Trống</div>'; return; } container.innerHTML = currentBedList.map(function(b, index) { var isDone = (b.status && b.status.includes('đã xong')); var isCancelled = (b.status && b.status.includes('đã hủy')); var isActive = (index === selectedBedIndex); var hasBed = (b.bedId && b.bedId.toString().trim() !== ""); var wrapperClass = "cursor-pointer p-3 rounded-xl transition-all mb-2 border " + (isActive ? "bg-[#1e3932] border-[#1e3932] text-white shadow-md scale-[1.02]" : (isCancelled ? "bg-red-50 border-red-100 text-red-800 opacity-80" : (isDone ? "bg-gray-100 border-transparent text-gray-400" : "bg-white border-gray-100 text-gray-600 hover:bg-gray-50"))); var statusDot = isCancelled ? "bg-red-500" : (isDone ? "bg-gray-400" : (hasBed ? "bg-green-500" : "bg-amber-400 animate-pulse")); var timeDisplay = isDone ? `Đã trả: ${b.end}` : (isCancelled ? `ĐÃ HỦY LỊCH` : `${b.start} - ${b.end}`); return `<div onclick="selectBedItem(${index})" class="${wrapperClass}"><div class="flex justify-between items-center mb-1"><span class="font-bold text-xs opacity-80">${hasBed ? `BED ${b.bedId}` : `CHỜ XẾP`}</span><div class="w-2 h-2 rounded-full ${statusDot}"></div></div><div class="font-bold text-sm truncate ${isDone || isCancelled ? 'opacity-60':''}">${b.name}</div><div class="text-[10px] font-mono flex justify-between opacity-70"><span>${timeDisplay}</span></div></div>`; }).join(''); }
+// --- SỬA HÀM VẼ DANH SÁCH (HIỆN ĐẦY ĐỦ TRẠNG THÁI) ---
+function renderLeftColumnList() {
+    var container = document.getElementById('col-left-list');
+    if (!container) return;
+
+    if (!currentBedList || currentBedList.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-300 text-[10px] py-10">Trống</div>';
+        return;
+    }
+
+    container.innerHTML = currentBedList.map(function(b, index) {
+        // Kiểm tra trạng thái
+        var isDone = (b.status && b.status.includes('đã xong')); // Màu xám
+        var isCancelled = (b.status && b.status.includes('đã hủy')); // Màu đỏ nhạt
+        var isActive = (b.status && (b.status.includes('active') || b.status.includes('đang dùng'))); // Màu xanh
+        var isSelected = (index === selectedBedIndex); // Đang click chọn
+        
+        // Logic màu sắc
+        var wrapperClass = "cursor-pointer p-3 rounded-xl transition-all mb-2 border relative ";
+        
+        if (isSelected) {
+            wrapperClass += "bg-[#1e3932] border-[#1e3932] text-white shadow-md scale-[1.02] z-10";
+        } else if (isCancelled) {
+            wrapperClass += "bg-red-50 border-red-100 text-red-800 opacity-70";
+        } else if (isDone) {
+            // Đã xong: Màu xám đậm hơn chút để dễ đọc, không làm mờ chữ quá
+            wrapperClass += "bg-gray-200 border-gray-300 text-gray-600"; 
+        } else if (isActive) {
+            wrapperClass += "bg-green-50 border-green-200 text-[#006241]";
+        } else {
+            wrapperClass += "bg-white border-gray-100 text-gray-600 hover:bg-gray-50";
+        }
+
+        // Dấu chấm tròn trạng thái
+        var statusDot = "";
+        if (isCancelled) statusDot = "bg-red-500";
+        else if (isDone) statusDot = "bg-gray-500";
+        else if (isActive) statusDot = "bg-green-500 animate-pulse";
+        else statusDot = "bg-amber-400"; // Chờ xếp
+
+        // Hiển thị giờ
+        // Nếu đã xong thì hiện giờ trả thực tế (realEndTime) nếu có, hoặc giờ dự kiến
+        var timeDisplay = `${b.start} - ${b.end}`;
+        if (isDone && b.realEndTime) {
+            timeDisplay = `Đã trả: ${b.realEndTime}`;
+        } else if (isCancelled) {
+            timeDisplay = "ĐÃ HỦY";
+        }
+
+        var bedLabel = (b.bedId && b.bedId != "WAITING") ? `BED 0${b.bedId}` : "CHỜ XẾP";
+
+        return `
+        <div onclick="selectBedItem(${index})" class="${wrapperClass}">
+            <div class="flex justify-between items-center mb-1">
+                <span class="font-bold text-[10px] opacity-80 uppercase tracking-wider">${bedLabel}</span>
+                <div class="w-2 h-2 rounded-full ${statusDot}"></div>
+            </div>
+            <div class="font-bold text-sm truncate mb-1">${b.name}</div>
+            <div class="text-[10px] font-mono flex justify-between opacity-80 font-bold">
+                <span>${timeDisplay}</span>
+            </div>
+        </div>`;
+    }).join('');
+}
 function renderRightColumnMap() { var container = document.getElementById('vertical-map-container'); if(!container) return; var html = ''; for (var i = 1; i <= 4; i++) { var booking = currentBedList.find(b => b.bedId == i && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); var boxStyle = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "bg-green-500 border-green-600 text-white shadow-md ring-2 ring-green-100 hover:scale-105 cursor-pointer" : "bg-amber-50 border-amber-300 text-amber-500 hover:scale-105 cursor-pointer") : "bg-gray-50 border-gray-200 text-gray-300"; var label = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "ACTIVE" : "ĐẶT") : "TRỐNG"; var actionAttr = booking ? `onclick="selectBedFromMap(${i})"` : ""; html += `<div ${actionAttr} class="flex-1 rounded-xl border-2 border-dashed ${boxStyle} flex flex-col items-center justify-center transition-all min-h-[50px] mb-2 relative group"><span class="text-lg font-black">0${i}</span><span class="text-[8px] font-bold tracking-wider">${label}</span>${booking ? `<div class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity"><span class="text-[10px] font-bold text-white">Xem</span></div>` : ''}</div>`; } container.innerHTML = html; }
 function selectBedFromMap(bedId) { var index = currentBedList.findIndex(b => b.bedId == bedId && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); if (index !== -1) { selectBedItem(index); var listItem = document.getElementById('col-left-list').children[index]; if(listItem) listItem.scrollIntoView({behavior: 'smooth', block: 'center'}); } }
-function selectBedItem(index) { selectedBedIndex = index; renderLeftColumnList(); var data = currentBedList[index]; var panel = document.getElementById('detail-content-panel'); var empty = document.getElementById('detail-empty-state'); var isDone = (data.status && data.status.includes('đã xong')); var isCancelled = (data.status && data.status.includes('đã hủy')); var isActive = (data.status && (data.status.includes('đang dùng') || data.status.includes('active'))); var hasBed = (data.bedId && data.bedId.toString().trim() !== ""); if(empty) empty.classList.add('hidden'); if(panel) { panel.classList.remove('hidden'); panel.classList.add('flex'); } document.getElementById('detail-bed-name').innerText = hasBed ? `BED ${data.bedId}` : "CHỜ XẾP"; document.getElementById('detail-status-badge').innerText = isDone ? "ĐÃ XONG" : (isCancelled ? "ĐÃ HỦY" : (isActive ? "ACTIVE" : "CHỜ KHÁCH")); document.getElementById('detail-cust-name').innerText = data.name; document.getElementById('detail-cust-phone').innerText = data.phone; document.getElementById('detail-start').innerText = data.start; document.getElementById('detail-end').innerText = data.end; document.getElementById('detail-comp-name').innerText = data.compName || "Chưa có"; document.getElementById('detail-comp-phone').innerText = data.compPhone || "--"; var rowCheckout = document.getElementById('row-checkout-time'); var actionBtns = document.getElementById('detail-action-buttons'); var timerBox = document.getElementById('detail-timer-box'); var wrapperCancel = document.getElementById('wrapper-btn-cancel'); if (isDone || isCancelled) { if(rowCheckout) { rowCheckout.classList.remove('hidden'); document.getElementById('detail-real-end').innerText = isCancelled ? "Đã hủy" : data.end; } if(actionBtns) actionBtns.classList.add('hidden'); if(timerBox) timerBox.classList.add('hidden'); if(wrapperCancel) wrapperCancel.classList.add('hidden'); stopPanelCountdown(); } else { if(rowCheckout) rowCheckout.classList.add('hidden'); if(actionBtns) actionBtns.classList.remove('hidden'); if(wrapperCancel) wrapperCancel.classList.remove('hidden'); var btnOrder = document.getElementById('btn-action-order'); var btnCheckout = document.getElementById('btn-action-checkout'); var canInteract = true; var timeMsg = ""; if (!isActive) { var now = new Date(); var startObj = parseTimeObj(data.start); if (startObj) { var diffMinutes = (now - startObj) / 60000; if (diffMinutes < -30) { canInteract = false; timeMsg = `(Sớm ${Math.abs(Math.round(diffMinutes))}p)`; } else if (diffMinutes > 50) { canInteract = false; timeMsg = `(Quá ${Math.round(diffMinutes)}p)`; } } } if (btnOrder) { btnOrder.disabled = !canInteract; btnOrder.className = canInteract ? "py-3 rounded-xl bg-amber-100 text-amber-800 font-bold hover:bg-amber-200 transition text-xs flex justify-center items-center gap-1" : "py-3 rounded-xl bg-gray-100 text-gray-400 font-bold cursor-not-allowed text-xs flex justify-center items-center gap-1"; var span = btnOrder.querySelector('span'); if(span) span.innerText = canInteract ? "☕ Gọi Món" : "⛔ " + timeMsg; btnOrder.onclick = function() { showBedDetail(data.bedId); }; } if (btnCheckout) { if (!hasBed) { btnCheckout.disabled = !canInteract; btnCheckout.innerHTML = canInteract ? '<span>🛏️ Xếp Bed Ngay</span>' : `<span>⛔ ${timeMsg}</span>`; btnCheckout.onclick = function() { if(!canInteract) return; pendingBedOrder = data; document.getElementById('bed-select-modal').classList.remove('hidden'); }; } else { btnCheckout.disabled = false; btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>'; btnCheckout.onclick = async function() { if (confirm(`Xác nhận khách đã xong và thanh toán?`)) { btnCheckout.innerHTML = 'Wait...'; db.ref('bedBookings/' + data.key).update({status: 'đã xong', endTime: new Date().toLocaleTimeString()}, (err) => { if(!err) openBedManager(); }); } }; } } if (hasBed && data.end) { if(timerBox) timerBox.classList.remove('hidden'); startPanelCountdown(data.end); } else { stopPanelCountdown(); } } var btnCancel = document.getElementById('btn-action-cancel'); if(btnCancel) { btnCancel.onclick = function() { if (confirm(`⚠️ CẢNH BÁO: Hủy lịch của khách ${data.name}?\n(Sẽ không tính doanh thu)`)) { btnCancel.innerHTML = "Đang hủy..."; btnCancel.disabled = true; db.ref('beds/' + data.key).update({status: 'đã hủy'}, (err) => { if(!err) openBedManager(); }); } }; } }
+// --- SỬA HÀM SELECT ITEM: ẨN NÚT HỦY KHI ĐANG ACTIVE ---
+function selectBedItem(index) {
+    selectedBedIndex = index;
+    renderLeftColumnList(); // Vẽ lại để highlight
+
+    var data = currentBedList[index];
+    var panel = document.getElementById('detail-content-panel');
+    var empty = document.getElementById('detail-empty-state');
+    
+    // Các biến trạng thái
+    var isDone = (data.status && data.status.includes('đã xong'));
+    var isCancelled = (data.status && data.status.includes('đã hủy'));
+    var isActive = (data.status && (data.status.includes('active') || data.status.includes('đang dùng')));
+    var hasBed = (data.bedId && data.bedId != "WAITING");
+
+    // Hiển thị Panel
+    if(empty) empty.classList.add('hidden');
+    if(panel) { panel.classList.remove('hidden'); panel.classList.add('flex'); }
+
+    // Điền thông tin (Giữ nguyên)
+    document.getElementById('detail-bed-name').innerText = hasBed ? `BED 0${data.bedId}` : "CHỜ XẾP";
+    
+    var badge = document.getElementById('detail-status-badge');
+    if (isDone) { badge.innerText = "ĐÃ XONG"; badge.className = "px-2 py-1 bg-gray-500 text-white rounded-lg text-[10px] font-bold uppercase"; }
+    else if (isCancelled) { badge.innerText = "ĐÃ HỦY"; badge.className = "px-2 py-1 bg-red-500 text-white rounded-lg text-[10px] font-bold uppercase"; }
+    else if (isActive) { badge.innerText = "ĐANG DÙNG"; badge.className = "px-2 py-1 bg-green-600 text-white rounded-lg text-[10px] font-bold uppercase"; }
+    else { badge.innerText = "CHỜ KHÁCH"; badge.className = "px-2 py-1 bg-amber-400 text-white rounded-lg text-[10px] font-bold uppercase"; }
+
+    document.getElementById('detail-cust-name').innerText = data.name || "Khách lẻ";
+    document.getElementById('detail-cust-phone').innerText = data.phone || "";
+    document.getElementById('detail-comp-name').innerText = data.compName || "Không có";
+    document.getElementById('detail-comp-phone').innerText = data.compPhone || "--";
+    document.getElementById('detail-start').innerText = data.checkInTime || data.start;
+    document.getElementById('detail-end').innerText = data.end;
+
+    // Các phần tử DOM
+    var rowCheckout = document.getElementById('row-checkout-time');
+    var actionBtns = document.getElementById('detail-action-buttons');
+    var timerBox = document.getElementById('detail-timer-box');
+    var wrapperCancel = document.getElementById('wrapper-btn-cancel');
+
+    // --- LOGIC HIỂN THỊ NÚT BẤM ---
+    
+    if (isDone || isCancelled) {
+        // 1. TRƯỜNG HỢP: ĐÃ XONG / ĐÃ HỦY
+        // Hiện thông tin nhưng ẩn hết nút bấm
+        if(rowCheckout) {
+            rowCheckout.classList.remove('hidden');
+            document.getElementById('detail-real-end').innerText = isCancelled ? "Đã hủy" : (data.realEndTime || "--:--");
+        }
+        if(actionBtns) actionBtns.classList.add('hidden');
+        if(timerBox) timerBox.classList.add('hidden');
+        if(wrapperCancel) wrapperCancel.classList.add('hidden');
+        stopPanelCountdown(); 
+        
+    } else {
+        // 2. TRƯỜNG HỢP: ĐANG HOẠT ĐỘNG HOẶC CHỜ
+        
+        if(rowCheckout) rowCheckout.classList.add('hidden');
+        if(actionBtns) actionBtns.classList.remove('hidden'); // Hiện nút Gọi món/Trả bed
+
+        // === LOGIC NÚT HỦY (THEO YÊU CẦU CỦA BẠN) ===
+        if (isActive) {
+            // Nếu đang dùng -> Ẩn nút Hủy (Chỉ được Trả Bed)
+            if(wrapperCancel) wrapperCancel.classList.add('hidden');
+        } else {
+            // Nếu đang chờ -> Hiện nút Hủy
+            if(wrapperCancel) wrapperCancel.classList.remove('hidden');
+        }
+
+        // Xử lý nút Hủy (nếu hiện)
+        var btnCancel = document.getElementById('btn-action-cancel');
+        if(btnCancel) {
+            btnCancel.onclick = function() {
+                if (confirm(`Xác nhận khách ${data.name} hủy lịch và KHÔNG đến?`)) {
+                    btnCancel.innerHTML = "Đang hủy...";
+                    btnCancel.disabled = true;
+                    db.ref('bedBookings/' + data.id).update({status: 'đã hủy'}, (err) => {
+                        if(!err) openBedManager();
+                    });
+                }
+            };
+        }
+
+        // Đồng hồ đếm ngược
+        if (hasBed && data.end && isActive) {
+            if(timerBox) timerBox.classList.remove('hidden');
+            startPanelCountdown(data.end);
+        } else {
+            stopPanelCountdown();
+            if(timerBox) timerBox.classList.add('hidden');
+        }
+
+        // Setup nút Gọi món / Trả Bed
+        setupActionButtons(data, isActive, hasBed);
+    }
+}
 function showBedDetail(bedId) { var booking = null; if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId); if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex]; if (!booking) { alert("Vui lòng chọn khách hàng trong danh sách trước!"); return; } activeOrderingBedId = bedId; pendingBedOrder = booking; switchView('menu'); setTimeout(function() { var cartInfo = document.getElementById('cart-bed-info'); var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between'); if (!cartInfo && headerContainer) { cartInfo = document.createElement('div'); cartInfo.id = 'cart-bed-info'; headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling); } if (cartInfo) { var guestName = booking.name || "Khách hàng"; cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1"; if (booking.bedId && booking.bedId != 0) { cartInfo.innerText = `🟢 BED 0${booking.bedId} - ${guestName}`; cartInfo.style.color = "#006241"; } else { cartInfo.innerText = `🟠 KHÁCH CHỜ - ${guestName}`; cartInfo.style.color = "#d97706"; } } }, 50); }
 // --- SỬA LỖI: XẾP BED BỊ RA ĐƠN MỚI UNDEFINED ---
 function finalizeBedCheckIn(bedId) {
@@ -1048,6 +1207,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
