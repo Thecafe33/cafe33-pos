@@ -2328,6 +2328,41 @@ function setCleaningFee(phone, amount, bookingId) {
         }
     });
 }
+// =========================================================
+// CÁC HÀM XỬ LÝ PHÍ VỆ SINH (BỊ THIẾU)
+// =========================================================
+
+// Biến tạm để nhớ đang phạt ai
+var pendingFeePhone = "";
+var pendingFeeBookingId = "";
+
+// 1. Hàm mở Modal chọn phí (Được gọi khi bấm nút chổi/vệ sinh)
+function openCleaningModal(phone, bookingId) {
+    console.log("Mở modal phạt cho:", phone); 
+    pendingFeePhone = phone;
+    pendingFeeBookingId = bookingId;
+    
+    var modal = document.getElementById('modal-cleaning-fee');
+    if(modal) {
+        modal.classList.remove('hidden');
+        // Thêm animation nhẹ cho đẹp
+        modal.querySelector('div').classList.add('scale-100');
+        modal.querySelector('div').classList.remove('scale-95');
+    } else {
+        alert("Lỗi: Không tìm thấy Modal HTML ID 'modal-cleaning-fee'. Vui lòng kiểm tra lại code HTML.");
+    }
+}
+
+// 2. Hàm xác nhận phí (Được gọi khi chọn 20k/30k/50k)
+function submitCleaningFee(amount) {
+    if (!pendingFeePhone) return;
+    
+    // Đóng modal
+    document.getElementById('modal-cleaning-fee').classList.add('hidden');
+    
+    // Gọi hàm lưu nợ
+    setCleaningFee(pendingFeePhone, amount, pendingFeeBookingId);
+}
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
     <div class="bg-white/95 backdrop-blur-2xl w-full max-w-[340px] rounded-[35px] shadow-[0_30px_70px_rgba(0,0,0,0.3)] text-center border border-white/60 p-8 transform scale-100 transition-all">
@@ -2408,6 +2443,7 @@ function setCleaningFee(phone, amount, bookingId) {
 </div>
 </body>
 </html>
+
 
 
 
