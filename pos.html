@@ -757,21 +757,52 @@ function switchView(v) {
 }
 
 // Bed Functions
+f// --- HÀM OPEN BED MANAGER (ĐÃ SỬA LỖI NGÀY GIỜ) ---
 function openBedManager() {
     document.getElementById('loading-overlay').style.display = 'flex';
     switchView('bed');
+    
     var dateEl = document.getElementById('today-date-display');
     if(dateEl) dateEl.innerText = new Date().toLocaleDateString('vi-VN');
+    
+    // Lắng nghe dữ liệu từ Firebase
     db.ref('bedBookings').on('value', snap => {
-    const data = snap.val() || {};
-    currentBedList = Object.keys(data).map(k => ({
-        id: k,
-        ...data[k]
-    }));
-    document.getElementById('loading-overlay').style.display = 'none';
-    renderBedBookings(currentBedList);
-});
+        const data = snap.val() || {};
+        
+        // --- ĐOẠN XỬ LÝ QUAN TRỌNG NHẤT ---
+        currentBedList = Object.keys(data).map(k => {
+            const item = data[k];
+            
+            // 1. Xử lý Giờ: Chấp nhận cả 'start' lẫn 'startTime'
+            // Nếu không có thì để mặc định là "--:--"
+            let sTime = item.start || item.startTime || "--:--";
+            let eTime = item.end || item.endTime || "--:--";
+            
+            // 2. Xử lý Ngày: Chấp nhận cả 'date' lẫn 'bookingDate'
+            let dDate = item.date || item.bookingDate || "";
+            
+            // 3. Ghép ngày vào giờ để hiển thị cho rõ (nếu không phải hôm nay)
+            // Ví dụ: "09:30 (25/10)"
+            let displayTime = sTime;
+            const todayStr = new Date().toLocaleDateString('en-GB'); // dd/mm/yyyy
+            // Nếu ngày đặt khác hôm nay thì hiển thị thêm ngày bên cạnh giờ
+            if (dDate && dDate !== todayStr && dDate.includes('/')) {
+                 displayTime = `${sTime} (${dDate.substring(0,5)})`;
+            }
 
+            return {
+                id: k,
+                ...item,
+                start: displayTime, // Gán lại vào biến chuẩn 'start' cho giao diện dùng
+                end: eTime,         // Gán lại vào biến chuẩn 'end'
+                rawDate: dDate      // Lưu lại ngày gốc để dùng nếu cần
+            };
+        });
+        // ------------------------------------
+
+        document.getElementById('loading-overlay').style.display = 'none';
+        renderBedBookings(currentBedList);
+    });
 }
 function renderBedBookings(list) { selectedBedIndex = -1; document.getElementById('detail-empty-state')?.classList.remove('hidden'); document.getElementById('detail-content-panel')?.classList.add('hidden'); stopPanelCountdown(); renderLeftColumnList(); renderRightColumnMap(); }
 function renderLeftColumnList() { var container = document.getElementById('col-left-list'); if(!container) return; if (!currentBedList || currentBedList.length === 0) { container.innerHTML = '<div class="text-center text-gray-300 text-[10px] py-10">Trống</div>'; return; } container.innerHTML = currentBedList.map(function(b, index) { var isDone = (b.status && b.status.includes('đã xong')); var isCancelled = (b.status && b.status.includes('đã hủy')); var isActive = (index === selectedBedIndex); var hasBed = (b.bedId && b.bedId.toString().trim() !== ""); var wrapperClass = "cursor-pointer p-3 rounded-xl transition-all mb-2 border " + (isActive ? "bg-[#1e3932] border-[#1e3932] text-white shadow-md scale-[1.02]" : (isCancelled ? "bg-red-50 border-red-100 text-red-800 opacity-80" : (isDone ? "bg-gray-100 border-transparent text-gray-400" : "bg-white border-gray-100 text-gray-600 hover:bg-gray-50"))); var statusDot = isCancelled ? "bg-red-500" : (isDone ? "bg-gray-400" : (hasBed ? "bg-green-500" : "bg-amber-400 animate-pulse")); var timeDisplay = isDone ? `Đã trả: ${b.end}` : (isCancelled ? `ĐÃ HỦY LỊCH` : `${b.start} - ${b.end}`); return `<div onclick="selectBedItem(${index})" class="${wrapperClass}"><div class="flex justify-between items-center mb-1"><span class="font-bold text-xs opacity-80">${hasBed ? `BED ${b.bedId}` : `CHỜ XẾP`}</span><div class="w-2 h-2 rounded-full ${statusDot}"></div></div><div class="font-bold text-sm truncate ${isDone || isCancelled ? 'opacity-60':''}">${b.name}</div><div class="text-[10px] font-mono flex justify-between opacity-70"><span>${timeDisplay}</span></div></div>`; }).join(''); }
@@ -902,6 +933,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
