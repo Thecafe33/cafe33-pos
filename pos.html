@@ -539,6 +539,7 @@ function completeOrder() {
 
                 // Xử lý sau khi lưu
                 if (pendingBedOrder) {
+                    renderBedSelection();
                     if (!pendingBedOrder.bedId || pendingBedOrder.bedId == 0) document.getElementById('bed-select-modal').classList.remove('hidden');
                     else { showAppModal("Thành công!", "Đã thêm món cho " + pendingBedOrder.name, '✅'); openBedManager(); }
                 } else {
@@ -1264,6 +1265,7 @@ function selectBedItem(index) {
                 btnCheckout.innerHTML = '<span>🛏️ Xếp Bed Ngay</span>';
                 btnCheckout.onclick = function() {
                     pendingBedOrder = data;
+                    renderBedSelection();
                     document.getElementById('bed-select-modal').classList.remove('hidden');
                 };
             } else {
@@ -1747,6 +1749,40 @@ function processCheckoutFirebase(booking) {
         }
     }); 
 }
+// --- HÀM VẼ NÚT CHỌN BED (KHÔI PHỤC) ---
+function renderBedSelection() {
+    var container = document.getElementById('bed-selection-container');
+    if (!container) return;
+    
+    container.innerHTML = ""; // Xóa trắng cũ
+
+    // Quán có 4 Bed (nếu nhiều hơn thì sửa số 4)
+    for (var i = 1; i <= 4; i++) {
+        // Kiểm tra Bed này có đang bận không
+        var isBusy = currentBedList.find(b => 
+            b.bedId == i && 
+            b.status && 
+            (b.status.includes('active') || b.status.includes('đang dùng'))
+        );
+
+        // Logic giao diện: Bận thì xám, Trống thì Xanh
+        var btnClass = isBusy 
+            ? "p-4 bg-gray-100 text-gray-400 rounded-xl font-bold border border-gray-200 cursor-not-allowed opacity-60"
+            : "p-4 bg-green-50 text-[#006241] rounded-xl font-bold border border-green-200 hover:bg-green-100 transition shadow-sm active:scale-95 cursor-pointer";
+
+        var onClick = isBusy ? "" : `onclick="finalizeBedCheckIn(${i})"`;
+        var statusText = isBusy ? "ĐANG BẬN" : "TRỐNG";
+        var icon = isBusy ? "⛔" : "✅";
+
+        container.innerHTML += `
+            <button ${onClick} class="${btnClass} flex flex-col items-center justify-center gap-1 h-24">
+                <span class="text-xl">${icon}</span>
+                <span class="text-xl">BED 0${i}</span>
+                <span class="text-[10px] uppercase font-bold tracking-wider">${statusText}</span>
+            </button>
+        `;
+    }
+}
 </script>
 <div id="ios-confirm-modal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-300">
     <div class="bg-white/90 backdrop-blur-xl w-[300px] md:w-[320px] rounded-[14px] shadow-2xl transform scale-100 transition-all text-center overflow-hidden">
@@ -1797,6 +1833,7 @@ function processCheckoutFirebase(booking) {
 </div>
 </body>
 </html>
+
 
 
 
