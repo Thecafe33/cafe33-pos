@@ -1505,7 +1505,7 @@ function renderLeftColumnList() {
     }).join('');
 }
 function renderRightColumnMap() { var container = document.getElementById('vertical-map-container'); if(!container) return; var html = ''; for (var i = 1; i <= 4; i++) { var booking = currentBedList.find(b => b.bedId == i && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); var boxStyle = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "bg-green-500 border-green-600 text-white shadow-md ring-2 ring-green-100 hover:scale-105 cursor-pointer" : "bg-amber-50 border-amber-300 text-amber-500 hover:scale-105 cursor-pointer") : "bg-gray-50 border-gray-200 text-gray-300"; var label = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "ACTIVE" : "ĐẶT") : "TRỐNG"; var actionAttr = booking ? `onclick="selectBedFromMap(${i})"` : ""; html += `<div ${actionAttr} class="flex-1 rounded-xl border-2 border-dashed ${boxStyle} flex flex-col items-center justify-center transition-all min-h-[50px] mb-2 relative group"><span class="text-lg font-black">0${i}</span><span class="text-[8px] font-bold tracking-wider">${label}</span>${booking ? `<div class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity"><span class="text-[10px] font-bold text-white">Xem</span></div>` : ''}</div>`; } container.innerHTML = html; }
-function selectBedFromMap(bedId) { var index = currentBedList.findIndex(b => b.bedId == bedId && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); if (index !== -1) { selectBedItem(index); var listItem = document.getElementById('col-left-list').children[index]; if(listItem) listItem.scrollIntoView({behavior: 'smooth', block: 'center'}); } }
+function selectBedFromMap(bedId) { var index = currentBedList.findIndex(b => b.bedId == bedId && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); if (index !== -1) { (index); var listItem = document.getElementById('col-left-list').children[index]; if(listItem) listItem.scrollIntoView({behavior: 'smooth', block: 'center'}); } }
 // --- HÀM GỌI POPUP STYLE IPHONE ---
 let onConfirmAction = null; // Biến lưu hành động sẽ làm khi bấm OK
 
@@ -1577,6 +1577,25 @@ function selectBedItem(index) {
     else if (isActive) { badge.innerText = "ĐANG DÙNG"; badge.className = "px-3 py-1 bg-green-500 text-white rounded-lg text-[10px] font-bold uppercase animate-pulse"; }
     else { badge.innerText = "CHỜ KHÁCH"; badge.className = "px-3 py-1 bg-amber-400 text-white rounded-lg text-[10px] font-bold uppercase"; }
 
+    // Biến tạm lưu thông tin để phạt
+var pendingFeePhone = "";
+var pendingFeeBookingId = "";
+
+function openCleaningModal(phone, bookingId) {
+    pendingFeePhone = phone;
+    pendingFeeBookingId = bookingId;
+    document.getElementById('modal-cleaning-fee').classList.remove('hidden');
+}
+
+function submitCleaningFee(amount) {
+    if (!pendingFeePhone) return;
+    
+    // Đóng modal
+    document.getElementById('modal-cleaning-fee').classList.add('hidden');
+    
+    // Gọi hàm lưu nợ cũ
+    setCleaningFee(pendingFeePhone, amount, pendingFeeBookingId);
+}
     // --- ẨN HIỆN CÁC KHỐI ---
     var rowCheckout = document.getElementById('row-checkout-time');
     var actionBtns = document.getElementById('detail-action-buttons');
@@ -1594,11 +1613,12 @@ function selectBedItem(index) {
         if(wrapperCancel) wrapperCancel.classList.add('hidden');
         stopPanelCountdown();
 
-        // [MỚI] TÍNH TỔNG TIỀN ĐÃ CHI TRONG SESSION NÀY
-        // Logic: Lọc đơn hàng có SĐT này và thời gian tạo nằm giữa CheckIn và CheckOut
-        if (isDone && data.phone) {
-            calculateSessionSpend(data.phone, data.id).then(total => {
-                // Tạo một div hiển thị tổng tiền và nút phạt
+        // 1. CHỈ HIỆN THÔNG TIN NẾU "ĐÃ XONG" (KHÔNG PHẢI HỦY)
+        if (isDone && !isCancelled && data.phone) {
+            
+            // Gọi hàm tính tiền chuẩn (có truyền giờ bắt đầu/kết thúc)
+            calculateSessionSpend(data.phone, data.start, data.realEndTime).then(total => {
+                
                 var infoDiv = document.getElementById('done-session-info');
                 if (!infoDiv) {
                     infoDiv = document.createElement('div');
@@ -1606,26 +1626,31 @@ function selectBedItem(index) {
                     document.getElementById('detail-content-panel').querySelector('.p-4.space-y-3').appendChild(infoDiv);
                 }
                 
+                // HTML MỚI: Gọn gàng, nút vệ sinh nhỏ xíu màu đỏ
                 infoDiv.innerHTML = `
-                <div class="mt-4 pt-4 border-t border-dashed border-gray-300">
-                    <div class="flex justify-between items-center mb-3">
-                        <span class="text-xs font-bold text-gray-500 uppercase">Tổng chi tiêu:</span>
-                        <span class="text-xl font-black text-[#006241]">${total.toLocaleString()}đ</span>
-                    </div>
-                    
-                    <div class="bg-red-50 p-3 rounded-2xl border border-red-100">
-                        <p class="text-[10px] font-bold text-red-500 uppercase mb-2 text-center">⚠️ Thu phí vệ sinh (Nợ lần sau)</p>
-                        <div class="grid grid-cols-3 gap-2">
-                            <button onclick="setCleaningFee('${data.phone}', 20000, '${bookingId}')" class="py-2 bg-white border border-red-200 rounded-xl text-[10px] font-bold text-red-600 hover:bg-red-500 hover:text-white transition shadow-sm">20K</button>
-                            <button onclick="setCleaningFee('${data.phone}', 30000, '${bookingId}')" class="py-2 bg-white border border-red-200 rounded-xl text-[10px] font-bold text-red-600 hover:bg-red-500 hover:text-white transition shadow-sm">30K</button>
-                            <button onclick="setCleaningFee('${data.phone}', 50000, '${bookingId}')" class="py-2 bg-white border border-red-200 rounded-xl text-[10px] font-bold text-red-600 hover:bg-red-500 hover:text-white transition shadow-sm">50K</button>
+                <div class="mt-4 pt-4 border-t border-dashed border-gray-300 relative group">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Tổng chi session này</p>
+                            <p class="text-2xl font-black text-[#006241]">${total.toLocaleString()}đ</p>
                         </div>
-                        <p id="fee-status-${bookingId}" class="text-[9px] text-center text-gray-400 mt-1 italic h-3"></p>
+                        
+                        <button onclick="openCleaningModal('${data.phone}', '${bookingId}')" 
+                            class="w-10 h-10 bg-white border border-red-100 text-red-400 rounded-full flex items-center justify-center shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all active:scale-95" title="Thêm phí vệ sinh">
+                            <span class="text-lg">🧹</span>
+                        </button>
                     </div>
+                    <p id="fee-status-${bookingId}" class="text-[9px] text-right text-green-600 font-bold mt-1 h-3"></p>
                 </div>`;
+                
                 infoDiv.classList.remove('hidden');
             });
+        } else {
+            // Nếu là HỦY thì ẩn luôn cái bảng tiền nong đi
+            var infoDiv = document.getElementById('done-session-info');
+            if(infoDiv) infoDiv.classList.add('hidden');
         }
+    }
 
     } else {
         // === KHU VỰC ĐANG CHẠY ===
@@ -2232,22 +2257,43 @@ function renderBedSelection() {
     });
 }
 // --- HÀM TÍNH TỔNG CHI TIÊU CỦA 1 LẦN BED ---
-function calculateSessionSpend(phone, bookingId) {
+// --- HÀM TÍNH TIỀN (CHUẨN XÁC THEO KHUNG GIỜ) ---
+function calculateSessionSpend(phone, startTimeStr, endTimeStr) {
     return new Promise((resolve) => {
-        // Lấy tất cả đơn hàng
+        if (!startTimeStr || !endTimeStr) { resolve(0); return; }
+
+        // 1. Tạo đối tượng Date cho Start/End (Giả định là hôm nay hoặc ngày trong booking)
+        // Vì data booking có thể thiếu ngày, ta lấy ngày hiện tại làm mốc so sánh giờ
+        var now = new Date();
+        
+        var startParts = startTimeStr.split(':');
+        var startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(startParts[0]), parseInt(startParts[1]), 0);
+
+        var endParts = endTimeStr.split(':');
+        var endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(endParts[0]), parseInt(endParts[1]), 59); // Thêm giây cho chắc
+
+        // Nếu qua đêm (End < Start), cộng thêm 1 ngày cho End
+        if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
+
+        // 2. Quét đơn hàng
         db.ref('orders').once('value', snap => {
             let total = 0;
             if (snap.exists()) {
                 const orders = snap.val();
                 Object.values(orders).forEach(o => {
-                    // Logic: Cùng SĐT và (Cùng BookingID Bed HOẶC BedID trùng khớp thời gian)
-                    // Ở đây đơn giản nhất là check SĐT + Thời gian loanh quanh ngày đó
+                    // Check SĐT
                     if (normalizePhone(o.sdt) === normalizePhone(phone)) {
-                        // Bà có thể thêm logic check thời gian checkin/checkout ở đây nếu muốn chính xác tuyệt đối
-                        // Tạm thời lấy hết đơn của khách đó trong ngày hôm nay
-                        // Hoặc tốt nhất: Lúc tạo order, bà lưu thêm bookingId vào order.
-                        // Nhưng với data hiện tại: Check SĐT là cách nhanh nhất.
-                        total += Number(o.total || 0);
+                        // Check Thời gian tạo đơn
+                        var orderDate = new Date(o.createdAt);
+                        
+                        // Logic so sánh: Đơn hàng phải nằm TRONG khoảng Start -> End
+                        // (Thêm buffer 5 phút trước/sau để trừ hao sai lệch)
+                        var bufferStart = new Date(startDate.getTime() - 5*60000); 
+                        var bufferEnd = new Date(endDate.getTime() + 5*60000);
+
+                        if (orderDate >= bufferStart && orderDate <= bufferEnd) {
+                            total += Number(o.total || 0);
+                        }
                     }
                 });
             }
@@ -2284,6 +2330,34 @@ function setCleaningFee(phone, amount, bookingId) {
     });
 }
 </script>
+<div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
+    <div class="bg-white/95 backdrop-blur-2xl w-full max-w-[340px] rounded-[35px] shadow-[0_30px_70px_rgba(0,0,0,0.3)] text-center border border-white/60 p-8 transform scale-100 transition-all">
+        
+        <div class="w-14 h-14 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm border border-red-100">
+            <span class="text-2xl">🧹</span>
+        </div>
+        
+        <h3 class="text-lg font-black text-gray-800 uppercase tracking-wide mb-1">Phí Vệ Sinh</h3>
+        <p class="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-6">Chọn mức phí lưu nợ lần sau</p>
+
+        <div class="grid grid-cols-3 gap-3 mb-6">
+            <button onclick="submitCleaningFee(20000)" class="py-4 bg-white border border-gray-100 rounded-[20px] text-gray-700 font-black text-xs shadow-sm active:scale-95 transition-all hover:border-red-500 hover:text-red-500 hover:shadow-md">
+                20K
+            </button>
+            <button onclick="submitCleaningFee(30000)" class="py-4 bg-white border border-gray-100 rounded-[20px] text-gray-700 font-black text-xs shadow-sm active:scale-95 transition-all hover:border-red-500 hover:text-red-500 hover:shadow-md">
+                30K
+            </button>
+            <button onclick="submitCleaningFee(50000)" class="py-4 bg-white border border-gray-100 rounded-[20px] text-gray-700 font-black text-xs shadow-sm active:scale-95 transition-all hover:border-red-500 hover:text-red-500 hover:shadow-md">
+                50K
+            </button>
+        </div>
+
+        <button onclick="document.getElementById('modal-cleaning-fee').classList.add('hidden')" 
+            class="text-gray-400 font-bold text-xs hover:text-gray-600 underline decoration-dashed underline-offset-4">
+            Đóng
+        </button>
+    </div>
+</div>
 <div id="ios-confirm-modal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-[4px] transition-opacity duration-300 p-6">
     <div class="bg-white/90 backdrop-blur-2xl w-full max-w-[320px] rounded-[35px] shadow-[0_20px_60px_rgba(0,0,0,0.2)] text-center overflow-hidden border border-white/40">
         
@@ -2335,6 +2409,7 @@ function setCleaningFee(phone, amount, bookingId) {
 </div>
 </body>
 </html>
+
 
 
 
