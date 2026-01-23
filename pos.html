@@ -976,6 +976,34 @@ function renderLeftColumnList() {
 }
 function renderRightColumnMap() { var container = document.getElementById('vertical-map-container'); if(!container) return; var html = ''; for (var i = 1; i <= 4; i++) { var booking = currentBedList.find(b => b.bedId == i && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); var boxStyle = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "bg-green-500 border-green-600 text-white shadow-md ring-2 ring-green-100 hover:scale-105 cursor-pointer" : "bg-amber-50 border-amber-300 text-amber-500 hover:scale-105 cursor-pointer") : "bg-gray-50 border-gray-200 text-gray-300"; var label = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "ACTIVE" : "ĐẶT") : "TRỐNG"; var actionAttr = booking ? `onclick="selectBedFromMap(${i})"` : ""; html += `<div ${actionAttr} class="flex-1 rounded-xl border-2 border-dashed ${boxStyle} flex flex-col items-center justify-center transition-all min-h-[50px] mb-2 relative group"><span class="text-lg font-black">0${i}</span><span class="text-[8px] font-bold tracking-wider">${label}</span>${booking ? `<div class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity"><span class="text-[10px] font-bold text-white">Xem</span></div>` : ''}</div>`; } container.innerHTML = html; }
 function selectBedFromMap(bedId) { var index = currentBedList.findIndex(b => b.bedId == bedId && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); if (index !== -1) { selectBedItem(index); var listItem = document.getElementById('col-left-list').children[index]; if(listItem) listItem.scrollIntoView({behavior: 'smooth', block: 'center'}); } }
+// --- HÀM GỌI POPUP STYLE IPHONE ---
+let onConfirmAction = null; // Biến lưu hành động sẽ làm khi bấm OK
+
+function showIOSConfirm(message, callback) {
+    // 1. Gán nội dung
+    document.getElementById('ios-modal-message').innerText = message;
+    
+    // 2. Lưu hành động cần làm (callback)
+    onConfirmAction = callback;
+    
+    // 3. Gán sự kiện cho nút OK
+    const btnOk = document.getElementById('ios-confirm-btn');
+    btnOk.onclick = function() {
+        if (onConfirmAction) onConfirmAction(); // Chạy hành động
+        closeIOSModal(); // Đóng popup
+    };
+
+    // 4. Hiển thị Popup
+    const modal = document.getElementById('ios-confirm-modal');
+    modal.classList.remove('hidden');
+    // Thêm chút animation
+    modal.classList.add('animate-fade-in'); 
+}
+
+function closeIOSModal() {
+    document.getElementById('ios-confirm-modal').classList.add('hidden');
+    onConfirmAction = null;
+}
 // --- HÀM SELECT ITEM: ĐÃ GỘP TẤT CẢ LOGIC (KHÔNG BỊ ĐƠ NỮA) ---
 function selectBedItem(index) {
     selectedBedIndex = index;
@@ -1063,15 +1091,16 @@ function selectBedItem(index) {
             // Xóa sự kiện cũ để tránh bị double click
             btnCancel.onclick = null;
             btnCancel.onclick = function() {
-                if (confirm(`Xác nhận khách ${data.name} hủy lịch và KHÔNG đến?`)) {
-                    btnCancel.innerHTML = "Đang hủy...";
-                    btnCancel.disabled = true;
-                    db.ref('bedBookings/' + bookingId).update({status: 'đã hủy'}, (err) => {
-                        if(!err) openBedManager();
-                    });
-                }
-            };
-        }
+              // GỌI POPUP IPHONE
+              showIOSConfirm(`Xác nhận khách ${data.name} hủy lịch và KHÔNG đến?`, () => {
+                 // Hành động khi bấm Đồng ý
+                 btnCancel.innerHTML = "Đang hủy...";
+                 btnCancel.disabled = true;
+                 db.ref('bedBookings/' + bookingId).update({status: 'đã hủy'}, (err) => {
+                   if(!err) openBedManager();
+                 });
+               });
+             };
 
         // --- NÚT GỌI MÓN ---
         if (btnOrder) {
@@ -1097,23 +1126,22 @@ function selectBedItem(index) {
                 // TRƯỜNG HỢP 2: ĐÃ CÓ BED -> HIỆN NÚT TRẢ BED
                 btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
                 btnCheckout.onclick = function() { 
-                    if (confirm(`Xác nhận khách ${data.name} trả Bed và thanh toán?`)) {
-                        btnCheckout.innerHTML = 'Wait...';
-                        
-                        // Cập nhật trạng thái "đã xong"
-                        db.ref('bedBookings/' + bookingId).update({
-                            status: 'đã xong',
-                            realEndTime: new Date().toLocaleTimeString('en-GB')
-                        }, (err) => { 
-                            if(!err) {
-                                openBedManager(); // Load lại danh sách
-                            } else {
-                                alert("Lỗi: " + err.message);
-                                btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
-                            }
-                        }); 
-                    } 
-                };
+    // GỌI POPUP IPHONE
+    showIOSConfirm(`Xác nhận khách ${data.name} trả Bed và thanh toán?`, () => {
+        // Hành động khi bấm Đồng ý
+        btnCheckout.innerHTML = 'Wait...';
+        db.ref('bedBookings/' + bookingId).update({
+            status: 'đã xong',
+            realEndTime: new Date().toLocaleTimeString('en-GB')
+        }, (err) => { 
+            if(!err) openBedManager(); 
+            else {
+                alert("Lỗi: " + err.message);
+                btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
+            }
+        });
+    });
+};
             }
         }
     }
@@ -1339,8 +1367,32 @@ function checkCustomer(){
 }
 
 </script>
+<div id="ios-confirm-modal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-300">
+    <div class="bg-white/90 backdrop-blur-xl w-[300px] md:w-[320px] rounded-[14px] shadow-2xl transform scale-100 transition-all text-center overflow-hidden">
+        
+        <div class="p-5 pt-6">
+            <h3 class="text-[17px] font-bold text-black mb-1">Xác nhận</h3>
+            <p id="ios-modal-message" class="text-[13px] text-gray-800 leading-snug">
+                Nội dung xác nhận sẽ hiện ở đây...
+            </p>
+        </div>
+
+        <div class="flex border-t border-gray-300/50 h-[44px]">
+            <button onclick="closeIOSModal()" 
+                class="w-1/2 h-full text-[17px] text-[#007AFF] font-normal hover:bg-gray-100 active:bg-gray-200 transition-colors border-r border-gray-300/50">
+                Hủy
+            </button>
+            
+            <button id="ios-confirm-btn" 
+                class="w-1/2 h-full text-[17px] text-[#007AFF] font-bold hover:bg-gray-100 active:bg-gray-200 transition-colors">
+                Đồng ý
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
 
 
 
