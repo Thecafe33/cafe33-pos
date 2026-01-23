@@ -847,7 +847,69 @@ function changeBedDate(dateInputValue) {
     // Vẽ lại giao diện
     renderBedBookings(currentBedList);
 }
-function renderBedBookings(list) { selectedBedIndex = -1; document.getElementById('detail-empty-state')?.classList.remove('hidden'); document.getElementById('detail-content-panel')?.classList.add('hidden'); stopPanelCountdown(); renderLeftColumnList(); renderRightColumnMap(); }
+function renderBedBookings(list) {
+    // ========================================================
+    // 1. TỰ ĐỘNG QUÉT VÀ HỦY LỊCH TRỄ (Auto-Cancel Logic)
+    // ========================================================
+    const now = new Date();
+    const AUTO_CANCEL_MINUTES = 50; // Giới hạn 50 phút
+    const todayStr = now.toLocaleDateString('en-GB'); // Định dạng dd/mm/yyyy
+
+    if (list && list.length > 0) {
+        list.forEach(booking => {
+            // Chỉ kiểm tra các đơn đang "chờ khách"
+            if (booking.status === 'chờ khách' || !booking.status) {
+                
+                // Chỉ hủy nếu là lịch của HÔM NAY (tránh hủy nhầm lịch ngày mai)
+                // (Nếu không có displayDate thì mặc định coi là hôm nay để xử lý)
+                if (!booking.displayDate || booking.displayDate === todayStr) {
+                    
+                    if (booking.start && booking.start.includes(':')) {
+                        // Tính toán thời gian trễ
+                        let parts = booking.start.split(':');
+                        let bookingTime = new Date();
+                        bookingTime.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
+
+                        let diff = (now - bookingTime) / 60000; // Đổi ra phút
+
+                        // Nếu trễ hơn 50 phút -> Hủy ngay trên Firebase
+                        if (diff > AUTO_CANCEL_MINUTES) {
+                            console.log(`🚫 Auto-cancel: Đơn ${booking.name} trễ ${Math.round(diff)}p -> HỦY`);
+                            
+                            let bId = booking.id || booking.key;
+                            if (bId) {
+                                db.ref('bedBookings/' + bId).update({
+                                    status: 'đã hủy',
+                                    note: 'Hủy tự động (Quá 50p)'
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ========================================================
+    // 2. RESET GIAO DIỆN VỀ MẶC ĐỊNH
+    // ========================================================
+    selectedBedIndex = -1; // Bỏ chọn item đang click
+    
+    // Hiện màn hình chờ "Chọn lịch để xem"
+    document.getElementById('detail-empty-state')?.classList.remove('hidden');
+    
+    // Ẩn bảng chi tiết đi
+    document.getElementById('detail-content-panel')?.classList.add('hidden');
+    
+    // Tắt đồng hồ đếm ngược (nếu đang chạy của bed trước)
+    stopPanelCountdown();
+
+    // ========================================================
+    // 3. VẼ LẠI GIAO DIỆN (List bên trái + Map bên phải)
+    // ========================================================
+    renderLeftColumnList();
+    renderRightColumnMap();
+}
 // --- SỬA HÀM VẼ DANH SÁCH (HIỆN ĐẦY ĐỦ TRẠNG THÁI) ---
 function renderLeftColumnList() {
     var container = document.getElementById('col-left-list');
@@ -1279,6 +1341,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
