@@ -1319,6 +1319,7 @@ function autoFillCustomer() {
 // --- HÀM TẠO LỊCH BED MỚI (ĐÃ FIX ĐƯỜNG DẪN + NGÀY GIỜ) ---
 // --- HÀM TẠO LỊCH BED MỚI (CHUẨN CÚ PHÁP) ---
 // --- HÀM TẠO LỊCH MỚI (ĐÃ KHỚP VỚI GIAO DIỆN IOS) ---
+// --- HÀM TẠO LỊCH MỚI (ĐÃ FIX LỖI TRÙNG BIẾN 'NOW') ---
 function submitNewBooking() {
     // 1. Lấy thông tin khách
     var phone = document.getElementById('new_cust_phone').value;
@@ -1328,27 +1329,29 @@ function submitNewBooking() {
 
     if (!phone || !name) return alert("Vui lòng nhập SĐT và Tên!");
 
-    // 2. Tính thời gian từ giao diện mới
+    // 2. Tính thời gian & Kiểm tra hợp lệ
     var durationMinutes = 60; // Mặc định 1 tiếng
     
-    // Kiểm tra xem đang chọn tab nào (Theo tiếng hay Chọn giờ về)
+    // Khai báo biến 'now' MỘT LẦN DUY NHẤT ở đây để dùng chung
+    var now = new Date(); 
+
+    // Kiểm tra xem đang chọn tab nào
     var boxDur = document.getElementById('mode-duration-box');
     
     if (boxDur && !boxDur.classList.contains('hidden')) {
         // Tab: Theo tiếng (1h, 2h, 3h)
-        // Biến selectedDurationHours lấy từ đoạn script cuối file
         durationMinutes = (typeof selectedDurationHours !== 'undefined' ? selectedDurationHours : 1) * 60;
     } else {
         // Tab: Chọn giờ về
         var timeStr = document.getElementById('manual-end-time').value;
         if (!timeStr) return alert("Vui lòng chọn giờ về!");
         
-        var now = new Date();
         var parts = timeStr.split(':');
-        var end = new Date();
+        var end = new Date(); // Tạo một biến ngày tạm
+        // Set giờ phút user chọn vào ngày hôm nay
         end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
         
-        // Nếu chọn giờ nhỏ hơn giờ hiện tại -> coi như là qua ngày hôm sau hoặc báo lỗi
+        // Nếu chọn giờ nhỏ hơn giờ hiện tại -> Báo lỗi
         if (end <= now) return alert("Giờ về phải lớn hơn giờ hiện tại!");
         
         durationMinutes = Math.floor((end - now) / 60000);
@@ -1358,8 +1361,7 @@ function submitNewBooking() {
     var btn = document.querySelector('button[onclick="submitNewBooking()"]');
     if(btn) { btn.innerHTML = "⏳ Đang tạo..."; btn.disabled = true; }
 
-    // 4. Tính toán giờ hiển thị
-    const now = new Date();
+    // 4. Tính toán giờ hiển thị (Dùng lại biến 'now' ở trên, KHÔNG khai báo lại)
     const dateStr = now.toLocaleDateString('en-GB'); 
     const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
     
@@ -1531,6 +1533,7 @@ function selectDuration(hours) {
 </div>
 </body>
 </html>
+
 
 
 
