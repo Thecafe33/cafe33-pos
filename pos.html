@@ -757,50 +757,66 @@ function switchView(v) {
 }
 
 // Bed Functions
-f// --- HÀM OPEN BED MANAGER (ĐÃ SỬA LỖI NGÀY GIỜ) ---
+// --- HÀM OPEN BED MANAGER (ĐÃ SỬA LỖI NGÀY GIỜ) ---
+// --- HÀM OPEN BED MANAGER (ĐÃ SỬA: CHỈ HIỆN LỊCH HÔM NAY) ---
 function openBedManager() {
     document.getElementById('loading-overlay').style.display = 'flex';
     switchView('bed');
     
-    var dateEl = document.getElementById('today-date-display');
-    if(dateEl) dateEl.innerText = new Date().toLocaleDateString('vi-VN');
+    // 1. Lấy ngày hôm nay chuẩn định dạng dd/mm/yyyy (Ví dụ: 23/01/2026)
+    const todayObj = new Date();
+    const todayStr = todayObj.toLocaleDateString('en-GB'); 
     
-    // Lắng nghe dữ liệu từ Firebase
+    var dateEl = document.getElementById('today-date-display');
+    if(dateEl) dateEl.innerText = todayStr;
+    
     db.ref('bedBookings').on('value', snap => {
         const data = snap.val() || {};
         
-        // --- ĐOẠN XỬ LÝ QUAN TRỌNG NHẤT ---
-        currentBedList = Object.keys(data).map(k => {
+        // 2. Xử lý và Chuẩn hóa dữ liệu
+        let allBookings = Object.keys(data).map(k => {
             const item = data[k];
             
-            // 1. Xử lý Giờ: Chấp nhận cả 'start' lẫn 'startTime'
-            // Nếu không có thì để mặc định là "--:--"
+            // Lấy giờ
             let sTime = item.start || item.startTime || "--:--";
             let eTime = item.end || item.endTime || "--:--";
             
-            // 2. Xử lý Ngày: Chấp nhận cả 'date' lẫn 'bookingDate'
-            let dDate = item.date || item.bookingDate || "";
+            // Lấy ngày (Chấp nhận nhiều tên biến)
+            let rawDate = item.date || item.bookingDate || "";
             
-            // 3. Ghép ngày vào giờ để hiển thị cho rõ (nếu không phải hôm nay)
-            // Ví dụ: "09:30 (25/10)"
-            let displayTime = sTime;
-            const todayStr = new Date().toLocaleDateString('en-GB'); // dd/mm/yyyy
-            // Nếu ngày đặt khác hôm nay thì hiển thị thêm ngày bên cạnh giờ
-            if (dDate && dDate !== todayStr && dDate.includes('/')) {
-                 displayTime = `${sTime} (${dDate.substring(0,5)})`;
+            // --- QUAN TRỌNG: CHUẨN HÓA NGÀY VỀ DẠNG dd/mm/yyyy ---
+            // Nếu dữ liệu đang là yyyy-mm-dd (do app tạo) thì phải xoay ngược lại
+            if (rawDate.includes('-')) {
+                const parts = rawDate.split('-'); // 2026-01-23
+                if (parts[0].length === 4) {
+                    rawDate = `${parts[2]}/${parts[1]}/${parts[0]}`; // Thành 23/01/2026
+                }
             }
+            // -----------------------------------------------------
 
             return {
                 id: k,
                 ...item,
-                start: displayTime, // Gán lại vào biến chuẩn 'start' cho giao diện dùng
-                end: eTime,         // Gán lại vào biến chuẩn 'end'
-                rawDate: dDate      // Lưu lại ngày gốc để dùng nếu cần
+                start: sTime, 
+                end: eTime,
+                displayDate: rawDate // Lưu lại ngày đã chuẩn hóa
             };
         });
-        // ------------------------------------
+
+        // 3. BỘ LỌC (FILTER): Chỉ giữ lại đơn trùng ngày hôm nay
+        currentBedList = allBookings.filter(b => {
+            // Logic: Nếu ngày trong đơn trùng với ngày hôm nay -> Giữ lại
+            // Hoặc đơn đó có trạng thái 'active' (đang dùng) thì luôn hiện dù khác ngày (phòng trường hợp qua đêm)
+            return b.displayDate === todayStr || (b.status && b.status.includes('active'));
+        });
 
         document.getElementById('loading-overlay').style.display = 'none';
+        
+        // 4. Kiểm tra xem có đơn nào không?
+        if (currentBedList.length === 0) {
+            console.log("Không có lịch cho ngày: " + todayStr);
+        }
+
         renderBedBookings(currentBedList);
     });
 }
@@ -933,6 +949,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
