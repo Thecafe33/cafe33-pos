@@ -853,53 +853,151 @@ function selectBill(idx) {
 }
 // --- ĐẾN ĐÂY ---
 
-function openRevenue() {
+// --- HÀM MỞ TAB DOANH THU (PHIÊN BẢN AN TOÀN) ---
+function openRevenue(mode) {
+    if (!mode) mode = 'week'; // Mặc định là tuần
+
     document.getElementById('loading-overlay').style.display = 'flex';
     switchView('revenue');
-    
-    // Gọi cả 2 nhánh 'orders' và 'order' để gộp dữ liệu tính toán
+
+    // Lấy ngày custom (Viết tường minh để tránh lỗi trên máy cũ)
+    var startEl = document.getElementById('rev-start');
+    var endEl = document.getElementById('rev-end');
+    var startVal = startEl ? startEl.value : null;
+    var endVal = endEl ? endEl.value : null;
+
     Promise.all([
         db.ref('orders').once('value'),
         db.ref('order').once('value')
-    ]).then(snapshots => {
+    ]).then(function(snapshots) {
         document.getElementById('loading-overlay').style.display = 'none';
-        let allOrders = [];
-        snapshots.forEach(snap => {
-            if(snap.exists()) allOrders = allOrders.concat(Object.values(snap.val()));
-        });
         
-        const stats = calculateStats(allOrders, 'week');
-        renderDailyRevenueList(stats.dailyList);
-        renderRevenueDashboard(stats, 'week');
+        try {
+            var allOrders = [];
+            snapshots.forEach(function(snap) {
+                if(snap.exists()) {
+                    var val = snap.val();
+                    // Chuyển object thành array an toàn
+                    if (val) {
+                        Object.keys(val).forEach(function(k) {
+                            allOrders.push(val[k]);
+                        });
+                    }
+                }
+            });
+
+            // Gọi hàm tính toán
+            var stats = calculateStats(allOrders, mode, startVal, endVal);
+            
+            if (stats) {
+                renderDailyRevenueList(stats.dailyList);
+                renderRevenueDashboard(stats, mode);
+            }
+        } catch (e) {
+            alert("Lỗi tính toán: " + e.message); // Hiện lỗi nếu có
+            console.error(e);
+        }
     });
 }
-function calculateStats(orders, filterType) {
-    const now = new Date();
-    let startTime, endTime;
-    const day = now.getDay() || 7; 
-    startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
-    endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999);
+// --- HÀM TÍNH TOÁN (PHIÊN BẢN FIX LỖI CRASH) ---
+function calculateStats(orders, mode, customStart, customEnd) {
+    var now = new Date();
+    var startTime, endTime;
+    var labels = [];
+    var chartData = [];
+    var groupType = 'day'; 
 
-    let stats = { drinkTotal: 0, snackTotal: 0, labels: ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'], chartData: [0,0,0,0,0,0,0], dailyList: {}, today: 0, yesterday: 0 };
-    const todayStr = now.toLocaleDateString('en-GB');
-    const yest = new Date(now); yest.setDate(now.getDate() - 1); const yestStr = yest.toLocaleDateString('en-GB');
+    // 1. THIẾT LẬP THỜI GIAN
+    if (mode === 'week') {
+        var day = now.getDay() || 7; 
+        startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
+        endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999);
+        labels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+        chartData = [0,0,0,0,0,0,0];
+    } 
+    else if (mode === 'month') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), 1);
+        endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        
+        // Tạo nhãn ngày 1 -> 31 bằng vòng lặp thủ công (An toàn hơn Array.from)
+        var daysInMonth = endTime.getDate();
+        for (var i = 1; i <= daysInMonth; i++) {
+            labels.push(i.toString());
+            chartData.push(0);
+        }
+    } 
+    else if (mode === 'year') {
+        startTime = new Date(now.getFullYear(), 0, 1);
+        endTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        labels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
+        chartData = [0,0,0,0,0,0,0,0,0,0,0,0];
+        groupType = 'month';
+    } 
+    else if (mode === 'custom') {
+        if (!customStart || !customEnd) return null;
+        startTime = new Date(customStart); startTime.setHours(0,0,0,0);
+        endTime = new Date(customEnd); endTime.setHours(23,59,59,999);
+        
+        var diffTime = Math.abs(endTime - startTime);
+        var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+        
+        if (diffDays > 31) {
+            groupType = 'month';
+            labels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12']; 
+            chartData = [0,0,0,0,0,0,0,0,0,0,0,0];
+        } else {
+            for (var j = 0; j <= diffDays; j++) {
+                var dTemp = new Date(startTime); dTemp.setDate(dTemp.getDate() + j);
+                labels.push(dTemp.getDate() + "/" + (dTemp.getMonth()+1));
+                chartData.push(0);
+            }
+        }
+    }
 
-    orders.forEach(o => {
-        const d = new Date(o.createdAt || Date.now());
-        const dateKey = d.toLocaleDateString('en-GB');
-        const amount = Number(o.total) || 0;
+    var stats = { drinkTotal: 0, snackTotal: 0, labels: labels, chartData: chartData, dailyList: {}, today: 0, yesterday: 0 };
+    
+    var todayStr = now.toLocaleDateString('en-GB');
+    var yest = new Date(now); yest.setDate(now.getDate() - 1); 
+    var yestStr = yest.toLocaleDateString('en-GB');
+
+    // 2. DUYỆT ĐƠN HÀNG
+    orders.forEach(function(o) {
+        var d = new Date(o.createdAt || Date.now());
+        var dateKey = d.toLocaleDateString('en-GB');
+        var amount = Number(o.total) || 0;
         if (amount <= 0) return;
 
         if (dateKey === todayStr) stats.today += amount;
         if (dateKey === yestStr) stats.yesterday += amount;
 
         if (d >= startTime && d <= endTime) {
-            let isSnack = false; if(String(o.items).toLowerCase().match(/hạt|bánh|snack/)) isSnack = true;
-            if(isSnack) stats.snackTotal += amount; else stats.drinkTotal += amount;
+            var itemsStr = String(o.items || "").toLowerCase();
+            var isSnack = (itemsStr.indexOf('hạt') > -1 || itemsStr.indexOf('bánh') > -1 || itemsStr.indexOf('snack') > -1);
+            
+            if(isSnack) stats.snackTotal += amount; 
+            else stats.drinkTotal += amount;
+            
             if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
             stats.dailyList[dateKey].drink += amount;
-            let idx = (d.getDay() + 6) % 7;
-            if (idx >= 0) stats.chartData[idx] += amount;
+
+            // Cộng dồn vào biểu đồ
+            var idx = -1;
+            if (groupType === 'month') {
+                idx = d.getMonth();
+            } else if (mode === 'month') {
+                idx = d.getDate() - 1;
+            } else if (mode === 'week') {
+                idx = (d.getDay() + 6) % 7;
+            } else if (mode === 'custom' && labels.length <= 31) {
+                // Logic đơn giản cho custom ngắn ngày
+                var timeDiff = d.getTime() - startTime.getTime();
+                var dayDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+                idx = dayDiff;
+            }
+
+            if (idx >= 0 && idx < chartData.length) {
+                chartData[idx] += amount;
+            }
         }
     });
     return stats;
@@ -2040,6 +2138,7 @@ function renderBedSelection() {
 </div>
 </body>
 </html>
+
 
 
 
