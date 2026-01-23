@@ -867,7 +867,68 @@ function autoFillCustomer() {
         console.log("Chưa có dữ liệu cho SĐT này (Khách mới)");
     }
 }
-function submitNewBooking() { var phone = document.getElementById('new_cust_phone').value; var name = document.getElementById('new_cust_name').value; var compName = document.getElementById('new_comp_name').value; var compPhone = document.getElementById('new_comp_phone').value; var duration = document.getElementById('final_duration_minutes').value; if (!phone || !name) return alert("Vui lòng nhập SĐT và Tên!"); var btn = document.getElementById('btn-submit-booking'); btn.innerHTML = "⏳ Đang tạo..."; btn.disabled = true; const now = new Date(); const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const endObj = new Date(now.getTime() + duration*60000); const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); const newBed = { phone: phone, name: name, date: new Date().toISOString().split('T')[0], start: startStr, end: endStr, compName: compName, compPhone: compPhone, status: "chờ khách", bedId: "", type: "walk-in" }; db.ref('beds').push(newBed, (err) => { btn.innerHTML = "XÁC NHẬN & GỌI MÓN"; btn.disabled = false; if(!err) { closeBookingModal(); openBedManager(); } }); }
+// --- HÀM TẠO LỊCH BED MỚI (ĐÃ FIX ĐƯỜNG DẪN + NGÀY GIỜ) ---
+function submitNewBooking() {
+    // 1. Lấy dữ liệu từ Form nhập
+    var phone = document.getElementById('new_cust_phone').value;
+    var name = document.getElementById('new_cust_name').value;
+    var compName = document.getElementById('new_comp_name').value;
+    var compPhone = document.getElementById('new_comp_phone').value;
+    var duration = document.getElementById('final_duration_minutes').value;
+
+    if (!phone || !name) return alert("Vui lòng nhập SĐT và Tên!");
+
+    // 2. Hiệu ứng nút bấm
+    var btn = document.getElementById('btn-submit-booking');
+    btn.innerHTML = "⏳ Đang tạo...";
+    btn.disabled = true;
+
+    // 3. Xử lý thời gian (Quan trọng nhất)
+    const now = new Date();
+    
+    // --> SỬA 1: Định dạng ngày thành dd/mm/yyyy (Ví dụ: 23/01/2026)
+    // Để khớp với bộ lọc hiển thị mà chúng ta vừa làm
+    const dateStr = now.toLocaleDateString('en-GB'); 
+    
+    // Giờ bắt đầu
+    const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    
+    // Tính giờ kết thúc
+    const endObj = new Date(now.getTime() + duration * 60000);
+    const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+
+    // 4. Tạo đối tượng dữ liệu
+    const newBed = {
+        phone: phone,
+        name: name,
+        date: dateStr,      // Đã sửa thành dd/mm/yyyy
+        start: startStr,
+        end: endStr,
+        compName: compName,
+        compPhone: compPhone,
+        status: "chờ khách", 
+        bedId: "",          
+        type: "walk-in"
+    };
+
+    // 5. --> SỬA 2: Đẩy vào đúng nhánh 'bedBookings' (Thay vì 'beds')
+    db.ref('bedBookings').push(newBed, (err) => {
+        // Reset nút bấm
+        btn.innerHTML = "TẠO LỊCH MỚI
+        btn.disabled = false;
+        
+        if (!err) {
+      ƠI      closeBookingModal();
+            // Gọi lại hàm hiển thị để thấy ngay lập tức
+            openBedManager(); 
+            
+            // Thông báo thành công
+            // alert("Đã xếp lịch thành công! Vui lòng chọn Bed ở cột bên trái.");
+        } else {
+            alert("Lỗi Firebase: " + err.message);
+        }
+    });
+}
 function submitWalkIn() { var phone = normalizePhone(document.getElementById('walkin-phone').value); var hours = document.getElementById('walkin-hours').value; if(!phone || !hours) return; document.getElementById('walk-in-modal').classList.add('hidden'); document.getElementById('loading-overlay').style.display = 'flex'; db.ref('beds').push({ phone: phone, name: "Khách vãng lai", duration: hours*60, type: "walk-in", status: "chờ khách" }); document.getElementById('loading-overlay').style.display = 'none'; openBedManager(); }
 function checkSdtLive() {
     // 1. Lấy giá trị từ ô input
@@ -949,6 +1010,7 @@ function checkCustomer(){
 </script>
 </body>
 </html>
+
 
 
 
