@@ -958,13 +958,16 @@ function renderBedBookings(list) {
                         if (diff > AUTO_CANCEL_MINUTES) {
                             console.log(`🚫 Auto-cancel: Đơn ${booking.name} trễ ${Math.round(diff)}p -> HỦY`);
                             
-                            let bId = booking.id || booking.key;
-                            if (bId) {
-                                db.ref('bedBookings/' + bId).update({
-                                    status: 'đã hủy',
-                                    note: 'Hủy tự động (Quá 50p)'
-                                });
-                            }
+// CẬP NHẬT FIREBASE VỚI MÃ LỖI 'auto_timeout'
+    db.ref('bedBookings/' + k).update({
+        status: 'đã hủy',
+        cancelType: 'auto_timeout', // <--- QUAN TRỌNG: Đánh dấu là lỗi quá giờ
+        note: 'Hủy tự động (Quá 50p)'
+    });
+    
+    // Cập nhật hiển thị ngay lập tức
+    item.status = 'đã hủy';
+    item.cancelType = 'auto_timeout';
                         }
                     }
                 }
@@ -993,68 +996,17 @@ function renderBedBookings(list) {
     renderRightColumnMap();
 }
 // --- SỬA HÀM VẼ DANH SÁCH (HIỆN ĐẦY ĐỦ TRẠNG THÁI) ---
-function renderLeftColumnList() {
-    var container = document.getElementById('col-left-list');
-    if (!container) return;
-
-    if (!currentBedList || currentBedList.length === 0) {
-        container.innerHTML = '<div class="text-center text-gray-300 text-[10px] py-10">Trống</div>';
-        return;
-    }
-
-    container.innerHTML = currentBedList.map(function(b, index) {
-        // Kiểm tra trạng thái
-        var isDone = (b.status && b.status.includes('đã xong')); // Màu xám
-        var isCancelled = (b.status && b.status.includes('đã hủy')); // Màu đỏ nhạt
-        var isActive = (b.status && (b.status.includes('active') || b.status.includes('đang dùng'))); // Màu xanh
-        var isSelected = (index === selectedBedIndex); // Đang click chọn
+// --- NÚT HỦY (ĐÃ SỬA: GỌI MODAL CHỌN LÝ DO) ---
+if(btnCancel) {
+    btnCancel.onclick = null;
+    btnCancel.onclick = function() {
+        // Lưu ID đơn hàng đang chọn vào biến tạm để lát nữa hàm hủy nó biết hủy đơn nào
+        // (Biến pendingCancelId này bà khai báo ở đầu file JS hoặc dùng window.pendingCancelId)
+        window.pendingCancelId = bookingId; 
         
-        // Logic màu sắc
-        var wrapperClass = "cursor-pointer p-3 rounded-xl transition-all mb-2 border relative ";
-        
-        if (isSelected) {
-            wrapperClass += "bg-[#1e3932] border-[#1e3932] text-white shadow-md scale-[1.02] z-10";
-        } else if (isCancelled) {
-            wrapperClass += "bg-red-50 border-red-100 text-red-800 opacity-70";
-        } else if (isDone) {
-            // Đã xong: Màu xám đậm hơn chút để dễ đọc, không làm mờ chữ quá
-            wrapperClass += "bg-gray-200 border-gray-300 text-gray-600"; 
-        } else if (isActive) {
-            wrapperClass += "bg-green-50 border-green-200 text-[#006241]";
-        } else {
-            wrapperClass += "bg-white border-gray-100 text-gray-600 hover:bg-gray-50";
-        }
-
-        // Dấu chấm tròn trạng thái
-        var statusDot = "";
-        if (isCancelled) statusDot = "bg-red-500";
-        else if (isDone) statusDot = "bg-gray-500";
-        else if (isActive) statusDot = "bg-green-500 animate-pulse";
-        else statusDot = "bg-amber-400"; // Chờ xếp
-
-        // Hiển thị giờ
-        // Nếu đã xong thì hiện giờ trả thực tế (realEndTime) nếu có, hoặc giờ dự kiến
-        var timeDisplay = `${b.start} - ${b.end}`;
-        if (isDone && b.realEndTime) {
-            timeDisplay = `Đã trả: ${b.realEndTime}`;
-        } else if (isCancelled) {
-            timeDisplay = "ĐÃ HỦY";
-        }
-
-        var bedLabel = (b.bedId && b.bedId != "WAITING") ? `BED 0${b.bedId}` : "CHỜ XẾP";
-
-        return `
-        <div onclick="selectBedItem(${index})" class="${wrapperClass}">
-            <div class="flex justify-between items-center mb-1">
-                <span class="font-bold text-[10px] opacity-80 uppercase tracking-wider">${bedLabel}</span>
-                <div class="w-2 h-2 rounded-full ${statusDot}"></div>
-            </div>
-            <div class="font-bold text-sm truncate mb-1">${b.name}</div>
-            <div class="text-[10px] font-mono flex justify-between opacity-80 font-bold">
-                <span>${timeDisplay}</span>
-            </div>
-        </div>`;
-    }).join('');
+        // Mở Modal chọn lý do
+        document.getElementById('modal-cancel-reason').classList.remove('hidden');
+    };
 }
 function renderRightColumnMap() { var container = document.getElementById('vertical-map-container'); if(!container) return; var html = ''; for (var i = 1; i <= 4; i++) { var booking = currentBedList.find(b => b.bedId == i && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); var boxStyle = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "bg-green-500 border-green-600 text-white shadow-md ring-2 ring-green-100 hover:scale-105 cursor-pointer" : "bg-amber-50 border-amber-300 text-amber-500 hover:scale-105 cursor-pointer") : "bg-gray-50 border-gray-200 text-gray-300"; var label = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "ACTIVE" : "ĐẶT") : "TRỐNG"; var actionAttr = booking ? `onclick="selectBedFromMap(${i})"` : ""; html += `<div ${actionAttr} class="flex-1 rounded-xl border-2 border-dashed ${boxStyle} flex flex-col items-center justify-center transition-all min-h-[50px] mb-2 relative group"><span class="text-lg font-black">0${i}</span><span class="text-[8px] font-bold tracking-wider">${label}</span>${booking ? `<div class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity"><span class="text-[10px] font-bold text-white">Xem</span></div>` : ''}</div>`; } container.innerHTML = html; }
 function selectBedFromMap(bedId) { var index = currentBedList.findIndex(b => b.bedId == bedId && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); if (index !== -1) { selectBedItem(index); var listItem = document.getElementById('col-left-list').children[index]; if(listItem) listItem.scrollIntoView({behavior: 'smooth', block: 'center'}); } }
@@ -1507,6 +1459,33 @@ function selectDuration(hours) {
     const activeBtn = document.getElementById(`btn-dur-${hours}`);
     activeBtn.className = "border border-green-600 bg-green-50 text-[#1e3932] py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all";
 }
+    // --- HÀM XỬ LÝ HỦY THEO LÝ DO ---
+function submitCancelBooking(type) {
+    var bookingId = window.pendingCancelId;
+    if (!bookingId) return;
+
+    var reasonText = "";
+    if (type === 'customer') reasonText = "Khách báo hủy";
+    else if (type === 'store') reasonText = "The cafe 33 hủy (System)";
+
+    // Đóng modal
+    document.getElementById('modal-cancel-reason').classList.add('hidden');
+    document.getElementById('loading-overlay').style.display = 'flex';
+
+    // Cập nhật Firebase
+    db.ref('bedBookings/' + bookingId).update({
+        status: 'đã hủy',
+        cancelType: type, // Lưu loại: 'customer' hoặc 'store'
+        note: reasonText
+    }, (err) => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        if (!err) {
+            openBedManager(); // Load lại danh sách
+        } else {
+            alert("Lỗi: " + err.message);
+        }
+    });
+}
 </script>
 <div id="ios-confirm-modal" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-300">
     <div class="bg-white/90 backdrop-blur-xl w-[300px] md:w-[320px] rounded-[14px] shadow-2xl transform scale-100 transition-all text-center overflow-hidden">
@@ -1531,8 +1510,33 @@ function selectDuration(hours) {
         </div>
     </div>
 </div>
+<div id="modal-cancel-reason" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-300">
+    <div class="bg-white w-[300px] rounded-2xl shadow-2xl overflow-hidden text-center transform scale-100 transition-all">
+        <div class="bg-red-50 p-4 border-b border-red-100">
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                <span class="text-2xl">⚠️</span>
+            </div>
+            <h3 class="text-base font-bold text-red-800 uppercase tracking-wide">Xác nhận hủy lịch</h3>
+            <p class="text-[10px] text-red-600/80 mt-1 font-bold">Vui lòng chọn lý do hủy để lưu hồ sơ</p>
+        </div>
+        
+        <div class="p-4 space-y-3">
+            <button onclick="submitCancelBooking('customer')" class="w-full py-3 bg-white border-2 border-gray-100 hover:border-gray-400 rounded-xl text-gray-700 font-bold text-xs uppercase shadow-sm active:scale-95 transition-all">
+                Khách báo hủy
+            </button>
+            <button onclick="submitCancelBooking('store')" class="w-full py-3 bg-white border-2 border-gray-100 hover:border-gray-400 rounded-xl text-gray-700 font-bold text-xs uppercase shadow-sm active:scale-95 transition-all">
+                The cafe 33 hủy (System)
+            </button>
+        </div>
+
+        <div class="bg-gray-50 p-3 border-t border-gray-100">
+            <button onclick="document.getElementById('modal-cancel-reason').classList.add('hidden')" class="text-gray-400 font-bold text-xs hover:text-gray-600">Đóng</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
 
 
 
