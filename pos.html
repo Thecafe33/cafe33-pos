@@ -1278,8 +1278,54 @@ function selectBedItem(index) {
         }
     }
 }
-function showBedDetail(bedId) { var booking = null; if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId); if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex]; if (!booking) { alert("Vui lòng chọn khách hàng trong danh sách trước!"); return; } activeOrderingBedId = bedId; pendingBedOrder = booking; switchView('menu'); setTimeout(function() { var cartInfo = document.getElementById('cart-bed-info'); var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between'); if (!cartInfo && headerContainer) { cartInfo = document.createElement('div'); cartInfo.id = 'cart-bed-info'; headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling); } if (cartInfo) { var guestName = booking.name || "Khách hàng"; cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1"; if (booking.bedId && booking.bedId != 0) { cartInfo.innerText = `🟢 BED 0${booking.bedId} - ${guestName}`; cartInfo.style.color = "#006241"; } else { cartInfo.innerText = `🟠 KHÁCH CHỜ - ${guestName}`; cartInfo.style.color = "#d97706"; } } }, 50); }
-// --- SỬA LỖI: XẾP BED BỊ RA ĐƠN MỚI UNDEFINED ---
+// --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
+function showBedDetail(bedId) { 
+    var booking = null; 
+    if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId);
+    if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex]; 
+    
+    if (!booking) { 
+        alert("Vui lòng chọn khách hàng trong danh sách trước!");
+        return; 
+    } 
+    
+    activeOrderingBedId = bedId; 
+    pendingBedOrder = booking; 
+    
+    // --- ĐOẠN MỚI THÊM: TỰ ĐIỀN SĐT KHÁCH VÀO GIỎ HÀNG ---
+    var sdtInput = document.getElementById('kh-sdt');
+    if (sdtInput && booking.phone) {
+        sdtInput.value = booking.phone;
+        // Gọi hàm kiểm tra để nó hiện tên khách lên (nếu có trong data)
+        if (typeof checkSdtLive === 'function') checkSdtLive();
+    }
+    // ----------------------------------------------------
+
+    switchView('menu'); 
+    
+    // (Đoạn dưới giữ nguyên để hiện cái thanh thông báo nhỏ)
+    setTimeout(function() { 
+        var cartInfo = document.getElementById('cart-bed-info'); 
+        var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between'); 
+        if (!cartInfo && headerContainer) { 
+            cartInfo = document.createElement('div'); 
+            cartInfo.id = 'cart-bed-info'; 
+            headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling); 
+        } 
+        if (cartInfo) { 
+            var guestName = booking.name || "Khách hàng"; 
+            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1"; 
+            if (booking.bedId && booking.bedId != 0) { 
+                cartInfo.innerText = `🟢 BED 0${booking.bedId} - ${guestName}`; 
+                cartInfo.style.color = "#006241"; 
+            } else { 
+                cartInfo.innerText = `🟠 KHÁCH CHỜ - ${guestName}`; 
+                cartInfo.style.color = "#d97706"; 
+            } 
+        } 
+    }, 50);
+}
+    //--- SỬA LỖI: XẾP BED BỊ RA ĐƠN MỚI UNDEFINED ---
 function finalizeBedCheckIn(bedId) {
     // 1. Kiểm tra an toàn
     if (!pendingBedOrder) return alert("Chưa chọn khách hàng!");
@@ -1650,6 +1696,12 @@ function handleBedCheckout(booking) {
         pendingBedOrder = booking; 
         
         isCheckoutFlow = true; // <--- QUAN TRỌNG: BẬT CỜ HIỆU LÊN!
+        var sdtInput = document.getElementById('kh-sdt');
+        if (sdtInput && booking.phone) {
+            sdtInput.value = booking.phone;
+            // Gọi hàm checkSdtLive để hiện tên khách & điểm tích lũy
+            if (typeof checkSdtLive === 'function') checkSdtLive();
+        }
         
         // Cập nhật giao diện giỏ hàng
         switchView('menu');
@@ -1745,6 +1797,7 @@ function processCheckoutFirebase(booking) {
 </div>
 </body>
 </html>
+
 
 
 
