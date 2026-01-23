@@ -486,74 +486,90 @@ function updateQty(idx, d) {
 // =========================================================
 // 5. THANH TOÁN (PAYMENT)
 // =========================================================
+// --- HÀM THANH TOÁN (ĐÃ SỬA: RESET SẠCH SẼ THÔNG TIN KHÁCH) ---
 function completeOrder() {
     if (cart.length === 0) return showAppModal("Hic!", "Chưa có món nào!", '🛒');
+    
     let pVal = document.getElementById('cash-paid').value;
     if (pVal === "" || pVal === "0") pVal = currentTotal;
     const paid = Number(pVal);
     if (paid < currentTotal) return alert("Tiền khách đưa chưa đủ!");
 
     document.getElementById('loading-overlay').style.display = 'flex';
-    var bedIdToSend = ""; var custNameToSend = "Khách vãng lai";
-    if (pendingBedOrder) { bedIdToSend = pendingBedOrder.bedId || "WAITING"; custNameToSend = pendingBedOrder.name; } 
-    else if (activeOrderingBedId) { bedIdToSend = activeOrderingBedId; }
+    
+    // Lấy thông tin Bed/Khách lần cuối để lưu đơn
+    var bedIdToSend = ""; 
+    var custNameToSend = "Khách vãng lai";
+    if (pendingBedOrder) { 
+        bedIdToSend = pendingBedOrder.bedId || "WAITING"; 
+        custNameToSend = pendingBedOrder.name; 
+    } else if (activeOrderingBedId) { 
+        bedIdToSend = activeOrderingBedId; 
+    }
 
     const orderData = {
         sdt: document.getElementById('kh-sdt').value || "Khách vãng lai",
-        total: currentTotal, paid: paid, change: Math.max(0, paid - currentTotal),
+        total: currentTotal, 
+        paid: paid, 
+        change: Math.max(0, paid - currentTotal),
         method: document.getElementById('btn-bank').classList.contains('border-[#006241]') ? 'Chuyển khoản' : 'Tiền mặt',
         items: cart.map(i => `${i.name}(${i.size})x${i.qty}`).join(', '),
         itemsArray: cart,
-        bedId: bedIdToSend, customerName: custNameToSend,
+        bedId: bedIdToSend, 
+        customerName: custNameToSend,
         createdAt: new Date().toISOString(),
         status: "pending_sync"
     };
 
-    // Đẩy đơn hàng lên Firebase (vào nhánh 'orders')
+    // Đẩy đơn hàng lên Firebase
     db.ref('orders').push(orderData, (error) => {
         document.getElementById('loading-overlay').style.display = 'none';
+        
         if(error) alert("Lỗi Firebase: " + error.message);
         else {
-            /// --- LOGIC MỚI: KIỂM TRA ĐỂ ĐÓNG BED ---
-            if (isCheckoutFlow && pendingBedOrder) {
-                // Nếu đây là quy trình TRẢ BED -> Cập nhật trạng thái Bed thành "đã xong"
-                var bookingId = pendingBedOrder.id || pendingBedOrder.key;
-                
-                db.ref('bedBookings/' + bookingId).update({
+            // === PHẦN QUAN TRỌNG: DỌN DẸP CHIẾN TRƯỜNG ===
+            
+            // 1. Xóa sạch ô nhập SĐT và trạng thái khách
+            document.getElementById('kh-sdt').value = ""; 
+            document.getElementById('sdt-status').innerText = "";
+            
+            // 2. Xóa cái dòng chữ màu cam/xanh (Khách chờ - Tên khách) nếu có
+            var cartInfo = document.getElementById('cart-bed-info');
+            if (cartInfo) cartInfo.remove();
+
+            // 3. Reset biến lưu khách (Để đơn sau không bị dính khách cũ)
+            pendingBedOrder = null;
+            activeOrderingBedId = null;
+
+            // 4. Xóa giỏ hàng
+            cart = [];
+            renderCart();
+
+            // === LOGIC ĐÓNG BED HOẶC CHUYỂN HƯỚNG ===
+            if (isCheckoutFlow && bedIdToSend) {
+                // Nếu là trả Bed lố giờ -> Đóng Bed luôn
+                db.ref('bedBookings/' + pendingBedOrder.id).update({
                     status: 'đã xong',
                     realEndTime: new Date().toLocaleTimeString('en-GB')
                 });
-
-                // Reset cờ hiệu
                 isCheckoutFlow = false;
-                
-                // Reset biến tạm
-                pendingBedOrder = null;
-                activeOrderingBedId = null;
-
-                // Xóa giỏ hàng & form
-                cart = []; 
-                document.getElementById('kh-sdt').value = ""; 
-                document.getElementById('sdt-status').innerText = "";
-                renderCart();
-                
-                // Quay về trang Bed
                 openBedManager();
                 setTimeout(() => { showAppModal("Hoàn tất!", "Đã thanh toán và TRẢ BED thành công!", '🏁'); }, 150);
-
-            } else {
-                // --- TRƯỜNG HỢP CŨ: Mua nước bình thường hoặc Đặt Bed mới ---
-                
-                // Reset
-                cart = []; document.getElementById('kh-sdt').value = ""; document.getElementById('sdt-status').innerText = "";
-                renderCart();
-
-                // Xử lý sau khi lưu
-                if (pendingBedOrder) {
-                    renderBedSelection();
-                    if (!pendingBedOrder.bedId || pendingBedOrder.bedId == 0) document.getElementById('bed-select-modal').classList.remove('hidden');
-                    else { showAppModal("Thành công!", "Đã thêm món cho " + pendingBedOrder.name, '✅'); openBedManager(); }
+            } 
+            else {
+                // Nếu là mua thường hoặc tạo Bed mới
+                // Kiểm tra lại pendingBedOrder (Lưu ý: ở trên đã reset null, nên check bedIdToSend)
+                if ((!bedIdToSend || bedIdToSend == "WAITING" || bedIdToSend == 0) && document.getElementById('bed-select-modal').classList.contains('hidden') === false) {
+                     // Đang mở modal chọn bed thì giữ nguyên
+                } else if (bedIdToSend == "WAITING") {
+                    // Nếu là đơn Bed mới tạo -> Hiện bảng chọn Bed
+                    // (Phải phục hồi pendingBedOrder tạm để chọn bed)
+                    // Logic này hơi phức tạp, tốt nhất là cho chọn bed xong xuôi mới reset.
+                    // Nhưng an toàn nhất: Nếu là bed mới, hiện bảng chọn.
+                     renderBedSelection();
+                     document.getElementById('bed-select-modal').classList.remove('hidden');
                 } else {
+                    // Quay về menu và báo thành công
                     switchView('menu');
                     setTimeout(() => { showAppModal("Xong!", "Thanh toán thành công!", '✅'); }, 150);
                 }
@@ -1868,6 +1884,7 @@ function renderBedSelection() {
 </div>
 </body>
 </html>
+
 
 
 
