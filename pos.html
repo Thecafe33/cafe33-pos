@@ -159,20 +159,31 @@ body { font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; 
     </div>
 </div>
 
-<div id="bed-select-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center">
-    <div class="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div class="mt-3 text-center">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Chọn Bed cho khách</h3>
-            <div class="mt-2 px-7 py-3">
-                <p class="text-sm text-gray-500">Vui lòng chọn Bed trống bên dưới:</p>
-                <div class="mt-4 grid grid-cols-2 gap-4" id="bed-selection-container">
-                    </div>
+<div id="bed-select-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm transition-all duration-300 p-4 pb-8 sm:p-4">
+    
+    <div class="bg-[#F2F2F7] w-full max-w-[380px] rounded-3xl shadow-2xl overflow-hidden transform transition-all scale-100 relative flex flex-col animate-slide-up sm:animate-none">
+        
+        <div class="bg-[#1e3932] px-6 py-5 flex justify-between items-center shrink-0 relative overflow-hidden">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 text-[#2a4f45] opacity-30">
+                <svg width="80" height="80" viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h20v2H2v-2zm2-8h2v7H4v-7zm5 0h2v7H9v-7zm4 0h2v7h-2v-7zm5 0h2v7h-2v-7zM2 7h20v2H2V7zm2-5h2v4H4V2zm5 0h2v4H9V2zm4 0h2v4h-2V2zm5 0h2v4h-2V2z"/></svg>
             </div>
-            <div class="items-center px-4 py-3">
-                <button id="close-bed-modal" onclick="document.getElementById('bed-select-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300">
-                    Đóng
-                </button>
+            <div class="relative z-10">
+                <h3 class="text-white text-xl font-bold tracking-wide">Chọn Giường</h3>
+                <p class="text-green-100/80 text-sm mt-0.5">Vui lòng chọn vị trí còn trống</p>
             </div>
+            <button onclick="document.getElementById('bed-select-modal').classList.add('hidden')" 
+                class="relative z-10 w-8 h-8 rounded-full bg-black/20 flex items-center justify-center text-white hover:bg-black/30 transition backdrop-blur-md">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+            </button>
+        </div>
+
+        <div class="p-5 bg-[#F2F2F7]">
+            <div class="grid grid-cols-2 gap-4" id="bed-selection-container">
+                </div>
+        </div>
+        
+        <div class="px-6 pb-5 text-center text-gray-400 text-[10px] font-medium uppercase tracking-wider">
+            Chạm vào Bed màu xanh để xác nhận
         </div>
     </div>
 </div>
@@ -1750,37 +1761,52 @@ function processCheckoutFirebase(booking) {
     }); 
 }
 // --- HÀM VẼ NÚT CHỌN BED (KHÔI PHỤC) ---
+// --- HÀM VẼ NÚT CHỌN BED (PHIÊN BẢN IOS PREMIUM) ---
 function renderBedSelection() {
     var container = document.getElementById('bed-selection-container');
     if (!container) return;
     
-    container.innerHTML = ""; // Xóa trắng cũ
+    container.innerHTML = ""; // Reset
 
-    // Quán có 4 Bed (nếu nhiều hơn thì sửa số 4)
+    // Duyệt 4 Bed
     for (var i = 1; i <= 4; i++) {
-        // Kiểm tra Bed này có đang bận không
+        // Kiểm tra trạng thái
         var isBusy = currentBedList.find(b => 
-            b.bedId == i && 
-            b.status && 
-            (b.status.includes('active') || b.status.includes('đang dùng'))
+            b.bedId == i && b.status && (b.status.includes('active') || b.status.includes('đang dùng'))
         );
 
-        // Logic giao diện: Bận thì xám, Trống thì Xanh
-        var btnClass = isBusy 
-            ? "p-4 bg-gray-100 text-gray-400 rounded-xl font-bold border border-gray-200 cursor-not-allowed opacity-60"
-            : "p-4 bg-green-50 text-[#006241] rounded-xl font-bold border border-green-200 hover:bg-green-100 transition shadow-sm active:scale-95 cursor-pointer";
+        // --- GIAO DIỆN NÚT BẤM ---
+        var btnHTML = "";
 
-        var onClick = isBusy ? "" : `onclick="finalizeBedCheckIn(${i})"`;
-        var statusText = isBusy ? "ĐANG BẬN" : "TRỐNG";
-        var icon = isBusy ? "⛔" : "✅";
-
-        container.innerHTML += `
-            <button ${onClick} class="${btnClass} flex flex-col items-center justify-center gap-1 h-24">
-                <span class="text-xl">${icon}</span>
-                <span class="text-xl">BED 0${i}</span>
-                <span class="text-[10px] uppercase font-bold tracking-wider">${statusText}</span>
+        if (isBusy) {
+            // === TRẠNG THÁI BẬN (Vô hiệu hóa, màu xám chìm) ===
+            btnHTML = `
+            <div class="relative group">
+                <button disabled class="w-full h-full bg-[#E5E5EA] rounded-2xl p-4 flex flex-col items-center border border-gray-200/50 cursor-not-allowed opacity-70 grayscale transition-all">
+                    <div class="w-12 h-12 bg-gray-300/50 text-gray-500 rounded-full flex items-center justify-center mb-3 shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                    </div>
+                    <span class="font-bold text-gray-500 text-lg">BED 0${i}</span>
+                    <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1 bg-gray-200 px-2 py-0.5 rounded-full">Đang bận</span>
+                </button>
+            </div>
+            `;
+        } else {
+            // === TRẠNG THÁI TRỐNG (Nổi bật, màu trắng bóng, bấm được) ===
+            btnHTML = `
+            <button onclick="finalizeBedCheckIn(${i})" class="w-full bg-white rounded-2xl p-4 flex flex-col items-center shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-transparent hover:border-[#1e3932]/30 active:scale-[0.97] active:shadow-sm transition-all duration-200 group relative overflow-hidden">
+                <div class="absolute inset-0 bg-[#1e3932] opacity-0 group-hover:opacity-[0.03] transition-opacity"></div>
+                
+                <div class="w-12 h-12 bg-[#E8F5E9] text-[#1e3932] rounded-full flex items-center justify-center mb-3 shadow-sm group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                </div>
+                <span class="font-black text-gray-800 text-lg group-hover:text-[#1e3932] transition-colors">BED 0${i}</span>
+                <span class="text-[10px] text-green-600 font-bold uppercase tracking-wider mt-1 bg-green-50 px-2.5 py-0.5 rounded-full">Sẵn sàng</span>
             </button>
-        `;
+            `;
+        }
+
+        container.innerHTML += btnHTML;
     }
 }
 </script>
@@ -1833,6 +1859,7 @@ function renderBedSelection() {
 </div>
 </body>
 </html>
+
 
 
 
