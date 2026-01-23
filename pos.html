@@ -854,13 +854,34 @@ function selectBill(idx) {
 // --- ĐẾN ĐÂY ---
 
 // --- HÀM MỞ TAB DOANH THU (PHIÊN BẢN AN TOÀN) ---
+// --- HÀM MỞ TAB DOANH THU (KHÔNG NHÁY MÀN HÌNH TRẮNG) ---
 function openRevenue(mode) {
-    if (!mode) mode = 'week'; // Mặc định là tuần
+    if (!mode) mode = 'week';
 
-    document.getElementById('loading-overlay').style.display = 'flex';
-    switchView('revenue');
+    // 1. KIỂM TRA XEM ĐANG Ở ĐÂU
+    // Nếu tab view-history đang hiện VÀ nút revenue đang active -> Tức là đang chuyển chế độ
+    var isSwitchingMode = !document.getElementById('view-history').classList.contains('hidden') && 
+                          document.getElementById('btn-nav-revenue').classList.contains('tab-active');
 
-    // Lấy ngày custom (Viết tường minh để tránh lỗi trên máy cũ)
+    if (isSwitchingMode) {
+        // --- CHẾ ĐỘ CHUYỂN TAB (KHÔNG NHÁY) ---
+        // Hiện vòng xoay nhỏ
+        var miniLoader = document.getElementById('mini-loader');
+        if (miniLoader) miniLoader.classList.remove('hidden');
+        
+        // Làm mờ nhẹ nội dung để biết đang load
+        var content = document.getElementById('history-detail-content');
+        if (content) {
+            content.style.opacity = "0.6";
+            content.style.pointerEvents = "none"; // Chặn bấm lung tung khi đang load
+        }
+    } else {
+        // --- CHẾ ĐỘ MỞ LẦN ĐẦU (HIỆN LOADING TO) ---
+        document.getElementById('loading-overlay').style.display = 'flex';
+        switchView('revenue');
+    }
+
+    // Lấy ngày custom
     var startEl = document.getElementById('rev-start');
     var endEl = document.getElementById('rev-end');
     var startVal = startEl ? startEl.value : null;
@@ -870,6 +891,8 @@ function openRevenue(mode) {
         db.ref('orders').once('value'),
         db.ref('order').once('value')
     ]).then(function(snapshots) {
+        
+        // Tắt Loading to (nếu có)
         document.getElementById('loading-overlay').style.display = 'none';
         
         try {
@@ -877,7 +900,6 @@ function openRevenue(mode) {
             snapshots.forEach(function(snap) {
                 if(snap.exists()) {
                     var val = snap.val();
-                    // Chuyển object thành array an toàn
                     if (val) {
                         Object.keys(val).forEach(function(k) {
                             allOrders.push(val[k]);
@@ -886,16 +908,17 @@ function openRevenue(mode) {
                 }
             });
 
-            // Gọi hàm tính toán
             var stats = calculateStats(allOrders, mode, startVal, endVal);
             
             if (stats) {
                 renderDailyRevenueList(stats.dailyList);
-                renderRevenueDashboard(stats, mode);
+                renderRevenueDashboard(stats, mode); // Hàm này sẽ tự tắt mini-loader và bỏ làm mờ
             }
         } catch (e) {
-            alert("Lỗi tính toán: " + e.message); // Hiện lỗi nếu có
-            console.error(e);
+            alert("Lỗi: " + e.message);
+            // Nếu lỗi cũng phải nhớ tắt hiệu ứng làm mờ
+            var content = document.getElementById('history-detail-content');
+            if (content) { content.style.opacity = "1"; content.style.pointerEvents = "auto"; }
         }
     });
 }
@@ -1013,19 +1036,22 @@ function renderDailyRevenueList(list) {
 }
 
 // --- HÀM VẼ DASHBOARD DOANH THU (STYLE APPLE: SÁNG, SẠCH, XANH THƯƠNG HIỆU) ---
+// --- HÀM VẼ DASHBOARD (CÓ THÊM VÒNG XOAY LOADING NHỎ) ---
 function renderRevenueDashboard(data, mode) {
     document.getElementById('history-detail-empty').classList.add('hidden');
     const detail = document.getElementById('history-detail-content');
     detail.classList.remove('hidden');
     
+    // Reset độ mờ (nếu trước đó bị làm mờ khi load)
+    detail.style.opacity = "1";
+    detail.style.pointerEvents = "auto";
+
     const diff = data.today - data.yesterday;
     const dColor = diff >= 0 ? 'text-green-500': 'text-red-500';
     const dIcon = diff >= 0 ? '▲': '▼';
 
-    // Style nút bấm chuẩn iOS Segmented Control
-    // Active: Nền Xanh, Chữ Trắng, Bóng đổ nhẹ
-    const activeBtn = "bg-[#006241] text-white shadow-md font-bold";
-    // Inactive: Nền trong suốt, Chữ xám
+    // Style nút bấm iOS
+    const activeBtn = "bg-[#006241] text-white shadow-md font-bold transform scale-105";
     const inactiveBtn = "text-gray-500 hover:bg-gray-200 font-medium";
 
     detail.innerHTML = `
@@ -1033,13 +1059,15 @@ function renderRevenueDashboard(data, mode) {
         
         <div class="flex flex-col sm:flex-row gap-3 items-center justify-between p-1.5 bg-gray-100/80 rounded-2xl border border-gray-200">
             
-            <div class="flex bg-gray-200 p-1 rounded-xl w-full sm:w-auto">
-                <button onclick="openRevenue('week')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase transition-all duration-200 ${mode==='week'?activeBtn:inactiveBtn}">Tuần</button>
-                <button onclick="openRevenue('month')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase transition-all duration-200 ${mode==='month'?activeBtn:inactiveBtn}">Tháng</button>
-                <button onclick="openRevenue('year')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase transition-all duration-200 ${mode==='year'?activeBtn:inactiveBtn}">Năm</button>
+            <div class="flex bg-gray-200 p-1 rounded-xl w-full sm:w-auto relative">
+                <button onclick="openRevenue('week')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase transition-all duration-300 ${mode==='week'?activeBtn:inactiveBtn}">Tuần</button>
+                <button onclick="openRevenue('month')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase transition-all duration-300 ${mode==='month'?activeBtn:inactiveBtn}">Tháng</button>
+                <button onclick="openRevenue('year')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg text-[10px] uppercase transition-all duration-300 ${mode==='year'?activeBtn:inactiveBtn}">Năm</button>
             </div>
             
             <div class="flex gap-2 items-center w-full sm:w-auto justify-end px-2">
+                <div id="mini-loader" class="hidden animate-spin rounded-full h-4 w-4 border-b-2 border-[#006241]"></div>
+
                 <div class="flex items-center gap-1 bg-white px-2 py-1.5 rounded-xl border border-gray-200 shadow-sm">
                     <input type="date" id="rev-start" class="text-[10px] font-bold text-[#1e3932] outline-none bg-transparent w-20 uppercase">
                     <span class="text-gray-300">-</span>
@@ -1056,12 +1084,10 @@ function renderRevenueDashboard(data, mode) {
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng thu</p>
                 <p class="brand-font text-lg sm:text-xl text-[#006241]">${(data.drinkTotal + data.snackTotal).toLocaleString()}</p>
             </div>
-            
             <div class="p-4 bg-white rounded-[24px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center">
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ăn vặt</p>
                 <p class="brand-font text-lg sm:text-xl text-amber-500">${data.snackTotal.toLocaleString()}</p>
             </div>
-            
             <div class="p-4 bg-white rounded-[24px] border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center">
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">So hôm qua</p>
                 <div class="flex items-center gap-1">
@@ -1080,7 +1106,6 @@ function renderRevenueDashboard(data, mode) {
         renderChart(data.labels, data.chartData, mode);
     }, 200);
 }
-
 function renderChart(labels, chartData, type) { 
     const ctx = document.getElementById('revenueChart').getContext('2d'); 
     if (myChart) myChart.destroy(); 
@@ -2138,6 +2163,7 @@ function renderBedSelection() {
 </div>
 </body>
 </html>
+
 
 
 
