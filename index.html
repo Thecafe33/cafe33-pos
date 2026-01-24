@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>The Cafe 33 - Member</title>
+    <title>Cafe 33 Member</title>
     <meta name="theme-color" content="#006241">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
 
     <style>
         body { font-family: 'Inter', sans-serif; background: #F3F4F6; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
@@ -86,7 +86,7 @@
                     <div class="space-y-4">
                         <div>
                             <label class="text-[10px] font-bold text-gray-400 uppercase ml-2 tracking-widest">Ngày đặt</label>
-                            <input type="date" id="book-date" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 font-bold text-[#006241] border border-transparent focus:border-[#006241]">
+                            <input type="date" id="book-date" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 font-bold text-[#006241] border border-transparent focus:border-[#006241] text-center">
                         </div>
                         <div class="flex gap-3">
                             <div class="flex-1">
@@ -100,7 +100,7 @@
                         </div>
                         <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 flex gap-2 items-start">
                             <span class="text-amber-500">ℹ️</span>
-                            <p class="text-[10px] text-amber-700 font-bold leading-relaxed">Giờ hoạt động: 08:00 - 20:50.<br>Vui lòng đến đúng giờ để giữ chỗ.</p>
+                            <p class="text-[10px] text-amber-700 font-bold leading-relaxed">Quán hoạt động: 08:00 - 20:50.<br>Tối thiểu 30 phút/lần đặt.</p>
                         </div>
                     </div>
 
@@ -121,15 +121,15 @@
         </div>
 
         <div class="absolute bottom-6 left-6 right-6 h-20 bg-white rounded-[30px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] flex items-center justify-between px-2 z-50 border border-gray-100">
-            <button onclick="switchTab('home')" id="nav-home" class="nav-item active flex-1 h-full rounded-[24px] flex flex-col items-center justify-center gap-1">
+            <button onclick="switchTab('home')" id="nav-home" class="nav-item active flex-1 h-full rounded-[24px] flex flex-col items-center justify-center gap-1 transition-all">
                 <span class="text-2xl">🏠</span>
                 <span class="text-[9px] uppercase tracking-widest">Trang chủ</span>
             </button>
-            <button onclick="switchTab('booking')" id="nav-booking" class="nav-item flex-1 h-full rounded-[24px] flex flex-col items-center justify-center gap-1">
+            <button onclick="switchTab('booking')" id="nav-booking" class="nav-item flex-1 h-full rounded-[24px] flex flex-col items-center justify-center gap-1 transition-all">
                 <span class="text-2xl">🛌</span>
                 <span class="text-[9px] uppercase tracking-widest">Đặt Bed</span>
             </button>
-            <button onclick="switchTab('rewards')" id="nav-rewards" class="nav-item flex-1 h-full rounded-[24px] flex flex-col items-center justify-center gap-1">
+            <button onclick="switchTab('rewards')" id="nav-rewards" class="nav-item flex-1 h-full rounded-[24px] flex flex-col items-center justify-center gap-1 transition-all">
                 <span class="text-2xl">🎁</span>
                 <span class="text-[9px] uppercase tracking-widest">Đổi quà</span>
             </button>
@@ -165,8 +165,8 @@
             appId: "..."
         };
         
-        // DÁN LINK MÃ.GS CỦA BÀ VÀO ĐÂY
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxxx...../exec"; 
+        // DÁN LINK WEB APP MỚI NHẤT VÀO ĐÂY
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/......./exec"; 
 
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -178,7 +178,7 @@
         // 2. KHỞI ĐỘNG
         // =============================================================
         window.onload = function() {
-            // Set min date cho booking là hôm nay
+            // Set min date cho booking
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('book-date').setAttribute('min', today);
             
@@ -221,12 +221,11 @@
                     document.getElementById('user-name').innerText = userData.name;
                     document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
                     
-                    // Điền form profile
+                    // Điền form
                     document.getElementById('edit-name').value = userData.name;
                     document.getElementById('edit-comp-name').value = userData.compName || userData.companionName || "";
                     document.getElementById('edit-comp-phone').value = userData.compPhone || userData.companionPhone || "";
                     
-                    // Điền form booking
                     document.getElementById('book-cname').value = userData.compName || userData.companionName || "";
                     document.getElementById('book-cphone').value = userData.compPhone || userData.companionPhone || "";
                 }
@@ -237,7 +236,7 @@
         }
 
         // =============================================================
-        // 3. XỬ LÝ ĐẶT BED (POS STYLE - Client check)
+        // 3. XỬ LÝ ĐẶT BED (POS STYLE - CHECK TRỰC TIẾP FIREBASE)
         // =============================================================
         function handleBookingSubmit() {
             const date = document.getElementById('book-date').value;
@@ -250,34 +249,36 @@
             if(start >= end) return alert("Giờ kết thúc phải sau giờ bắt đầu!");
             if(start < "08:00" || end > "20:50") return alert("Quán mở từ 08:00 đến 20:50 ạ!");
 
-            // Tính thời lượng
+            // Tính phút
             const startMin = parseInt(start.split(':')[0])*60 + parseInt(start.split(':')[1]);
             const endMin = parseInt(end.split(':')[0])*60 + parseInt(end.split(':')[1]);
             if(endMin - startMin < 30) return alert("Thời gian tối thiểu là 30 phút!");
 
             document.getElementById('loading-overlay').classList.remove('hidden');
 
-            // A. LẤY DỮ LIỆU ĐỂ KIỂM TRA TRÙNG (POS STYLE)
-            // Quét tất cả booking của ngày đó trên Firebase
-            db.ref('bedBookings').orderByChild('date').equalTo(convertDate(date)).once('value', snap => {
+            // BƯỚC 1: LẤY LỊCH CỦA NGÀY ĐÓ TỪ FIREBASE
+            // Convert ngày sang dd/mm/yyyy để khớp với dữ liệu POS
+            const dateStr = convertDate(date);
+
+            db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value', snap => {
                 const bookings = [];
                 snap.forEach(child => {
                     const val = child.val();
+                    // Lọc những đơn chưa hủy và chưa xong
                     if(val.status !== 'đã hủy' && val.status !== 'đã xong') {
                         bookings.push(val);
                     }
                 });
 
-                // B. GIẢ LẬP XẾP BED (4 GIƯỜNG)
+                // BƯỚC 2: TÌM GIƯỜNG TRỐNG (1-4)
                 let availableBed = null;
                 for(let bed = 1; bed <= 4; bed++) {
                     let isBusy = false;
-                    // Kiểm tra bed này có vướng lịch nào không
                     for(let b of bookings) {
                         if(b.bedId == bed) {
                             const bStart = parseInt(b.start.split(':')[0])*60 + parseInt(b.start.split(':')[1]);
                             const bEnd = parseInt(b.end.split(':')[0])*60 + parseInt(b.end.split(':')[1]);
-                            // Công thức check trùng: Max(StartA, StartB) < Min(EndA, EndB)
+                            // Check va chạm: Max(StartA, StartB) < Min(EndA, EndB)
                             if(Math.max(startMin, bStart) < Math.min(endMin, bEnd)) {
                                 isBusy = true; break;
                             }
@@ -285,22 +286,22 @@
                     }
                     if(!isBusy) {
                         availableBed = bed;
-                        break; // Tìm thấy giường trống
+                        break;
                     }
                 }
 
                 if(availableBed) {
-                    // C. TẠO BOOKING MỚI
+                    // BƯỚC 3: ĐẨY ĐƠN LÊN FIREBASE (POS THẤY NGAY)
                     const newBooking = {
                         phone: curPhone,
                         name: userData.name,
-                        date: convertDate(date), // Chuyển về dd/mm/yyyy cho khớp POS
+                        date: dateStr, 
                         start: start,
                         end: end,
                         compName: cName,
                         compPhone: cPhone,
                         bedId: availableBed,
-                        status: "chờ khách", // Hoặc 'đã đặt trước'
+                        status: "chờ khách", // POS sẽ thấy màu vàng
                         type: "app",
                         createdAt: new Date().toISOString()
                     };
@@ -310,7 +311,6 @@
                         if(err) alert("Lỗi: " + err.message);
                         else {
                             alert(`Đặt thành công! Bạn được xếp vào BED 0${availableBed}`);
-                            // Reset form
                             document.getElementById('book-date').value = "";
                             switchTab('home');
                         }
@@ -328,7 +328,7 @@
         }
 
         // =============================================================
-        // 4. CÁC LOGIC KHÁC (Quà, Hồ sơ...) - GIỮ NGUYÊN
+        // 4. QUÀ TẶNG & HỒ SƠ (Dùng cơ chế POS Style đã duyệt)
         // =============================================================
         function loadRewards() {
             db.ref('rewards').on('value', snap => {
@@ -340,11 +340,11 @@
                 Object.values(rewards).forEach(r => {
                     const cost = parseInt(r.cost);
                     const canRedeem = ((userData.points || 0) >= cost);
-                    const btnClass = canRedeem ? "bg-[#006241] text-white shadow-md active:scale-95" : "bg-gray-200 text-gray-400";
+                    const btnClass = canRedeem ? "bg-[#006241] text-white shadow-md active:scale-95" : "bg-gray-200 text-gray-400 cursor-not-allowed";
                     
                     list.innerHTML += `
                     <div class="bg-white p-4 rounded-[24px] shadow-sm border border-gray-100 flex flex-col items-center text-center">
-                        <div class="w-16 h-16 rounded-2xl bg-gray-50 mb-3 overflow-hidden">
+                        <div class="w-16 h-16 rounded-2xl bg-gray-50 mb-3 overflow-hidden border border-gray-100">
                             <img src="${r.img}" class="w-full h-full object-cover">
                         </div>
                         <p class="text-xs font-black text-[#1e3932] mb-1 truncate w-full uppercase">${r.name}</p>
@@ -361,8 +361,10 @@
             if(newPoints < 0) return alert("Không đủ điểm!");
 
             document.getElementById('loading-overlay').classList.remove('hidden');
+            // Cập nhật Firebase ngay
             db.ref('customers/' + curPhone).update({ points: newPoints });
 
+            // Ghi log vào Sheet
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST', mode: 'no-cors',
                 body: JSON.stringify({ action: 'logRedeem', phone: curPhone, custName: userData.name, giftName: giftName, pointCost: cost })
@@ -381,8 +383,10 @@
             document.getElementById('modal-profile').classList.add('hidden');
             document.getElementById('loading-overlay').classList.remove('hidden');
 
+            // Cập nhật Firebase
             db.ref('customers/' + curPhone).update({ name: newName, compName: newComp, compPhone: newCompPhone });
 
+            // Ghi log vào Sheet
             fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST', mode: 'no-cors',
                 body: JSON.stringify({ action: 'logProfileUpdate', phone: curPhone, oldName: oldData.name, newName: newName, oldComp: oldData.compName || "", newComp: newComp })
@@ -417,9 +421,18 @@
         }
 
         function switchTab(t) {
-            document.querySelectorAll('#main-content > div').forEach(d => d.classList.add('hidden'));
+            // Ẩn tất cả Tab nội dung (Dựa vào ID parent của chúng)
+            document.getElementById('tab-home').parentElement.classList.remove('hidden'); 
+            
+            // Ẩn cụ thể từng khối
+            document.getElementById('tab-home').classList.add('hidden');
+            document.getElementById('tab-booking').classList.add('hidden');
+            document.getElementById('tab-rewards').classList.add('hidden');
+            
+            // Hiện cái cần hiện
             document.getElementById('tab-' + t).classList.remove('hidden');
             
+            // Update Active Nav
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
             document.getElementById('nav-' + t).classList.add('active');
         }
