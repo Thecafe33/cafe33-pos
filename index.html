@@ -400,70 +400,68 @@ function showDashboard(phone) {
 // --- 4. CẬP NHẬT HỒ SƠ ---
 // --- HÀM CẬP NHẬT THÔNG TIN (ĐÃ FIX LỖI TREO MÀN HÌNH) ---
 // --- 4. CẬP NHẬT HỒ SƠ (ĐÃ FIX ĐÚNG ID VÀ CHỐNG TREO) ---
+// --- HÀM CẬP NHẬT THÔNG TIN (SẠCH SẼ - KHÔNG LỖI) ---
 window.handleUpdate = function() {
-    // 1. Lấy dữ liệu (DÙNG ĐÚNG ID CÓ TRONG FILE HTML CỦA BÀ)
-    const nameInput = document.getElementById('edit-name');   [cite_start]// [cite: 97]
-    const cNameInput = document.getElementById('edit-cname'); [cite_start]// [cite: 100]
-    const cPhoneInput = document.getElementById('edit-cphone'); [cite_start]// [cite: 100]
-    
-    // Kiểm tra xem có lấy được thẻ không
-    if (!nameInput || !cNameInput || !cPhoneInput) {
-        alert("Lỗi hệ thống: Không tìm thấy ô nhập liệu (ID không khớp).");
-        return;
+    // Lấy thẻ input (Đúng ID trong file của bà)
+    const nameInput = document.getElementById('edit-name');
+    const cNameInput = document.getElementById('edit-cname');
+    const cPhoneInput = document.getElementById('edit-cphone');
+
+    if (!nameInput || !cNameInput) {
+        return alert("Lỗi: Không tìm thấy ô nhập liệu.");
     }
 
     const newName = nameInput.value.trim();
     const newComp = cNameInput.value.trim();
-    const newCompPhone = cPhoneInput.value.trim();
+    const newCompPhone = cPhoneInput ? cPhoneInput.value.trim() : "";
     
-    // Validate
     if (newName === "") return alert("Vui lòng nhập tên của bạn!");
     
-    // 2. BẬT LOADING
+    // Bật Loading
     const loading = document.getElementById('loading-overlay');
-    loading.classList.remove('hidden');
+    if(loading) loading.classList.remove('hidden');
 
-    // Chuẩn bị dữ liệu cũ để lưu log (nếu cần)
-    const oldName = userData.name || "---";
+    // Lấy dữ liệu cũ an toàn
+    const oldName = (typeof userData !== 'undefined' && userData && userData.name) ? userData.name : "---";
 
-    // 3. Cập nhật Firebase
+    // Cập nhật Firebase
     const updates = {};
     updates['customers/' + curPhone + '/name'] = newName;
-    updates['customers/' + curPhone + '/compName'] = newComp;     // Đồng bộ tên biến
-    updates['customers/' + curPhone + '/companionName'] = newComp; // Lưu thêm trường này cho chắc
+    updates['customers/' + curPhone + '/compName'] = newComp;
+    updates['customers/' + curPhone + '/companionName'] = newComp; 
     updates['customers/' + curPhone + '/compPhone'] = newCompPhone;
 
     db.ref().update(updates)
         .then(() => {
-            // --- THÀNH CÔNG ---
-            loading.classList.add('hidden'); // Tắt loading NGAY
+            if(loading) loading.classList.add('hidden'); // Tắt loading
             
-            showAppModal("Thành công", "Đã cập nhật hồ sơ của bạn!", '✅');
+            // Thông báo thành công
+            if(typeof showAppModal === 'function') {
+                showAppModal("Thành công", "Đã cập nhật hồ sơ!", '✅');
+            } else {
+                alert("Đã cập nhật thành công!");
+            }
 
-            // Gửi dữ liệu về Sheet (Chạy ngầm)
+            // Gửi Log
             if (typeof GOOGLE_SCRIPT_URL !== 'undefined' && GOOGLE_SCRIPT_URL) {
                 const logData = {
                     action: 'logProfileUpdate',
                     phone: curPhone,
                     oldName: oldName,
                     newName: newName,
-                    oldComp: userData.compName || userData.companionName || "---",
+                    oldComp: "---",
                     newComp: newComp
                 };
-                
                 fetch(GOOGLE_SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', 
+                    method: 'POST', mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(logData)
-                }).catch(err => console.log("Lỗi ghi log (không sao):", err));
+                }).catch(e => console.log(e));
             }
         })
         .catch((error) => {
-            // --- THẤT BẠI ---
-            loading.classList.add('hidden'); // Tắt loading NGAY
-            console.error("Update Error:", error);
-            alert("Lỗi khi cập nhật: " + error.message);
+            if(loading) loading.classList.add('hidden');
+            alert("Lỗi: " + error.message);
         });
 }
 
@@ -612,6 +610,7 @@ let _historyCache = [];
 
 // 1. HÀM MỞ DANH SÁCH LỊCH SỬ (Đã sửa: Hiện chữ "ĐÃ HỦY" ở dòng Vị trí)
 // --- HÀM XEM LỊCH SỬ (ĐÃ FIX: CHỈ HIỆN HÔM NAY + TRẠNG THÁI TRỐNG) ---
+// --- HÀM XEM LỊCH SỬ (ĐÃ FIX: CẬP NHẬT CACHE ĐỂ MỞ ĐƯỢC POPUP) ---
 function openHistory() {
     document.getElementById('history-modal').classList.remove('hidden');
     document.getElementById('history-loading').classList.remove('hidden');
@@ -619,47 +618,49 @@ function openHistory() {
     const listDiv = document.getElementById('history-list');
     const activeDiv = document.getElementById('section-active-booking');
     
-    // Reset giao diện
     listDiv.innerHTML = ''; 
-    // Không ẩn activeDiv nữa vì luôn phải hiện tiêu đề
-    activeDiv.classList.remove('hidden'); 
+    activeDiv.classList.add('hidden'); // Mặc định ẩn trước
 
-    // Lấy TOÀN BỘ dữ liệu
+    // Lấy dữ liệu
     db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).once('value', snap => {
         document.getElementById('history-loading').classList.add('hidden');
         
-        const arr = [];
-        snap.forEach(c => { const val = c.val(); if(val) arr.push({key: c.key, ...val}); });
-
-        // Sắp xếp: Mới nhất lên đầu
-        arr.sort((a,b) => {
-            try { return (b.date.split('/').reverse().join('') + b.start).localeCompare(a.date.split('/').reverse().join('') + a.start); } catch(e){return 0}
+        // 1. CẬP NHẬT BIẾN TOÀN CỤC (QUAN TRỌNG NHẤT)
+        _historyCache = []; 
+        snap.forEach(c => { 
+            const val = c.val(); 
+            if(val) _historyCache.push({key: c.key, ...val}); 
         });
 
-        // --- XỬ LÝ NGÀY HÔM NAY ---
+        // 2. Sắp xếp ngay trên biến _historyCache
+        _historyCache.sort((a,b) => {
+            try { 
+                return (b.date.split('/').reverse().join('') + b.start)
+                       .localeCompare(a.date.split('/').reverse().join('') + a.start); 
+            } catch(e){ return 0 }
+        });
+
+        // 3. Xử lý logic hiển thị
         const todayObj = new Date();
         const d = String(todayObj.getDate()).padStart(2,'0');
         const m = String(todayObj.getMonth()+1).padStart(2,'0');
         const y = todayObj.getFullYear();
-        
-        // Tạo 2 định dạng ngày để so sánh cho chắc (dd/mm/yyyy và yyyy-mm-dd)
-        const todayStr1 = `${d}/${m}/${y}`; // 24/01/2026
-        const todayStr2 = `${y}-${m}-${d}`; // 2026-01-24
+        const todayStr1 = `${d}/${m}/${y}`;
+        const todayStr2 = `${y}-${m}-${d}`;
 
-        // 1. Tìm đơn "Hôm nay" (Phải trùng ngày VÀ chưa xong/hủy)
-        let todayBooking = arr.find(h => {
+        // Tìm đơn hôm nay
+        let todayBooking = _historyCache.find(h => {
             const s = (h.status || "").toLowerCase();
             const isActive = (s !== 'đã hủy' && s !== 'đã xong');
-            // Kiểm tra ngày trùng khớp
             const isToday = (h.date === todayStr1 || h.date === todayStr2);
             return isActive && isToday;
         });
 
-        // 2. Vẽ phần "Lịch đặt bed hôm nay"
+        // Vẽ thẻ Active (Hôm nay)
+        activeDiv.classList.remove('hidden');
         let activeContent = '';
         
         if (todayBooking) {
-            // CÓ LỊCH -> HIỆN THẺ TO
             const h = todayBooking;
             const bedText = (h.bedId && h.bedId != "WAITING") ? "BED 0" + h.bedId : "Chờ xếp...";
             const allowCancel = (h.status || "").includes('chờ') ? '' : 'hidden'; 
@@ -678,7 +679,6 @@ function openHistory() {
                     </div>
                 </div>`;
         } else {
-            // KHÔNG CÓ LỊCH -> HIỆN CHỮ NHẮC NHỞ
             activeContent = `
                 <div class="bg-white/50 border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center">
                     <p class="text-2xl mb-2">🛏️</p>
@@ -686,34 +686,20 @@ function openHistory() {
                     <button onclick="document.getElementById('history-modal').classList.add('hidden'); showTab('bed')" class="mt-3 text-[10px] font-bold text-[#006241] uppercase hover:underline">Đặt ngay +</button>
                 </div>`;
         }
+        activeDiv.innerHTML = `<h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1">Lịch trình hôm nay</h3>` + activeContent;
 
-        // Cập nhật HTML cho section active (Gồm cả tiêu đề mới)
-        activeDiv.innerHTML = `
-            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1">Lịch đặt bed hôm nay</h3>
-            ${activeContent}
-        `;
-
-        // 3. Vẽ Danh sách bên dưới (Tất cả lịch sử còn lại)
-        if (arr.length === 0) {
-             listDiv.innerHTML = '<div class="text-center text-gray-400 text-sm italic py-10">Chưa có lịch sử nào khác.</div>';
+        // Vẽ danh sách lịch sử cũ
+        if (_historyCache.length === 0) {
+            listDiv.innerHTML = '<div class="text-center text-gray-400 text-sm italic py-10">Chưa có lịch sử nào.</div>';
         } else {
-            arr.forEach(h => {
-                // Bỏ qua cái đã hiện ở trên (nếu có)
-                if (todayBooking && h.key === todayBooking.key) return; 
+            _historyCache.forEach(h => {
+                if (todayBooking && h.key === todayBooking.key) return; // Bỏ qua cái đã hiện ở trên
 
                 let clr = "text-gray-500 bg-gray-100"; let txt = h.status || "---";
                 if (txt.includes('xong')) { clr = "text-green-700 bg-green-50"; txt = "HOÀN THÀNH"; }
                 else if (txt.includes('hủy')) { clr = "text-red-500 bg-red-50"; txt = "ĐÃ HỦY"; }
-                
-                // Logic hiển thị vị trí
-                let locationText = "---";
-                if ((h.status||"").includes('hủy')) {
-                    locationText = '<span class="text-red-400 font-bold">ĐÃ HỦY</span>';
-                } else if (h.bedId && h.bedId != "WAITING") {
-                    locationText = "BED 0" + h.bedId;
-                } else {
-                    locationText = "Đang xếp...";
-                }
+
+                let locationText = (h.status||"").includes('hủy') ? '<span class="text-red-400 font-bold">ĐÃ HỦY</span>' : (h.bedId ? "BED 0"+h.bedId : "Đang xếp...");
 
                 listDiv.innerHTML += `
                 <div onclick="showHistoryDetail('${h.key}')" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-2 relative mb-2 active:scale-95 transition-transform cursor-pointer">
@@ -889,6 +875,7 @@ function toggleViolationDetail() {
 </div>
 </body>
 </html>
+
 
 
 
