@@ -1698,110 +1698,167 @@ function selectBedItem(index) {
         </div>
         
         <div id="wrapper-btn-cancel" class="mt-2 hidden">
-            <button id="btn-action-cancel" class="w-full py-2.5 rounded-xl text-red-400 font-bold bg-white border border-dashed border-gray-300 hover:bg-red-50 hover:border-red-200 transition-all text-[10px] uppercase tracking-widest">
-                Hủy Lịch Này
+          // --- HÀM CHỌN BED ITEM (ĐÃ NÂNG CẤP: QUẢN LÝ PHẠT VỆ SINH) ---
+function selectBedItem(index) {
+    selectedBedIndex = index;
+    renderLeftColumnList(); 
+
+    var data = currentBedList[index];
+    var panel = document.getElementById('detail-content-panel');
+    var empty = document.getElementById('detail-empty-state');
+    
+    // --- ẨN MÀN HÌNH CHỜ ---
+    if(empty) empty.classList.add('hidden');
+    if(panel) { panel.classList.remove('hidden'); panel.classList.add('flex'); }
+
+    // --- TRẠNG THÁI ---
+    var isDone = (data.status && data.status.includes('đã xong'));
+    var isCancelled = (data.status && data.status.includes('đã hủy'));
+    var isActive = (data.status && (data.status.includes('active') || data.status.includes('đang dùng')));
+    var hasBed = (data.bedId && data.bedId != "WAITING");
+    var bookingId = data.id || data.key;
+    
+    // Kiểm tra xem đơn này đã bị phạt chưa?
+    var hasPenalty = data.hasPenalty === true;
+    var penaltyAmt = data.penaltyAmount || 0;
+
+    // --- XÂY DỰNG GIAO DIỆN ---
+    panel.innerHTML = `
+    <div class="bg-white border-b border-gray-100 p-4 sticky top-0 z-10 shadow-sm">
+        <div class="flex justify-between items-center">
+            <div>
+                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Đang chọn</p>
+                <h1 class="text-3xl font-black text-[#1e3932] leading-none" id="detail-bed-name">${hasBed ? `BED 0${data.bedId}` : "CHỜ XẾP"}</h1>
+            </div>
+            <div id="detail-status-badge" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                ${isDone ? "ĐÃ XONG" : (isCancelled ? "ĐÃ HỦY" : (isActive ? "ĐANG DÙNG" : "CHỜ KHÁCH"))}
+            </div>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 bg-[#F9FAFB]">
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+                <p class="text-[9px] font-bold text-gray-400 uppercase">Người đặt</p>
+                <p class="font-bold text-[#1e3932] text-sm truncate">${data.name || "Khách lẻ"}</p>
+                <p class="font-mono text-[10px] text-gray-500 font-bold">${data.phone || "--"}</p>
+            </div>
+            <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+                <p class="text-[9px] font-bold text-gray-400 uppercase">Đi cùng</p>
+                <p class="font-bold text-[#1e3932] text-sm truncate">${data.compName || "---"}</p>
+                <p class="font-mono text-[10px] text-gray-500 font-bold">${data.compPhone || "--"}</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center text-xs">
+            <div><p class="text-[9px] text-gray-400 font-bold uppercase">Bắt đầu</p><p class="font-black text-[#1e3932] text-lg">${data.start}</p></div>
+            <div class="text-gray-300">➜</div>
+            <div class="text-right"><p class="text-[9px] text-gray-400 font-bold uppercase">Kết thúc</p><p class="font-black text-[#1e3932] text-lg">${data.end}</p></div>
+        </div>
+        
+        <div id="row-checkout-time" class="hidden bg-gray-100 rounded-xl p-3 flex justify-between items-center">
+            <span class="text-[10px] font-bold text-gray-500 uppercase">Check-out lúc:</span>
+            <span class="font-black text-red-600 text-sm">${isCancelled ? (data.note || "Đã hủy") : (data.realEndTime || "--:--")}</span>
+        </div>
+
+        <div id="done-session-info" class="hidden"></div>
+
+    </div>
+
+    <div id="detail-action-buttons" class="p-4 bg-white border-t border-gray-100 mt-auto">
+        <div class="grid grid-cols-2 gap-3">
+            <button id="btn-action-order" class="py-3 rounded-xl bg-amber-50 text-amber-700 font-bold border border-amber-100 shadow-sm active:scale-95 transition-all flex justify-center items-center gap-1.5">
+                <span>☕</span> <span class="uppercase text-[10px] tracking-wider">Gọi Món</span>
             </button>
+            <button id="btn-action-checkout" class="py-3 rounded-xl bg-[#006241] text-white font-bold shadow-md shadow-green-900/10 active:scale-95 transition-all flex justify-center items-center gap-1.5">
+                <span>🛏️</span> <span class="uppercase text-[10px] tracking-wider">Xếp Bed</span>
+            </button>
+        </div>
+        <div id="wrapper-btn-cancel" class="mt-2 hidden">
+            <button id="btn-action-cancel" class="w-full py-2.5 rounded-xl text-red-400 font-bold bg-white border border-dashed border-gray-300 hover:bg-red-50 hover:border-red-200 transition-all text-[10px] uppercase tracking-widest">Hủy Lịch Này</button>
         </div>
     </div>
     `;
 
-    // --- CẬP NHẬT MÀU BADGE ---
+    // ... (Code cập nhật màu Badge Badge giữ nguyên) ...
     var badge = document.getElementById('detail-status-badge');
-    if (isDone) { 
-        badge.className = "px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold uppercase"; 
-    } else if (isCancelled) { 
-        badge.className = "px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-[10px] font-bold uppercase"; 
-    } else if (isActive) { 
-        badge.className = "px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-[10px] font-bold uppercase animate-pulse border border-green-200"; 
-    } else { 
-        badge.className = "px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold uppercase border border-amber-200"; 
-    }
+    if (isDone) badge.className = "px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold uppercase"; 
+    else if (isCancelled) badge.className = "px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-[10px] font-bold uppercase"; 
+    else if (isActive) badge.className = "px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-[10px] font-bold uppercase animate-pulse border border-green-200"; 
+    else badge.className = "px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold uppercase border border-amber-200"; 
 
-    // --- LOGIC ẨN HIỆN ---
+    // --- LOGIC ẨN HIỆN & RENDER NÚT PHẠT ---
     var rowCheckout = document.getElementById('row-checkout-time');
     var actionBtns = document.getElementById('detail-action-buttons');
-    var timerBox = document.getElementById('detail-timer-box');
     var wrapperCancel = document.getElementById('wrapper-btn-cancel');
 
     if (isDone || isCancelled) {
-        // === ĐÃ XONG / ĐÃ HỦY ===
-        if(rowCheckout) {
-            rowCheckout.classList.remove('hidden');
-            document.getElementById('detail-real-end').innerText = isCancelled ? (data.note || "Đã hủy") : (data.realEndTime || "--:--");
-        }
-        
-        // Ẩn nút thao tác thường
+        if(rowCheckout) rowCheckout.classList.remove('hidden');
         if(actionBtns) actionBtns.classList.add('hidden');
-        if(timerBox) timerBox.classList.add('hidden');
-        stopPanelCountdown();
+        if(wrapperCancel) wrapperCancel.classList.add('hidden');
 
-        // [QUAN TRỌNG] HIỆN TỔNG TIỀN + NÚT VỆ SINH APPLE STYLE
+        // [QUAN TRỌNG] HIỆN TỔNG TIỀN + LOGIC NÚT PHẠT THÔNG MINH
         if (isDone && !isCancelled && data.phone) {
-            
             calculateSessionSpend(data.phone, data.start, data.realEndTime).then(total => {
                 var infoDiv = document.getElementById('done-session-info');
                 if (infoDiv) {
-                    // Chúng ta sẽ vẽ 2 khối riêng biệt vào đây
+                    
+                    // A. NẾU CHƯA BỊ PHẠT -> HIỆN NÚT CÂY CHỔI
+                    var penaltyHTML = `
+                    <div class="mt-4 bg-white rounded-[24px] p-4 border border-red-100 shadow-[0_8px_20px_-8px_rgba(239,68,68,0.3)] flex items-center justify-between relative overflow-hidden group cursor-pointer" onclick="openCleaningModal('${data.phone}', '${bookingId}')">
+                        <div class="flex items-center gap-4 z-10">
+                            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center shadow-md shadow-red-300/50 group-active:scale-90 transition-all duration-300">
+                                <span class="text-3xl drop-shadow-sm group-hover:-rotate-12 transition-transform">🧹</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-black text-gray-900 leading-none mb-1 group-hover:text-red-600 transition-colors">Phí Vệ Sinh</h3>
+                                <p class="text-[11px] text-gray-500 font-medium">Chạm để thêm phí dọn dẹp</p>
+                            </div>
+                        </div>
+                        <div class="text-gray-300 text-2xl z-10">➜</div>
+                    </div>`;
+
+                    // B. NẾU ĐÃ BỊ PHẠT -> HIỆN THÔNG BÁO + NÚT SỬA/XÓA
+                    if (hasPenalty) {
+                        penaltyHTML = `
+                        <div class="mt-4 bg-red-50 rounded-[24px] p-4 border border-red-200 flex flex-col gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-xl">⚠️</div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-red-400 uppercase tracking-wider">Đã tính phí lần sau</p>
+                                    <p class="text-xl font-black text-red-600 leading-none">${penaltyAmt.toLocaleString()}đ</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 mt-1">
+                                <button onclick="openCleaningModal('${data.phone}', '${bookingId}')" class="flex-1 py-2.5 bg-white border border-red-100 text-red-500 font-bold text-[10px] rounded-xl uppercase shadow-sm active:scale-95">✏️ Thay đổi</button>
+                                <button onclick="deletePenalty('${data.phone}', '${bookingId}')" class="flex-1 py-2.5 bg-red-500 text-white font-bold text-[10px] rounded-xl uppercase shadow-sm active:scale-95">🗑️ Xóa phí</button>
+                            </div>
+                        </div>`;
+                    }
+
                     infoDiv.innerHTML = `
                     <div class="bg-white border border-[#006241]/30 rounded-[20px] p-5 shadow-sm relative overflow-hidden mt-3">
                         <div class="absolute -right-5 -bottom-5 w-24 h-24 bg-[#006241]/10 rounded-full blur-xl pointer-events-none"></div>
-                        
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng chi session này</p>
                         <div class="flex items-baseline gap-1">
                             <p class="text-4xl font-black text-[#1e3932] tracking-tight">${total.toLocaleString()}</p>
                             <span class="text-lg font-bold text-[#006241]">vnđ</span>
                         </div>
                     </div>
-
-                    <div class="mt-4 bg-white rounded-[24px] p-4 border border-red-100 shadow-[0_8px_20px_-8px_rgba(239,68,68,0.3)] flex items-center justify-between relative overflow-hidden group cursor-pointer" onclick="openCleaningModal('${data.phone}', '${bookingId}')">
-                        
-                        <div class="flex items-center gap-4 z-10">
-                            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center shadow-md shadow-red-300/50 group-active:scale-90 transition-all duration-300">
-                                <span class="text-3xl drop-shadow-sm group-hover:-rotate-12 transition-transform">🧹</span>
-                            </div>
-                            
-                            <div>
-                                <h3 class="text-lg font-black text-gray-900 leading-none mb-1 group-hover:text-red-600 transition-colors">Phí Vệ Sinh</h3>
-                                <p class="text-[11px] text-gray-500 font-medium">Chạm để thêm phí dọn dẹp (Nếu cần)</p>
-                            </div>
-                        </div>
-
-                        <div class="text-gray-300 text-2xl z-10 group-hover:text-red-400 group-hover:translate-x-1 transition-all">➜</div>
-                    </div>
-
-                    <p id="fee-status-${bookingId}" class="text-center text-[11px] text-red-600 font-bold mt-2 hidden animate-pulse"></p>
+                    ${penaltyHTML}
                     `;
-                    
                     infoDiv.classList.remove('hidden');
                 }
             });
         }
-
     } else {
-        // === ĐANG HOẠT ĐỘNG / CHỜ ===
+        // ... (Code hiển thị khi đang chạy - Giữ nguyên như cũ) ...
         var oldInfo = document.getElementById('done-session-info');
         if(oldInfo) oldInfo.classList.add('hidden');
-
         if(rowCheckout) rowCheckout.classList.add('hidden');
         if(actionBtns) actionBtns.classList.remove('hidden');
-        
-        // Logic nút Hủy: Chỉ hiện khi CHƯA active (Waiting)
-        if (isActive) {
-             if(wrapperCancel) wrapperCancel.classList.add('hidden');
-        } else {
-             if(wrapperCancel) wrapperCancel.classList.remove('hidden');
-        }
-
-        // Logic Đồng hồ
-        if (hasBed && data.end && isActive) {
-            if(timerBox) timerBox.classList.remove('hidden');
-            startPanelCountdown(data.end);
-        } else {
-            stopPanelCountdown();
-            if(timerBox) timerBox.classList.add('hidden');
-        }
-
-        // Setup lại sự kiện cho các nút mới được vẽ
+        if(isActive) { if(wrapperCancel) wrapperCancel.classList.add('hidden'); }
+        else { if(wrapperCancel) wrapperCancel.classList.remove('hidden'); }
         setupActionButtons(bookingId, data, hasBed, 
             document.getElementById('btn-action-order'), 
             document.getElementById('btn-action-checkout'), 
@@ -1809,7 +1866,6 @@ function selectBedItem(index) {
         );
     }
 }
-
 // Hàm phụ để gán nút (cho code gọn)
 function setupActionButtons(bookingId, data, hasBed, btnOrder, btnCheckout, btnCancel) {
     // Cancel
@@ -2484,14 +2540,72 @@ function openCleaningModal(phone, bookingId) {
 }
 
 // 2. Hàm xác nhận phí (Được gọi khi chọn 20k/30k/50k)
+// --- 1. XÁC NHẬN VÀ GỬI PHÍ (CÓ POPUP CONFIRM) ---
 function submitCleaningFee(amount) {
     if (!pendingFeePhone) return;
     
-    // Đóng modal
+    // Đóng modal chọn tiền trước
     document.getElementById('modal-cleaning-fee').classList.add('hidden');
     
-    // Gọi hàm lưu nợ
-    setCleaningFee(pendingFeePhone, amount, pendingFeeBookingId);
+    // Hiện Popup xác nhận kiểu Apple (IOS Confirm)
+    showIOSConfirm(`Xác nhận tính phí ${amount.toLocaleString()}đ cho khách này?`, function() {
+        setCleaningFee(pendingFeePhone, amount, pendingFeeBookingId);
+    });
+}
+
+// --- 2. LƯU PHÍ VÀO FIREBASE (CẬP NHẬT CẢ KHÁCH VÀ BED) ---
+function setCleaningFee(phone, amount, bookingId) {
+    document.getElementById('loading-overlay').style.display = 'flex';
+
+    // A. Cập nhật nợ cho khách hàng
+    db.ref('customers/' + normalizePhone(phone)).update({
+        pendingFee: amount, 
+        pendingFeeReason: "Phí vệ sinh nệm"
+    }, (error) => {
+        if (error) {
+            document.getElementById('loading-overlay').style.display = 'none';
+            alert("Lỗi: " + error.message);
+        } else {
+            // B. Đánh dấu vào Booking là "Đã bị phạt" (Để hiển thị lại nút Xóa/Sửa)
+            db.ref('bedBookings/' + bookingId).update({
+                hasPenalty: true,
+                penaltyAmount: amount
+            }, () => {
+                document.getElementById('loading-overlay').style.display = 'none';
+                
+                // Load lại danh sách để giao diện tự cập nhật (Hiện bảng thông báo đỏ)
+                openBedManager(); 
+                
+                // Hiện thông báo thành công
+                setTimeout(() => {
+                    showAppModal("Đã tính phí!", `Khách sẽ bị tính thêm ${amount.toLocaleString()}đ vào lần thanh toán sau.`, "✅");
+                }, 300);
+            });
+        }
+    });
+}
+
+// --- 3. XÓA PHÍ PHẠT (NÚT XÓA) ---
+function deletePenalty(phone, bookingId) {
+    showIOSConfirm("Bạn chắc chắn muốn XÓA phí phạt này chứ?", function() {
+        document.getElementById('loading-overlay').style.display = 'flex';
+
+        // A. Xóa nợ của khách (Về 0)
+        db.ref('customers/' + normalizePhone(phone)).update({
+            pendingFee: 0, 
+            pendingFeeReason: null
+        });
+
+        // B. Cập nhật lại booking (Hủy cờ hasPenalty)
+        db.ref('bedBookings/' + bookingId).update({
+            hasPenalty: false,
+            penaltyAmount: 0
+        }, () => {
+            document.getElementById('loading-overlay').style.display = 'none';
+            openBedManager(); // Refresh giao diện
+            setTimeout(() => { showAppModal("Đã xóa!", "Đã hủy bỏ khoản phí vệ sinh.", "🗑️"); }, 300);
+        });
+    });
 }
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
@@ -2573,6 +2687,7 @@ function submitCleaningFee(amount) {
 </div>
 </body>
 </html>
+
 
 
 
