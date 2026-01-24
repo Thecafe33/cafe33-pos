@@ -112,6 +112,12 @@
         <p class="text-[10px] font-bold text-gray-400 ml-2 uppercase pt-2 tracking-widest">Người đi cùng mặc định</p>
         <div class="space-y-3"><input type="text" id="edit-cname" class="w-full p-4 bg-gray-50 rounded-2xl outline-none shadow-inner" placeholder="Tên người đi cùng"><input type="tel" id="edit-cphone" class="w-full p-4 bg-gray-50 rounded-2xl outline-none shadow-inner" placeholder="SĐT người đi cùng"></div>
         <button id="btn-update-profile" onclick="handleUpdate()" class="w-full py-4 rounded-2xl border-2 border-[#006241] text-[#006241] font-bold text-sm mt-4 uppercase tracking-widest">Lưu thay đổi</button>
+        <div class="mt-8 pt-6 border-t border-gray-50 text-center">
+            <button onclick="handleLogout()" class="w-full py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-xs uppercase tracking-widest border border-red-100 active:scale-95 transition-all shadow-sm hover:bg-red-100">
+                Đăng xuất tài khoản
+            </button>
+            <p class="text-[9px] text-gray-300 mt-4 font-bold tracking-widest">THE CAFE 33 APP • V2026</p>
+        </div>
       </div>
     </div>
 
@@ -474,8 +480,10 @@ function redeemGift(name, cost) {
 // --- HÀM XEM LỊCH SỬ (ĐÃ FIX: HIỆN ĐẦY ĐỦ KHÔNG SÓT) ---
 // --- HÀM XEM LỊCH SỬ (ĐÃ FIX: HIỆN TOÀN BỘ KHÔNG BỎ SÓT) ---
 // --- BIẾN TOÀN CỤC LƯU CACHE LỊCH SỬ ---
+// --- BIẾN CACHE TOÀN CỤC ---
 let _historyCache = [];
 
+// 1. HÀM MỞ DANH SÁCH LỊCH SỬ (Đã sửa: Hiện chữ "ĐÃ HỦY" ở dòng Vị trí)
 function openHistory() {
     document.getElementById('history-modal').classList.remove('hidden');
     document.getElementById('history-loading').classList.remove('hidden');
@@ -487,7 +495,7 @@ function openHistory() {
 
     db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).once('value', snap => {
         document.getElementById('history-loading').classList.add('hidden');
-        _historyCache = []; // Reset cache
+        _historyCache = []; 
         
         snap.forEach(c => { const val = c.val(); if(val) _historyCache.push({key: c.key, ...val}); });
         
@@ -499,10 +507,10 @@ function openHistory() {
             try { return (b.date.split('/').reverse().join('') + b.start).localeCompare(a.date.split('/').reverse().join('') + a.start); } catch(e){return 0}
         });
 
-        // Tách Active và History
+        // Tách Active
         let activeItem = _historyCache.find(h => h.status !== 'đã hủy' && h.status !== 'đã xong');
         
-        // Render Active
+        // Render Active Card
         if(activeItem) {
             activeDiv.classList.remove('hidden');
             const h = activeItem;
@@ -513,15 +521,25 @@ function openHistory() {
                 <div class="flex gap-2"><button onclick="alert('Liên hệ quầy để đổi giờ!')" class="flex-1 py-3 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs">✏️ Đổi giờ</button><button onclick="cancelBooking('${h.key}')" class="flex-1 py-3 rounded-xl bg-red-50 text-red-600 font-bold text-xs">🗑️ Hủy</button></div>`;
         }
 
-        // Render List (THÊM ONCLICK VÀO ĐÂY)
+        // Render Danh sách bên dưới
         _historyCache.forEach(h => {
-            if(h === activeItem) return; // Bỏ qua thằng đang active
+            if(h === activeItem) return; 
             
             let clr = "text-gray-500 bg-gray-100"; let txt = h.status || "---";
             if (txt.includes('xong')) { clr = "text-green-700 bg-green-50"; txt = "HOÀN THÀNH"; }
             else if (txt.includes('hủy')) { clr = "text-red-500 bg-red-50"; txt = "ĐÃ HỦY"; }
 
-            // Bấm vào div này sẽ mở popup
+            // --- [SỬA ĐOẠN NÀY]: Logic hiển thị vị trí ---
+            let locationText = "---";
+            if ((h.status||"").includes('hủy')) {
+                locationText = '<span class="text-red-400 font-bold">ĐÃ HỦY</span>';
+            } else if (h.bedId && h.bedId != "WAITING") {
+                locationText = "BED 0" + h.bedId;
+            } else {
+                locationText = "Đang xếp...";
+            }
+            // ---------------------------------------------
+
             listDiv.innerHTML += `
             <div onclick="showHistoryDetail('${h.key}')" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-2 relative mb-2 active:scale-95 transition-transform cursor-pointer">
                 <div class="flex justify-between items-center">
@@ -529,7 +547,7 @@ function openHistory() {
                     <span class="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase ${clr}">${txt}</span>
                 </div>
                 <div class="flex justify-between items-end">
-                    <div><p class="text-lg font-black text-[#1e3932] leading-none">${h.start} - ${h.end}</p><p class="text-[10px] text-gray-400 font-bold mt-1">Vị trí: ${h.bedId ? 'BED 0'+h.bedId : '---'}</p></div>
+                    <div><p class="text-lg font-black text-[#1e3932] leading-none">${h.start} - ${h.end}</p><p class="text-[10px] text-gray-400 font-bold mt-1">Vị trí: <span class="text-gray-600">${locationText}</span></p></div>
                     ${h.totalSpend ? `<span class="text-xs font-bold text-[#006241]">-${Number(h.totalSpend).toLocaleString()}đ</span>` : ''}
                 </div>
             </div>`;
@@ -537,6 +555,9 @@ function openHistory() {
     });
 }
 
+// Các hàm phụ trợ popup
+function closeHistoryDetail() { document.getElementById('detail-history-modal').classList.add('hidden'); }
+function toggleViolationDetail() { document.getElementById('violation-detail-box').classList.toggle('hidden'); }
 // --- HÀM HỦY LỊCH (CẬP NHẬT TRỰC TIẾP FIREBASE) ---//
 function cancelBooking(key) {
     if(!confirm("Bạn chắc chắn muốn hủy lịch này?")) return;
@@ -564,57 +585,61 @@ function showHistoryDetail(key) {
     const item = _historyCache.find(i => i.key === key);
     if(!item) return;
 
-    // 1. Điền thông tin cơ bản
+    const isCancelled = (item.status || "").includes('hủy');
+    
     document.getElementById('dh-date').innerText = item.date;
-    document.getElementById('dh-bed').innerText = item.bedId ? "BED 0" + item.bedId : "CHƯA XẾP";
     document.getElementById('dh-in').innerText = item.start;
     document.getElementById('dh-out').innerText = item.end;
 
-    // 2. Tính thời gian sử dụng
-    const s = parseInt(item.start.split(':')[0])*60 + parseInt(item.start.split(':')[1]);
-    const e = parseInt(item.end.split(':')[0])*60 + parseInt(item.end.split(':')[1]);
-    let diff = e - s;
-    if(diff < 0) diff = 0;
-    const h = Math.floor(diff/60);
-    const m = diff % 60;
-    document.getElementById('dh-duration').innerText = `${h} giờ ${m} phút`;
+    // --- XỬ LÝ MÀU SẮC HEADER & GIỜ ---
+    const header = document.getElementById('dh-header');
+    // Xóa màu cũ để tránh trùng lặp
+    header.classList.remove('from-[#006241]', 'to-[#1e3932]', 'from-red-500', 'to-red-800');
 
-    // 3. Xử lý nút Vi Phạm (Nút tròn Apple)
+    if (isCancelled) {
+        // STYLE HỦY: MÀU ĐỎ - CHỮ XÁM
+        header.classList.add('from-red-500', 'to-red-800');
+        document.getElementById('dh-bed').innerText = "ĐÃ HỦY LỊCH";
+        document.getElementById('dh-duration').innerText = "Chưa sử dụng";
+        document.getElementById('dh-duration').className = "text-3xl font-black text-gray-400 brand-font mt-1";
+    } else {
+        // STYLE THƯỜNG: MÀU XANH - CHỮ XANH
+        header.classList.add('from-[#006241]', 'to-[#1e3932]');
+        document.getElementById('dh-bed').innerText = item.bedId ? "BED 0" + item.bedId : "CHƯA XẾP";
+        
+        // Tính giờ
+        const s = parseInt(item.start.split(':')[0])*60 + parseInt(item.start.split(':')[1]);
+        const e = parseInt(item.end.split(':')[0])*60 + parseInt(item.end.split(':')[1]);
+        let diff = e - s;
+        if(diff < 0) diff = 0;
+        const h = Math.floor(diff/60);
+        const m = diff % 60;
+        
+        document.getElementById('dh-duration').innerText = `${h} giờ ${m} phút`;
+        document.getElementById('dh-duration').className = "text-3xl font-black text-[#006241] brand-font mt-1";
+    }
+
+    // Xử lý nút Vi Phạm
     const badge = document.getElementById('violation-badge');
     const vList = document.getElementById('violation-list');
     vList.innerHTML = "";
     
-    // Giả lập check lỗi (Vì hiện tại Firebase chưa có trường violations chuẩn)
-    // Logic: Nếu có trường 'violations' (mảng) hoặc check ghi chú
     let errors = [];
-    if(item.violations && Array.isArray(item.violations)) {
-        errors = item.violations;
-    } else if (item.note && (item.note.includes('ồn') || item.note.includes('vệ sinh') || item.note.includes('phạt'))) {
-        // Tạm thời lấy từ ghi chú nếu chưa có trường riêng
-        errors.push(item.note);
-    }
+    if(item.violations && Array.isArray(item.violations)) errors = item.violations;
+    else if (item.note && (item.note.includes('ồn') || item.note.includes('vệ sinh') || item.note.includes('phạt'))) errors.push(item.note);
     
-    // Hiển thị Badge
     if(errors.length > 0) {
         badge.innerText = errors.length;
-        badge.classList.remove('hidden');
-        badge.classList.add('flex'); // Hiện badge đỏ
-        
-        errors.forEach(err => {
-            vList.innerHTML += `<li class="border-b border-gray-50 pb-1 last:border-0 last:pb-0">⚠️ ${err}</li>`;
-        });
+        badge.classList.remove('hidden'); badge.classList.add('flex');
+        errors.forEach(err => { vList.innerHTML += `<li class="border-b border-gray-50 pb-1 last:border-0 last:pb-0">⚠️ ${err}</li>`; });
     } else {
-        badge.classList.add('hidden'); // Ẩn badge nếu không có lỗi
+        badge.classList.add('hidden');
         vList.innerHTML = `<li class="text-gray-400 italic">Không có vi phạm nào.</li>`;
     }
 
-    // Reset trạng thái popup lỗi
     document.getElementById('violation-detail-box').classList.add('hidden');
-
-    // Hiện Modal
     document.getElementById('detail-history-modal').classList.remove('hidden');
 }
-
 function closeHistoryDetail() {
     document.getElementById('detail-history-modal').classList.add('hidden');
 }
@@ -629,7 +654,7 @@ function toggleViolationDetail() {
     
     <div class="relative bg-white/90 backdrop-blur-xl w-full max-w-sm rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] overflow-hidden animate-fade-in border border-white/50">
         
-        <div class="h-32 bg-gradient-to-br from-[#006241] to-[#1e3932] relative flex items-center justify-center">
+        <div id="dh-header" class="h-32 bg-gradient-to-br from-[#006241] to-[#1e3932] relative flex items-center justify-center">
             <p class="text-[80px] opacity-10">☕</p>
             <div class="absolute -bottom-10 w-full flex justify-center">
                 <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg text-3xl">
@@ -680,6 +705,7 @@ function toggleViolationDetail() {
 </div>
 </body>
 </html>
+
 
 
 
