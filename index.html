@@ -473,113 +473,74 @@ function redeemGift(name, cost) {
 // --- HÀM XEM LỊCH SỬ (ĐÃ FIX LỖI ẨN ĐƠN) ---
 // --- HÀM XEM LỊCH SỬ (ĐÃ FIX: HIỆN ĐẦY ĐỦ KHÔNG SÓT) ---
 // --- HÀM XEM LỊCH SỬ (ĐÃ FIX: HIỆN TOÀN BỘ KHÔNG BỎ SÓT) ---
+// --- BIẾN TOÀN CỤC LƯU CACHE LỊCH SỬ ---
+let _historyCache = [];
+
+// --- BIẾN TOÀN CỤC LƯU CACHE LỊCH SỬ ---
+let _historyCache = [];
+
 function openHistory() {
     document.getElementById('history-modal').classList.remove('hidden');
     document.getElementById('history-loading').classList.remove('hidden');
-    
     const listDiv = document.getElementById('history-list');
     const activeDiv = document.getElementById('section-active-booking');
     const activeCard = document.getElementById('active-card');
     
-    listDiv.innerHTML = ''; 
-    activeDiv.classList.add('hidden');
+    listDiv.innerHTML = ''; activeDiv.classList.add('hidden');
 
-    // Lấy TOÀN BỘ dữ liệu của khách
     db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).once('value', snap => {
         document.getElementById('history-loading').classList.add('hidden');
+        _historyCache = []; // Reset cache
         
-        const arr = [];
-        snap.forEach(c => {
-            const val = c.val();
-            if (val) arr.push({key: c.key, ...val});
-        });
+        snap.forEach(c => { const val = c.val(); if(val) _historyCache.push({key: c.key, ...val}); });
         
-        if (arr.length === 0) {
-            listDiv.innerHTML = '<div class="text-center text-gray-400 text-sm italic py-10">Bạn chưa có lịch sử đặt Bed nào.</div>';
-            return;
+        if (_historyCache.length === 0) {
+            listDiv.innerHTML = '<div class="text-center text-gray-400 text-sm italic py-10">Chưa có lịch sử.</div>'; return;
         }
 
-        // Sắp xếp: Mới nhất lên đầu (Dựa vào ngày + giờ)
-        arr.sort((a,b) => {
-            try {
-                // Chuyển 24/01/2026 -> 20260124 để so sánh
-                const d1 = a.date.split('/').reverse().join('');
-                const d2 = b.date.split('/').reverse().join('');
-                // So sánh ngày trước, sau đó đến giờ bắt đầu
-                if (d1 !== d2) return d2.localeCompare(d1);
-                return b.start.localeCompare(a.start);
-            } catch(e) { return 0; }
+        _historyCache.sort((a,b) => {
+            try { return (b.date.split('/').reverse().join('') + b.start).localeCompare(a.date.split('/').reverse().join('') + a.start); } catch(e){return 0}
         });
 
-        // --- CHIẾN THUẬT: TÁCH RIÊNG ĐƠN ACTIVE VÀ DANH SÁCH ---
-        let activeBooking = null;
-        let listBookings = [];
-
-        // 1. Lọc đơn Active (Chưa xong, chưa hủy)
-        // Lấy đơn active ĐẦU TIÊN (mới nhất) làm Active Card
-        // Các đơn active còn lại (nếu có) đẩy xuống danh sách
-        arr.forEach(h => {
-            const s = (h.status || "").toLowerCase();
-            const isActive = (s !== 'đã hủy' && s !== 'đã xong');
-            
-            if (isActive && !activeBooking) {
-                activeBooking = h; // Giữ lại cái đầu tiên để hiện to
-            } else {
-                listBookings.push(h); // Còn lại đẩy hết vào danh sách
-            }
-        });
-
-        // 2. Vẽ Active Card (Nếu có)
-        if (activeBooking) {
+        // Tách Active và History
+        let activeItem = _historyCache.find(h => h.status !== 'đã hủy' && h.status !== 'đã xong');
+        
+        // Render Active
+        if(activeItem) {
             activeDiv.classList.remove('hidden');
-            const h = activeBooking;
+            const h = activeItem;
             const bedText = (h.bedId && h.bedId != "WAITING") ? "BED 0" + h.bedId : "Chờ xếp...";
-            const allowCancel = (h.status || "").includes('chờ') ? '' : 'hidden'; 
-
             activeCard.innerHTML = `
-                <div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl shadow-sm animate-pulse">ĐANG DÙNG / SẮP TỚI</div>
-                <div class="mb-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">📅 ${h.date}</p>
-                    <p class="text-3xl font-black text-[#1e3932] tracking-tight">${h.start}</p>
-                    <p class="text-sm text-gray-500 font-bold mt-1">Đến: ${h.end} • <span class="text-[#006241]">${bedText}</span></p>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="alert('Vui lòng liên hệ nhân viên để đổi giờ!')" class="flex-1 py-3 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs border border-blue-100">✏️ Đổi giờ</button>
-                    <button onclick="cancelBooking('${h.key}')" class="flex-1 py-3 rounded-xl bg-red-50 text-red-600 font-bold text-xs border border-red-100 ${allowCancel}">🗑️ Hủy</button>
-                </div>`;
+                <div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl shadow-sm animate-pulse">ĐANG DÙNG</div>
+                <div class="mb-4"><p class="text-xs font-bold text-gray-400 uppercase mb-1">📅 ${h.date}</p><p class="text-3xl font-black text-[#1e3932]">${h.start}</p><p class="text-sm text-gray-500 font-bold mt-1">Đến: ${h.end} • <span class="text-[#006241]">${bedText}</span></p></div>
+                <div class="flex gap-2"><button onclick="alert('Liên hệ quầy để đổi giờ!')" class="flex-1 py-3 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs">✏️ Đổi giờ</button><button onclick="cancelBooking('${h.key}')" class="flex-1 py-3 rounded-xl bg-red-50 text-red-600 font-bold text-xs">🗑️ Hủy</button></div>`;
         }
 
-        // 3. Vẽ Danh sách bên dưới (Bao gồm lịch sử cũ và các đơn active thừa)
-        listBookings.forEach(h => {
-            let clr = "text-gray-500 bg-gray-100";
-            let txt = h.status || "---";
-            let bd = "border-gray-100";
+        // Render List (THÊM ONCLICK VÀO ĐÂY)
+        _historyCache.forEach(h => {
+            if(h === activeItem) return; // Bỏ qua thằng đang active
             
-            const s = (h.status || "").toLowerCase();
-            if (s.includes('xong')) { clr = "text-green-700 bg-green-50"; txt = "HOÀN THÀNH"; }
-            else if (s.includes('hủy')) { clr = "text-red-500 bg-red-50"; txt = "ĐÃ HỦY"; }
-            else if (s.includes('chờ')) { clr = "text-amber-600 bg-amber-50"; txt = "ĐANG CHỜ"; bd="border-amber-100"; }
-            else if (s.includes('dùng') || s.includes('active')) { clr = "text-blue-600 bg-blue-50"; txt = "ĐANG DÙNG"; bd="border-blue-100"; }
+            let clr = "text-gray-500 bg-gray-100"; let txt = h.status || "---";
+            if (txt.includes('xong')) { clr = "text-green-700 bg-green-50"; txt = "HOÀN THÀNH"; }
+            else if (txt.includes('hủy')) { clr = "text-red-500 bg-red-50"; txt = "ĐÃ HỦY"; }
 
+            // Bấm vào div này sẽ mở popup
             listDiv.innerHTML += `
-            <div class="bg-white p-4 rounded-2xl border ${bd} shadow-sm flex flex-col gap-2 relative mb-2">
+            <div onclick="showHistoryDetail('${h.key}')" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-2 relative mb-2 active:scale-95 transition-transform cursor-pointer">
                 <div class="flex justify-between items-center">
                     <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">📅 ${h.date}</span>
                     <span class="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase ${clr}">${txt}</span>
                 </div>
                 <div class="flex justify-between items-end">
-                    <div>
-                        <p class="text-lg font-black text-[#1e3932] leading-none">${h.start} - ${h.end}</p>
-                        <p class="text-[10px] text-gray-400 font-bold mt-1">Vị trí: ${h.bedId ? 'BED 0'+h.bedId : '---'}</p>
-                    </div>
-                    ${h.totalSpend ? `<span class="text-xs font-bold text-[#006241] bg-green-50 px-2 py-1 rounded-md">-${Number(h.totalSpend).toLocaleString()}đ</span>` : ''}
+                    <div><p class="text-lg font-black text-[#1e3932] leading-none">${h.start} - ${h.end}</p><p class="text-[10px] text-gray-400 font-bold mt-1">Vị trí: ${h.bedId ? 'BED 0'+h.bedId : '---'}</p></div>
+                    ${h.totalSpend ? `<span class="text-xs font-bold text-[#006241]">-${Number(h.totalSpend).toLocaleString()}đ</span>` : ''}
                 </div>
             </div>`;
         });
     });
 }
 
-// --- HÀM HỦY LỊCH (CẬP NHẬT TRỰC TIẾP FIREBASE) ---
+// --- HÀM HỦY LỊCH (CẬP NHẬT TRỰC TIẾP FIREBASE) ---//
 function cancelBooking(key) {
     if(!confirm("Bạn chắc chắn muốn hủy lịch này?")) return;
     
@@ -600,9 +561,129 @@ function cancelBooking(key) {
         }
     });
 }
+  // --- LOGIC POPUP CHI TIẾT (APPLE STYLE) ---
+
+function showHistoryDetail(key) {
+    const item = _historyCache.find(i => i.key === key);
+    if(!item) return;
+
+    // 1. Điền thông tin cơ bản
+    document.getElementById('dh-date').innerText = item.date;
+    document.getElementById('dh-bed').innerText = item.bedId ? "BED 0" + item.bedId : "CHƯA XẾP";
+    document.getElementById('dh-in').innerText = item.start;
+    document.getElementById('dh-out').innerText = item.end;
+
+    // 2. Tính thời gian sử dụng
+    const s = parseInt(item.start.split(':')[0])*60 + parseInt(item.start.split(':')[1]);
+    const e = parseInt(item.end.split(':')[0])*60 + parseInt(item.end.split(':')[1]);
+    let diff = e - s;
+    if(diff < 0) diff = 0;
+    const h = Math.floor(diff/60);
+    const m = diff % 60;
+    document.getElementById('dh-duration').innerText = `${h} giờ ${m} phút`;
+
+    // 3. Xử lý nút Vi Phạm (Nút tròn Apple)
+    const badge = document.getElementById('violation-badge');
+    const vList = document.getElementById('violation-list');
+    vList.innerHTML = "";
+    
+    // Giả lập check lỗi (Vì hiện tại Firebase chưa có trường violations chuẩn)
+    // Logic: Nếu có trường 'violations' (mảng) hoặc check ghi chú
+    let errors = [];
+    if(item.violations && Array.isArray(item.violations)) {
+        errors = item.violations;
+    } else if (item.note && (item.note.includes('ồn') || item.note.includes('vệ sinh') || item.note.includes('phạt'))) {
+        // Tạm thời lấy từ ghi chú nếu chưa có trường riêng
+        errors.push(item.note);
+    }
+    
+    // Hiển thị Badge
+    if(errors.length > 0) {
+        badge.innerText = errors.length;
+        badge.classList.remove('hidden');
+        badge.classList.add('flex'); // Hiện badge đỏ
+        
+        errors.forEach(err => {
+            vList.innerHTML += `<li class="border-b border-gray-50 pb-1 last:border-0 last:pb-0">⚠️ ${err}</li>`;
+        });
+    } else {
+        badge.classList.add('hidden'); // Ẩn badge nếu không có lỗi
+        vList.innerHTML = `<li class="text-gray-400 italic">Không có vi phạm nào.</li>`;
+    }
+
+    // Reset trạng thái popup lỗi
+    document.getElementById('violation-detail-box').classList.add('hidden');
+
+    // Hiện Modal
+    document.getElementById('detail-history-modal').classList.remove('hidden');
+}
+
+function closeHistoryDetail() {
+    document.getElementById('detail-history-modal').classList.add('hidden');
+}
+
+function toggleViolationDetail() {
+    const box = document.getElementById('violation-detail-box');
+    box.classList.toggle('hidden');
+}
 </script>
+  <div id="detail-history-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-6 transition-all duration-300">
+    <div class="absolute inset-0 bg-black/30 backdrop-blur-md" onclick="closeHistoryDetail()"></div>
+    
+    <div class="relative bg-white/90 backdrop-blur-xl w-full max-w-sm rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] overflow-hidden animate-fade-in border border-white/50">
+        
+        <div class="h-32 bg-gradient-to-br from-[#006241] to-[#1e3932] relative flex items-center justify-center">
+            <p class="text-[80px] opacity-10">☕</p>
+            <div class="absolute -bottom-10 w-full flex justify-center">
+                <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg text-3xl">
+                    🛌
+                </div>
+            </div>
+            <button onclick="closeHistoryDetail()" class="absolute top-5 right-5 w-8 h-8 bg-black/20 text-white rounded-full flex items-center justify-center backdrop-blur-sm hover:bg-black/30 transition">✕</button>
+        </div>
+
+        <div class="pt-12 pb-8 px-8 text-center">
+            <h3 class="brand-font text-2xl text-[#1e3932] mb-1" id="dh-date">--/--/----</h3>
+            <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-6" id="dh-bed">BED --</p>
+
+            <div class="flex justify-between items-center bg-gray-50/80 rounded-3xl p-5 border border-white shadow-inner mb-6">
+                <div class="text-left">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Check-in</p>
+                    <p class="text-xl font-black text-[#1e3932]" id="dh-in">--:--</p>
+                </div>
+                <div class="h-8 w-[1px] bg-gray-200"></div>
+                <div class="text-right">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase">Check-out</p>
+                    <p class="text-xl font-black text-[#1e3932]" id="dh-out">--:--</p>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <p class="text-xs text-gray-400 font-medium">Tổng thời gian sử dụng</p>
+                <p class="text-3xl font-black text-[#006241] brand-font mt-1" id="dh-duration">-- giờ -- phút</p>
+            </div>
+
+            <div id="violation-container" class="relative inline-block group">
+                <button onclick="toggleViolationDetail()" class="w-16 h-16 rounded-full bg-white shadow-[0_8px_20px_rgba(0,0,0,0.1)] flex items-center justify-center text-2xl transition-transform active:scale-95 border border-gray-100 relative">
+                    ⚠️
+                    <div id="violation-badge" class="absolute -top-1 -right-1 w-6 h-6 bg-[#FF3B30] text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md hidden">0</div>
+                </button>
+                <p class="text-[10px] text-gray-400 font-bold mt-2">Báo cáo vi phạm</p>
+                
+                <div id="violation-detail-box" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-gray-100 text-left z-10 animate-fade-in">
+                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Chi tiết lỗi:</p>
+                    <ul id="violation-list" class="text-xs text-[#1e3932] font-medium space-y-1">
+                        </ul>
+                    <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-b border-r border-gray-100"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
 
 
 
