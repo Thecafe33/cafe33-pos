@@ -398,25 +398,75 @@ function showDashboard(phone) {
 }
 
 // --- 4. CẬP NHẬT HỒ SƠ ---
-function handleUpdate() {
-    const name = document.getElementById('edit-name').value;
-    const cName = document.getElementById('edit-cname').value;
-    const cPhone = document.getElementById('edit-cphone').value;
-    const oldData = {...userData};
+// --- HÀM CẬP NHẬT THÔNG TIN (ĐÃ FIX LỖI TREO MÀN HÌNH) ---
+window.handleUpdate = function() {
+    // 1. Lấy dữ liệu từ ô nhập
+    const nameInput = document.getElementById('user-name');
+    const compInput = document.getElementById('user-comp');
+    
+    if (!nameInput || !compInput) {
+        alert("Lỗi: Không tìm thấy ô nhập liệu!");
+        return;
+    }
 
-    document.getElementById('loading-overlay').classList.remove('hidden');
+    const newName = nameInput.value.trim();
+    const newComp = compInput.value.trim();
     
-    // Update Firebase
-    db.ref('customers/' + curPhone).update({ name: name, compName: cName, compPhone: cPhone });
+    // Validate
+    if (newName === "") return alert("Vui lòng nhập tên của bạn!");
     
-    // Log Sheet
-    fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST', mode: 'no-cors',
-        body: JSON.stringify({ action: 'logProfileUpdate', phone: curPhone, oldName: oldData.name, newName: name, oldComp: oldData.compName || "", newComp: cName })
-    }).finally(() => {
-        document.getElementById('loading-overlay').classList.add('hidden');
-        showAppModal("Thành công", "Đã cập nhật hồ sơ!", '✅');
-    });
+    // 2. BẬT LOADING (Lớp kính mờ hiện lên)
+    const loading = document.getElementById('loading-overlay');
+    loading.classList.remove('hidden');
+
+    // Chuẩn bị dữ liệu cũ để lưu lịch sử (Lấy từ giao diện hiện tại hoặc biến userData)
+    // Nếu chưa có biến userData thì lấy tạm giá trị cũ
+    const oldNameText = nameInput.getAttribute('placeholder') || "Cũ"; 
+    
+    // 3. Cập nhật Firebase
+    const updates = {};
+    updates['customers/' + curPhone + '/name'] = newName;
+    updates['customers/' + curPhone + '/companionName'] = newComp;
+
+    db.ref().update(updates)
+        .then(() => {
+            // --- THÀNH CÔNG ---
+            
+            // QUAN TRỌNG: Tắt Loading NGAY LẬP TỨC để không bị treo
+            loading.classList.add('hidden'); 
+            
+            alert("Cập nhật thông tin thành công!");
+
+            // Gửi dữ liệu về Sheet để lưu lịch sử (Chạy ngầm, không cần chờ)
+            // Đảm bảo bà đã khai báo biến scriptURL ở đầu file script
+            if (typeof scriptURL !== 'undefined' && scriptURL) {
+                const logData = {
+                    action: 'logProfileUpdate',
+                    phone: curPhone,
+                    oldName: oldNameText,
+                    newName: newName,
+                    oldComp: "---", // Có thể update logic lấy tên bạn cũ nếu cần
+                    newComp: newComp
+                };
+                
+                // Dùng fetch với mode 'no-cors' để tránh lỗi mạng làm phiền user
+                fetch(scriptURL, {
+                    method: 'POST',
+                    mode: 'no-cors', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(logData)
+                }).catch(err => console.log("Lỗi ghi log (không ảnh hưởng App):", err));
+            }
+        })
+        .catch((error) => {
+            // --- THẤT BẠI ---
+            
+            // QUAN TRỌNG: Gặp lỗi cũng phải Tắt Loading
+            loading.classList.add('hidden');
+            
+            console.error("Update Error:", error);
+            alert("Lỗi khi cập nhật: " + error.message);
+        });
 }
 
 // --- 5. ĐẶT BED (POS STYLE) ---
@@ -833,6 +883,7 @@ function toggleViolationDetail() {
 </div>
 </body>
 </html>
+
 
 
 
