@@ -26,11 +26,6 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
-  
-  <!-- Realtime Database SDK chung với POS -->
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-  
   <style>
     /* CSS CHỐNG RELOAD & ZOOM */
     html, body {
@@ -45,7 +40,7 @@
         color: #1e3932; 
         text-align: left; 
         -webkit-font-smoothing: antialiased;
-        overflow-y: auto; 
+        overflow-y: auto; /* Cho phép cuộn nội dung */
     }
     .brand-font { font-family: 'League Spartan', sans-serif; font-weight: 800; letter-spacing: -0.01em; }
     .sb-green { background-color: #006241; }
@@ -57,6 +52,7 @@
     .modal-enter { opacity: 0; transform: scale(0.9); }
     .modal-show { opacity: 1; transform: scale(1); }
     
+    /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 10px; }
@@ -67,11 +63,11 @@
   <div id="loading-overlay" class="fixed inset-0 bg-white/95 z-[9999] hidden flex flex-col items-center justify-center backdrop-blur-sm">
     <div class="w-14 h-14 border-4 border-[#006241] border-t-transparent rounded-full animate-spin mb-4"></div>
     <p class="brand-font text-[#006241] text-xl font-black animate-pulse">The cafe 33</p>
-    <p class="text-xs text-gray-400 font-bold mt-2" id="loading-text">Đang kết nối...</p>
+    <p class="text-xs text-gray-400 font-bold mt-2" id="loading-text">Đang xử lý...</p>
   </div>
 
-  <div id="image-overlay" class="fixed inset-0 bg-black/95 z-[200] hidden flex flex-col items-center justify-center p-4 backdrop-blur-md">
-    <button onclick="document.getElementById('image-overlay').classList.add('hidden')" class="absolute top-8 right-8 text-white text-5xl font-light">&times;</button>
+  <div id="image-overlay" class="fixed inset-0 bg-black/95 z-[200] hidden flex flex-col items-center justify-center p-4 backdrop-blur-md" onclick="closeZoom()">
+    <button class="absolute top-8 right-8 text-white text-5xl font-light">&times;</button>
     <div class="w-full h-full flex items-center justify-center overflow-auto"><img id="zoomed-img" src="" class="max-w-full max-h-full object-contain shadow-2xl transition-transform" onclick="event.stopPropagation()"></div>
   </div>
 
@@ -91,7 +87,7 @@
     <h1 class="text-5xl text-[#006241] mb-4 brand-font">The cafe 33</h1>
     <p class="text-[11px] font-bold text-gray-400 mb-12 uppercase tracking-widest">Tích điểm nhận đặc quyền</p>
     <input type="tel" id="login-sdt" placeholder="Số điện thoại của bạn..." class="w-full p-5 rounded-3xl bg-gray-50 border border-gray-100 mb-4 text-center outline-none text-lg">
-    <button id="btn-login" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-lg">Đăng nhập</button>
+    <button onclick="login()" id="btn-login" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-lg">Đăng nhập</button>
   </div>
 
   <div id="main-app" class="hidden">
@@ -109,7 +105,7 @@
         <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
       </div>
       
-      <div id="btn-open-history" class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer mb-6 active:scale-95 transition-transform">
+      <div onclick="openHistory()" class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer mb-6 active:scale-95 transition-transform">
         <div class="flex items-center gap-4">
             <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-xl text-[#006241]">📅</div>
             <div>
@@ -123,10 +119,10 @@
       <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-4 text-left">
         <h4 class="font-bold text-[10px] uppercase text-gray-400 ml-2 tracking-widest">Hồ sơ của bạn</h4>
         <div><label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Tên của bạn</label><input type="text" id="edit-name" class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner"></div>
-        <div><label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Số điện thoại</label><input type="tel" id="edit-sdt" class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner"></div>
+        <div><label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Số điện thoại</label><input type="tel" id="edit-sdt" class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner" readonly></div>
         <p class="text-[10px] font-bold text-gray-400 ml-2 uppercase pt-2 tracking-widest">Người đi cùng mặc định</p>
         <div class="space-y-3"><input type="text" id="edit-cname" class="w-full p-4 bg-gray-50 rounded-2xl outline-none shadow-inner" placeholder="Tên người đi cùng"><input type="tel" id="edit-cphone" class="w-full p-4 bg-gray-50 rounded-2xl outline-none shadow-inner" placeholder="SĐT người đi cùng"></div>
-        <button id="btn-update-profile" class="w-full py-4 rounded-2xl border-2 border-[#006241] text-[#006241] font-bold text-sm mt-4 uppercase tracking-widest">Lưu thay đổi</button>
+        <button onclick="handleUpdate()" class="w-full py-4 rounded-2xl border-2 border-[#006241] text-[#006241] font-bold text-sm mt-4 uppercase tracking-widest">Lưu thay đổi</button>
       </div>
     </div>
 
@@ -141,12 +137,12 @@
         <hr class="border-gray-50">
         <div class="space-y-5"><p class="text-[10px] font-bold text-gray-400 uppercase ml-2 text-center tracking-widest">Nội quy & Miễn trừ trách nhiệm</p>
           <div class="grid grid-cols-2 gap-4">
-            <div class="relative aspect-square w-full rounded-[2rem] overflow-hidden border border-gray-100 shadow-sm" onclick="document.getElementById('zoomed-img').src='https://i.ibb.co/KcwBLYBN/N-I-QUY-S-D-NG-BED-20260109-102319-0000.png';document.getElementById('image-overlay').classList.remove('hidden');"><img src="https://i.ibb.co/KcwBLYBN/N-I-QUY-S-D-NG-BED-20260109-102319-0000.png" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/20 flex items-end justify-center pb-3"><span class="text-[8px] text-white font-bold uppercase bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">Nhấn để xem rõ</span></div></div>
-            <div class="relative aspect-square w-full rounded-[2rem] overflow-hidden border border-gray-100 shadow-sm" onclick="document.getElementById('zoomed-img').src='https://i.ibb.co/XrqnhTQK/2-20250520-223429-0001.png';document.getElementById('image-overlay').classList.remove('hidden');"><img src="https://i.ibb.co/XrqnhTQK/2-20250520-223429-0001.png" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/20 flex items-end justify-center pb-3"><span class="text-[8px] text-white font-bold uppercase bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">Nhấn để xem rõ</span></div></div>
+            <div class="relative aspect-square w-full rounded-[2rem] overflow-hidden border border-gray-100 shadow-sm" onclick="zoomImg('https://i.ibb.co/KcwBLYBN/N-I-QUY-S-D-NG-BED-20260109-102319-0000.png')"><img src="https://i.ibb.co/KcwBLYBN/N-I-QUY-S-D-NG-BED-20260109-102319-0000.png" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/20 flex items-end justify-center pb-3"><span class="text-[8px] text-white font-bold uppercase bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">Nhấn để xem rõ</span></div></div>
+            <div class="relative aspect-square w-full rounded-[2rem] overflow-hidden border border-gray-100 shadow-sm" onclick="zoomImg('https://i.ibb.co/XrqnhTQK/2-20250520-223429-0001.png')"><img src="https://i.ibb.co/XrqnhTQK/2-20250520-223429-0001.png" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/20 flex items-end justify-center pb-3"><span class="text-[8px] text-white font-bold uppercase bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">Nhấn để xem rõ</span></div></div>
           </div>
           <div class="flex items-start gap-3 p-6 bg-gray-50 rounded-[2rem] border border-gray-100 text-left"><input type="checkbox" id="agree-rules" class="mt-1 w-7 h-7 accent-[#006241]"><label for="agree-rules" class="text-[12px] leading-relaxed text-gray-600 font-medium italic">Tôi cam kết đã đọc và tuân thủ toàn bộ nội quy của <span class="brand-font">The cafe 33</span>.</label></div>
         </div>
-        <button id="btn-booking" class="w-full p-5 rounded-3xl sb-green text-white font-bold uppercase text-lg shadow-xl tracking-widest active:scale-95 transition-all">Xác nhận đặt chỗ</button>
+        <button onclick="handleBooking()" class="w-full p-5 rounded-3xl sb-green text-white font-bold uppercase text-lg shadow-xl tracking-widest active:scale-95 transition-all">Xác nhận đặt chỗ</button>
       </div>
     </div>
 
@@ -154,9 +150,9 @@
   </div>
 
   <nav id="nav-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 h-28 flex justify-around items-center hidden z-50 px-6 shadow-2xl">
-    <button id="nav-user" class="nav-active flex flex-col items-center justify-center w-1/3 py-4 transition-all"><span class="text-3xl mb-1">👤</span><span class="text-[14px] uppercase font-extrabold tracking-tighter">Bạn</span></button>
-    <button id="nav-bed" class="text-gray-300 flex flex-col items-center justify-center w-1/3 py-4 transition-all"><span class="text-3xl mb-1">🛌</span><span class="text-[14px] uppercase font-extrabold tracking-tighter">Đặt Bed</span></button>
-    <button id="nav-rewards" class="text-gray-300 flex flex-col items-center justify-center w-1/3 py-4 transition-all"><span class="text-3xl mb-1">🎁</span><span class="text-[14px] uppercase font-extrabold tracking-tighter">Đổi quà</span></button>
+    <button onclick="showTab('user')" id="nav-user" class="nav-active flex flex-col items-center justify-center w-1/3 py-4 transition-all"><span class="text-3xl mb-1">👤</span><span class="text-[14px] uppercase font-extrabold tracking-tighter">Bạn</span></button>
+    <button onclick="showTab('bed')" id="nav-bed" class="text-gray-300 flex flex-col items-center justify-center w-1/3 py-4 transition-all"><span class="text-3xl mb-1">🛌</span><span class="text-[14px] uppercase font-extrabold tracking-tighter">Đặt Bed</span></button>
+    <button onclick="showTab('rewards')" id="nav-rewards" class="text-gray-300 flex flex-col items-center justify-center w-1/3 py-4 transition-all"><span class="text-3xl mb-1">🎁</span><span class="text-[14px] uppercase font-extrabold tracking-tighter">Đổi quà</span></button>
   </nav>
 
   <div id="history-modal" class="fixed inset-0 bg-white z-50 hidden flex-col overflow-hidden">
@@ -175,6 +171,21 @@
          <div id="history-list" class="space-y-3"></div>
       </div>
     </div>
+  </div>
+
+  <div id="change-time-modal" class="fixed inset-0 bg-black/50 z-[60] hidden items-center justify-center p-5">
+     <div class="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl animate-bounce-in">
+        <h3 class="text-lg font-bold text-[#1e3932] mb-4">Thay đổi giờ đặt</h3>
+        <input type="hidden" id="edit-booking-id">
+        <div class="grid grid-cols-2 gap-3 mb-4">
+           <div><label class="block text-xs font-bold text-gray-400 mb-1">Bắt đầu</label><input type="time" id="edit-start" class="w-full p-3 bg-gray-50 rounded-xl font-bold text-[#1e3932] outline-none border focus:border-[#006241]"></div>
+           <div><label class="block text-xs font-bold text-gray-400 mb-1">Kết thúc</label><input type="time" id="edit-end" class="w-full p-3 bg-gray-50 rounded-xl font-bold text-[#1e3932] outline-none border focus:border-[#006241]"></div>
+        </div>
+        <div class="flex gap-2">
+           <button onclick="document.getElementById('change-time-modal').classList.add('hidden')" class="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-500">Hủy</button>
+           <button onclick="submitChangeTime()" class="flex-1 py-3 bg-[#006241] rounded-xl font-bold text-white shadow-lg shadow-green-900/20">Lưu thay đổi</button>
+        </div>
+     </div>
   </div>
 
   <div id="gift-detail-modal" class="fixed inset-0 bg-black/60 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm transition-opacity duration-300">
@@ -199,70 +210,55 @@
   </div>
 
   <script>
-    
-    // [EDIT HERE] Copy cấu hình Firebase từ file POS dán vào đây:
-    const firebaseConfig = {
-  apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
-  authDomain: "the-cafe-33.firebaseapp.com",
-  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "the-cafe-33",
-  storageBucket: "the-cafe-33.firebasestorage.app",
-  messagingSenderId: "238718397407",
-  appId: "1:238718397407:web:8d605d6e0508c46dfaf26a",
-  measurementId: "G-6CPTZGXJRY"
-};
+    // --- KẾT NỐI SERVER (Thay thế google.script.run) ---
+    // Link này lấy từ POS của bạn
+    const API_URL = "https://script.google.com/macros/s/AKfycbx6bPgd4roLXlBimmhlO_Nitp2XJmu-zZ5FwrzkcHXg2XWFegkYXjDzrshS7d9zCt-iLw/exec";
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    async function callAPI(action, data = {}) {
+        console.log(`📡 Đang gọi: ${action}`, data);
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                redirect: "follow",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: action, ...data })
+            });
+            const result = await response.json();
+            console.log(`✅ Kết quả ${action}:`, result);
+            return result;
+        } catch (error) {
+            console.error("❌ Lỗi API:", error);
+            showAppModal("Lỗi mạng", "Không thể kết nối đến máy chủ.<br>" + error.message, '❌');
+            document.getElementById('loading-overlay').classList.add('hidden');
+            return { status: "error", message: error.message };
+        }
+    }
 
-    let curPhone = "";
-    let curData = {};
-    // --- 3. GLOBAL VARIABLES ---
+    // --- LOGIC APP CHÍNH ---
     let uData = {}; 
     let curPhone = "";
     let _cachedGiftList = [];
-    let unsubscribeUser = null; // Dùng để hủy lắng nghe khi logout
 
-    // --- 4. CLOCK & UI HELPERS ---
-    function updateClock() { 
-        const now = new Date(); 
-        const h = String(now.getHours()).padStart(2, '0'); 
-        const m = String(now.getMinutes()).padStart(2, '0'); 
-        const d = String(now.getDate()).padStart(2, '0'); 
-        const mo = String(now.getMonth() + 1).padStart(2, '0'); 
-        const el = document.getElementById('live-clock');
-        if(el) el.innerText = h + ":" + m + " - " + d + "/" + mo; 
-    }
+    // Clock
+    function updateClock() { const now = new Date(); const h = String(now.getHours()).padStart(2, '0'); const m = String(now.getMinutes()).padStart(2, '0'); const d = String(now.getDate()).padStart(2, '0'); const mo = String(now.getMonth() + 1).padStart(2, '0'); document.getElementById('live-clock').innerText = h + ":" + m + " - " + d + "/" + mo; }
     setInterval(updateClock, 10000); updateClock();
 
-    window.showTab = function(t) { 
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden')); 
-        document.getElementById('tab-' + t).classList.remove('hidden'); 
-        document.querySelectorAll('nav button').forEach(btn => { 
-            btn.classList.remove('nav-active', 'text-[#006241]'); 
-            btn.classList.add('text-gray-300'); 
-        }); 
-        document.getElementById('nav-' + t).classList.add('nav-active'); 
-        document.getElementById('nav-' + t).classList.remove('text-gray-300'); 
-    }
+    // UI Helpers
+    function zoomImg(src) { document.getElementById('zoomed-img').src = src; document.getElementById('image-overlay').classList.remove('hidden'); }
+    function closeZoom() { document.getElementById('image-overlay').classList.add('hidden'); }
+    function showTab(t) { document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden')); document.getElementById('tab-' + t).classList.remove('hidden'); document.querySelectorAll('nav button').forEach(btn => { btn.classList.remove('nav-active', 'text-[#006241]'); btn.classList.add('text-gray-300'); }); document.getElementById('nav-' + t).classList.add('nav-active'); document.getElementById('nav-' + t).classList.remove('text-gray-300'); }
 
-    // Modal System
-    window.showAppModal = function(title, message, icon = '☕', onConfirm = null) { 
+    // App Modal
+    function showAppModal(title, message, icon = '☕', onConfirm = null) { 
         const overlay = document.getElementById('modal-overlay'); 
         const modal = document.getElementById('custom-modal'); 
         const btnSub = document.getElementById('modal-btn-sub'); 
         const btnMain = document.getElementById('modal-btn-main'); 
-        
         document.getElementById('modal-title').innerText = title; 
         document.getElementById('modal-message').innerHTML = message; 
         document.getElementById('modal-icon').innerText = icon; 
-        
         overlay.classList.remove('hidden'); 
         setTimeout(() => modal.classList.replace('modal-enter', 'modal-show'), 10); 
-        
-        // Reset button
-        btnMain.onclick = null;
-        btnSub.onclick = null;
         
         if (onConfirm) { 
             btnSub.classList.remove('hidden'); 
@@ -273,184 +269,72 @@
             btnMain.onclick = closeAppModal; 
         } 
     }
-    
-    window.closeAppModal = function() { 
+    function closeAppModal() { 
         const overlay = document.getElementById('modal-overlay'); 
         const modal = document.getElementById('custom-modal'); 
         modal.classList.replace('modal-show', 'modal-enter'); 
         setTimeout(() => overlay.classList.add('hidden'), 300); 
     }
 
-    // --- 5. LOGIC ĐĂNG NHẬP ---
-    document.getElementById('btn-login').addEventListener('click', login);
-
+    // --- LOGIN ---
     async function login() { 
         curPhone = document.getElementById('login-sdt').value.trim(); 
         if(!curPhone) return showAppModal("Hic!", "Bạn nhập số điện thoại để đăng nhập nhé."); 
         
         document.getElementById('loading-overlay').classList.remove('hidden');
-        document.getElementById('loading-text').innerText = "Đang tìm dữ liệu...";
-
-        try {
-            // Query collection 'customers'
-            const q = query(collection(db, 'customers'), where('phone', '==', curPhone));
-            const snapshot = await getDocs(q);
-            
-            if (!snapshot.empty) {
-                const docSnap = snapshot.docs[0];
-                uData = docSnap.data();
-                uData.id = docSnap.id; // Lưu ID để update
-                
-                // Lắng nghe thay đổi điểm Realtime
-                listenUserChanges(docSnap.id);
-
-                // Load danh sách quà
-                await loadRewards();
-
-                document.getElementById('loading-overlay').classList.add('hidden');
-                document.getElementById('login-screen').classList.add('hidden'); 
-                document.getElementById('main-app').classList.remove('hidden'); 
-                document.getElementById('nav-bar').classList.remove('hidden'); 
-                refreshUI(); 
-            } else {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                showAppModal("Thông báo", "Số điện thoại này chưa đăng ký thành viên!", '🚫'); 
-            }
-        } catch (error) {
-            console.error(error);
-            document.getElementById('loading-overlay').classList.add('hidden');
-            showAppModal("Lỗi mạng", "Không thể kết nối Firebase: " + error.message, '❌');
-        }
-    }
-
-    function listenUserChanges(docId) {
-        if (unsubscribeUser) unsubscribeUser(); // Hủy cái cũ nếu có
-        unsubscribeUser = onSnapshot(doc(db, 'customers', docId), (doc) => {
-            if (doc.exists()) {
-                uData = { ...uData, ...doc.data() };
-                refreshUI(); // Cập nhật giao diện khi điểm thay đổi từ POS
-            }
-        });
-    }
-
-    async function loadRewards() {
-        try {
-            const q = query(collection(db, 'rewards')); // Collection 'rewards'
-            const snapshot = await getDocs(q);
-            let list = [];
-            snapshot.forEach(doc => list.push(doc.data()));
-            _cachedGiftList = list;
-            // Gọi render sau
-        } catch(e) { console.log("Chưa tải được quà:", e); }
+        
+        // GỌI API THAY VÌ GOOGLE.SCRIPT.RUN
+        const res = await callAPI('checkUser', { phone: curPhone });
+        
+        document.getElementById('loading-overlay').classList.add('hidden');
+        if (res.status === 'success') { 
+            uData = res; 
+            document.getElementById('login-screen').classList.add('hidden'); 
+            document.getElementById('main-app').classList.remove('hidden'); 
+            document.getElementById('nav-bar').classList.remove('hidden'); 
+            refreshUI(); 
+        } else { 
+            showAppModal("Thông báo", res.message); 
+        } 
     }
 
     function refreshUI() { 
-        document.getElementById('user-name-display').innerText = uData.name || "Khách hàng"; 
-        document.getElementById('user-points').innerText = (uData.points || 0).toLocaleString(); 
-        
-        document.getElementById('edit-name').value = uData.name || ""; 
+        document.getElementById('user-name-display').innerText = uData.name; 
+        document.getElementById('user-points').innerText = uData.points.toLocaleString(); 
+        document.getElementById('edit-name').value = uData.name; 
         document.getElementById('edit-sdt').value = curPhone; 
         document.getElementById('edit-cname').value = uData.compName || ""; 
         document.getElementById('edit-cphone').value = uData.compPhone || ""; 
-        
         document.getElementById('book-cname').value = uData.compName || ""; 
         document.getElementById('book-cphone').value = uData.compPhone || ""; 
         
-        let p = uData.points || 0;
         let r = "Thành viên"; 
-        if (p >= 55000) r = "Thành viên 'siu thân'"; 
-        else if (p >= 33000) r = "Thành viên 'thân iu'"; 
-        else if (p >= 10000) r = "Thành viên Bạc"; 
+        if (uData.points >= 55000) r = "Thành viên 'siu thân'"; 
+        else if (uData.points >= 33000) r = "Thành viên 'thân iu'"; 
+        else if (uData.points >= 10000) r = "Thành viên Bạc"; 
         document.getElementById('user-rank').innerText = r; 
         
-        renderRewards(_cachedGiftList); 
+        renderRewards(uData.rewards); 
     }
 
-    // --- 6. LOGIC CẬP NHẬT & ĐỒNG BỘ 2 CHIỀU ---
-    document.getElementById('btn-update-profile').addEventListener('click', handleUpdate);
-
-    async function handleUpdate() {
-        const oldName = uData.name;
-        const oldPhone = curPhone;
-        const oldCName = uData.compName || "";
-        const oldCPhone = uData.compPhone || "";
-
-        const newName = document.getElementById('edit-name').value.trim();
-        const newPhone = document.getElementById('edit-sdt').value.trim(); 
-        const newCName = document.getElementById('edit-cname').value.trim();
-        const newCPhone = document.getElementById('edit-cphone').value.trim();
-
-        if (!newName || !newPhone) return showAppModal("Thiếu tin", "Tên và SĐT chính không được để trống!", '⚠️');
-
+    async function handleUpdate() { 
+        const up = { 
+            name: document.getElementById('edit-name').value, 
+            sdt: document.getElementById('edit-sdt').value, 
+            cName: document.getElementById('edit-cname').value, 
+            cPhone: document.getElementById('edit-cphone').value 
+        }; 
+        
         document.getElementById('loading-overlay').classList.remove('hidden');
-        document.getElementById('loading-text').innerText = "Đang lưu và đồng bộ...";
-
-        try {
-            const userRef = doc(db, 'customers', uData.id);
-
-            // A. Update Firebase
-            const updateData = {
-                name: newName,
-                phone: newPhone,
-                compName: newCName,
-                compPhone: newCPhone,
-                updatedAt: serverTimestamp()
-            };
-            await updateDoc(userRef, updateData);
-
-            // B. Ghi Audit Log (LichSuThayDoi)
-            if (newName !== oldName || newPhone !== oldPhone || newCName !== oldCName || newCPhone !== oldCPhone) {
-                await addDoc(collection(db, 'audit_logs'), {
-                    customerId: uData.id,
-                    phone: oldPhone, 
-                    action: 'update_profile',
-                    changes: {
-                        old: { name: oldName, phone: oldPhone, cName: oldCName, cPhone: oldCPhone },
-                        new: { name: newName, phone: newPhone, cName: newCName, cPhone: newCPhone }
-                    },
-                    createdAt: serverTimestamp()
-                });
-            }
-
-            // C. Gọi Webhook để đồng bộ về Sheet (QUAN TRỌNG)
-            if (GOOGLE_SCRIPT_SYNC_URL && GOOGLE_SCRIPT_SYNC_URL.includes("http")) {
-                 const payload = JSON.stringify({
-                    action: "syncProfileFromApp",
-                    oldPhone: oldPhone,
-                    data: { name: newName, phone: newPhone, compName: newCName, compPhone: newCPhone }
-                });
-                
-                // Fire and forget (gửi đi không chờ kết quả để app mượt)
-                fetch(GOOGLE_SCRIPT_SYNC_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: payload
-                }).catch(e => console.log("Lỗi gọi sync sheet:", e));
-            }
-
-            // D. Hoàn tất
-            curPhone = newPhone; 
-            uData = { ...uData, ...updateData };
-            
-            document.getElementById('loading-overlay').classList.add('hidden');
-            showAppModal("Thành công", "Thông tin đã được lưu và đồng bộ!", '✅');
-            
-            if (oldPhone !== newPhone) {
-                 showAppModal("Lưu ý", "Bạn vừa đổi SĐT. Vui lòng đăng nhập lại.", '🔄', () => location.reload());
-            } else {
-                refreshUI();
-            }
-
-        } catch (e) {
-            document.getElementById('loading-overlay').classList.add('hidden');
-            showAppModal("Lỗi", "Không lưu được: " + e.message, '❌');
-        }
+        const res = await callAPI('updateProfile', { phone: curPhone, data: up });
+        document.getElementById('loading-overlay').classList.add('hidden');
+        
+        showAppModal("Thành công", res, '✅'); 
+        curPhone = up.sdt; 
+        login(); // Reload lại dữ liệu
     }
 
-    // --- 7. LOGIC ĐẶT BED (CLIENT-SIDE CALCULATION) ---
-    document.getElementById('btn-booking').addEventListener('click', handleBooking);
-
+    // --- BOOKING LOGIC ---
     async function handleBooking() {
         if (!document.getElementById('agree-rules').checked) return showAppModal("Nội quy", "Bạn tích đồng ý nội quy để tiếp tục nhé.", '📜');
         
@@ -464,402 +348,192 @@
         const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         const curT = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
 
-        if (bDate < today) return showAppModal("Ngày sai", "Không đặt quá khứ nha.", '📅');
-        if (bDate === today && sT < curT) return showAppModal("Giờ sai", "Giờ bắt đầu đã qua rồi.", '⏰');
-        if (sT < "08:00" || eT > "20:50" || sT >= eT) return showAppModal("Giờ hoạt động", "Quán mở từ 08:00 - 20:50.", '⏰');
+        if (bDate < today) return showAppModal("Ngày không hợp lệ", "Không thể đặt lịch quá khứ.", '📅');
+        if (bDate === today && sT < curT) return showAppModal("Giờ không hợp lệ", "Giờ bắt đầu không thể ở quá khứ.", '⏰');
+        if (sT < "08:00" || eT > "20:50" || sT >= eT) return showAppModal("Giờ hoạt động", "Quán hoạt động từ 08:00 đến 20:50.", '⏰');
 
-        const startMin = timeToMinutes(sT);
-        const endMin = timeToMinutes(eT);
-        if ((endMin - startMin) < 30) return showAppModal("Thời gian", "Tối thiểu 30 phút nhé.", '⏳');
+        const startMin = parseInt(sT.split(':')[0]) * 60 + parseInt(sT.split(':')[1]);
+        const endMin = parseInt(eT.split(':')[0]) * 60 + parseInt(eT.split(':')[1]);
+        const duration = endMin - startMin;
+
+        if (duration < 30) return showAppModal("Thời gian", "Tối thiểu 30 phút nhé.", '⏳');
 
         document.getElementById('loading-overlay').classList.remove('hidden');
-        document.getElementById('loading-text').innerText = "Đang kiểm tra chỗ...";
+        
+        // GỌI API CHECK SLOT
+        const res = await callAPI('checkMemberBookingAvailability', { 
+            phone: curPhone, date: bDate, start: sT, duration: duration 
+        });
+        
+        document.getElementById('loading-overlay').classList.add('hidden');
 
-        // --- CHECK TRỐNG CHỖ (LOGIC TỪ MÃ.GS CHUYỂN VỀ) ---
-        try {
-            // 1. Tải booking trong ngày
-            const q = query(collection(db, 'bedBookings'), where('date', '==', bDate));
-            const snapshot = await getDocs(q);
-            
-            let bookings = [];
-            let hasMyBooking = false;
-
-            snapshot.forEach(doc => {
-                const d = doc.data();
-                if (d.status !== 'đã hủy') {
-                    bookings.push(d);
-                    if (d.phone === curPhone && d.status !== 'đã xong') hasMyBooking = true;
-                }
-            });
-
-            if (hasMyBooking) {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                return showAppModal("Quy định", "Bạn đã có lịch đặt trong ngày này rồi.", '🚫');
-            }
-
-            // 2. Logic xếp Bed (Giả lập 4 Bed)
-            let bedStatus = { 1: [], 2: [], 3: [], 4: [] };
-            // Phân loại đơn cũ vào bed
-            bookings.forEach(b => {
-                const s = timeToMinutes(b.startTime);
-                const e = timeToMinutes(b.endTime);
-                const bid = parseInt(b.bedId);
-                if (bid >= 1 && bid <= 4) bedStatus[bid].push({s, e});
-            });
-
-            // 3. Tìm Bed trống
-            let foundBed = null;
-            for (let i = 1; i <= 4; i++) {
-                let slots = bedStatus[i];
-                let isBusy = false;
-                for (let sl of slots) {
-                    // Check overlap: Max(StartA, StartB) < Min(EndA, EndB)
-                    if (Math.max(startMin, sl.s) < Math.min(endMin, sl.e)) {
-                        isBusy = true; break;
-                    }
-                }
-                if (!isBusy) { foundBed = i; break; }
-            }
-
-            if (foundBed) {
-                // -> CÒN CHỖ: Ghi đơn
-                await addDoc(collection(db, 'bedBookings'), {
-                    phone: curPhone,
-                    name: uData.name,
-                    date: bDate,
-                    startTime: sT,
-                    endTime: eT,
-                    cName: document.getElementById('book-cname').value,
-                    cPhone: document.getElementById('book-cphone').value,
-                    bedId: foundBed,
-                    status: "đã đặt trước",
-                    type: "app",
-                    createdAt: serverTimestamp()
-                });
-                document.getElementById('loading-overlay').classList.add('hidden');
-                showAppModal("Thành công", "Đã đặt Bed thành công!", '✅');
-            } else {
-                // -> HẾT CHỖ
-                document.getElementById('loading-overlay').classList.add('hidden');
-                showAppModal("Hết chỗ", "Giờ này đã kín chỗ. Bạn vui lòng chọn giờ khác.", '❌');
-            }
-
-        } catch (e) {
-            document.getElementById('loading-overlay').classList.add('hidden');
-            showAppModal("Lỗi", "Lỗi kiểm tra: " + e.message, '❌');
+        if (res.status === 'SUCCESS') {
+            executeSaveBooking(bDate, sT, eT);
+        } else if (res.status === 'LIMIT_REACHED') {
+            showAppModal("Quy định đặt chỗ", res.message, '🚫');
+        } else {
+            handleFullSlot(res);
         }
     }
 
-    // --- 8. REWARDS & REDEMPTION (TRANSACTION) ---
+    function handleFullSlot(res) {
+        let msg = `Hic, khung giờ <b>${res.finalStart || 'này'}</b> đã kín chỗ.`;
+        if (res.suggestions && res.suggestions.length > 0) {
+            const best = res.suggestions[0];
+            if (best.type === 'SHRINK') {
+                msg += `<br><br>💡 Còn 1 Bed trống từ <b>${best.startTime} đến ${best.endTime}</b>. Bạn muốn đặt không?`;
+            } else {
+                msg += `<br><br>💡 Gợi ý trống gần nhất:<br>`;
+                res.suggestions.forEach(s => msg += `• ${s.startTime} - ${s.endTime}<br>`);
+                msg += `<br>Đổi sang <b>${best.startTime}</b> nhé?`;
+            }
+            showAppModal("Hết chỗ", msg, '⚠️', () => {
+                document.getElementById('book-start').value = best.startTime;
+                document.getElementById('book-end').value = best.endTime;
+            });
+        } else {
+            showAppModal("Hết chỗ", msg + "<br>Vui lòng chọn khung giờ khác.", '❌');
+        }
+    }
+
+    async function executeSaveBooking(bDate, sT, eT) {
+        const bData = { 
+            uName: uData.name, uPhone: curPhone, date: bDate, sTime: sT, eTime: eT, 
+            cName: document.getElementById('book-cname').value, 
+            cPhone: document.getElementById('book-cphone').value 
+        };
+        
+        document.getElementById('loading-overlay').classList.remove('hidden');
+        const res = await callAPI('saveBooking', { data: bData });
+        document.getElementById('loading-overlay').classList.add('hidden');
+        
+        showAppModal("Thành công", res, '✅');
+    }
+
+    // --- REWARDS LOGIC ---
     function renderRewards(list) {
         const container = document.getElementById('rewards-list');
-        if (!container) return;
         if (!list || list.length === 0) { container.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Chưa có quà.</div>'; return; }
-        
+        _cachedGiftList = list;
         container.innerHTML = list.map((item, index) => {
-            return `<div onclick="window.openGiftDetail(${index})" class="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4 mb-3 relative overflow-hidden group active:scale-[0.98] transition-transform cursor-pointer hover:shadow-md">
+            return `<div onclick="openGiftDetail(${index})" class="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4 mb-3 relative overflow-hidden group active:scale-[0.98] transition-transform cursor-pointer hover:shadow-md">
                 <div class="shrink-0 w-24 h-24 rounded-3xl overflow-hidden border border-gray-100 bg-gray-50"><img src="${item.img || ''}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150'"></div>
-                <div class="flex-1 min-w-0"><p class="font-bold text-sm text-[#1e3932] mb-1 uppercase truncate">${item.name}</p><p class="text-[10px] text-gray-400 mb-2 line-clamp-2">${item.desc || '...'}</p><p class="text-md text-[#006241] font-black brand-font">${parseInt(item.point_cost || item.cost).toLocaleString()} <span class="text-amber-500 text-xs">★</span></p></div>
+                <div class="flex-1 min-w-0"><p class="font-bold text-sm text-[#1e3932] mb-1 uppercase truncate">${item.name}</p><p class="text-[10px] text-gray-400 mb-2 line-clamp-2">${item.desc || '...'}</p><p class="text-md text-[#006241] font-black brand-font">${item.cost.toLocaleString()} <span class="text-amber-500 text-xs">★</span></p></div>
                 <div class="shrink-0 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-[#006241] group-hover:text-white transition-colors">➜</div>
             </div>`;
         }).join('');
     }
 
-    window.openGiftDetail = function(index) {
+    function openGiftDetail(index) {
         const item = _cachedGiftList[index];
         if (!item) return;
-        const cost = parseInt(item.point_cost || item.cost || 0);
-        
         document.getElementById('detail-gift-name').innerText = item.name;
         document.getElementById('detail-gift-desc').innerText = item.desc || '...';
-        document.getElementById('detail-gift-cost').innerText = cost.toLocaleString() + ' ★';
+        document.getElementById('detail-gift-cost').innerText = item.cost.toLocaleString() + ' ★';
         document.getElementById('detail-gift-img').src = item.img || '';
-        document.getElementById('detail-user-point').innerText = (uData.points || 0).toLocaleString() + ' ★';
-        
-        let percent = (uData.points / cost) * 100; if (percent > 100) percent = 100;
+        document.getElementById('detail-user-point').innerText = uData.points.toLocaleString() + ' ★';
+        let percent = (uData.points / item.cost) * 100; if (percent > 100) percent = 100;
         document.getElementById('detail-progress').style.width = percent + '%';
 
         const btn = document.getElementById('btn-confirm-redeem');
         const msg = document.getElementById('detail-message');
-        
-        // Gán sự kiện cho nút (Closure để giữ biến item)
-        btn.onclick = () => { document.getElementById('gift-detail-modal').classList.add('hidden'); performRedeem(item, cost); };
+        const prog = document.getElementById('detail-progress');
 
-        if (uData.points >= cost) {
+        if (uData.points >= item.cost) {
             btn.disabled = false; btn.innerHTML = 'XÁC NHẬN ĐỔI NGAY';
             btn.className = "w-full py-4 rounded-2xl bg-[#006241] text-white font-bold text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-transform";
+            btn.onclick = () => { document.getElementById('gift-detail-modal').classList.add('hidden'); redeem(item.name, item.cost); };
+            prog.className = "h-full bg-[#006241] rounded-full transition-all duration-500";
             msg.classList.add('hidden');
         } else {
             btn.disabled = true; btn.innerHTML = 'CHƯA ĐỦ ĐIỂM';
             btn.className = "w-full py-4 rounded-2xl bg-gray-300 text-gray-500 font-bold text-sm uppercase tracking-widest cursor-not-allowed";
-            msg.classList.remove('hidden'); msg.innerText = `Thiếu ${(cost - uData.points).toLocaleString()} ★ nữa.`;
+            prog.className = "h-full bg-red-500 rounded-full transition-all duration-500";
+            msg.classList.remove('hidden'); msg.innerText = `Thiếu ${(item.cost - uData.points).toLocaleString()} ★ nữa.`;
         }
         document.getElementById('gift-detail-modal').classList.remove('hidden');
     }
 
-    async function performRedeem(item, cost) {
-        showAppModal("Xác nhận", `Dùng <b>${cost.toLocaleString()} ★</b> đổi <b>${item.name}</b>?`, '🎁', async () => {
+    async function redeem(name, cost) {
+        showAppModal("Xác nhận", `Dùng <b>${cost.toLocaleString()} ★</b> đổi <b>${name}</b>?`, '🎁', async () => {
             document.getElementById('loading-overlay').classList.remove('hidden');
+            const res = await callAPI('redeem', { phone: curPhone, rewardName: name, cost: cost }); // 'redeem' phải khớp action bên Mã.gs
+            document.getElementById('loading-overlay').classList.add('hidden');
             
-            try {
-                // Transaction: Trừ điểm & Ghi lịch sử
-                await runTransaction(db, async (transaction) => {
-                    const userRef = doc(db, 'customers', uData.id);
-                    const sfDoc = await transaction.get(userRef);
-                    
-                    if (!sfDoc.exists()) throw "User không tồn tại!";
-                    const currentPoints = sfDoc.data().points || 0;
-                    
-                    if (currentPoints < cost) throw "Không đủ điểm!";
-                    
-                    // 1. Update điểm
-                    transaction.update(userRef, { points: currentPoints - cost });
-                    
-                    // 2. Ghi redemptions (LichSuDoiQua)
-                    const newRef = doc(collection(db, "redemptions"));
-                    transaction.set(newRef, {
-                        phone: curPhone,
-                        reward_name: item.name,
-                        points_deducted: cost,
-                        status: "new",
-                        created_at: serverTimestamp()
-                    });
-                });
-
-                document.getElementById('loading-overlay').classList.add('hidden');
-                showAppModal("Thành công", "Đổi quà thành công! Hãy đưa màn hình cho nhân viên.", '✅');
-            } catch (e) {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                showAppModal("Lỗi", "Giao dịch thất bại: " + e, '❌');
+            if (res.status === 'success') { 
+                showAppModal("Thành công", "Đã đổi quà. Đưa màn hình này cho nhân viên nhé.", '✅'); 
+                login(); 
+            } else { 
+                showAppModal("Lỗi", res.message, '❌'); 
             }
         });
     }
 
-    // --- 9. HISTORY ---
-    document.getElementById('btn-open-history').addEventListener('click', openHistory);
-
+    // --- HISTORY LOGIC ---
     async function openHistory() {
         document.getElementById('history-modal').classList.remove('hidden');
         const listDiv = document.getElementById('history-list');
         const activeDiv = document.getElementById('section-active-booking');
         const activeCard = document.getElementById('active-card');
-        
         document.getElementById('history-loading').classList.remove('hidden');
         listDiv.innerHTML = ''; activeDiv.classList.add('hidden');
 
-        try {
-            // Query bookings by phone
-            // Lưu ý: Cần tạo Index trong Firestore: bedBookings -> phone (Asc) + date (Desc)
-            const q = query(collection(db, 'bedBookings'), where('phone', '==', curPhone), orderBy('date', 'desc'), limit(10));
-            const snapshot = await getDocs(q);
-            
-            const todayStr = new Date().toISOString().split('T')[0];
-            let hasActive = false;
+        const data = await callAPI('getMemberBookingHistory', { phone: curPhone });
+        document.getElementById('history-loading').classList.add('hidden');
 
-            if (snapshot.empty) {
-                 listDiv.innerHTML = '<div class="text-center text-gray-400 text-sm italic">Chưa có lịch sử.</div>';
-            } else {
-                 let html = "";
-                 snapshot.forEach(doc => {
-                    const h = doc.data();
-                    const id = doc.id;
-                    
-                    // Check Active
-                    if (h.date === todayStr && !h.status.includes('hủy') && !h.status.includes('xong')) {
-                        hasActive = true;
-                        activeDiv.classList.remove('hidden');
-                        const bedText = h.bedId ? "BED " + h.bedId : "Đang xếp";
-                        activeCard.innerHTML = `<div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl">ĐANG HOẠT ĐỘNG</div><p class="text-3xl font-black text-[#1e3932] mb-1">${h.startTime}</p><p class="text-sm text-gray-500 font-medium mb-4">Đến: <b>${h.endTime}</b> • Vị trí: <b class="text-[#006241]">${bedText}</b></p><div class="flex gap-2"><button onclick="window.requestCancel('${id}')" class="flex-1 py-2 rounded-xl bg-red-50 text-red-700 font-bold text-xs border border-red-100">🗑️ Hủy lịch</button></div>`;
-                    } else {
-                        // History Item
-                        let clr = "text-gray-500 bg-gray-100";
-                        if (h.status.includes('xong')) clr = "text-green-600 bg-green-100";
-                        else if (h.status.includes('hủy')) clr = "text-red-500 bg-red-50";
-                        
-                        html += `<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-2"><div class="flex justify-between items-center mb-2"><span class="text-xs font-bold text-gray-400">${h.date}</span><span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase ${clr}">${h.status}</span></div><p class="text-lg font-black text-[#1e3932] leading-none">${h.startTime} - ${h.endTime}</p><p class="text-xs text-gray-400 mt-1">Bed: ${h.bedId || '--'}</p></div>`;
-                    }
-                 });
-                 listDiv.innerHTML = html;
-            }
-            document.getElementById('history-loading').classList.add('hidden');
-        } catch (e) {
-            console.error(e);
-            document.getElementById('history-loading').innerText = "Lỗi tải (Cần tạo Index Firestore).";
+        if (data.active) {
+            activeDiv.classList.remove('hidden');
+            const b = data.active;
+            const bedText = (b.bed && b.bed != '') ? "BED " + b.bed : "Chờ xếp";
+            activeCard.innerHTML = `<div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl">ĐANG HOẠT ĐỘNG</div><p class="text-3xl font-black text-[#1e3932] mb-1">${b.start}</p><p class="text-sm text-gray-500 font-medium mb-4">Đến: <b>${b.end}</b> • Vị trí: <b class="text-[#006241]">${bedText}</b></p><div class="flex gap-2"><button onclick="openChangeTime(${b.id}, '${b.start}', '${b.end}')" class="flex-1 py-2 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-100">✏️ Đổi giờ</button><button onclick="requestCancel(${b.id})" class="flex-1 py-2 rounded-xl bg-red-50 text-red-700 font-bold text-xs border border-red-100">🗑️ Hủy lịch</button></div>`;
+        }
+        if (data.history.length === 0) {
+            listDiv.innerHTML = '<div class="text-center text-gray-400 text-sm italic">Chưa có lịch sử.</div>';
+        } else {
+            listDiv.innerHTML = data.history.map(h => {
+                let clr = "text-gray-500 bg-gray-100", txt = h.status;
+                if (h.status.includes('đã xong')) { clr = "text-green-600 bg-green-100"; txt = "HOÀN THÀNH"; }
+                else if (h.status.includes('đã hủy')) { clr = "text-red-500 bg-red-50"; txt = "ĐÃ HỦY"; }
+                return `<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm"><div class="flex justify-between items-center mb-2"><span class="text-xs font-bold text-gray-400">${h.date}</span><span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase ${clr}">${txt}</span></div><p class="text-lg font-black text-[#1e3932] leading-none">${h.start} - ${h.end}</p><p class="text-xs text-gray-400 mt-1">Bed: ${h.bed || '--'} | Điểm: ${h.points}</p></div>`;
+            }).join('');
         }
     }
 
-    window.requestCancel = function(docId) {
+    function requestCancel(id) {
         showAppModal("Xác nhận", "Hủy lịch này?", '⚠️', async () => {
             document.getElementById('loading-overlay').classList.remove('hidden');
-            try {
-                await updateDoc(doc(db, 'bedBookings', docId), {
-                    status: 'đã hủy',
-                    note: 'Khách tự hủy App'
-                });
-                document.getElementById('loading-overlay').classList.add('hidden');
-                showAppModal("Xong", "Đã hủy.", '✅');
-                openHistory();
-            } catch(e) {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                showAppModal("Lỗi", e.message, '❌');
-            }
+            const res = await callAPI('userCancelBooking', { id: id });
+            document.getElementById('loading-overlay').classList.add('hidden');
+            if(res === 'OK') { showAppModal("Xong", "Đã hủy.", '✅'); openHistory(); } 
+            else showAppModal("Lỗi", res, '❌');
         });
     }
 
-    // Utils
-    function timeToMinutes(timeStr) {
-        if (!timeStr) return 0;
-        const [h, m] = timeStr.split(':').map(Number);
-        return h * 60 + m;
+    function openChangeTime(id, s, e) {
+        document.getElementById('edit-booking-id').value = id;
+        document.getElementById('edit-start').value = s;
+        document.getElementById('edit-end').value = e;
+        document.getElementById('change-time-modal').classList.remove('hidden');
     }
-  // Show modal (giữ nguyên cũ mày, tao fix nhỏ cho chắc)
-  function showAppModal(title, msg, icon = '☕', mainCallback = null, subCallback = null) {
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-message').innerHTML = msg;
-    document.getElementById('modal-icon').innerText = icon;
-    document.getElementById('modal-btn-main').onclick = () => {
-      document.getElementById('modal-overlay').classList.add('hidden');
-      if (mainCallback) mainCallback();
-    };
-    const subBtn = document.getElementById('modal-btn-sub');
-    if (subCallback) {
-      subBtn.classList.remove('hidden');
-      subBtn.onclick = () => {
-        document.getElementById('modal-overlay').classList.add('hidden');
-        subCallback();
-      };
-    } else {
-      subBtn.classList.add('hidden');
+
+    async function submitChangeTime() {
+        const id = document.getElementById('edit-booking-id').value;
+        const s = document.getElementById('edit-start').value;
+        const e = document.getElementById('edit-end').value;
+        document.getElementById('change-time-modal').classList.add('hidden');
+        document.getElementById('loading-overlay').classList.remove('hidden');
+
+        const now = new Date();
+        const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        
+        const res = await callAPI('userUpdateBooking', { id: id, start: s, end: e, date: todayStr });
+        document.getElementById('loading-overlay').classList.add('hidden');
+
+        if(res === 'OK') { showAppModal("Xong", "Đã đổi giờ.", '✅'); openHistory(); }
+        else if (res === 'FULL') showAppModal("Hết chỗ", "Giờ này kín rồi.", '🚫');
+        else showAppModal("Lỗi", "Thử lại sau nhé.", '❌');
     }
-    document.getElementById('modal-overlay').classList.remove('hidden');
-  }
-
-  // Login (giữ cũ, tao fix clean phone)
-  document.getElementById('login-btn').addEventListener('click', () => {
-    let phone = document.getElementById('login-sdt').value.trim();
-    if (!phone || phone.length < 10) return showAppModal("Lỗi", "SĐT không hợp lệ!", '⚠️');
-
-    document.getElementById('loading-overlay').classList.remove('hidden');
-
-    db.ref('customers/' + phone).once('value').then(snap => {
-      if (snap.exists()) {
-        curData = snap.val();
-      } else {
-        curData = { phone: phone, name: "Khách vãng lai", points: 0 };
-        db.ref('customers/' + phone).set(curData);
-      }
-      curPhone = phone;
-      loadProfile();
-      loadRewards();
-      openHistory();
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('main-app').classList.remove('hidden');
-      document.getElementById('loading-overlay').classList.add('hidden');
-    }).catch(err => {
-      document.getElementById('loading-overlay').classList.add('hidden');
-      showAppModal("Lỗi kết nối", err.message, '❌');
-    });
-  });
-
-  // Load profile (thêm rank nếu có)
-  function loadProfile() {
-    document.getElementById('profile-name').innerText = curData.name || "Khách";
-    document.getElementById('profile-phone').innerText = curPhone;
-    document.getElementById('profile-points').innerText = (curData.points || 0) + " ★";
-    document.getElementById('profile-rank').innerText = curData.rank || "Bronze";
-  }
-
-  // Load rewards (giữ cũ, fix canRedeem)
-  function loadRewards() {
-    db.ref('rewards').once('value').then(snap => {
-      const list = document.getElementById('rewards-list');
-      list.innerHTML = '';
-      snap.forEach(child => {
-        const r = child.val();
-        const key = child.key;
-        const cost = r.cost || 0;
-        const canRedeem = (curData.points || 0) >= cost;
-        list.innerHTML += `<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-          <img src="${r.img || ''}" class="w-full h-40 object-cover rounded-xl mb-3">
-          <p class="font-black text-sm">${r.name}</p>
-          <p class="text-xs text-gray-500 mb-3">${r.desc}</p>
-          <button ${canRedeem ? '' : 'disabled'} onclick="${canRedeem ? `redeemReward('${key}', ${cost})` : ''}" class="w-full py-3 rounded-xl font-bold text-xs uppercase ${canRedeem ? 'bg-[#006241] text-white' : 'bg-gray-300 text-gray-500'}">
-            Đổi • ${cost} điểm
-          </button>
-        </div>`;
-      });
-    });
-  }
-
-  function redeemReward(key, cost) {
-    showAppModal("Xác nhận", `Đổi quà trừ ${cost} điểm?`, '🎁', () => {
-      const newPoints = curData.points - cost;
-      db.ref('customers/' + curPhone).update({ points: newPoints });
-      db.ref('redemptions').push({ phone: curPhone, rewardKey: key, points_deducted: cost, timestamp: Date.now() });
-      curData.points = newPoints;
-      loadProfile();
-      loadRewards();
-      showAppModal("Thành công", "Đổi quà ok!", '✅');
-    });
-  }
-
-  // Open history (Realtime version, giữ render active/history cũ mày)
-  function openHistory() {
-    document.getElementById('history-modal').classList.remove('hidden');
-    const listDiv = document.getElementById('history-list');
-    const activeDiv = document.getElementById('section-active-booking');
-    const activeCard = document.getElementById('active-card');
-    listDiv.innerHTML = '<p class="text-center text-gray-400">Đang tải...</p>';
-    activeDiv.classList.add('hidden');
-
-    db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).once('value').then(snap => {
-      let html = '';
-      let hasActive = false;
-      const todayStr = new Date().toISOString().split('T')[0];
-
-      snap.forEach(child => {
-        const h = child.val();
-        const id = child.key;
-
-        if (h.date === todayStr && !h.status.includes('hủy') && !h.status.includes('xong')) {
-          hasActive = true;
-          activeDiv.classList.remove('hidden');
-          const bedText = h.bedId ? "BED " + h.bedId : "Đang xếp";
-          activeCard.innerHTML = `<div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl">ĐANG HOẠT ĐỘNG</div><p class="text-3xl font-black text-[#1e3932] mb-1">${h.startTime}</p><p class="text-sm text-gray-500 font-medium mb-4">Đến: <b>${h.endTime}</b> • Vị trí: <b class="text-[#006241]">${bedText}</b></p><div class="flex gap-2"><button onclick="requestCancel('${id}')" class="flex-1 py-2 rounded-xl bg-red-50 text-red-700 font-bold text-xs border border-red-100">🗑️ Hủy lịch</button></div>`;
-        } else {
-          let clr = "text-gray-500 bg-gray-100";
-          if (h.status.includes('xong')) clr = "text-green-600 bg-green-100";
-          else if (h.status.includes('hủy')) clr = "text-red-500 bg-red-50";
-          html += `<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-2"><div class="flex justify-between items-center mb-2"><span class="text-xs font-bold text-gray-400">${h.date}</span><span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase ${clr}">${h.status}</span></div><p class="text-lg font-black text-[#1e3932] leading-none">${h.startTime} - ${h.endTime}</p><p class="text-xs text-gray-400 mt-1">Bed: ${h.bedId || '--'}</p></div>`;
-        }
-      });
-
-      listDiv.innerHTML = html || '<div class="text-center text-gray-400 text-sm italic">Chưa có lịch sử.</div>';
-    }).catch(err => {
-      listDiv.innerHTML = '<p class="text-center text-red-500">Lỗi tải lịch sử</p>';
-    });
-  }
-
-  function requestCancel(id) {
-    showAppModal("Xác nhận", "Hủy lịch này?", '⚠️', () => {
-      db.ref('bedBookings/' + id).update({
-        status: 'đã hủy',
-        note: 'Khách tự hủy App'
-      }).then(() => {
-        openHistory();
-        showAppModal("Xong", "Đã hủy.", '✅');
-      }).catch(() => showAppModal("Lỗi", "Hủy thất bại!", '❌'));
-    });
-  }
-
-  // Utils cũ mày
-  function timeToMinutes(timeStr) {
-    if (!timeStr) return 0;
-    const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m;
-  }
   </script>
 </body>
+
 </html>
-
-
