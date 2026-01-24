@@ -657,51 +657,50 @@ function completeOrder() {
         
         if(error) alert("Lỗi Firebase: " + error.message);
         else {
-            // === DỌN DẸP DỮ LIỆU ===
+            // === DỌN DẸP GIAO DIỆN ===
             document.getElementById('kh-sdt').value = ""; 
             document.getElementById('sdt-status').innerText = "";
             var cartInfo = document.getElementById('cart-bed-info');
             if (cartInfo) cartInfo.remove();
 
-            // Reset biến toàn cục (Lúc này pendingBedOrder sẽ thành null)
-            pendingBedOrder = null;
-            activeOrderingBedId = null;
-
+            // Xóa giỏ hàng (Đúng, vì đã thanh toán rồi)
             cart = [];
             renderCart();
 
-            // === [FIX] BƯỚC 2: SỬ DỤNG ID ĐÃ LƯU ĐỂ ĐÓNG BED ===
-            // Kiểm tra: Có cờ isCheckoutFlow VÀ có ID đã lưu từ trước
+            // === [QUAN TRỌNG] LOGIC RESET BIẾN THÔNG MINH ===
+            // Nếu đây là đơn "WAITING" (Chờ xếp bed), ta TUYỆT ĐỐI KHÔNG ĐƯỢC RESET pendingBedOrder
+            // Vì lát nữa chọn Bed xong, hàm finalizeBedCheckIn cần dùng biến này để biết update cho ai.
+            
+            if (bedIdToSend !== "WAITING") {
+                // Chỉ reset khi đơn đã xong hẳn (Mang về, hoặc Order thêm cho Bed đã có số)
+                pendingBedOrder = null;
+                activeOrderingBedId = null;
+            }
+
+            // === ĐIỀU HƯỚNG TIẾP THEO ===
+
+            // 1. Trường hợp Trả Bed (Checkout) -> Đóng Bed ngay
             if (isCheckoutFlow && bookingKeyToClose) {
                 console.log("Đang đóng Bed ID:", bookingKeyToClose);
-                
-                // Cập nhật trạng thái "đã xong"
                 db.ref('bedBookings/' + bookingKeyToClose).update({
                     status: 'đã xong',
                     realEndTime: new Date().toLocaleTimeString('en-GB')
                 });
-
-                // Reset cờ sau khi dùng xong
                 isCheckoutFlow = false;
-                
-                // Quay về trang quản lý Bed
+                pendingBedOrder = null; // Xong rồi thì reset được
                 openBedManager();
                 setTimeout(() => { showAppModal("Hoàn tất!", "Đã thanh toán và TRẢ BED thành công!", '🏁'); }, 150);
             } 
+            // 2. Trường hợp Khách mới (WAITING) -> Mở Modal chọn Bed
+            else if (bedIdToSend == "WAITING") {
+                 // Không reset pendingBedOrder ở đây, để dành cho bước chọn Bed
+                 renderBedSelection();
+                 document.getElementById('bed-select-modal').classList.remove('hidden');
+            } 
+            // 3. Trường hợp Order thêm / Mang về -> Xong phim
             else {
-                // --- TRƯỜNG HỢP KHÔNG PHẢI TRẢ BED (MUA THÊM, MUA MANG VỀ) ---
-                
-                // Logic giữ nguyên màn hình chọn Bed nếu đang dở dang
-                if ((!bedIdToSend || bedIdToSend == "WAITING" || bedIdToSend == 0) && document.getElementById('bed-select-modal').classList.contains('hidden') === false) {
-                     // Không làm gì, giữ nguyên modal
-                } else if (bedIdToSend == "WAITING") {
-                     renderBedSelection();
-                     document.getElementById('bed-select-modal').classList.remove('hidden');
-                } else {
-                    // Quay về menu và báo thành công
-                    switchView('menu');
-                    setTimeout(() => { showAppModal("Xong!", "Thanh toán thành công!", '✅'); }, 150);
-                }
+                switchView('menu');
+                setTimeout(() => { showAppModal("Xong!", "Thanh toán thành công!", '✅'); }, 150);
             }
         }
     });
@@ -2446,6 +2445,7 @@ function submitCleaningFee(amount) {
 </div>
 </body>
 </html>
+
 
 
 
