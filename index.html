@@ -217,17 +217,6 @@
 
     let curPhone = "";
     let curData = {};
-    // Khởi tạo App
-    let app, db;
-    try {
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        console.log("Firebase initialized");
-    } catch (e) {
-        console.error("Firebase init error:", e);
-        alert("Lỗi cấu hình Firebase. Kiểm tra console.");
-    }
-
     // --- 3. GLOBAL VARIABLES ---
     let uData = {}; 
     let curPhone = "";
@@ -723,7 +712,154 @@
         const [h, m] = timeStr.split(':').map(Number);
         return h * 60 + m;
     }
+  // Show modal (giữ nguyên cũ mày, tao fix nhỏ cho chắc)
+  function showAppModal(title, msg, icon = '☕', mainCallback = null, subCallback = null) {
+    document.getElementById('modal-title').innerText = title;
+    document.getElementById('modal-message').innerHTML = msg;
+    document.getElementById('modal-icon').innerText = icon;
+    document.getElementById('modal-btn-main').onclick = () => {
+      document.getElementById('modal-overlay').classList.add('hidden');
+      if (mainCallback) mainCallback();
+    };
+    const subBtn = document.getElementById('modal-btn-sub');
+    if (subCallback) {
+      subBtn.classList.remove('hidden');
+      subBtn.onclick = () => {
+        document.getElementById('modal-overlay').classList.add('hidden');
+        subCallback();
+      };
+    } else {
+      subBtn.classList.add('hidden');
+    }
+    document.getElementById('modal-overlay').classList.remove('hidden');
+  }
+
+  // Login (giữ cũ, tao fix clean phone)
+  document.getElementById('login-btn').addEventListener('click', () => {
+    let phone = document.getElementById('login-sdt').value.trim();
+    if (!phone || phone.length < 10) return showAppModal("Lỗi", "SĐT không hợp lệ!", '⚠️');
+
+    document.getElementById('loading-overlay').classList.remove('hidden');
+
+    db.ref('customers/' + phone).once('value').then(snap => {
+      if (snap.exists()) {
+        curData = snap.val();
+      } else {
+        curData = { phone: phone, name: "Khách vãng lai", points: 0 };
+        db.ref('customers/' + phone).set(curData);
+      }
+      curPhone = phone;
+      loadProfile();
+      loadRewards();
+      openHistory();
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('main-app').classList.remove('hidden');
+      document.getElementById('loading-overlay').classList.add('hidden');
+    }).catch(err => {
+      document.getElementById('loading-overlay').classList.add('hidden');
+      showAppModal("Lỗi kết nối", err.message, '❌');
+    });
+  });
+
+  // Load profile (thêm rank nếu có)
+  function loadProfile() {
+    document.getElementById('profile-name').innerText = curData.name || "Khách";
+    document.getElementById('profile-phone').innerText = curPhone;
+    document.getElementById('profile-points').innerText = (curData.points || 0) + " ★";
+    document.getElementById('profile-rank').innerText = curData.rank || "Bronze";
+  }
+
+  // Load rewards (giữ cũ, fix canRedeem)
+  function loadRewards() {
+    db.ref('rewards').once('value').then(snap => {
+      const list = document.getElementById('rewards-list');
+      list.innerHTML = '';
+      snap.forEach(child => {
+        const r = child.val();
+        const key = child.key;
+        const cost = r.cost || 0;
+        const canRedeem = (curData.points || 0) >= cost;
+        list.innerHTML += `<div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+          <img src="${r.img || ''}" class="w-full h-40 object-cover rounded-xl mb-3">
+          <p class="font-black text-sm">${r.name}</p>
+          <p class="text-xs text-gray-500 mb-3">${r.desc}</p>
+          <button ${canRedeem ? '' : 'disabled'} onclick="${canRedeem ? `redeemReward('${key}', ${cost})` : ''}" class="w-full py-3 rounded-xl font-bold text-xs uppercase ${canRedeem ? 'bg-[#006241] text-white' : 'bg-gray-300 text-gray-500'}">
+            Đổi • ${cost} điểm
+          </button>
+        </div>`;
+      });
+    });
+  }
+
+  function redeemReward(key, cost) {
+    showAppModal("Xác nhận", `Đổi quà trừ ${cost} điểm?`, '🎁', () => {
+      const newPoints = curData.points - cost;
+      db.ref('customers/' + curPhone).update({ points: newPoints });
+      db.ref('redemptions').push({ phone: curPhone, rewardKey: key, points_deducted: cost, timestamp: Date.now() });
+      curData.points = newPoints;
+      loadProfile();
+      loadRewards();
+      showAppModal("Thành công", "Đổi quà ok!", '✅');
+    });
+  }
+
+  // Open history (Realtime version, giữ render active/history cũ mày)
+  function openHistory() {
+    document.getElementById('history-modal').classList.remove('hidden');
+    const listDiv = document.getElementById('history-list');
+    const activeDiv = document.getElementById('section-active-booking');
+    const activeCard = document.getElementById('active-card');
+    listDiv.innerHTML = '<p class="text-center text-gray-400">Đang tải...</p>';
+    activeDiv.classList.add('hidden');
+
+    db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).once('value').then(snap => {
+      let html = '';
+      let hasActive = false;
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      snap.forEach(child => {
+        const h = child.val();
+        const id = child.key;
+
+        if (h.date === todayStr && !h.status.includes('hủy') && !h.status.includes('xong')) {
+          hasActive = true;
+          activeDiv.classList.remove('hidden');
+          const bedText = h.bedId ? "BED " + h.bedId : "Đang xếp";
+          activeCard.innerHTML = `<div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl">ĐANG HOẠT ĐỘNG</div><p class="text-3xl font-black text-[#1e3932] mb-1">${h.startTime}</p><p class="text-sm text-gray-500 font-medium mb-4">Đến: <b>${h.endTime}</b> • Vị trí: <b class="text-[#006241]">${bedText}</b></p><div class="flex gap-2"><button onclick="requestCancel('${id}')" class="flex-1 py-2 rounded-xl bg-red-50 text-red-700 font-bold text-xs border border-red-100">🗑️ Hủy lịch</button></div>`;
+        } else {
+          let clr = "text-gray-500 bg-gray-100";
+          if (h.status.includes('xong')) clr = "text-green-600 bg-green-100";
+          else if (h.status.includes('hủy')) clr = "text-red-500 bg-red-50";
+          html += `<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-2"><div class="flex justify-between items-center mb-2"><span class="text-xs font-bold text-gray-400">${h.date}</span><span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase ${clr}">${h.status}</span></div><p class="text-lg font-black text-[#1e3932] leading-none">${h.startTime} - ${h.endTime}</p><p class="text-xs text-gray-400 mt-1">Bed: ${h.bedId || '--'}</p></div>`;
+        }
+      });
+
+      listDiv.innerHTML = html || '<div class="text-center text-gray-400 text-sm italic">Chưa có lịch sử.</div>';
+    }).catch(err => {
+      listDiv.innerHTML = '<p class="text-center text-red-500">Lỗi tải lịch sử</p>';
+    });
+  }
+
+  function requestCancel(id) {
+    showAppModal("Xác nhận", "Hủy lịch này?", '⚠️', () => {
+      db.ref('bedBookings/' + id).update({
+        status: 'đã hủy',
+        note: 'Khách tự hủy App'
+      }).then(() => {
+        openHistory();
+        showAppModal("Xong", "Đã hủy.", '✅');
+      }).catch(() => showAppModal("Lỗi", "Hủy thất bại!", '❌'));
+    });
+  }
+
+  // Utils cũ mày
+  function timeToMinutes(timeStr) {
+    if (!timeStr) return 0;
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  }
   </script>
 </body>
 </html>
+
 
