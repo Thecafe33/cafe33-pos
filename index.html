@@ -402,11 +402,12 @@ function showDashboard(phone) {
 // --- 4. CẬP NHẬT HỒ SƠ (ĐÃ FIX ĐÚNG ID VÀ CHỐNG TREO) ---
 // --- HÀM CẬP NHẬT THÔNG TIN (SẠCH SẼ - KHÔNG LỖI) ---
 // --- HÀM CẬP NHẬT HỒ SƠ (PHIÊN BẢN CHỐNG TREO TUYỆT ĐỐI) ---
+// --- HÀM CẬP NHẬT HỒ SƠ (PHIÊN BẢN CƯỠNG CHẾ TẮT TOÀN BỘ) ---
 window.handleUpdate = function() {
-    // 1. Lấy dữ liệu (Đảm bảo đúng ID trong file index của bà)
-    const nameInput = document.getElementById('edit-name');   
-    const cNameInput = document.getElementById('edit-cname'); 
-    const cPhoneInput = document.getElementById('edit-cphone'); 
+    // 1. Lấy dữ liệu
+    const nameInput = document.getElementById('edit-name');
+    const cNameInput = document.getElementById('edit-cname');
+    const cPhoneInput = document.getElementById('edit-cphone');
 
     if (!nameInput || !cNameInput) return alert("Lỗi: Không tìm thấy ô nhập liệu.");
 
@@ -416,22 +417,15 @@ window.handleUpdate = function() {
     
     if (newName === "") return alert("Vui lòng nhập tên của bạn!");
     
-    // 2. BẬT LOADING
-    const loading = document.getElementById('loading-overlay');
-    if(loading) loading.classList.remove('hidden');
+    // 2. BẬT LOADING (Dùng lệnh này để tóm gọn tất cả các lớp phủ đang ẩn nấp)
+    const allLoadings = document.querySelectorAll('#loading-overlay');
+    allLoadings.forEach(el => el.classList.remove('hidden'));
 
-    // === [QUAN TRỌNG] === 
-    // KÍCH HOẠT BOM HẸN GIỜ: Sau 3 giây, nếu loading chưa tắt thì BẮT BUỘC TẮT
+    // === BOM HẸN GIỜ: Tắt TẤT CẢ sau 3 giây (đề phòng mạng lag) ===
     const safetyTimer = setTimeout(() => {
-        if(loading && !loading.classList.contains('hidden')) {
-            console.warn("⚠️ Quá thời gian chờ -> Tự động tắt loading.");
-            loading.classList.add('hidden');
-            // Vẫn báo thành công vì thường là Firebase đã xong rồi, chỉ do mạng lag thôi
-            if(typeof showAppModal === 'function') showAppModal("Thông báo", "Đã gửi yêu cầu cập nhật!", '✅');
-        }
-    }, 3000); // 3000ms = 3 giây
+        allLoadings.forEach(el => el.classList.add('hidden')); // Tắt sạch sẽ
+    }, 3000); 
 
-    // Chuẩn bị dữ liệu
     const oldName = (typeof userData !== 'undefined' && userData.name) ? userData.name : "---";
     const updates = {};
     updates['customers/' + curPhone + '/name'] = newName;
@@ -442,11 +436,10 @@ window.handleUpdate = function() {
     // 3. Gửi lệnh update
     db.ref().update(updates)
         .then(() => {
-            // Nếu chạy xong sớm hơn 3 giây -> Hủy bom hẹn giờ
             clearTimeout(safetyTimer);
             
-            // Tắt Loading NGAY LẬP TỨC
-            if(loading) loading.classList.add('hidden'); 
+            // THÀNH CÔNG -> TẮT SẠCH CÁC LOADING
+            allLoadings.forEach(el => el.classList.add('hidden'));
             
             if(typeof showAppModal === 'function') {
                 showAppModal("Thành công", "Đã cập nhật hồ sơ!", '✅');
@@ -454,7 +447,7 @@ window.handleUpdate = function() {
                 alert("Đã cập nhật thành công!");
             }
 
-            // Gửi Log về Sheet (Chạy ngầm - Kệ nó)
+            // Gửi Log
             if (typeof GOOGLE_SCRIPT_URL !== 'undefined' && GOOGLE_SCRIPT_URL) {
                 const logData = {
                     action: 'logProfileUpdate',
@@ -468,17 +461,16 @@ window.handleUpdate = function() {
                     method: 'POST', mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(logData)
-                }).catch(e => console.log("Lỗi log sheet: ", e));
+                }).catch(e => console.log(e));
             }
         })
         .catch((error) => {
-            // Nếu lỗi -> Hủy bom hẹn giờ -> Tắt loading -> Báo lỗi
             clearTimeout(safetyTimer);
-            if(loading) loading.classList.add('hidden');
-            alert("Lỗi kết nối: " + error.message);
+            // LỖI -> CŨNG PHẢI TẮT SẠCH
+            allLoadings.forEach(el => el.classList.add('hidden'));
+            alert("Lỗi: " + error.message);
         });
 }
-
 // --- 5. ĐẶT BED (POS STYLE) ---
 function handleBooking() {
     if (!document.getElementById('agree-rules').checked) return alert("Vui lòng đồng ý nội quy!");
@@ -901,6 +893,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
