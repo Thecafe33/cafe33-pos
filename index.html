@@ -505,10 +505,11 @@ window.handleUpdate = function() {
 }
 // --- 5. ĐẶT BED (POS STYLE) ---
 // --- HÀM ĐẶT BED (LOGIC MỚI: CHỜ XẾP BED) ---
+// --- HÀM ĐẶT BED (BẢN FULL: CHẶN TRÙNG KHÁCH + GỢI Ý GIỜ + CHỜ XẾP BED) ---
 function handleBooking() {
     if (!document.getElementById('agree-rules').checked) return alert("Vui lòng đồng ý nội quy!");
     
-    // Lấy dữ liệu
+    // 1. Lấy dữ liệu
     const date = document.getElementById('book-date').value;
     const start = document.getElementById('book-start').value;
     const end = document.getElementById('book-end').value;
@@ -523,88 +524,111 @@ function handleBooking() {
     const eMin = parseInt(end.split(':')[0])*60 + parseInt(end.split(':')[1]);
     if(eMin - sMin < 30) return alert("Tối thiểu 30 phút!");
 
-    // 1. BẬT LOADING (Chống treo)
+    // 2. BẬT LOADING
     const loading = document.getElementById('loading-overlay');
     loading.classList.remove('hidden');
 
+    // Bom hẹn giờ 3s (Chống treo)
     const safetyTimer = setTimeout(() => {
         if(!loading.classList.contains('hidden')) {
             loading.classList.add('hidden');
-            if(typeof showAppModal === 'function') showAppModal("Thông báo", "Đang gửi yêu cầu...", '✅');
+            if(typeof showAppModal === 'function') showAppModal("Thông báo", "Đang kiểm tra...", '✅');
         }
     }, 3000);
 
-    const p = date.split('-');
-    const dateStr = `${p[2]}/${p[1]}/${p[0]}`; // dd/MM/yyyy
-
-    // 2. Kiểm tra xem còn chỗ không (Vẫn phải kiểm tra để không nhận quá tải)
-    db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value', snap => {
-        const bookings = [];
-        snap.forEach(c => { const v = c.val(); if(v.status !== 'đã hủy' && v.status !== 'đã xong') bookings.push(v); });
-
-        // Đếm số lượng Bed đang bận trong khung giờ này
-        let busyCount = 0;
-        // Giả sử quán có 4 Bed
-        for(let i=1; i<=4; i++) {
-            let isBedBusy = false;
-            for(let b of bookings) {
-                // Nếu booking cũ CÓ SỐ BED (do POS xếp) thì mới tính là bận bed đó
-                // Nếu booking cũ CHƯA CÓ SỐ BED (cũng đang chờ) thì ta tạm tính là chiếm 1 suất
-                let bookingBedId = b.bedId || 0; 
-                
-                // Logic kiểm tra va chạm giờ
-                if (bookingBedId == i || bookingBedId == 0) { 
-                     // (Ở đây ta check đơn giản: Đếm tổng số đơn đang trùng giờ)
-                     // Nếu tổng số đơn trùng giờ < 4 thì cho đặt
-                }
-            }
-        }
+    // --- BƯỚC 1: KIỂM TRA KHÁCH CÓ ĐƠN TREO KHÔNG? ---
+    db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).once('value', userSnap => {
+        let hasActiveBooking = false;
         
-        // CÁCH KIỂM TRA ĐƠN GIẢN HƠN:
-        // Đếm xem có bao nhiêu người đang đặt trong khung giờ này
-        let overlapCount = 0;
-        bookings.forEach(b => {
-            const bs = parseInt(b.start.split(':')[0])*60 + parseInt(b.start.split(':')[1]);
-            const be = parseInt(b.end.split(':')[0])*60 + parseInt(b.end.split(':')[1]);
-            // Nếu giờ đặt chạm nhau
-            if(Math.max(sMin, bs) < Math.min(eMin, be)) {
-                overlapCount++;
+        userSnap.forEach(c => {
+            const v = c.val();
+            const st = (v.status || "").toLowerCase();
+            // Nếu có đơn chưa xong hoặc chưa hủy -> Chặn
+            if (st !== 'đã hủy' && st !== 'đã xong') {
+                hasActiveBooking = true;
             }
         });
 
-        // Nếu số người trùng giờ < 4 (Tổng số bed) -> Còn chỗ
-        if(overlapCount < 4) {
-            // THỎA MÃN -> LƯU VÀO FIREBASE
-            // Lưu ý: bedId để rỗng ("") để POS tự xếp
-            db.ref('bedBookings').push({
-                phone: curPhone, 
-                name: userData.name,
-                date: dateStr, 
-                start: start, 
-                end: end,
-                compName: cName, 
-                compPhone: cPhone,
-                
-                bedId: "",            // <--- ĐỂ TRỐNG (POS sẽ điền sau)
-                status: "chờ xếp bed", // <--- TRẠNG THÁI MỚI
-                
-                type: "app",
-                createdAt: new Date().toISOString()
-            }, () => {
-                clearTimeout(safetyTimer);
-                loading.classList.add('hidden');
-                
-                // Thông báo: Đã gửi yêu cầu
-                showAppModal("Thành công", `Lịch đã được đặt, vui lòng đến đúng giờ.`, '✅', () => {
-                    document.getElementById('book-date').value = "";
-                    showTab('user');
-                });
-            });
-        } else {
+        if (hasActiveBooking) {
+            // NẾU ĐÃ CÓ LỊCH -> DỪNG LẠI, HƯỚNG DẪN QUA TAB LỊCH SỬ
             clearTimeout(safetyTimer);
             loading.classList.add('hidden');
-            alert("Giờ này quán đã full Bed. Vui lòng chọn giờ khác.");
+            
+            showAppModal("Bạn đã có lịch đặt!", 
+                "Bạn đang có một lịch đặt Bed chưa hoàn thành.<br>Nếu muốn thay đổi hoặc hủy, vui lòng vào Lịch sử.", 
+                "⚠️", 
+                () => {
+                    // Khi bấm Đồng ý -> Chuyển qua tab User -> Mở Lịch sử
+                    showTab('user');
+                    openHistory();
+                }
+            );
+            return; // Dừng hàm tại đây
         }
+
+        // --- BƯỚC 2: NẾU KHÁCH "SẠCH", KIỂM TRA QUÁN CÒN CHỖ KHÔNG? ---
+        const p = date.split('-');
+        const dateStr = `${p[2]}/${p[1]}/${p[0]}`; // dd/MM/yyyy
+
+        db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value', snap => {
+            const bookings = [];
+            snap.forEach(c => { const v = c.val(); if(v.status !== 'đã hủy' && v.status !== 'đã xong') bookings.push(v); });
+
+            // Đếm số lượng trùng giờ
+            let overlapCount = 0;
+            let endTimes = []; // Lưu giờ kết thúc của các đơn trùng để gợi ý
+
+            bookings.forEach(b => {
+                const bs = parseInt(b.start.split(':')[0])*60 + parseInt(b.start.split(':')[1]);
+                const be = parseInt(b.end.split(':')[0])*60 + parseInt(b.end.split(':')[1]);
+                
+                // Logic va chạm giờ: (Start mới < End cũ) VÀ (End mới > Start cũ)
+                if(Math.max(sMin, bs) < Math.min(eMin, be)) {
+                    overlapCount++;
+                    endTimes.push(be); // Lưu lại giờ kết thúc của bed này
+                }
+            });
+
+            if(overlapCount < 4) {
+                // --- BƯỚC 3: CÒN CHỖ -> GHI VÀO FIREBASE ---
+                db.ref('bedBookings').push({
+                    phone: curPhone, name: userData.name,
+                    date: dateStr, start: start, end: end,
+                    compName: cName, compPhone: cPhone,
+                    bedId: "",             // POS tự xếp
+                    status: "chờ xếp bed", 
+                    type: "app",
+                    createdAt: new Date().toISOString()
+                }, () => {
+                    clearTimeout(safetyTimer);
+                    loading.classList.add('hidden');
+                    showAppModal("Thành công", `Đã gửi yêu cầu!<br>Vui lòng đợi nhân viên xếp Bed.`, '✅', () => {
+                        document.getElementById('book-date').value = "";
+                        showTab('user');
+                    });
+                });
+            } else {
+                // --- BƯỚC 4: HẾT CHỖ -> TÍNH TOÁN GỢI Ý ---
+                clearTimeout(safetyTimer);
+                loading.classList.add('hidden');
+
+                // Tìm giờ sớm nhất có bed trống (Min của các EndTime đang trùng)
+                let suggestMsg = "Giờ này quán đã full.";
+                if (endTimes.length > 0) {
+                    endTimes.sort((a,b) => a - b); // Sắp xếp tăng dần
+                    const earliestFree = endTimes[0]; // Lấy cái sớm nhất
+                    
+                    // Đổi phút ra giờ:phút
+                    const h = Math.floor(earliestFree/60);
+                    const m = earliestFree % 60;
+                    const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+                    
+                    suggestMsg = `Giờ này đã kín chỗ.<br>Sớm nhất <b>${timeStr}</b> sẽ có Bed trống.`;
+                }
+                
+                showAppModal("Hết chỗ", suggestMsg, '🚫');
+            }
+        });
     });
 }
 
@@ -968,6 +992,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
