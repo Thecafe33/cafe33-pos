@@ -272,28 +272,42 @@ function showDashboard(phone) {
     document.getElementById('nav-bar').classList.remove('hidden');
 
     // Lắng nghe User Realtime
-    db.ref('customers/' + phone).on('value', snap => {
-        userData = snap.val();
-        if(userData) {
-            document.getElementById('user-name-display').innerText = userData.name;
-            document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
-            
-            // Điền form
-            document.getElementById('edit-name').value = userData.name;
-            document.getElementById('edit-sdt').value = phone;
-            document.getElementById('edit-cname').value = userData.compName || "";
-            document.getElementById('edit-cphone').value = userData.compPhone || "";
-            
-            document.getElementById('book-cname').value = userData.compName || "";
-            document.getElementById('book-cphone').value = userData.compPhone || "";
-            
-            let r = "Thành viên";
-            if (userData.points >= 55000) r = "Thành viên 'siu thân'";
-            else if (userData.points >= 33000) r = "Thành viên 'thân iu'";
-            else if (userData.points >= 10000) r = "Thành viên Bạc";
-            document.getElementById('user-rank').innerText = r;
-        }
-    });
+    // ... (bên trong hàm showDashboard)
+        db.ref('customers/' + phone).on('value', snap => {
+            userData = snap.val();
+            if(userData) {
+                document.getElementById('user-name-display').innerText = userData.name;
+                document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
+                
+                // --- SỬA ĐOẠN NÀY ĐỂ TỰ ĐIỀN THÔNG TIN NGƯỜI ĐI CÙNG ---
+                // Ưu tiên lấy compName, nếu không có thì lấy companionName (dữ liệu từ Sheet)
+                var cName = userData.compName || userData.companionName || "";
+                var cPhone = userData.compPhone || userData.companionPhone || "";
+
+                // 1. Điền vào Tab Hồ sơ (Tab Bạn)
+                document.getElementById('edit-name').value = userData.name || "";
+                document.getElementById('edit-sdt').value = phone;
+                document.getElementById('edit-cname').value = cName;
+                document.getElementById('edit-cphone').value = cPhone;
+                
+                // 2. Điền vào Tab Đặt Bed
+                var bookCname = document.getElementById('book-cname');
+                if(bookCname) bookCname.value = cName;
+                
+                var bookCphone = document.getElementById('book-cphone');
+                if(bookCphone) bookCphone.value = cPhone;
+                // -------------------------------------------------------
+                
+                // Xếp hạng
+                let p = userData.points || 0;
+                let r = "Thành viên";
+                if (p >= 55000) r = "Thành viên 'siu thân'";
+                else if (p >= 33000) r = "Thành viên 'thân iu'";
+                else if (p >= 10000) r = "Thành viên Bạc";
+                document.getElementById('user-rank').innerText = r;
+            }
+        });
+        // ...
     
     loadRewards();
 }
@@ -504,3 +518,4 @@ function cancelBooking(key) {
 </script>
 </body>
 </html>
+
