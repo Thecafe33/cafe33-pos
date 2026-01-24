@@ -399,71 +399,69 @@ function showDashboard(phone) {
 
 // --- 4. CẬP NHẬT HỒ SƠ ---
 // --- HÀM CẬP NHẬT THÔNG TIN (ĐÃ FIX LỖI TREO MÀN HÌNH) ---
+// --- 4. CẬP NHẬT HỒ SƠ (ĐÃ FIX ĐÚNG ID VÀ CHỐNG TREO) ---
 window.handleUpdate = function() {
-    // 1. Lấy dữ liệu từ ô nhập
-    const nameInput = document.getElementById('user-name');
-    const compInput = document.getElementById('user-comp');
+    // 1. Lấy dữ liệu (DÙNG ĐÚNG ID CÓ TRONG FILE HTML CỦA BÀ)
+    const nameInput = document.getElementById('edit-name');   [cite_start]// [cite: 97]
+    const cNameInput = document.getElementById('edit-cname'); [cite_start]// [cite: 100]
+    const cPhoneInput = document.getElementById('edit-cphone'); [cite_start]// [cite: 100]
     
-    if (!nameInput || !compInput) {
-        alert("Lỗi: Không tìm thấy ô nhập liệu!");
+    // Kiểm tra xem có lấy được thẻ không
+    if (!nameInput || !cNameInput || !cPhoneInput) {
+        alert("Lỗi hệ thống: Không tìm thấy ô nhập liệu (ID không khớp).");
         return;
     }
 
     const newName = nameInput.value.trim();
-    const newComp = compInput.value.trim();
+    const newComp = cNameInput.value.trim();
+    const newCompPhone = cPhoneInput.value.trim();
     
     // Validate
     if (newName === "") return alert("Vui lòng nhập tên của bạn!");
     
-    // 2. BẬT LOADING (Lớp kính mờ hiện lên)
+    // 2. BẬT LOADING
     const loading = document.getElementById('loading-overlay');
     loading.classList.remove('hidden');
 
-    // Chuẩn bị dữ liệu cũ để lưu lịch sử (Lấy từ giao diện hiện tại hoặc biến userData)
-    // Nếu chưa có biến userData thì lấy tạm giá trị cũ
-    const oldNameText = nameInput.getAttribute('placeholder') || "Cũ"; 
-    
+    // Chuẩn bị dữ liệu cũ để lưu log (nếu cần)
+    const oldName = userData.name || "---";
+
     // 3. Cập nhật Firebase
     const updates = {};
     updates['customers/' + curPhone + '/name'] = newName;
-    updates['customers/' + curPhone + '/companionName'] = newComp;
+    updates['customers/' + curPhone + '/compName'] = newComp;     // Đồng bộ tên biến
+    updates['customers/' + curPhone + '/companionName'] = newComp; // Lưu thêm trường này cho chắc
+    updates['customers/' + curPhone + '/compPhone'] = newCompPhone;
 
     db.ref().update(updates)
         .then(() => {
             // --- THÀNH CÔNG ---
+            loading.classList.add('hidden'); // Tắt loading NGAY
             
-            // QUAN TRỌNG: Tắt Loading NGAY LẬP TỨC để không bị treo
-            loading.classList.add('hidden'); 
-            
-            alert("Cập nhật thông tin thành công!");
+            showAppModal("Thành công", "Đã cập nhật hồ sơ của bạn!", '✅');
 
-            // Gửi dữ liệu về Sheet để lưu lịch sử (Chạy ngầm, không cần chờ)
-            // Đảm bảo bà đã khai báo biến scriptURL ở đầu file script
-            if (typeof scriptURL !== 'undefined' && scriptURL) {
+            // Gửi dữ liệu về Sheet (Chạy ngầm)
+            if (typeof GOOGLE_SCRIPT_URL !== 'undefined' && GOOGLE_SCRIPT_URL) {
                 const logData = {
                     action: 'logProfileUpdate',
                     phone: curPhone,
-                    oldName: oldNameText,
+                    oldName: oldName,
                     newName: newName,
-                    oldComp: "---", // Có thể update logic lấy tên bạn cũ nếu cần
+                    oldComp: userData.compName || userData.companionName || "---",
                     newComp: newComp
                 };
                 
-                // Dùng fetch với mode 'no-cors' để tránh lỗi mạng làm phiền user
-                fetch(scriptURL, {
+                fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors', 
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(logData)
-                }).catch(err => console.log("Lỗi ghi log (không ảnh hưởng App):", err));
+                }).catch(err => console.log("Lỗi ghi log (không sao):", err));
             }
         })
         .catch((error) => {
             // --- THẤT BẠI ---
-            
-            // QUAN TRỌNG: Gặp lỗi cũng phải Tắt Loading
-            loading.classList.add('hidden');
-            
+            loading.classList.add('hidden'); // Tắt loading NGAY
             console.error("Update Error:", error);
             alert("Lỗi khi cập nhật: " + error.message);
         });
@@ -759,45 +757,52 @@ function cancelBooking(key) {
 }
   // --- LOGIC POPUP CHI TIẾT (APPLE STYLE) ---
 
+// --- HÀM HIỆN CHI TIẾT LỊCH SỬ (AN TOÀN - KHÔNG BỊ ĐƠ) ---
 function showHistoryDetail(key) {
     const item = _historyCache.find(i => i.key === key);
     if(!item) return;
 
     const isCancelled = (item.status || "").includes('hủy');
     
+    // 1. Điền thông tin cơ bản
     document.getElementById('dh-date').innerText = item.date;
     document.getElementById('dh-in').innerText = item.start;
     document.getElementById('dh-out').innerText = item.end;
 
-    // --- XỬ LÝ MÀU SẮC HEADER & GIỜ ---
+    // 2. Xử lý Header Màu & Tên (Có kiểm tra lỗi để không bị treo)
     const header = document.getElementById('dh-header');
-    // Xóa màu cũ để tránh trùng lặp
-    header.classList.remove('from-[#006241]', 'to-[#1e3932]', 'from-red-500', 'to-red-800');
+    const bedLabel = document.getElementById('dh-bed');
+    const durationLabel = document.getElementById('dh-duration');
 
-    if (isCancelled) {
-        // STYLE HỦY: MÀU ĐỎ - CHỮ XÁM
-        header.classList.add('from-red-500', 'to-red-800');
-        document.getElementById('dh-bed').innerText = "ĐÃ HỦY LỊCH";
-        document.getElementById('dh-duration').innerText = "Chưa sử dụng";
-        document.getElementById('dh-duration').className = "text-3xl font-black text-gray-400 brand-font mt-1";
-    } else {
-        // STYLE THƯỜNG: MÀU XANH - CHỮ XANH
-        header.classList.add('from-[#006241]', 'to-[#1e3932]');
-        document.getElementById('dh-bed').innerText = item.bedId ? "BED 0" + item.bedId : "CHƯA XẾP";
-        
-        // Tính giờ
-        const s = parseInt(item.start.split(':')[0])*60 + parseInt(item.start.split(':')[1]);
-        const e = parseInt(item.end.split(':')[0])*60 + parseInt(item.end.split(':')[1]);
-        let diff = e - s;
-        if(diff < 0) diff = 0;
-        const h = Math.floor(diff/60);
-        const m = diff % 60;
-        
-        document.getElementById('dh-duration').innerText = `${h} giờ ${m} phút`;
-        document.getElementById('dh-duration').className = "text-3xl font-black text-[#006241] brand-font mt-1";
+    if (header) {
+        // Xóa màu cũ
+        header.classList.remove('from-[#006241]', 'to-[#1e3932]', 'from-red-500', 'to-red-800');
+
+        if (isCancelled) {
+            // STYLE HỦY: MÀU ĐỎ
+            header.classList.add('from-red-500', 'to-red-800');
+            bedLabel.innerText = "ĐÃ HỦY LỊCH";
+            durationLabel.innerText = "Chưa sử dụng";
+            durationLabel.className = "text-3xl font-black text-gray-400 brand-font mt-1";
+        } else {
+            // STYLE THƯỜNG: MÀU XANH
+            header.classList.add('from-[#006241]', 'to-[#1e3932]');
+            bedLabel.innerText = item.bedId ? "BED 0" + item.bedId : "CHƯA XẾP";
+            
+            // Tính giờ
+            const s = parseInt(item.start.split(':')[0])*60 + parseInt(item.start.split(':')[1]);
+            const e = parseInt(item.end.split(':')[0])*60 + parseInt(item.end.split(':')[1]);
+            let diff = e - s;
+            if(diff < 0) diff = 0;
+            const h = Math.floor(diff/60);
+            const m = diff % 60;
+            
+            durationLabel.innerText = `${h} giờ ${m} phút`;
+            durationLabel.className = "text-3xl font-black text-[#006241] brand-font mt-1";
+        }
     }
 
-    // Xử lý nút Vi Phạm
+    // 3. Xử lý nút Vi Phạm
     const badge = document.getElementById('violation-badge');
     const vList = document.getElementById('violation-list');
     vList.innerHTML = "";
@@ -815,6 +820,7 @@ function showHistoryDetail(key) {
         vList.innerHTML = `<li class="text-gray-400 italic">Không có vi phạm nào.</li>`;
     }
 
+    // 4. MỞ POPUP (Quan trọng nhất)
     document.getElementById('violation-detail-box').classList.add('hidden');
     document.getElementById('detail-history-modal').classList.remove('hidden');
 }
@@ -883,6 +889,7 @@ function toggleViolationDetail() {
 </div>
 </body>
 </html>
+
 
 
 
