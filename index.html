@@ -498,7 +498,15 @@ function handleBooking() {
     const eMin = parseInt(end.split(':')[0])*60 + parseInt(end.split(':')[1]);
     if(eMin - sMin < 30) return alert("Tối thiểu 30 phút!");
 
-    document.getElementById('loading-overlay').classList.remove('hidden');
+    // BẬT LOADING
+    const loading = document.getElementById('loading-overlay');
+    loading.classList.remove('hidden');
+
+    // BOM HẸN GIỜ AN TOÀN: Sau 4 giây tự động tắt (đề phòng treo)
+    const safetyTimer = setTimeout(() => {
+        loading.classList.add('hidden');
+        showAppModal("Thông báo", "Kết nối chậm, vui lòng thử lại sau vài giây!", '⚠️');
+    }, 4000);
 
     // Chuyển ngày sang dd/MM/yyyy
     const p = date.split('-');
@@ -507,7 +515,10 @@ function handleBooking() {
     // Check Firebase
     db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value', snap => {
         const bookings = [];
-        snap.forEach(c => { const v = c.val(); if(v.status !== 'đã hủy' && v.status !== 'đã xong') bookings.push(v); });
+        snap.forEach(c => { 
+            const v = c.val(); 
+            if(v.status !== 'đã hủy' && v.status !== 'đã xong') bookings.push(v); 
+        });
 
         let availableBed = null;
         for(let i=1; i<=4; i++) {
@@ -529,17 +540,29 @@ function handleBooking() {
                 compName: cName, compPhone: cPhone,
                 bedId: availableBed, status: "chờ khách", type: "app",
                 createdAt: new Date().toISOString()
-            }, () => {
-                document.getElementById('loading-overlay').classList.add('hidden');
+            }).then(() => {
+                clearTimeout(safetyTimer); // Hủy bom nếu thành công sớm
+                loading.classList.add('hidden');
                 showAppModal("Thành công", `Đã đặt Bed 0${availableBed}`, '✅', () => {
                     document.getElementById('book-date').value = "";
+                    document.getElementById('book-start').value = "";
+                    document.getElementById('book-end').value = "";
                     showTab('user');
                 });
+            }).catch(err => {
+                clearTimeout(safetyTimer);
+                loading.classList.add('hidden');
+                alert("Lỗi đặt chỗ: " + err.message);
             });
         } else {
-            document.getElementById('loading-overlay').classList.add('hidden');
+            clearTimeout(safetyTimer);
+            loading.classList.add('hidden');
             alert("Giờ này đã kín chỗ. Vui lòng chọn giờ khác.");
         }
+    }).catch(err => {
+        clearTimeout(safetyTimer);
+        loading.classList.add('hidden');
+        alert("Lỗi kết nối Firebase: " + err.message);
     });
 }
 
@@ -903,6 +926,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
