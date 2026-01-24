@@ -326,19 +326,41 @@ function showTab(t) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function showAppModal(title, msg, icon='☕', cb=null) {
+function showAppModal(title, msg, icon='☕', cb=null, showCancel=false) {
     document.getElementById('modal-title').innerText = title;
     document.getElementById('modal-message').innerHTML = msg;
     document.getElementById('modal-icon').innerText = icon;
-    document.getElementById('modal-overlay').classList.remove('hidden');
+    
+    const overlay = document.getElementById('modal-overlay');
+    const modalContent = document.getElementById('custom-modal');
+    
+    // Reset trạng thái
+    modalContent.classList.remove('modal-show');
+    modalContent.classList.add('modal-enter');
+    
+    // Bật overlay
+    overlay.classList.remove('hidden');
+    
+    // Trigger animation sau 10ms (để browser render lại)
+    setTimeout(() => {
+        modalContent.classList.remove('modal-enter');
+        modalContent.classList.add('modal-show');
+    }, 10);
+    
     const btnMain = document.getElementById('modal-btn-main');
     const btnSub = document.getElementById('modal-btn-sub');
     
-    // Reset buttons
-    btnMain.onclick = null; btnSub.onclick = null;
+    btnMain.onclick = () => { 
+        overlay.classList.add('hidden'); 
+        if(cb) cb(); 
+    };
     
-    btnMain.onclick = () => { document.getElementById('modal-overlay').classList.add('hidden'); if(cb) cb(); };
-    btnSub.classList.add('hidden');
+    if(showCancel) {
+        btnSub.classList.remove('hidden');
+        btnSub.onclick = () => { overlay.classList.add('hidden'); };
+    } else {
+        btnSub.classList.add('hidden');
+    }
 }
 
 function normalizePhone(p) { return String(p || "").replace(/[^0-9]/g, ""); }
@@ -926,6 +948,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
