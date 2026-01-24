@@ -1,455 +1,473 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cafe 33 Member</title>
-    <meta name="theme-color" content="#006241">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#006241">
 
-    <style>
-        body { font-family: 'Inter', sans-serif; background: #F3F4F6; -webkit-tap-highlight-color: transparent; overscroll-behavior-y: none; }
-        .brand-font { font-family: 'League Spartan', sans-serif; }
-        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.5); }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 0px; background: transparent; }
-        
-        /* Nav Active State */
-        .nav-item.active { color: #006241; background-color: #E6F4F1; font-weight: 800; }
-        .nav-item { color: #9CA3AF; transition: all 0.2s; }
-    </style>
+<link rel="icon" href="https://i.ibb.co/nqdTWnvt/N-u-v-N-u-v-ng-Ngh-thu-t-s-p-ch-In-m-Ti-m-c-ph-Bi-u-tr-ng-C-ph-20260121-210413-0000.png">
+<link rel="apple-touch-icon" href="https://i.ibb.co/nqdTWnvt/N-u-v-N-u-v-ng-Ngh-thu-t-s-p-ch-In-m-Ti-m-c-ph-Bi-u-tr-ng-C-ph-20260121-210413-0000.png">
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* GIỮ NGUYÊN CSS CŨ CỦA BÀ */
+html, body {
+overscroll-behavior-y: none;
+touch-action: pan-x pan-y;
+margin: 0; padding: 0; height: 100%; width: 100%;
+-webkit-tap-highlight-color: transparent;
+}
+body {
+background-color: #f8f9fa;
+font-family: 'Inter', sans-serif;
+color: #1e3932;
+text-align: left;
+-webkit-font-smoothing: antialiased;
+overflow-y: auto;
+}
+.brand-font { font-family: 'League Spartan', sans-serif; font-weight: 800; letter-spacing: -0.01em; }
+.sb-green { background-color: #006241; }
+.card-gradient { background: linear-gradient(135deg, #004d33 0%, #006241 100%); }
+.nav-active { color: #006241; font-weight: 800; background-color: rgba(0, 98, 65, 0.05); border-radius: 1.5rem; }
+.tab-content { animation: fadeIn 0.3s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+#custom-modal, #image-overlay { transition: all 0.3s ease; }
+.modal-enter { opacity: 0; transform: scale(0.9); }
+.modal-show { opacity: 1; transform: scale(1); }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 10px; }
+</style>
 </head>
-<body class="bg-[#F2F2F7] min-h-screen flex flex-col relative overflow-hidden">
+<body class="min-h-screen pb-32">
 
-    <div id="loading-overlay" class="fixed inset-0 bg-white/95 z-[9999] hidden flex flex-col items-center justify-center backdrop-blur-sm">
-        <div class="w-12 h-12 border-4 border-[#006241] border-t-transparent rounded-full animate-spin mb-3"></div>
-        <p class="brand-font text-[#006241] animate-pulse">The cafe 33</p>
-    </div>
+<div id="loading-overlay" class="fixed inset-0 bg-white/95 z-[9999] hidden flex flex-col items-center justify-center backdrop-blur-sm">
+<div class="w-14 h-14 border-4 border-[#006241] border-t-transparent rounded-full animate-spin mb-4"></div>
+<p class="brand-font text-[#006241] text-xl font-black animate-pulse">The cafe 33</p>
+<p class="text-xs text-gray-400 font-bold mt-2" id="loading-text">Đang kết nối...</p>
+</div>
 
-    <div id="view-login" class="w-full h-screen flex flex-col items-center justify-center px-6 z-50 bg-[#F2F2F7]">
-        <div class="glass-panel rounded-[40px] p-8 shadow-xl text-center w-full max-w-sm">
-            <div class="w-20 h-20 bg-[#006241] rounded-full mx-auto mb-6 flex items-center justify-center shadow-lg shadow-green-900/30">
-                <span class="text-4xl">☕</span>
-            </div>
-            <h1 class="brand-font text-3xl text-[#006241] font-black uppercase tracking-wide mb-2">The Cafe 33</h1>
-            <p class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-8">Dành cho thành viên</p>
-            <div class="space-y-4">
-                <input type="tel" id="login-phone" placeholder="Nhập số điện thoại..." class="w-full p-5 bg-gray-50 rounded-[24px] text-center font-bold text-lg text-[#006241] outline-none border-2 border-transparent focus:border-[#006241] transition-all shadow-inner">
-                <button onclick="handleLogin()" class="w-full py-5 bg-[#006241] text-white font-black rounded-[24px] uppercase text-sm shadow-xl shadow-green-900/20 active:scale-95 transition-all">Tra Cứu Điểm</button>
-            </div>
-            <p id="login-error" class="text-[10px] text-red-500 font-bold mt-4 h-4"></p>
-        </div>
-    </div>
+<div id="image-overlay" class="fixed inset-0 bg-black/95 z-[200] hidden flex flex-col items-center justify-center p-4 backdrop-blur-md">
+<button onclick="document.getElementById('image-overlay').classList.add('hidden')" class="absolute top-8 right-8 text-white text-5xl font-light">&times;</button>
+<div class="w-full h-full flex items-center justify-center overflow-auto"><img id="zoomed-img" src="" class="max-w-full max-h-full object-contain shadow-2xl transition-transform" onclick="event.stopPropagation()"></div>
+</div>
 
-    <div id="view-dashboard" class="hidden w-full h-screen flex flex-col relative bg-[#F2F2F7]">
+<div id="modal-overlay" class="fixed inset-0 bg-black/40 z-[100] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+<div id="custom-modal" class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center modal-enter">
+<div id="modal-icon" class="text-5xl mb-4">☕</div>
+<h3 id="modal-title" class="brand-font text-2xl text-[#006241] mb-3">Thông báo</h3>
+<div id="modal-message" class="text-lg text-[#1e3932] font-bold mb-8 leading-relaxed brand-font"></div>
+<div id="modal-actions" class="flex flex-col gap-3">
+<button id="modal-btn-main" class="w-full py-4 sb-green text-white font-bold rounded-2xl uppercase tracking-widest text-xs shadow-lg">Đồng ý</button>
+<button id="modal-btn-sub" class="w-full py-4 text-gray-400 font-bold rounded-2xl uppercase tracking-widest text-[10px] hidden">Hủy bỏ</button>
+</div>
+</div>
+</div>
+
+<div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-8 bg-white text-center">
+<h1 class="text-5xl text-[#006241] mb-4 brand-font">The cafe 33</h1>
+<p class="text-[11px] font-bold text-gray-400 mb-12 uppercase tracking-widest">Tích điểm nhận đặc quyền</p>
+<input type="tel" id="login-sdt" placeholder="Số điện thoại của bạn..." class="w-full p-5 rounded-3xl bg-gray-50 border border-gray-100 mb-4 text-center outline-none text-lg">
+<button id="btn-login" onclick="login()" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-lg">Đăng nhập</button>
+</div>
+
+<div id="main-app" class="hidden">
+<div class="p-5 bg-white shadow-sm flex justify-between items-center sticky top-0 z-50">
+<h2 class="text-2xl text-[#006241] brand-font">The cafe 33</h2>
+<div id="live-clock" class="text-[11px] font-extrabold text-[#006241] border border-gray-100 px-4 py-2 rounded-full bg-gray-50 shadow-inner">--:--</div>
+</div>
+
+<div id="tab-user" class="p-5 tab-content">
+<div class="card-gradient p-8 rounded-[2.5rem] text-white shadow-2xl h-60 flex flex-col justify-between relative overflow-hidden mb-8 text-left">
+<div class="flex justify-between items-start z-10"><p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Member Card</p><p class="text-[14px] opacity-60 brand-font">The cafe 33</p></div>
+<div class="z-10"><p id="user-name-display" class="text-3xl font-bold uppercase tracking-wider mb-2"></p>
+<div class="flex justify-between items-end"><p id="user-rank" class="text-[12px] text-amber-400 font-bold uppercase tracking-widest"></p><div class="text-right"><span id="user-points" class="text-5xl font-black">0</span><span class="text-xs ml-1 opacity-70 font-bold">★</span></div></div>
+</div>
+<div class="absolute -bottom-10 -right-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+</div>
+
+<div id="btn-open-history" onclick="openHistory()" class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer mb-6 active:scale-95 transition-transform">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-xl text-[#006241]">📅</div>
+<div>
+<p class="font-bold text-[#1e3932] text-sm uppercase tracking-wider">Lịch sử đặt Bed</p>
+<p class="text-[10px] text-gray-400 font-bold">Xem lịch trình & Hủy lịch</p>
+</div>
+</div>
+<div class="text-gray-300 font-bold">➜</div>
+</div>
+
+<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-4 text-left">
+<h4 class="font-bold text-[10px] uppercase text-gray-400 ml-2 tracking-widest">Hồ sơ của bạn</h4>
+<div><label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Tên của bạn</label><input type="text" id="edit-name" class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner"></div>
+<div><label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Số điện thoại</label><input type="tel" id="edit-sdt" class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner" readonly></div>
+<p class="text-[10px] font-bold text-gray-400 ml-2 uppercase pt-2 tracking-widest">Người đi cùng mặc định</p>
+<div class="space-y-3"><input type="text" id="edit-cname" class="w-full p-4 bg-gray-50 rounded-2xl outline-none shadow-inner" placeholder="Tên người đi cùng"><input type="tel" id="edit-cphone" class="w-full p-4 bg-gray-50 rounded-2xl outline-none shadow-inner" placeholder="SĐT người đi cùng"></div>
+<button id="btn-update-profile" onclick="handleUpdate()" class="w-full py-4 rounded-2xl border-2 border-[#006241] text-[#006241] font-bold text-sm mt-4 uppercase tracking-widest">Lưu thay đổi</button>
+</div>
+</div>
+
+<div id="tab-bed" class="p-6 tab-content hidden">
+<h3 class="text-2xl text-[#006241] mb-6 brand-font text-left">Đặt chỗ Cafe in Bed</h3>
+<div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-7 text-left">
+<div class="space-y-4"><label class="text-[10px] font-bold text-gray-400 uppercase ml-2 tracking-widest">Ngày bạn đến</label><input type="date" id="book-date" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 shadow-inner text-center">
+<div class="flex gap-4"><div class="flex-1 text-center"><label class="text-[10px] font-bold text-gray-400 uppercase">Bắt đầu</label><input type="time" id="book-start" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 shadow-inner text-center"></div><div class="flex-1 text-center"><label class="text-[10px] font-bold text-gray-400 uppercase">Kết thúc</label><input type="time" id="book-end" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 shadow-inner text-center"></div></div>
+<p class="text-[9px] text-amber-600 font-bold text-center italic">* Quán hoạt động: 08:00 - 20:50. Tối thiểu 30p.</p>
+</div>
+<div class="space-y-4"><label class="text-[10px] font-bold text-gray-400 uppercase ml-2 tracking-widest">Thông tin người đi cùng</label><input type="text" id="book-cname" placeholder="Tên người đi cùng" class="w-full p-4 rounded-2xl bg-gray-50 outline-none shadow-inner"><input type="tel" id="book-cphone" placeholder="Số điện thoại" class="w-full p-4 rounded-2xl bg-gray-50 outline-none shadow-inner"></div>
+<hr class="border-gray-50">
+<div class="space-y-5"><p class="text-[10px] font-bold text-gray-400 uppercase ml-2 text-center tracking-widest">Nội quy & Miễn trừ trách nhiệm</p>
+<div class="grid grid-cols-2 gap-4">
+<div class="relative aspect-square w-full rounded-[2rem] overflow-hidden border border-gray-100 shadow-sm" onclick="zoomImg('https://i.ibb.co/KcwBLYBN/N-I-QUY-S-D-NG-BED-20260109-102319-0000.png')"><img src="https://i.ibb.co/KcwBLYBN/N-I-QUY-S-D-NG-BED-20260109-102319-0000.png" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/20 flex items-end justify-center pb-3"><span class="text-[8px] text-white font-bold uppercase bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">Nhấn để xem rõ</span></div></div>
+<div class="relative aspect-square w-full rounded-[2rem] overflow-hidden border border-gray-100 shadow-sm" onclick="zoomImg('https://i.ibb.co/XrqnhTQK/2-20250520-223429-0001.png')"><img src="https://i.ibb.co/XrqnhTQK/2-20250520-223429-0001.png" class="w-full h-full object-cover"><div class="absolute inset-0 bg-black/20 flex items-end justify-center pb-3"><span class="text-[8px] text-white font-bold uppercase bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">Nhấn để xem rõ</span></div></div>
+</div>
+<div class="flex items-start gap-3 p-6 bg-gray-50 rounded-[2rem] border border-gray-100 text-left"><input type="checkbox" id="agree-rules" class="mt-1 w-7 h-7 accent-[#006241]"><label for="agree-rules" class="text-[12px] leading-relaxed text-gray-600 font-medium italic">Tôi cam kết đã đọc và tuân thủ toàn bộ nội quy của <span class="brand-font">The cafe 33</span>.</label></div>
+</div>
+<button id="btn-booking" onclick="handleBooking()" class="w-full p-5 rounded-3xl sb-green text-white font-bold uppercase text-lg shadow-xl tracking-widest active:scale-95 transition-all">Xác nhận đặt chỗ</button>
+</div>
+</div>
+
+<div id="tab-rewards" class="p-6 tab-content hidden"><h3 class="text-2xl text-[#006241] mb-6 brand-font text-left">Đổi quà tặng</h3><div id="rewards-list" class="grid grid-cols-1 gap-4"></div></div>
+</div>
+
+<nav id="nav-bar" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 h-28 flex justify-around items-center hidden z-50 px-6 shadow-2xl">
+<button onclick="showTab('user')" id="nav-user" class="nav-active flex flex-col items-center justify-center w-1/3 py-4 transition-all"><span class="text-3xl mb-1">👤</span><span class="text-[14px] uppercase font-extrabold tracking-tighter">Bạn</span></button>
+<button onclick="showTab('bed')" id="nav-bed" class="text-gray-300 flex flex-col items-center justify-center w-1/3 py-4 transition-all"><span class="text-3xl mb-1">🛌</span><span class="text-[14px] uppercase font-extrabold tracking-tighter">Đặt Bed</span></button>
+<button onclick="showTab('rewards')" id="nav-rewards" class="text-gray-300 flex flex-col items-center justify-center w-1/3 py-4 transition-all"><span class="text-3xl mb-1">🎁</span><span class="text-[14px] uppercase font-extrabold tracking-tighter">Đổi quà</span></button>
+</nav>
+
+<div id="history-modal" class="fixed inset-0 bg-white z-50 hidden flex-col overflow-hidden">
+<div class="px-5 pt-12 pb-4 bg-white border-b border-gray-100 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+<h2 class="text-2xl font-black text-[#1e3932]">Lịch sử đặt Bed</h2>
+<button onclick="document.getElementById('history-modal').classList.add('hidden')" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">✕</button>
+</div>
+<div class="flex-1 overflow-y-auto overflow-x-hidden p-6 pb-40 bg-[#f8f9fa] w-full h-full overscroll-contain" id="history-content" style="-webkit-overflow-scrolling: touch;">
+<div id="history-loading" class="text-center py-10 text-gray-400">Đang tải dữ liệu...</div>
+<div id="section-active-booking" class="hidden mb-6">
+<h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Lịch trình hôm nay</h3>
+<div id="active-card" class="bg-white rounded-2xl p-5 shadow-sm border border-amber-100 relative overflow-hidden"></div>
+</div>
+<div id="section-past-booking">
+<h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Lịch sử hoạt động</h3>
+<div id="history-list" class="space-y-3"></div>
+</div>
+</div>
+</div>
+
+<div id="gift-detail-modal" class="fixed inset-0 bg-black/60 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm transition-opacity duration-300">
+<div class="bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl relative animate-bounce-in">
+<button onclick="document.getElementById('gift-detail-modal').classList.add('hidden')" class="absolute top-4 right-4 z-10 w-10 h-10 bg-black/20 text-white rounded-full flex items-center justify-center backdrop-blur-md hover:bg-black/40 transition">✕</button>
+<div class="h-64 w-full bg-gray-100 relative">
+<img id="detail-gift-img" src="" class="w-full h-full object-cover">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-5 left-6 right-6"><h3 id="detail-gift-name" class="text-2xl font-black text-white leading-tight mb-1 shadow-black drop-shadow-md">Tên quà</h3></div>
+</div>
+<div class="p-6">
+<p id="detail-gift-desc" class="text-gray-500 text-sm mb-6 leading-relaxed">Mô tả quà tặng...</p>
+<div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 mb-6">
+<div class="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-wider mb-2"><span>Điểm của bạn</span><span>Cần có</span></div>
+<div class="flex justify-between items-end"><span id="detail-user-point" class="text-xl font-black text-[#1e3932]">0</span><span class="text-gray-300 mb-1">/</span><span id="detail-gift-cost" class="text-xl font-black text-[#006241]">0</span></div>
+<div class="w-full h-2 bg-gray-200 rounded-full mt-3 overflow-hidden"><div id="detail-progress" class="h-full bg-[#006241] rounded-full transition-all duration-500" style="width: 0%"></div></div>
+<p id="detail-message" class="text-[10px] font-bold text-amber-500 mt-2 text-right hidden">Bạn còn thiếu điểm nha!</p>
+</div>
+<button id="btn-confirm-redeem" class="w-full py-4 rounded-2xl bg-[#006241] text-white font-bold text-sm uppercase tracking-widest shadow-lg shadow-green-900/20 active:scale-[0.98] transition-transform">Xác nhận đổi quà</button>
+</div>
+</div>
+</div>
+
+<script>
+// --- 1. CẤU HÌNH (DÁN TỪ POS VÀO ĐÂY) ---
+const firebaseConfig = {
+apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+authDomain: "the-cafe-33.firebaseapp.com",
+databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+projectId: "the-cafe-33",
+storageBucket: "the-cafe-33.appspot.com",
+messagingSenderId: "...",
+appId: "..."
+};
+
+// --- DÁN LINK MÃ.GS VÀO ĐÂY ---
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxxx...../exec"; 
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let curPhone = localStorage.getItem('member_phone');
+let userData = {};
+
+// --- 2. LOGIC CHUNG ---
+window.onload = function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('book-date').setAttribute('min', today);
+    if(curPhone) showDashboard(curPhone);
+    updateClock();
+};
+
+function updateClock() { 
+    const now = new Date(); 
+    const h = String(now.getHours()).padStart(2,'0'), m = String(now.getMinutes()).padStart(2,'0'); 
+    const d = String(now.getDate()).padStart(2,'0'), mo = String(now.getMonth()+1).padStart(2,'0'); 
+    document.getElementById('live-clock').innerText = `${h}:${m} - ${d}/${mo}`;
+}
+setInterval(updateClock, 10000);
+
+function zoomImg(src) { document.getElementById('zoomed-img').src = src; document.getElementById('image-overlay').classList.remove('hidden'); }
+function showTab(t) { 
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden')); 
+    document.getElementById('tab-' + t).classList.remove('hidden'); 
+    document.querySelectorAll('nav button').forEach(btn => { btn.classList.remove('nav-active', 'text-[#006241]'); btn.classList.add('text-gray-300'); }); 
+    document.getElementById('nav-' + t).classList.add('nav-active');
+    document.getElementById('nav-' + t).classList.remove('text-gray-300'); 
+}
+
+function showAppModal(title, msg, icon='☕', cb=null) {
+    document.getElementById('modal-title').innerText = title;
+    document.getElementById('modal-message').innerHTML = msg;
+    document.getElementById('modal-icon').innerText = icon;
+    document.getElementById('modal-overlay').classList.remove('hidden');
+    const btnMain = document.getElementById('modal-btn-main');
+    const btnSub = document.getElementById('modal-btn-sub');
+    btnMain.onclick = () => { document.getElementById('modal-overlay').classList.add('hidden'); if(cb) cb(); };
+    btnSub.classList.add('hidden');
+}
+
+function normalizePhone(p) { return String(p || "").replace(/[^0-9]/g, ""); }
+
+// --- 3. ĐĂNG NHẬP & DASHBOARD ---
+function login() {
+    const phone = normalizePhone(document.getElementById('login-sdt').value);
+    if (phone.length < 9) return alert("SĐT không hợp lệ!");
+    
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    db.ref('customers/' + phone).once('value', snap => {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        if (snap.exists()) {
+            localStorage.setItem('member_phone', phone);
+            showDashboard(phone);
+        } else {
+            alert("SĐT này chưa đăng ký thành viên!");
+        }
+    });
+}
+
+function showDashboard(phone) {
+    curPhone = phone;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    document.getElementById('nav-bar').classList.remove('hidden');
+
+    // Lắng nghe thông tin
+    db.ref('customers/' + phone).on('value', snap => {
+        userData = snap.val();
+        if(userData) {
+            document.getElementById('user-name-display').innerText = userData.name;
+            document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
+            
+            // Điền form
+            document.getElementById('edit-name').value = userData.name;
+            document.getElementById('edit-sdt').value = phone;
+            document.getElementById('edit-cname').value = userData.compName || "";
+            document.getElementById('edit-cphone').value = userData.compPhone || "";
+            
+            document.getElementById('book-cname').value = userData.compName || "";
+            document.getElementById('book-cphone').value = userData.compPhone || "";
+            
+            let r = "Thành viên";
+            if (userData.points >= 55000) r = "Thành viên 'siu thân'";
+            else if (userData.points >= 33000) r = "Thành viên 'thân iu'";
+            else if (userData.points >= 10000) r = "Thành viên Bạc";
+            document.getElementById('user-rank').innerText = r;
+        }
+    });
+    
+    loadRewards();
+}
+
+// --- 4. CẬP NHẬT HỒ SƠ ---
+function handleUpdate() {
+    const name = document.getElementById('edit-name').value;
+    const cName = document.getElementById('edit-cname').value;
+    const cPhone = document.getElementById('edit-cphone').value;
+    const oldData = {...userData};
+
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    
+    // Update Firebase
+    db.ref('customers/' + curPhone).update({ name: name, compName: cName, compPhone: cPhone });
+    
+    // Log Sheet
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors',
+        body: JSON.stringify({ action: 'logProfileUpdate', phone: curPhone, oldName: oldData.name, newName: name, oldComp: oldData.compName || "", newComp: cName })
+    }).finally(() => {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        showAppModal("Thành công", "Đã cập nhật hồ sơ!", '✅');
+    });
+}
+
+// --- 5. ĐẶT BED (POS STYLE) ---
+function handleBooking() {
+    if (!document.getElementById('agree-rules').checked) return alert("Vui lòng đồng ý nội quy!");
+    const date = document.getElementById('book-date').value;
+    const start = document.getElementById('book-start').value;
+    const end = document.getElementById('book-end').value;
+    const cName = document.getElementById('book-cname').value;
+    const cPhone = document.getElementById('book-cphone').value;
+
+    if(!date || !start || !end) return alert("Nhập đủ ngày giờ!");
+    if(start >= end) return alert("Giờ kết thúc phải sau giờ bắt đầu!");
+    if(start < "08:00" || end > "20:50") return alert("Quán hoạt động 08:00 - 20:50");
+
+    const sMin = parseInt(start.split(':')[0])*60 + parseInt(start.split(':')[1]);
+    const eMin = parseInt(end.split(':')[0])*60 + parseInt(end.split(':')[1]);
+    if(eMin - sMin < 30) return alert("Tối thiểu 30 phút!");
+
+    document.getElementById('loading-overlay').classList.remove('hidden');
+
+    // Chuyển ngày sang dd/MM/yyyy
+    const p = date.split('-');
+    const dateStr = `${p[2]}/${p[1]}/${p[0]}`;
+
+    // Check Firebase
+    db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value', snap => {
+        const bookings = [];
+        snap.forEach(c => { const v = c.val(); if(v.status !== 'đã hủy' && v.status !== 'đã xong') bookings.push(v); });
+
+        let availableBed = null;
+        for(let i=1; i<=4; i++) {
+            let busy = false;
+            for(let b of bookings) {
+                if(b.bedId == i) {
+                    const bs = parseInt(b.start.split(':')[0])*60 + parseInt(b.start.split(':')[1]);
+                    const be = parseInt(b.end.split(':')[0])*60 + parseInt(b.end.split(':')[1]);
+                    if(Math.max(sMin, bs) < Math.min(eMin, be)) { busy = true; break; }
+                }
+            }
+            if(!busy) { availableBed = i; break; }
+        }
+
+        if(availableBed) {
+            db.ref('bedBookings').push({
+                phone: curPhone, name: userData.name,
+                date: dateStr, start: start, end: end,
+                compName: cName, compPhone: cPhone,
+                bedId: availableBed, status: "chờ khách", type: "app",
+                createdAt: new Date().toISOString()
+            }, () => {
+                document.getElementById('loading-overlay').classList.add('hidden');
+                showAppModal("Thành công", `Đã đặt Bed 0${availableBed}`, '✅', () => {
+                    document.getElementById('book-date').value = "";
+                    showTab('user');
+                });
+            });
+        } else {
+            document.getElementById('loading-overlay').classList.add('hidden');
+            alert("Giờ này đã kín chỗ. Vui lòng chọn giờ khác.");
+        }
+    });
+}
+
+// --- 6. QUÀ & LỊCH SỬ ---
+function loadRewards() {
+    db.ref('rewards').on('value', snap => {
+        const list = document.getElementById('rewards-list');
+        list.innerHTML = "";
+        const r = snap.val();
+        if(!r) { list.innerHTML = "Chưa có quà"; return; }
         
-        <div class="bg-[#006241] pt-10 pb-20 px-6 rounded-b-[40px] shadow-lg shrink-0 relative z-10">
-            <div class="flex justify-between items-start">
-                <div onclick="document.getElementById('modal-profile').classList.remove('hidden')">
-                    <p class="text-green-100/80 text-[10px] font-bold uppercase mb-1">Xin chào,</p>
-                    <h2 id="user-name" class="brand-font text-2xl text-white font-black truncate max-w-[200px]">--</h2>
-                    <p class="text-[9px] text-amber-300 font-bold mt-1 cursor-pointer flex items-center gap-1">✎ Sửa hồ sơ</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-[9px] text-green-100/80 font-bold uppercase mb-1">Điểm tích lũy</p>
-                    <p id="user-points" class="brand-font text-3xl text-white font-black">0</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex-1 overflow-y-auto -mt-10 pt-12 pb-28 px-4 space-y-4 custom-scrollbar z-0" id="main-content">
+        Object.values(r).forEach(item => {
+            const cost = parseInt(item.cost);
+            const can = (userData.points || 0) >= cost;
+            const btnCls = can ? "bg-[#006241] text-white active:scale-95" : "bg-gray-200 text-gray-400";
             
-            <div id="tab-home" class="space-y-4 animate-fade-in">
-                <div class="bg-white p-5 rounded-[30px] shadow-sm border border-gray-100 flex items-center justify-between">
-                    <div>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Hạng thành viên</p>
-                        <p class="text-lg font-black text-[#006241]" id="user-rank">Thành Viên</p>
-                    </div>
-                    <div class="w-12 h-12 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center text-2xl shadow-inner">👑</div>
+            list.innerHTML += `
+            <div class="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4">
+                <img src="${item.img}" class="w-20 h-20 rounded-2xl object-cover bg-gray-50">
+                <div class="flex-1">
+                    <p class="font-bold text-sm text-[#1e3932] truncate">${item.name}</p>
+                    <p class="text-[10px] font-bold text-amber-500 mb-2">${cost.toLocaleString()} điểm</p>
+                    <button onclick="redeemGift('${item.name}', ${cost})" ${can?'':'disabled'} class="w-full py-2 rounded-xl text-[10px] font-bold uppercase ${btnCls}">Đổi</button>
                 </div>
+            </div>`;
+        });
+    });
+}
 
-                <div>
-                    <h3 class="text-xs font-black text-gray-400 uppercase tracking-widest mb-3 ml-2">Lịch sử hoạt động</h3>
-                    <div id="history-list" class="space-y-3 pb-10"></div>
-                </div>
-            </div>
+function redeemGift(name, cost) {
+    if(!confirm(`Đổi ${name} với ${cost} điểm?`)) return;
+    const np = (userData.points || 0) - cost;
+    if(np < 0) return alert("Lỗi điểm");
+    
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    db.ref('customers/' + curPhone).update({ points: np });
+    
+    fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST', mode: 'no-cors',
+        body: JSON.stringify({ action: 'logRedeem', phone: curPhone, custName: userData.name, giftName: name, pointCost: cost })
+    }).finally(() => {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        alert("Đổi thành công!");
+    });
+}
 
-            <div id="tab-booking" class="hidden space-y-5 animate-fade-in">
-                <div class="bg-white p-6 rounded-[35px] shadow-sm border border-gray-100">
-                    <h3 class="text-xl font-black text-[#006241] mb-6 text-center uppercase tracking-tight">Đặt chỗ Cafe in Bed</h3>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase ml-2 tracking-widest">Ngày đặt</label>
-                            <input type="date" id="book-date" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 font-bold text-[#006241] border border-transparent focus:border-[#006241] text-center">
-                        </div>
-                        <div class="flex gap-3">
-                            <div class="flex-1">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Bắt đầu</label>
-                                <input type="time" id="book-start" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 font-bold text-[#006241] border border-transparent focus:border-[#006241] text-center">
-                            </div>
-                            <div class="flex-1">
-                                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Kết thúc</label>
-                                <input type="time" id="book-end" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 font-bold text-[#006241] border border-transparent focus:border-[#006241] text-center">
-                            </div>
-                        </div>
-                        <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 flex gap-2 items-start">
-                            <span class="text-amber-500">ℹ️</span>
-                            <p class="text-[10px] text-amber-700 font-bold leading-relaxed">Quán hoạt động: 08:00 - 20:50.<br>Tối thiểu 30 phút/lần đặt.</p>
-                        </div>
-                    </div>
+// --- LỊCH SỬ BOOKING ---
+function openHistory() {
+    document.getElementById('history-modal').classList.remove('hidden');
+    document.getElementById('history-loading').classList.remove('hidden');
+    const list = document.getElementById('history-list');
+    const activeDiv = document.getElementById('section-active-booking');
+    const activeCard = document.getElementById('active-card');
+    list.innerHTML = ""; activeDiv.classList.add('hidden');
 
-                    <div class="mt-6 space-y-3">
-                        <label class="text-[10px] font-bold text-gray-400 uppercase ml-2 tracking-widest">Người đi cùng (Tùy chọn)</label>
-                        <input type="text" id="book-cname" placeholder="Tên bạn đi cùng" class="w-full p-4 rounded-2xl bg-gray-50 outline-none text-sm font-bold">
-                        <input type="tel" id="book-cphone" placeholder="SĐT bạn đi cùng" class="w-full p-4 rounded-2xl bg-gray-50 outline-none text-sm font-bold">
-                    </div>
-
-                    <button onclick="handleBookingSubmit()" class="w-full py-4 mt-8 bg-[#006241] text-white font-black rounded-2xl uppercase text-sm shadow-lg shadow-green-900/20 active:scale-95 transition-all">Xác nhận đặt Bed</button>
-                </div>
-            </div>
-
-            <div id="tab-rewards" class="hidden space-y-4 animate-fade-in">
-                <div id="rewards-list" class="grid grid-cols-2 gap-3 pb-10"></div>
-            </div>
-
-        </div>
-
-        <div class="absolute bottom-6 left-6 right-6 h-20 bg-white rounded-[30px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] flex items-center justify-between px-2 z-50 border border-gray-100">
-            <button onclick="switchTab('home')" id="nav-home" class="nav-item active flex-1 h-full rounded-[24px] flex flex-col items-center justify-center gap-1 transition-all">
-                <span class="text-2xl">🏠</span>
-                <span class="text-[9px] uppercase tracking-widest">Trang chủ</span>
-            </button>
-            <button onclick="switchTab('booking')" id="nav-booking" class="nav-item flex-1 h-full rounded-[24px] flex flex-col items-center justify-center gap-1 transition-all">
-                <span class="text-2xl">🛌</span>
-                <span class="text-[9px] uppercase tracking-widest">Đặt Bed</span>
-            </button>
-            <button onclick="switchTab('rewards')" id="nav-rewards" class="nav-item flex-1 h-full rounded-[24px] flex flex-col items-center justify-center gap-1 transition-all">
-                <span class="text-2xl">🎁</span>
-                <span class="text-[9px] uppercase tracking-widest">Đổi quà</span>
-            </button>
-        </div>
-    </div>
-
-    <div id="modal-profile" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center p-6 backdrop-blur-sm animate-fade-in">
-        <div class="bg-white rounded-[35px] p-8 w-full max-w-sm shadow-2xl">
-            <h3 class="brand-font text-xl text-[#006241] mb-6 text-center uppercase font-black">Cập nhật hồ sơ</h3>
-            <div class="space-y-3">
-                <input id="edit-name" type="text" placeholder="Tên của bạn" class="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold text-[#006241] outline-none border border-transparent focus:border-[#006241]">
-                <input id="edit-comp-name" type="text" placeholder="Tên người đi cùng" class="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold text-[#006241] outline-none border border-transparent focus:border-[#006241]">
-                <input id="edit-comp-phone" type="tel" placeholder="SĐT người đi cùng" class="w-full p-4 bg-gray-50 rounded-2xl text-sm font-bold text-[#006241] outline-none border border-transparent focus:border-[#006241]">
-            </div>
-            <div class="grid grid-cols-2 gap-3 mt-6">
-                <button onclick="document.getElementById('modal-profile').classList.add('hidden')" class="py-3 bg-gray-100 text-gray-500 rounded-xl font-bold text-xs uppercase">Hủy</button>
-                <button onclick="saveProfile()" class="py-3 bg-[#006241] text-white rounded-xl font-bold text-xs shadow-lg uppercase">Lưu thay đổi</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // =============================================================
-        // 1. CẤU HÌNH (DÁN TỪ FILE POS VÀO ĐÂY)
-        // =============================================================
-        const firebaseConfig = {
-            apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
-            authDomain: "the-cafe-33.firebaseapp.com",
-            databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "the-cafe-33",
-            storageBucket: "the-cafe-33.appspot.com",
-            messagingSenderId: "...",
-            appId: "..."
-        };
+    db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).limitToLast(20).once('value', snap => {
+        document.getElementById('history-loading').classList.add('hidden');
+        const arr = [];
+        snap.forEach(c => arr.push({key: c.key, ...c.val()}));
         
-        // DÁN LINK WEB APP MỚI NHẤT VÀO ĐÂY
-        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/......./exec"; 
+        // Sắp xếp ngày giảm dần
+        arr.sort((a,b) => {
+            const da = a.date.split('/').reverse().join('') + a.start;
+            const db = b.date.split('/').reverse().join('') + b.start;
+            return db.localeCompare(da);
+        });
 
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+        const today = new Date();
+        const dStr = String(today.getDate()).padStart(2,'0') + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + today.getFullYear();
 
-        let curPhone = localStorage.getItem('member_phone');
-        let userData = {};
+        arr.forEach(h => {
+            // Check active (Hôm nay + chưa xong + chưa hủy)
+            if(h.date === dStr && h.status !== 'đã xong' && h.status !== 'đã hủy') {
+                activeDiv.classList.remove('hidden');
+                activeCard.innerHTML = `<div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl">ĐANG HOẠT ĐỘNG</div><p class="text-3xl font-black text-[#1e3932] mb-1">${h.start}</p><p class="text-sm text-gray-500 font-medium mb-4">Đến: <b>${h.end}</b> • Bed: <b>${h.bedId}</b></p><button onclick="cancelBooking('${h.key}')" class="w-full py-3 bg-red-50 text-red-600 rounded-xl font-bold text-xs">Hủy lịch</button>`;
+            } else {
+                let clr = "bg-gray-100 text-gray-500";
+                if(h.status.includes('xong')) clr = "bg-green-100 text-green-600";
+                if(h.status.includes('hủy')) clr = "bg-red-50 text-red-500";
+                
+                list.innerHTML += `<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm"><div class="flex justify-between items-center mb-2"><span class="text-xs font-bold text-gray-400">${h.date}</span><span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase ${clr}">${h.status}</span></div><p class="text-lg font-black text-[#1e3932] leading-none">${h.start} - ${h.end}</p><p class="text-xs text-gray-400 mt-1">Bed: ${h.bedId}</p></div>`;
+            }
+        });
+        if(arr.length === 0) list.innerHTML = "<p class='text-center text-gray-400 text-xs'>Chưa có lịch.</p>";
+    });
+}
 
-        // =============================================================
-        // 2. KHỞI ĐỘNG
-        // =============================================================
-        window.onload = function() {
-            // Set min date cho booking
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('book-date').setAttribute('min', today);
-            
-            if(curPhone) showDashboard(curPhone);
-        };
-
-        function normalizePhone(p) { return String(p || "").replace(/[^0-9]/g, ""); }
-
-        function handleLogin() {
-            const phone = normalizePhone(document.getElementById('login-phone').value);
-            if (phone.length < 9) return document.getElementById('login-error').innerText = "SĐT không hợp lệ!";
-
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            
-            db.ref('customers/' + phone).once('value', snap => {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                if (snap.exists()) {
-                    localStorage.setItem('member_phone', phone);
-                    showDashboard(phone);
-                } else {
-                    document.getElementById('login-error').innerText = "SĐT chưa đăng ký!";
-                }
-            });
-        }
-
-        function handleLogout() {
-            localStorage.removeItem('member_phone');
-            location.reload();
-        }
-
-        function showDashboard(phone) {
-            curPhone = phone;
-            document.getElementById('view-login').classList.add('hidden');
-            document.getElementById('view-dashboard').classList.remove('hidden');
-
-            // Lắng nghe User Realtime
-            db.ref('customers/' + phone).on('value', snap => {
-                userData = snap.val();
-                if(userData) {
-                    document.getElementById('user-name').innerText = userData.name;
-                    document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
-                    
-                    // Điền form
-                    document.getElementById('edit-name').value = userData.name;
-                    document.getElementById('edit-comp-name').value = userData.compName || userData.companionName || "";
-                    document.getElementById('edit-comp-phone').value = userData.compPhone || userData.companionPhone || "";
-                    
-                    document.getElementById('book-cname').value = userData.compName || userData.companionName || "";
-                    document.getElementById('book-cphone').value = userData.compPhone || userData.companionPhone || "";
-                }
-            });
-
-            loadHistory(phone);
-            loadRewards();
-        }
-
-        // =============================================================
-        // 3. XỬ LÝ ĐẶT BED (POS STYLE - CHECK TRỰC TIẾP FIREBASE)
-        // =============================================================
-        function handleBookingSubmit() {
-            const date = document.getElementById('book-date').value;
-            const start = document.getElementById('book-start').value;
-            const end = document.getElementById('book-end').value;
-            const cName = document.getElementById('book-cname').value;
-            const cPhone = document.getElementById('book-cphone').value;
-
-            if(!date || !start || !end) return alert("Vui lòng nhập đầy đủ ngày giờ!");
-            if(start >= end) return alert("Giờ kết thúc phải sau giờ bắt đầu!");
-            if(start < "08:00" || end > "20:50") return alert("Quán mở từ 08:00 đến 20:50 ạ!");
-
-            // Tính phút
-            const startMin = parseInt(start.split(':')[0])*60 + parseInt(start.split(':')[1]);
-            const endMin = parseInt(end.split(':')[0])*60 + parseInt(end.split(':')[1]);
-            if(endMin - startMin < 30) return alert("Thời gian tối thiểu là 30 phút!");
-
-            document.getElementById('loading-overlay').classList.remove('hidden');
-
-            // BƯỚC 1: LẤY LỊCH CỦA NGÀY ĐÓ TỪ FIREBASE
-            // Convert ngày sang dd/mm/yyyy để khớp với dữ liệu POS
-            const dateStr = convertDate(date);
-
-            db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value', snap => {
-                const bookings = [];
-                snap.forEach(child => {
-                    const val = child.val();
-                    // Lọc những đơn chưa hủy và chưa xong
-                    if(val.status !== 'đã hủy' && val.status !== 'đã xong') {
-                        bookings.push(val);
-                    }
-                });
-
-                // BƯỚC 2: TÌM GIƯỜNG TRỐNG (1-4)
-                let availableBed = null;
-                for(let bed = 1; bed <= 4; bed++) {
-                    let isBusy = false;
-                    for(let b of bookings) {
-                        if(b.bedId == bed) {
-                            const bStart = parseInt(b.start.split(':')[0])*60 + parseInt(b.start.split(':')[1]);
-                            const bEnd = parseInt(b.end.split(':')[0])*60 + parseInt(b.end.split(':')[1]);
-                            // Check va chạm: Max(StartA, StartB) < Min(EndA, EndB)
-                            if(Math.max(startMin, bStart) < Math.min(endMin, bEnd)) {
-                                isBusy = true; break;
-                            }
-                        }
-                    }
-                    if(!isBusy) {
-                        availableBed = bed;
-                        break;
-                    }
-                }
-
-                if(availableBed) {
-                    // BƯỚC 3: ĐẨY ĐƠN LÊN FIREBASE (POS THẤY NGAY)
-                    const newBooking = {
-                        phone: curPhone,
-                        name: userData.name,
-                        date: dateStr, 
-                        start: start,
-                        end: end,
-                        compName: cName,
-                        compPhone: cPhone,
-                        bedId: availableBed,
-                        status: "chờ khách", // POS sẽ thấy màu vàng
-                        type: "app",
-                        createdAt: new Date().toISOString()
-                    };
-
-                    db.ref('bedBookings').push(newBooking, (err) => {
-                        document.getElementById('loading-overlay').classList.add('hidden');
-                        if(err) alert("Lỗi: " + err.message);
-                        else {
-                            alert(`Đặt thành công! Bạn được xếp vào BED 0${availableBed}`);
-                            document.getElementById('book-date').value = "";
-                            switchTab('home');
-                        }
-                    });
-                } else {
-                    document.getElementById('loading-overlay').classList.add('hidden');
-                    alert("Giờ này đã kín hết 4 Bed rồi ạ. Vui lòng chọn giờ khác!");
-                }
-            });
-        }
-
-        function convertDate(yyyy_mm_dd) {
-            const p = yyyy_mm_dd.split('-');
-            return `${p[2]}/${p[1]}/${p[0]}`;
-        }
-
-        // =============================================================
-        // 4. QUÀ TẶNG & HỒ SƠ (Dùng cơ chế POS Style đã duyệt)
-        // =============================================================
-        function loadRewards() {
-            db.ref('rewards').on('value', snap => {
-                const list = document.getElementById('rewards-list');
-                list.innerHTML = "";
-                const rewards = snap.val();
-                if (!rewards) { list.innerHTML = '<p class="text-gray-400 text-xs col-span-2 text-center">Chưa có quà.</p>'; return; }
-
-                Object.values(rewards).forEach(r => {
-                    const cost = parseInt(r.cost);
-                    const canRedeem = ((userData.points || 0) >= cost);
-                    const btnClass = canRedeem ? "bg-[#006241] text-white shadow-md active:scale-95" : "bg-gray-200 text-gray-400 cursor-not-allowed";
-                    
-                    list.innerHTML += `
-                    <div class="bg-white p-4 rounded-[24px] shadow-sm border border-gray-100 flex flex-col items-center text-center">
-                        <div class="w-16 h-16 rounded-2xl bg-gray-50 mb-3 overflow-hidden border border-gray-100">
-                            <img src="${r.img}" class="w-full h-full object-cover">
-                        </div>
-                        <p class="text-xs font-black text-[#1e3932] mb-1 truncate w-full uppercase">${r.name}</p>
-                        <p class="text-[10px] font-bold text-amber-500 mb-3">${cost.toLocaleString()} điểm</p>
-                        <button onclick="redeemGift('${r.name}', ${cost})" ${canRedeem ? '' : 'disabled'} class="w-full py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${btnClass}">Đổi</button>
-                    </div>`;
-                });
-            });
-        }
-
-        function redeemGift(giftName, cost) {
-            if(!confirm(`Đổi [${giftName}] với ${cost} điểm?`)) return;
-            const newPoints = (userData.points || 0) - cost;
-            if(newPoints < 0) return alert("Không đủ điểm!");
-
-            document.getElementById('loading-overlay').classList.remove('hidden');
-            // Cập nhật Firebase ngay
-            db.ref('customers/' + curPhone).update({ points: newPoints });
-
-            // Ghi log vào Sheet
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors',
-                body: JSON.stringify({ action: 'logRedeem', phone: curPhone, custName: userData.name, giftName: giftName, pointCost: cost })
-            }).finally(() => {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                alert("Đổi quà thành công!");
-            });
-        }
-
-        function saveProfile() {
-            const newName = document.getElementById('edit-name').value;
-            const newComp = document.getElementById('edit-comp-name').value;
-            const newCompPhone = document.getElementById('edit-comp-phone').value;
-            const oldData = { ...userData };
-
-            document.getElementById('modal-profile').classList.add('hidden');
-            document.getElementById('loading-overlay').classList.remove('hidden');
-
-            // Cập nhật Firebase
-            db.ref('customers/' + curPhone).update({ name: newName, compName: newComp, compPhone: newCompPhone });
-
-            // Ghi log vào Sheet
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors',
-                body: JSON.stringify({ action: 'logProfileUpdate', phone: curPhone, oldName: oldData.name, newName: newName, oldComp: oldData.compName || "", newComp: newComp })
-            }).finally(() => {
-                document.getElementById('loading-overlay').classList.add('hidden');
-                alert("Đã cập nhật hồ sơ!");
-            });
-        }
-
-        function loadHistory(phone) {
-            db.ref('orders').orderByChild('createdAt').limitToLast(20).on('value', snap => {
-                const list = document.getElementById('history-list');
-                list.innerHTML = "";
-                const orders = [];
-                snap.forEach(child => { if (normalizePhone(child.val().sdt) === phone) orders.push(child.val()); });
-
-                if(orders.length == 0) list.innerHTML = '<p class="text-center text-gray-400 text-xs italic">Chưa có đơn hàng.</p>';
-
-                orders.reverse().forEach(o => {
-                    const d = new Date(o.createdAt);
-                    const timeStr = d.toLocaleDateString('vi-VN') + " " + d.toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
-                    list.innerHTML += `
-                    <div class="bg-white p-4 rounded-[24px] shadow-sm border border-gray-100 flex justify-between items-center">
-                        <div>
-                            <p class="text-[9px] text-gray-400 font-bold uppercase mb-1">${timeStr}</p>
-                            <p class="text-xs font-bold text-gray-700 w-48 truncate">${o.items}</p>
-                        </div>
-                        <p class="text-sm font-black text-[#006241]">${Number(o.total).toLocaleString()}đ</p>
-                    </div>`;
-                });
-            });
-        }
-
-        function switchTab(t) {
-            // Ẩn tất cả Tab nội dung (Dựa vào ID parent của chúng)
-            document.getElementById('tab-home').parentElement.classList.remove('hidden'); 
-            
-            // Ẩn cụ thể từng khối
-            document.getElementById('tab-home').classList.add('hidden');
-            document.getElementById('tab-booking').classList.add('hidden');
-            document.getElementById('tab-rewards').classList.add('hidden');
-            
-            // Hiện cái cần hiện
-            document.getElementById('tab-' + t).classList.remove('hidden');
-            
-            // Update Active Nav
-            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            document.getElementById('nav-' + t).classList.add('active');
-        }
-
-        function animateValue(id, start, end, duration) {
-            if (start === end) return;
-            const range = end - start;
-            let current = start;
-            const increment = end > start ? Math.ceil(range/20) : Math.floor(range/20);
-            const stepTime = Math.abs(Math.floor(duration / (range / increment)));
-            const obj = document.getElementById(id);
-            const timer = setInterval(function() {
-                current += increment;
-                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) { current = end; clearInterval(timer); }
-                obj.innerHTML = current.toLocaleString();
-            }, stepTime);
-        }
-    </script>
+function cancelBooking(key) {
+    if(!confirm("Hủy lịch này?")) return;
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    db.ref('bedBookings/' + key).update({ status: 'đã hủy', note: 'Khách tự hủy' }, () => {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        alert("Đã hủy.");
+        openHistory();
+    });
+}
+</script>
 </body>
 </html>
