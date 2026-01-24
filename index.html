@@ -469,54 +469,110 @@ function redeemGift(name, cost) {
     });
 }
 
+// --- HÀM XEM LỊCH SỬ ĐẶT BED (ĐÃ SỬA: LẤY TỪ FIREBASE) ---
 function openHistory() {
     document.getElementById('history-modal').classList.remove('hidden');
-    document.getElementById('history-loading').classList.remove('hidden');
-    const list = document.getElementById('history-list');
+    const listDiv = document.getElementById('history-list');
     const activeDiv = document.getElementById('section-active-booking');
     const activeCard = document.getElementById('active-card');
-    list.innerHTML = ""; activeDiv.classList.add('hidden');
+    
+    // Hiện loading
+    document.getElementById('history-loading').classList.remove('hidden');
+    listDiv.innerHTML = ''; 
+    activeDiv.classList.add('hidden');
 
-    db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).limitToLast(20).once('value', snap => {
+    // Lấy dữ liệu từ Firebase (Lọc theo SĐT)
+    db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).once('value', snap => {
         document.getElementById('history-loading').classList.add('hidden');
+        
         const arr = [];
         snap.forEach(c => arr.push({key: c.key, ...c.val()}));
         
+        // Sắp xếp: Mới nhất lên đầu
         arr.sort((a,b) => {
+            // Chuyển đổi ngày từ dd/MM/yyyy sang yyyyMMdd để so sánh
             const da = a.date.split('/').reverse().join('') + a.start;
             const db = b.date.split('/').reverse().join('') + b.start;
-            return db.localeCompare(da);
+            return db.localeCompare(da); // Giảm dần
         });
 
         const today = new Date();
         const dStr = String(today.getDate()).padStart(2,'0') + '/' + String(today.getMonth()+1).padStart(2,'0') + '/' + today.getFullYear();
 
+        if (arr.length === 0) {
+            listDiv.innerHTML = '<div class="text-center text-gray-400 text-sm italic py-10">Bạn chưa có lịch sử đặt Bed nào.</div>';
+            return;
+        }
+
         arr.forEach(h => {
-            if(h.date === dStr && h.status !== 'đã xong' && h.status !== 'đã hủy') {
+            // KIỂM TRA ĐƠN ĐANG HOẠT ĐỘNG (Hôm nay + Chưa xong + Chưa hủy)
+            const isActive = (h.date === dStr && h.status !== 'đã xong' && h.status !== 'đã hủy');
+
+            if(isActive) {
+                // Hiển thị Card Active
                 activeDiv.classList.remove('hidden');
-                activeCard.innerHTML = `<div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl">ĐANG HOẠT ĐỘNG</div><p class="text-3xl font-black text-[#1e3932] mb-1">${h.start}</p><p class="text-sm text-gray-500 font-medium mb-4">Đến: <b>${h.end}</b> • Bed: <b>${h.bedId}</b></p><button onclick="cancelBooking('${h.key}')" class="w-full py-3 bg-red-50 text-red-600 rounded-xl font-bold text-xs">Hủy lịch</button>`;
+                const bedText = (h.bedId && h.bedId != "WAITING") ? "BED 0" + h.bedId : "Đang xếp...";
+                
+                activeCard.innerHTML = `
+                    <div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl shadow-sm">ĐANG HOẠT ĐỘNG</div>
+                    <p class="text-3xl font-black text-[#1e3932] mb-1">${h.start}</p>
+                    <p class="text-sm text-gray-500 font-medium mb-4">Đến: <b>${h.end}</b> • Vị trí: <b class="text-[#006241]">${bedText}</b></p>
+                    <div class="flex gap-2">
+                        <button onclick="alert('Vui lòng liên hệ nhân viên để đổi giờ!')" class="flex-1 py-3 rounded-xl bg-blue-50 text-blue-700 font-bold text-xs border border-blue-100">✏️ Đổi giờ</button>
+                        <button onclick="cancelBooking('${h.key}')" class="flex-1 py-3 rounded-xl bg-red-50 text-red-700 font-bold text-xs border border-red-100">🗑️ Hủy lịch</button>
+                    </div>`;
             } else {
-                let clr = "bg-gray-100 text-gray-500";
-                if(h.status.includes('xong')) clr = "bg-green-100 text-green-600";
-                if(h.status.includes('hủy')) clr = "bg-red-50 text-red-500";
-                list.innerHTML += `<div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm"><div class="flex justify-between items-center mb-2"><span class="text-xs font-bold text-gray-400">${h.date}</span><span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase ${clr}">${h.status}</span></div><p class="text-lg font-black text-[#1e3932] leading-none">${h.start} - ${h.end}</p><p class="text-xs text-gray-400 mt-1">Bed: ${h.bedId}</p></div>`;
+                // Hiển thị Lịch sử cũ
+                let clr = "text-gray-500 bg-gray-100";
+                let txt = h.status || "Hoàn tất";
+                
+                if (txt.includes('xong')) { clr = "text-green-600 bg-green-100"; txt = "HOÀN THÀNH"; }
+                else if (txt.includes('hủy')) { clr = "text-red-500 bg-red-50"; txt = "ĐÃ HỦY"; }
+                else if (txt.includes('chờ')) { clr = "text-amber-600 bg-amber-50"; txt = "ĐANG CHỜ"; }
+
+                listDiv.innerHTML += `
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-400">📅 ${h.date}</span>
+                        <span class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase ${clr}">${txt}</span>
+                    </div>
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <p class="text-lg font-black text-[#1e3932] leading-none">${h.start} - ${h.end}</p>
+                            <p class="text-xs text-gray-400 mt-1 font-medium">Vị trí: ${h.bedId ? 'BED 0'+h.bedId : '---'}</p>
+                        </div>
+                        ${h.totalSpend ? `<span class="text-xs font-bold text-[#006241]">Chi: ${Number(h.totalSpend).toLocaleString()}đ</span>` : ''}
+                    </div>
+                </div>`;
             }
         });
-        if(arr.length === 0) list.innerHTML = "<p class='text-center text-gray-400 text-xs'>Chưa có lịch.</p>";
     });
 }
 
+// --- HÀM HỦY LỊCH (CẬP NHẬT TRỰC TIẾP FIREBASE) ---
 function cancelBooking(key) {
-    if(!confirm("Hủy lịch này?")) return;
+    if(!confirm("Bạn chắc chắn muốn hủy lịch này?")) return;
+    
     document.getElementById('loading-overlay').classList.remove('hidden');
-    db.ref('bedBookings/' + key).update({ status: 'đã hủy', note: 'Khách tự hủy' }, () => {
+    
+    // Cập nhật trạng thái trên Firebase
+    db.ref('bedBookings/' + key).update({ 
+        status: 'đã hủy', 
+        note: 'Khách tự hủy qua App' 
+    }, (error) => {
         document.getElementById('loading-overlay').classList.add('hidden');
-        alert("Đã hủy.");
-        openHistory();
+        if (error) {
+            alert("Lỗi: " + error.message);
+        } else {
+            alert("Đã hủy lịch thành công.");
+            // Tải lại danh sách để cập nhật giao diện
+            openHistory();
+        }
     });
 }
 </script>
 </body>
 </html>
+
 
 
