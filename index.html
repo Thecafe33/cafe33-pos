@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
   
   <style>
-    /* GIỮ NGUYÊN CSS CŨ CỦA BÀ */
+    /* GIỮ NGUYÊN CSS CŨ [cite: 6034-6062] */
     html, body {
       overscroll-behavior-y: none;
       touch-action: pan-x pan-y;
@@ -198,13 +198,14 @@ const firebaseConfig = {
 };
 
 // DÁN LINK WEB APP MỚI CỦA BÀ VÀO ĐÂY (Đuôi /exec)
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxDp3MHSZJmux8cZwROdQKdallHwnO6jvqy-CpXjj4a/dev"; 
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxxxx...../exec"; 
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let curPhone = localStorage.getItem('member_phone');
 let userData = {};
+let _cachedGiftList = []; // Thêm biến cache danh sách quà
 
 // --- 2. LOGIC CHUNG ---
 window.onload = function() {
@@ -386,25 +387,55 @@ function loadRewards() {
     db.ref('rewards').on('value', snap => {
         const list = document.getElementById('rewards-list');
         list.innerHTML = "";
-        const r = snap.val();
-        if(!r) { list.innerHTML = "Chưa có quà"; return; }
+        const rewards = snap.val();
         
-        Object.values(r).forEach(item => {
-            const cost = parseInt(item.cost);
-            const can = (userData.points || 0) >= cost;
-            const btnCls = can ? "bg-[#006241] text-white active:scale-95" : "bg-gray-200 text-gray-400";
-            
+        if (!rewards) { 
+            list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Chưa có quà.</div>'; 
+            return; 
+        }
+        
+        // Lưu cache để dùng khi mở modal chi tiết
+        _cachedGiftList = Object.values(rewards);
+
+        _cachedGiftList.forEach((item, index) => {
             list.innerHTML += `
-            <div class="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4">
-                <img src="${item.img}" class="w-20 h-20 rounded-2xl object-cover bg-gray-50">
-                <div class="flex-1">
-                    <p class="font-bold text-sm text-[#1e3932] truncate">${item.name}</p>
-                    <p class="text-[10px] font-bold text-amber-500 mb-2">${cost.toLocaleString()} điểm</p>
-                    <button onclick="redeemGift('${item.name}', ${cost})" ${can?'':'disabled'} class="w-full py-2 rounded-xl text-[10px] font-bold uppercase ${btnCls}">Đổi</button>
-                </div>
+            <div onclick="openGiftDetail(${index})" class="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4 mb-3 relative overflow-hidden group active:scale-[0.98] transition-transform cursor-pointer hover:shadow-md">
+                <div class="shrink-0 w-24 h-24 rounded-3xl overflow-hidden border border-gray-100 bg-gray-50"><img src="${item.img || ''}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150'"></div>
+                <div class="flex-1 min-w-0"><p class="font-bold text-sm text-[#1e3932] mb-1 uppercase truncate">${item.name}</p><p class="text-[10px] text-gray-400 mb-2 line-clamp-2">${item.desc || '...'}</p><p class="text-md text-[#006241] font-black brand-font">${item.cost.toLocaleString()} <span class="text-amber-500 text-xs">★</span></p></div>
+                <div class="shrink-0 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-[#006241] group-hover:text-white transition-colors">➜</div>
             </div>`;
         });
     });
+}
+
+function openGiftDetail(index) {
+    const item = _cachedGiftList[index];
+    if (!item) return;
+    document.getElementById('detail-gift-name').innerText = item.name;
+    document.getElementById('detail-gift-desc').innerText = item.desc || '...';
+    document.getElementById('detail-gift-cost').innerText = item.cost.toLocaleString() + ' ★';
+    document.getElementById('detail-gift-img').src = item.img || '';
+    document.getElementById('detail-user-point').innerText = userData.points.toLocaleString() + ' ★';
+    let percent = (userData.points / item.cost) * 100; if (percent > 100) percent = 100;
+    document.getElementById('detail-progress').style.width = percent + '%';
+
+    const btn = document.getElementById('btn-confirm-redeem');
+    const msg = document.getElementById('detail-message');
+    const prog = document.getElementById('detail-progress');
+
+    if (userData.points >= item.cost) {
+        btn.disabled = false; btn.innerHTML = 'XÁC NHẬN ĐỔI NGAY';
+        btn.className = "w-full py-4 rounded-2xl bg-[#006241] text-white font-bold text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-transform";
+        btn.onclick = () => { document.getElementById('gift-detail-modal').classList.add('hidden'); redeemGift(item.name, item.cost); };
+        prog.className = "h-full bg-[#006241] rounded-full transition-all duration-500";
+        msg.classList.add('hidden');
+    } else {
+        btn.disabled = true; btn.innerHTML = 'CHƯA ĐỦ ĐIỂM';
+        btn.className = "w-full py-4 rounded-2xl bg-gray-300 text-gray-500 font-bold text-sm uppercase tracking-widest cursor-not-allowed";
+        prog.className = "h-full bg-red-500 rounded-full transition-all duration-500";
+        msg.classList.remove('hidden'); msg.innerText = `Thiếu ${(item.cost - userData.points).toLocaleString()} ★ nữa.`;
+    }
+    document.getElementById('gift-detail-modal').classList.remove('hidden');
 }
 
 function redeemGift(name, cost) {
@@ -473,4 +504,3 @@ function cancelBooking(key) {
 </script>
 </body>
 </html>
-
