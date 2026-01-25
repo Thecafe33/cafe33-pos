@@ -800,23 +800,25 @@ function setMethod(m) {
     input.value = currentTotal;
 
     if (isBank) {
-        showPaymentQR();
         // --- CHẾ ĐỘ CHUYỂN KHOẢN ---
-        // Vô hiệu hóa click
+        // Gọi hàm hiển thị QR
+        showPaymentQR(); 
+        
+        // Vô hiệu hóa ô nhập tiền
         box.style.pointerEvents = "none";
-        // Làm mờ đi (50%)
         box.style.opacity = "0.4";
-        // Chuyển sang trắng đen cho nó chìm hẳn
         box.style.filter = "grayscale(100%)";
     } else {
         // --- CHẾ ĐỘ TIỀN MẶT ---
-        // Cho phép click lại
         box.style.pointerEvents = "auto";
-        // Sáng rõ trở lại
         box.style.opacity = "1";
-        // Bỏ trắng đen
         box.style.filter = "none";
+        
+        // Ẩn Popup QR nếu đang mở (trường hợp khách đổi ý)
+        document.getElementById('qr-modal')?.classList.add('hidden');
     }
+    calcChange();
+}
 
     // Tính lại tiền thừa (về 0)
     calcChange();
@@ -2565,29 +2567,48 @@ function listenForPayment(code, amount) {
 }
 // --- HÀM HIỂN THỊ QR VÀ ĐỢI TIỀN (CHÈN MỚI) ---
 function showPaymentQR() {
-  // Không cần set currentOrderCode ở đây nữa, server sẽ trả về
+    // 1. Hiển thị Popup ngay lập tức nhưng ở trạng thái "Đang tạo mã..."
+    const modal = document.getElementById('qr-modal');
+    modal.classList.remove('hidden');
+    
+    // Reset ảnh QR và nội dung về trạng thái chờ
+    const qrImg = document.getElementById('vietqr-img');
+    const qrText = document.getElementById('qr-content');
+    const statusEl = document.getElementById('qr-status');
+    
+    qrImg.src = "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif"; // Ảnh loading gif hoặc để trống
+    qrText.innerText = "Đang tạo mã QR...";
+    statusEl.innerText = "Vui lòng đợi...";
 
-  google.script.run
-    .withSuccessHandler(function(result) {
-      console.log("PayOS result:", result);
-      if (result.status === "success") {
-        // Lấy orderCodeFull từ server (CFxxxx)
-        currentOrderCode = result.orderCodeFull || "CF0000";
-
-        document.getElementById('vietqr-img').src = "data:image/png;base64," + result.qrCode;
-        document.getElementById('qr-content').innerText = currentOrderCode;
-
-        document.getElementById('qr-modal').classList.remove('hidden');
-
-        listenForPayment(currentOrderCode, currentTotal); // Dùng full CFxxxx
-      } else {
-        alert("Lỗi tạo payment PayOS: " + result.message);
-      }
-    })
-    .withFailureHandler(function(err) {
-      alert("Lỗi GAS: " + err.message);
-    })
-    .createPayment({ amount: currentTotal }); // Chỉ gửi amount thôi
+    // 2. Gọi Google Script để lấy QR từ PayOS API
+    google.script.run
+        .withSuccessHandler(function(result) {
+            console.log("PayOS Result:", result);
+            if (result.status === "success") {
+                // Cập nhật QR Code thật từ PayOS
+                // Lưu ý: PayOS trả về 'qrCode' là chuỗi base64 của ảnh QR
+                if (result.qrCode.startsWith("data:image")) {
+                     qrImg.src = result.qrCode;
+                } else {
+                     // Nếu PayOS trả về chuỗi raw base64 (không có header)
+                     qrImg.src = "data:image/png;base64," + result.qrCode; 
+                }
+                
+                qrText.innerText = result.orderCodeFull; // Hiển thị mã CFxxxx
+                statusEl.innerHTML = '<b class="text-amber-500 animate-pulse">Đang chờ thanh toán...</b>';
+                
+                // Bắt đầu lắng nghe Firebase
+                listenForPayment(result.orderCodeFull, result.amount);
+            } else {
+                alert("Lỗi tạo mã QR: " + result.message);
+                modal.classList.add('hidden'); // Đóng nếu lỗi
+            }
+        })
+        .withFailureHandler(function(error) {
+            alert("Lỗi kết nối Server: " + error.message);
+            modal.classList.add('hidden');
+        })
+        .createPayment({ amount: currentTotal }); // Gửi số tiền lên Server
 }
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
@@ -2681,6 +2702,7 @@ function showPaymentQR() {
 </div>
 </body>
 </html>
+
 
 
 
