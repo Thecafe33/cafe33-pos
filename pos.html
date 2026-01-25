@@ -2519,24 +2519,47 @@ function deletePenalty(phone, bookingId) {
     });
 }
 // --- HÀM LẮNG NGHE TIỀN VỀ TỪ PAYOS (CHÈN MỚI) ---
+// --- HÀM LẮNG NGHE TIỀN VỀ THEO MÃ ĐƠN HÀNG (VIẾT LẠI) ---
 function listenForPayment(code, amount) {
-    if (paymentListener) db.ref('payment_events').off('child_added', paymentListener);
+    // 1. Dọn dẹp các lệnh lắng nghe cũ nếu có
+    if (paymentListener) {
+        db.ref('payment_events/' + currentOrderCode).off();
+    }
 
-    paymentListener = db.ref('payment_events').limitToLast(5).on('child_added', (snap) => {
+    console.log("🔍 Đang đợi thanh toán cho mã:", code);
+
+    // 2. Lắng nghe trực tiếp vào nhánh payment_events/[Mã_CF]
+    // Cách này giúp POS không phải quét toàn bộ danh sách, tiết kiệm pin và nhanh hơn
+    paymentListener = db.ref('payment_events/' + code).on('value', (snap) => {
         const data = snap.val();
-        if (!data) return;
+        
+        // Nếu tìm thấy dữ liệu và số tiền khớp hoặc dư
+        if (data && Number(data.amount) >= amount) {
+            console.log("✅ Đã thấy tiền về cho đơn:", code);
 
-        // Kiểm tra mã CFxxxx và số tiền
-        if (data.content.includes(code) && Number(data.amount) >= amount) {
+            // Cập nhật giao diện thông báo
             const statusEl = document.getElementById('qr-status');
-            if(statusEl) statusEl.innerHTML = '<b class="text-green-600 text-lg">✅ ĐÃ NHẬN TIỀN!</b>';
-            
+            if(statusEl) {
+                statusEl.innerHTML = `
+                    <div class="flex flex-col items-center animate-bounce">
+                        <span class="text-green-500 text-3xl">✅</span>
+                        <span class="text-green-600 font-black text-sm uppercase">Đã nhận đủ tiền</span>
+                    </div>`;
+            }
+
+            // Đợi 1.5 giây để nhân viên kịp thấy dấu tích xanh rồi tự động đóng
             setTimeout(() => {
                 document.getElementById('qr-modal')?.classList.add('hidden');
-                completeOrder(); // Gọi hàm hoàn tất đơn hàng có sẵn của bà
+                
+                // Gọi hàm thanh toán mặc định của bà để lưu đơn vào Sheet/Firebase Orders
+                if (typeof completeOrder === "function") {
+                    completeOrder(); 
+                }
             }, 1500);
 
-            db.ref('payment_events').off('child_added', paymentListener);
+            // Tắt lắng nghe sau khi đã xong việc
+            db.ref('payment_events/' + code).off();
+            paymentListener = null;
         }
     });
 }
@@ -2650,6 +2673,7 @@ function showPaymentQR() {
 </div>
 </body>
 </html>
+
 
 
 
