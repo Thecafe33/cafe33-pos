@@ -142,20 +142,43 @@ body { font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; 
     }
 
     /* 4. Giỏ hàng: Biến thành thanh ngang ở dưới cùng */
+    /* --- BIẾN HÌNH GIỎ HÀNG THÀNH "VIÊN THUỐC BAY" (FLOATING BAR) --- */
     #sidebar-cart {
-        width: 100% !important; /* Full chiều ngang */
-        height: auto !important;
-        max-height: 40vh; /* Không cao quá 40% màn hình */
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        z-index: 50;
-        border-radius: 20px 20px 0 0 !important; /* Bo tròn 2 góc trên */
-        border-left: none !important;
-        box-shadow: 0 -5px 20px rgba(0,0,0,0.1) !important;
+        position: fixed !important;
         
-        /* Mặc định thu gọn lại, chỉ hiện tổng tiền */
-        transition: transform 0.3s ease;
+        /* 1. CÁCH LỀ ĐÁY VÀ 2 BÊN (TẠO CẢM GIÁC LƠ LỬNG) */
+        bottom: 24px !important; /* Cách đáy 24px (đủ để né thanh Home ảo) */
+        left: 16px !important;
+        right: 16px !important;
+        width: auto !important; /* Tự co giãn theo lề */
+        
+        /* 2. KHÔNG CẦN CHỈNH CHIỀU CAO, ĐỂ NÓ TỰ ÔM */
+        height: auto !important;
+        max-height: 120px;
+        
+        /* 3. BO TRÒN 4 GÓC THẬT MẠNH */
+        border-radius: 30px !important; 
+        
+        /* 4. ĐỔ BÓNG XỊN HƠN (ĐỂ TÁCH BIỆT KHỎI NỀN) */
+        box-shadow: 
+            0 20px 50px -10px rgba(0,0,0,0.3), 
+            0 0 0 1px rgba(0,0,0,0.05) !important;
+        
+        /* 5. MÀU SẮC & VIỀN */
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(10px);
+        border: none !important;
+        padding: 16px 20px !important;
+        z-index: 1000 !important;
+    }
+
+    /* Khi mở rộng thì cho nó dính lại xuống đáy để hiển thị danh sách */
+    #sidebar-cart.expanded {
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        border-radius: 30px 30px 0 0 !important;
+        padding-bottom: 40px !important;
     }
 
     /* 5. Tinh chỉnh các nút bấm cho to ra dễ ấn */
@@ -316,10 +339,37 @@ body { font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; 
     <p id="clock" class="hidden md:block text-[10px] font-black text-gray-300 ml-4"></p>
 </div>
 
-    <div id="category-bar" class="px-6 py-2 border-b border-gray-50 bg-gray-50/30 flex gap-2 overflow-x-auto"><div id="tabs-container" class="flex gap-2"></div></div>
+    <div class="flex-1 overflow-hidden relative flex flex-col">
+    
+    <div id="category-bar" class="hidden md:flex px-6 py-2 border-b border-gray-50 bg-gray-50/30 gap-2 overflow-x-auto">
+        <div id="tabs-container" class="flex gap-2"></div>
+    </div>
 
-    <div class="flex-1 overflow-hidden relative">
-        <div id="view-menu" class="h-full p-5 overflow-y-auto text-center"><div id="menu-grid" class="grid grid-cols-3 gap-4"></div></div>
+    <div class="md:hidden px-4 pt-4 pb-2 bg-[#F2F2F7] z-20 relative">
+        <button onclick="toggleCatDropdown()" id="mob-cat-btn" class="w-full bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex justify-between items-center active:scale-[0.98] transition-all">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-green-50 text-[#006241] flex items-center justify-center font-bold text-sm">
+                    📂
+                </div>
+                <span id="mob-cat-label" class="font-bold text-gray-800 text-sm uppercase tracking-wide">Tất cả</span>
+            </div>
+            <svg id="cat-arrow" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+        </button>
+
+        <div id="mob-cat-dropdown" class="hidden absolute top-full left-4 right-4 mt-2 bg-white/90 backdrop-blur-xl rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] border border-white/50 overflow-hidden z-50 max-h-[60vh] overflow-y-auto custom-scrollbar animate-fade-in origin-top">
+            <div id="mob-cat-list" class="divide-y divide-gray-100">
+                </div>
+        </div>
+        
+        <div id="mob-cat-overlay" onclick="toggleCatDropdown()" class="hidden fixed inset-0 z-40 bg-black/10 backdrop-blur-[1px]"></div>
+    </div>
+
+    <div id="view-menu" class="h-full p-5 overflow-y-auto text-center custom-scrollbar">
+        <div id="menu-grid" class="grid grid-cols-3 gap-4"></div>
+    </div>
+</div>
 
        <div id="view-payment" class="hidden h-full flex-col animate-fade-in relative bg-[#f2f2f7]"> <div class="hidden md:flex flex-col h-full p-8 bg-white">
          <div class="flex justify-between items-center mb-6"><h2 class="brand-font text-4xl text-[#006241] uppercase font-black text-center w-full">Thanh toán</h2><button onclick="switchView('menu')" class="text-gray-400 font-bold uppercase text-xs border-b-2 absolute right-10">Quay lại</button></div>
@@ -873,19 +923,87 @@ db.ref("customers").on("value", snap => {
 // =========================================================
 // 4. MENU & GIỎ HÀNG (CORE)
 // =========================================================
-function renderTabs() { 
+// --- HÀM VẼ MENU (2 TRONG 1: NGANG CHO PC - DỌC CHO MOBILE) ---
+function renderTabs() {
     if (!menu || menu.length === 0) return;
+    
+    // Lấy danh sách các loại (Tea, Coffee...)
     const cats = ["Tất cả", ...new Set(menu.map(m => m.type))];
-    const container = document.getElementById('tabs-container');
-    if(container) {
-        container.innerHTML = cats.map(c => 
-            `<button onclick="filterTab('${c}')" class="category-tab ${c === currentTab? 'tab-active': 'bg-white text-gray-400'} capitalize-first">${c}</button>`
-        ).join(''); 
+
+    // 1. RENDER CHO TABLET (Thanh ngang cũ)
+    const containerPC = document.getElementById('tabs-container');
+    if(containerPC) {
+        containerPC.innerHTML = cats.map(c =>
+            `<button onclick="filterTab('${c}')" class="category-tab ${c === currentTab? 'tab-active': 'bg-white text-gray-400'} capitalize-first transition-all">${c}</button>`
+        ).join('');
+    }
+
+    // 2. RENDER CHO MOBILE (Menu thả xuống xịn xò)
+    const containerMob = document.getElementById('mob-cat-list');
+    if(containerMob) {
+        containerMob.innerHTML = cats.map(c => {
+            // Kiểm tra xem dòng này có đang chọn không để tô màu
+            const isActive = (c === currentTab);
+            const activeClass = isActive ? "bg-green-50 text-[#006241] font-black border-l-4 border-[#006241]" : "text-gray-600 font-medium hover:bg-gray-50";
+            const checkIcon = isActive ? "✓" : "";
+            
+            return `
+            <div onclick="filterTabMobile('${c}')" class="p-4 flex justify-between items-center cursor-pointer transition-colors ${activeClass}">
+                <span class="capitalize-first text-sm">${c}</span>
+                <span class="font-bold text-lg">${checkIcon}</span>
+            </div>
+            `;
+        }).join('');
     }
 }
 
-function filterTab(c) { 
-    currentTab = c; renderTabs(); renderMenu(); 
+// --- HÀM ĐÓNG MỞ DROPDOWN ---
+function toggleCatDropdown() {
+    const drop = document.getElementById('mob-cat-dropdown');
+    const overlay = document.getElementById('mob-cat-overlay');
+    const arrow = document.getElementById('cat-arrow');
+    
+    if (drop.classList.contains('hidden')) {
+        // Mở ra
+        drop.classList.remove('hidden');
+        overlay.classList.remove('hidden');
+        arrow.style.transform = "rotate(180deg)"; // Xoay mũi tên lên
+    } else {
+        // Đóng lại
+        drop.classList.add('hidden');
+        overlay.classList.add('hidden');
+        arrow.style.transform = "rotate(0deg)"; // Xoay mũi tên xuống
+    }
+}
+
+// --- HÀM CHỌN DANH MỤC TRÊN MOBILE ---
+function filterTabMobile(c) {
+    // 1. Cập nhật biến toàn cục
+    currentTab = c;
+    
+    // 2. Cập nhật nhãn trên nút bấm
+    document.getElementById('mob-cat-label').innerText = c;
+    
+    // 3. Lọc món ăn
+    renderMenu();
+    
+    // 4. Vẽ lại dropdown (để chuyển dấu tích xanh sang món mới)
+    renderTabs();
+    
+    // 5. Đóng dropdown
+    toggleCatDropdown();
+}
+
+function filterTab(c) {
+    currentTab = c; 
+    
+    // Cập nhật giao diện Tablet
+    renderTabs(); 
+    renderMenu();
+    
+    // Cập nhật luôn nhãn Mobile (nếu có)
+    const mobLabel = document.getElementById('mob-cat-label');
+    if(mobLabel) mobLabel.innerText = c;
 }
 
 function renderMenu() { 
@@ -3254,6 +3372,7 @@ function backMobileStep() {
 </div>
 </body>
 </html>
+
 
 
 
