@@ -2533,7 +2533,10 @@ function listenForPayment(code, amount) {
         
         // Nếu tìm thấy dữ liệu và số tiền khớp hoặc dư
         if (data && Number(data.amount) >= amount) {
-            console.log("✅ Đã thấy tiền về cho đơn:", code);
+            console.log("✅ Đã nhận tiền:", code);
+            // --- CHÈN DÒNG NÀY VÀO ĐÂY ---
+            speakSuccess(data.amount); 
+            // -----------------------------
 
             // Cập nhật giao diện thông báo
             const statusEl = document.getElementById('qr-status');
@@ -2619,6 +2622,22 @@ function showPaymentQR() {
         alert("Lỗi kết nối! Vui lòng thử lại.");
         modal.classList.add('hidden');
     });
+}
+// --- HÀM ĐỌC ÂM THANH KHI NHẬN TIỀN ---
+function speakSuccess(amount) {
+    // 1. Soạn nội dung cần đọc
+    // Dùng toLocaleString('vi-VN') để nó đọc là "Năm mươi nghìn" thay vì "5 không không..."
+    var textToRead = "The Cafe 33 đã nhận " + Number(amount).toLocaleString('vi-VN') + " đồng. Cảm ơn nhó!";
+    
+    // 2. Cấu hình giọng đọc
+    var msg = new SpeechSynthesisUtterance();
+    msg.text = textToRead;
+    msg.lang = 'vi-VN'; // Chọn giọng tiếng Việt
+    msg.volume = 1;     // Âm lượng to nhất (0 -> 1)
+    msg.rate = 1.1;     // Tốc độ đọc (1 là bình thường, 1.1 là nhanh nhẹ vui tươi)
+    
+    // 3. Phát loa
+    window.speechSynthesis.speak(msg);
 }
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
@@ -2712,6 +2731,7 @@ function showPaymentQR() {
 </div>
 </body>
 </html>
+
 
 
 
