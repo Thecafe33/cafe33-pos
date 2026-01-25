@@ -2563,17 +2563,20 @@ function listenForPayment(code, amount) {
 }
 // --- HÀM HIỂN THỊ QR VÀ ĐỢI TIỀN (CHÈN MỚI) ---
 // --- HÀM TẠO QR DÀNH RIÊNG CHO GITHUB / WEB NGOÀI ---
+// --- HÀM TẠO QR (BẢN FIX LỖI ẢNH BỊ GÃY) ---
 function showPaymentQR() {
-    // 1. DÁN LINK GOOGLE SCRIPT CỦA BÀ VÀO ĐÂY (Trong ngoặc kép)
-    // Ví dụ: "https://script.google.com/macros/s/AKfycb.../exec"
-    const API_URL = "https://script.google.com/macros/s/AKfycbwJ4KQT1oO5cG1xsahyZcHtmDiiTfg0FqK_pw-pSViiz_AlJXm2059Rcxst1ccqGyQYYw/exec"; 
-
-    if (API_URL.includes("DÁN_LINK")) {
-        alert("Bà chưa dán link Web App vào code kìa!");
+    // 1. KIỂM TRA SỐ TIỀN
+    if (!currentTotal || currentTotal < 2000) {
+        alert("Vui lòng chọn món (Tối thiểu 2.000đ) để tạo mã QR!");
+        setMethod('Tiền mặt'); 
         return;
     }
 
-    // Hiển thị Popup chờ ngay lập tức
+    // 2. DÁN LINK WEB APP CỦA BÀ VÀO ĐÂY
+    // (Nhớ giữ nguyên cái link bà đang dùng, đừng xóa đi nhé)
+    const API_URL = "DÁN_LINK_WEB_APP_CỦA_BÀ_VÀO_ĐÂY"; 
+
+    // Hiển thị Popup chờ
     const modal = document.getElementById('qr-modal');
     modal.classList.remove('hidden');
     
@@ -2581,42 +2584,42 @@ function showPaymentQR() {
     const qrText = document.getElementById('qr-content');
     const statusEl = document.getElementById('qr-status');
     
-    // Ảnh loading trong lúc chờ
+    // Ảnh loading
     qrImg.src = "https://i.gifer.com/ZZ5H.gif"; 
     qrText.innerText = "Đang kết nối PayOS...";
     statusEl.innerText = "Vui lòng đợi giây lát...";
 
-    // 2. GỌI SERVER BẰNG LỆNH FETCH (Thay cho google.script.run)
-    // Đây là cách "người ngoài" (GitHub) nói chuyện với Google Script
+    // 3. GỌI SERVER
     fetch(API_URL, {
         method: "POST",
-        // Dùng text/plain để tránh bị lỗi chặn CORS (Quan trọng!)
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
-            action: "createPayment", // Báo hiệu muốn tạo QR
+            action: "createPayment",
             amount: currentTotal
         })
     })
-    .then(response => response.json()) // Nhận kết quả trả về
+    .then(response => response.json())
     .then(result => {
         console.log("PayOS Result:", result);
         
         if (result.status === "success") {
-            // Xử lý khi thành công
-            if (result.qrCode.startsWith("data:image")) {
-                 qrImg.src = result.qrCode;
+            // --- ĐOẠN SỬA QUAN TRỌNG NHẤT TẠI ĐÂY ---
+            var imgSource = result.qrCode;
+
+            // Kiểm tra xem dữ liệu trả về là Link hay là Mã hóa Base64
+            if (imgSource.includes("http") || imgSource.includes("data:image")) {
+                // Nếu là link (https://...) hoặc đã có sẵn header -> Dùng luôn
+                qrImg.src = imgSource;
             } else {
-                 qrImg.src = "data:image/png;base64," + result.qrCode; 
+                // Nếu là chuỗi mã hóa trần trụi -> Thêm đầu ngữ vào
+                qrImg.src = "data:image/png;base64," + imgSource; 
             }
+            // ----------------------------------------
             
-            // Cập nhật mã đơn hàng chuẩn từ Server (CFxxxx)
-            // Để đảm bảo POS và PayOS cùng hiểu một mã
             currentOrderCode = result.orderCodeFull;
             qrText.innerText = currentOrderCode; 
-            
             statusEl.innerHTML = '<b class="text-amber-500 animate-pulse">Đang chờ thanh toán...</b>';
             
-            // Kích hoạt mắt thần soi tiền
             listenForPayment(result.orderCodeFull, result.amount);
         } else {
             alert("Lỗi từ PayOS: " + result.message);
@@ -2625,7 +2628,7 @@ function showPaymentQR() {
     })
     .catch(error => {
         console.error("Lỗi Fetch:", error);
-        alert("Không kết nối được Server! Kiểm tra lại đường truyền hoặc Link Web App.");
+        alert("Lỗi kết nối! Vui lòng thử lại.");
         modal.classList.add('hidden');
     });
 }
@@ -2721,6 +2724,7 @@ function showPaymentQR() {
 </div>
 </body>
 </html>
+
 
 
 
