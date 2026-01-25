@@ -2562,49 +2562,72 @@ function listenForPayment(code, amount) {
     });
 }
 // --- HÀM HIỂN THỊ QR VÀ ĐỢI TIỀN (CHÈN MỚI) ---
+// --- HÀM TẠO QR DÀNH RIÊNG CHO GITHUB / WEB NGOÀI ---
 function showPaymentQR() {
-    // 1. Hiển thị Popup ngay lập tức nhưng ở trạng thái "Đang tạo mã..."
+    // 1. DÁN LINK GOOGLE SCRIPT CỦA BÀ VÀO ĐÂY (Trong ngoặc kép)
+    // Ví dụ: "https://script.google.com/macros/s/AKfycb.../exec"
+    const API_URL = "https://script.google.com/macros/s/AKfycby4XInarGQZNs6X4E05ICQY0hroWBN9XYpp2APRm7-SPa3CQEnRB316fXCQPWI5Zvojdg/exec"; 
+
+    if (API_URL.includes("DÁN_LINK")) {
+        alert("Bà chưa dán link Web App vào code kìa!");
+        return;
+    }
+
+    // Hiển thị Popup chờ ngay lập tức
     const modal = document.getElementById('qr-modal');
     modal.classList.remove('hidden');
     
-    // Reset ảnh QR và nội dung về trạng thái chờ
     const qrImg = document.getElementById('vietqr-img');
     const qrText = document.getElementById('qr-content');
     const statusEl = document.getElementById('qr-status');
     
-    qrImg.src = "https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif"; // Ảnh loading gif hoặc để trống
-    qrText.innerText = "Đang tạo mã QR...";
-    statusEl.innerText = "Vui lòng đợi...";
+    // Ảnh loading trong lúc chờ
+    qrImg.src = "https://i.gifer.com/ZZ5H.gif"; 
+    qrText.innerText = "Đang kết nối PayOS...";
+    statusEl.innerText = "Vui lòng đợi giây lát...";
 
-    // 2. Gọi Google Script để lấy QR từ PayOS API
-    google.script.run
-        .withSuccessHandler(function(result) {
-            console.log("PayOS Result:", result);
-            if (result.status === "success") {
-                // Cập nhật QR Code thật từ PayOS
-                // Lưu ý: PayOS trả về 'qrCode' là chuỗi base64 của ảnh QR
-                if (result.qrCode.startsWith("data:image")) {
-                     qrImg.src = result.qrCode;
-                } else {
-                     // Nếu PayOS trả về chuỗi raw base64 (không có header)
-                     qrImg.src = "data:image/png;base64," + result.qrCode; 
-                }
-                
-                qrText.innerText = result.orderCodeFull; // Hiển thị mã CFxxxx
-                statusEl.innerHTML = '<b class="text-amber-500 animate-pulse">Đang chờ thanh toán...</b>';
-                
-                // Bắt đầu lắng nghe Firebase
-                listenForPayment(result.orderCodeFull, result.amount);
+    // 2. GỌI SERVER BẰNG LỆNH FETCH (Thay cho google.script.run)
+    // Đây là cách "người ngoài" (GitHub) nói chuyện với Google Script
+    fetch(API_URL, {
+        method: "POST",
+        // Dùng text/plain để tránh bị lỗi chặn CORS (Quan trọng!)
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+            action: "createPayment", // Báo hiệu muốn tạo QR
+            amount: currentTotal
+        })
+    })
+    .then(response => response.json()) // Nhận kết quả trả về
+    .then(result => {
+        console.log("PayOS Result:", result);
+        
+        if (result.status === "success") {
+            // Xử lý khi thành công
+            if (result.qrCode.startsWith("data:image")) {
+                 qrImg.src = result.qrCode;
             } else {
-                alert("Lỗi tạo mã QR: " + result.message);
-                modal.classList.add('hidden'); // Đóng nếu lỗi
+                 qrImg.src = "data:image/png;base64," + result.qrCode; 
             }
-        })
-        .withFailureHandler(function(error) {
-            alert("Lỗi kết nối Server: " + error.message);
+            
+            // Cập nhật mã đơn hàng chuẩn từ Server (CFxxxx)
+            // Để đảm bảo POS và PayOS cùng hiểu một mã
+            currentOrderCode = result.orderCodeFull;
+            qrText.innerText = currentOrderCode; 
+            
+            statusEl.innerHTML = '<b class="text-amber-500 animate-pulse">Đang chờ thanh toán...</b>';
+            
+            // Kích hoạt mắt thần soi tiền
+            listenForPayment(result.orderCodeFull, result.amount);
+        } else {
+            alert("Lỗi từ PayOS: " + result.message);
             modal.classList.add('hidden');
-        })
-        .createPayment({ amount: currentTotal }); // Gửi số tiền lên Server
+        }
+    })
+    .catch(error => {
+        console.error("Lỗi Fetch:", error);
+        alert("Không kết nối được Server! Kiểm tra lại đường truyền hoặc Link Web App.");
+        modal.classList.add('hidden');
+    });
 }
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
@@ -2698,6 +2721,7 @@ function showPaymentQR() {
 </div>
 </body>
 </html>
+
 
 
 
