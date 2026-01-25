@@ -366,44 +366,28 @@ body { font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; 
     <div class="flex-1 flex flex-col overflow-hidden relative bg-[#F2F2F7]">
 
     <div id="category-bar" class="hidden md:flex px-6 py-2 border-b border-gray-50 bg-gray-50/30 gap-2 overflow-x-auto">
-        <div id="tabs-container" class="flex gap-2"></div>
-    </div>
+    <div id="tabs-container" class="flex gap-2"></div>
+</div>
 
-    <div class="md:hidden flex flex-col gap-3 px-4 pt-4 pb-2 z-30 shrink-0">
+<div class="md:hidden px-4 pt-3 pb-2 relative z-40">
     
-    <div class="bg-[#1e3932] rounded-[28px] p-5 shadow-xl shadow-green-900/10 relative overflow-hidden flex flex-col gap-4">
-        <div class="absolute -right-10 -top-10 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
-        
-        <div class="flex justify-between items-start relative z-10">
-            <div>
-                <p class="text-[9px] font-bold text-green-200/80 uppercase tracking-widest mb-1">Tổng tạm tính</p>
-                <p id="top-total-mobile" class="brand-font text-4xl text-white font-black tracking-tight leading-none">0đ</p>
-            </div>
-            
-            <button onclick="openCartModal()" class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white backdrop-blur-sm border border-white/10 active:bg-white/20 transition-all relative">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                <span id="cart-badge-mobile" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[9px] flex items-center justify-center font-bold hidden">0</span>
-            </button>
-        </div>
-
-        <button onclick="switchView('payment')" class="relative z-10 w-full bg-white text-[#006241] py-3.5 rounded-xl font-black text-xs uppercase shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2">
-            <span>Thanh toán ngay</span>
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-        </button>
-    </div>
-
-    <button onclick="openCategorySheet()" class="w-full bg-white p-3.5 rounded-[20px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-100 flex justify-between items-center active:bg-gray-50 transition-all">
+    <button onclick="toggleFastDropdown()" class="w-full bg-white p-3 rounded-[18px] shadow-sm border border-gray-200 flex justify-between items-center active:bg-gray-50 transition-all">
         <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-gray-50 text-gray-500 flex items-center justify-center text-base shadow-inner">📂</div>
-            <div class="flex flex-col items-start">
-                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Danh mục</span>
-                <span id="mob-cat-label-new" class="font-bold text-gray-900 text-sm uppercase">Tất cả</span>
+            <div class="w-8 h-8 rounded-full bg-green-50 text-[#006241] flex items-center justify-center text-sm font-bold">📂</div>
+            <div class="text-left">
+                <span class="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">Danh mục</span>
+                <span id="mob-cat-label-new" class="font-black text-gray-800 text-sm uppercase">Tất cả</span>
             </div>
         </div>
-        <div class="bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-            <span class="text-[10px] font-bold text-gray-500">Thay đổi ▾</span>
+        <div class="text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
         </div>
     </button>
+
+    <div id="fast-dropdown-list" class="hidden absolute top-full left-4 right-4 mt-2 bg-white rounded-[24px] shadow-xl border border-gray-100 overflow-hidden max-h-[60vh] overflow-y-auto custom-scrollbar animate-fade-in origin-top">
+        </div>
+
+    <div id="fast-dropdown-overlay" onclick="toggleFastDropdown()" class="hidden fixed inset-0 z-[-1]"></div>
 </div>
 
 <div id="sheet-category" class="md:hidden fixed inset-0 z-[100] hidden">
@@ -992,83 +976,72 @@ db.ref("customers").on("value", snap => {
 // --- HÀM VẼ MENU (2 TRONG 1: NGANG CHO PC - DỌC CHO MOBILE) ---
 // --- HÀM VẼ MENU & CẬP NHẬT TỔNG TIỀN TRÊN ĐẦU ---
 
+// ========================================================
+// LOGIC MENU: PC (NGANG) & MOBILE (DROPDOWN NHANH)
+// ========================================================
+
 function renderTabs() {
     if (!menu || menu.length === 0) return;
+    
+    // Lấy danh sách danh mục
     const cats = ["Tất cả", ...new Set(menu.map(m => m.type))];
 
-    // 1. Render cho Tablet (Giữ nguyên)
+    // 1. VẼ CHO PC (Thanh ngang cũ - Giữ nguyên)
     const containerPC = document.getElementById('tabs-container');
     if(containerPC) {
-        containerPC.innerHTML = cats.map(c => `<button onclick="filterTab('${c}')" class="category-tab ${c === currentTab? 'tab-active': 'bg-white text-gray-400'} capitalize-first transition-all">${c}</button>`).join('');
+        containerPC.innerHTML = cats.map(c => 
+            `<button onclick="filterTab('${c}')" class="category-tab ${c === currentTab? 'tab-active': 'bg-white text-gray-400'} capitalize-first transition-all">${c}</button>`
+        ).join('');
     }
 
-    // 2. Render cho Mobile (Dropdown kiểu mới)
-    const containerMob = document.getElementById('mob-cat-list-new');
+    // 2. VẼ CHO MOBILE (Dropdown list)
+    const containerMob = document.getElementById('fast-dropdown-list');
     if(containerMob) {
         containerMob.innerHTML = cats.map(c => {
             const isActive = (c === currentTab);
-            // Style: Nút bo tròn, icon check bên phải
+            // Style: Mỗi dòng là 1 ô bấm to, có dấu tích nếu đang chọn
             return `
-            <div onclick="filterTabMobile('${c}')" class="p-3 rounded-xl flex justify-between items-center cursor-pointer transition-all ${isActive ? 'bg-green-50 text-[#006241]' : 'hover:bg-gray-50 text-gray-600'}">
-                <span class="capitalize-first font-bold text-sm ml-2">${c}</span>
-                ${isActive ? '<span class="text-[#006241] text-lg font-black">✓</span>' : ''}
+            <div onclick="selectCategoryFast('${c}')" class="p-4 border-b border-gray-50 last:border-0 flex justify-between items-center cursor-pointer active:bg-gray-50 transition-colors ${isActive ? 'bg-green-50/50' : 'bg-white'}">
+                <span class="font-bold text-sm capitalize-first ${isActive ? 'text-[#006241]' : 'text-gray-600'}">${c}</span>
+                ${isActive ? '<span class="text-[#006241] font-black text-lg">✓</span>' : ''}
             </div>
             `;
         }).join('');
     }
 }
 
-// ============================================================
-// --- 1. LOGIC MENU DANH MỤC TRƯỢT TỪ ĐÁY (BOTTOM SHEET) ---
-// ============================================================
-function openCategorySheet() {
-    const sheet = document.getElementById('sheet-category');
-    const content = document.getElementById('sheet-category-content');
-    
-    // Vẽ lại danh sách danh mục
-    const cats = ["Tất cả", ...new Set(menu.map(m => m.type))];
-    const listEl = document.getElementById('sheet-category-list');
-    
-    listEl.innerHTML = cats.map(c => {
-        const isActive = (c === currentTab);
-        return `
-        <button onclick="selectCategoryMobile('${c}')" class="w-full p-4 rounded-2xl flex items-center justify-between transition-all mb-2 ${isActive ? 'bg-green-50 border border-green-200 shadow-sm' : 'bg-white border border-gray-100'}">
-            <div class="flex items-center gap-3">
-                <div class="w-2 h-2 rounded-full ${isActive ? 'bg-[#006241]' : 'bg-gray-300'}"></div>
-                <span class="capitalize-first text-sm font-bold ${isActive ? 'text-[#006241]' : 'text-gray-600'}">${c}</span>
-            </div>
-            ${isActive ? '<span class="text-[#006241] font-black">✓</span>' : ''}
-        </button>`;
-    }).join('');
+// --- CÁC HÀM ĐIỀU KHIỂN DROPDOWN ---
 
-    // Hiệu ứng mở
-    sheet.classList.remove('hidden');
-    setTimeout(() => {
-        content.classList.add('sheet-open');
-        sheet.querySelector('div').classList.remove('opacity-0');
-    }, 10);
+function toggleFastDropdown() {
+    const list = document.getElementById('fast-dropdown-list');
+    const overlay = document.getElementById('fast-dropdown-overlay');
+    
+    if (list.classList.contains('hidden')) {
+        // MỞ RA
+        list.classList.remove('hidden');
+        overlay.classList.remove('hidden');
+    } else {
+        // ĐÓNG LẠI
+        list.classList.add('hidden');
+        overlay.classList.add('hidden');
+    }
 }
 
-function closeCategorySheet() {
-    const sheet = document.getElementById('sheet-category');
-    const content = document.getElementById('sheet-category-content');
-    
-    // Hiệu ứng đóng
-    content.classList.remove('sheet-open');
-    sheet.querySelector('div').classList.add('opacity-0');
-    
-    setTimeout(() => {
-        sheet.classList.add('hidden');
-    }, 300);
-}
-
-// Khi chọn danh mục trên Mobile
-function selectCategoryMobile(c) {
+function selectCategoryFast(c) {
     currentTab = c;
-    // Cập nhật chữ trên nút Menu
-    document.getElementById('mob-cat-label-new').innerText = c;
-    renderMenu(); // Lọc món ăn
-    closeCategorySheet(); // Đóng sheet
+    
+    // 1. Cập nhật chữ trên nút Mobile
+    const label = document.getElementById('mob-cat-label-new');
+    if(label) label.innerText = c;
+    
+    // 2. Lọc món ăn
+    renderMenu(); 
+    
+    // 3. Vẽ lại menu (để cập nhật dấu tick xanh)
+    renderTabs(); 
+    
+    // 4. Đóng dropdown ngay lập tức
+    toggleFastDropdown();
 }
 
 // ============================================================
@@ -3544,6 +3517,7 @@ function backMobileStep() {
 </div>
 </body>
 </html>
+
 
 
 
