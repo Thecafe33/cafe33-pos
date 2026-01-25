@@ -2639,6 +2639,46 @@ function speakSuccess(amount) {
     // 3. Phát loa
     window.speechSynthesis.speak(msg);
 }
+// --- BIẾN TOÀN CỤC ĐỂ GIỮ LOA ---
+let synth = window.speechSynthesis;
+let soundLock = null;
+
+// 1. Hàm đọc cơ bản (Fix lỗi giọng chị Google bị kẹt)
+function speakNow(text) {
+    if (synth.speaking) synth.cancel(); // Dừng câu đang nói dở
+
+    let msg = new SpeechSynthesisUtterance(text);
+    msg.lang = 'vi-VN'; 
+    msg.rate = 1.1;
+    msg.volume = 1.0;
+
+    synth.speak(msg);
+}
+
+// 2. Hàm "Mồi loa" (Gắn vào nút Chuyển khoản)
+// Mẹo: Phát một âm thanh rỗng liên tục để trình duyệt tưởng bà đang nghe nhạc
+function unlockAudio() {
+    speakNow("Đang tạo mã thanh toán"); // Nói câu đầu tiên để xin quyền
+    
+    // Hack: Tạo một audio rỗng chạy nền để giữ kết nối loa không bị ngắt
+    if (!soundLock) {
+        soundLock = new Audio("https://github.com/anars/blank-audio/raw/master/10-minutes-of-silence.mp3");
+        soundLock.loop = true;
+        soundLock.play().catch(e => console.log("Không play được audio nền"));
+    }
+}
+
+// 3. Hàm gọi khi tiền về
+function speakSuccess(amount) {
+    // Dừng audio nền lại cho đỡ tốn pin
+    if (soundLock) {
+        soundLock.pause();
+        soundLock = null;
+    }
+
+    let text = "Đã nhận " + Number(amount).toLocaleString('vi-VN') + " đồng. Cảm ơn!";
+    speakNow(text);
+}
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
     <div class="bg-white/95 backdrop-blur-2xl w-full max-w-[340px] rounded-[35px] shadow-[0_30px_70px_rgba(0,0,0,0.3)] text-center border border-white/60 p-8 transform scale-100 transition-all">
@@ -2731,6 +2771,7 @@ function speakSuccess(amount) {
 </div>
 </body>
 </html>
+
 
 
 
