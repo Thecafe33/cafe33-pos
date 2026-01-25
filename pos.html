@@ -2565,28 +2565,29 @@ function listenForPayment(code, amount) {
 }
 // --- HÀM HIỂN THỊ QR VÀ ĐỢI TIỀN (CHÈN MỚI) ---
 function showPaymentQR() {
-  currentOrderCode = "CF" + Math.floor(1000 + Math.random() * 9000);
+  // Không cần set currentOrderCode ở đây nữa, server sẽ trả về
 
-  // Gọi GAS để tạo payment PayOS
   google.script.run
     .withSuccessHandler(function(result) {
+      console.log("PayOS result:", result);
       if (result.status === "success") {
-        // Hiển thị QR từ PayOS (base64)
+        // Lấy orderCodeFull từ server (CFxxxx)
+        currentOrderCode = result.orderCodeFull || "CF0000";
+
         document.getElementById('vietqr-img').src = "data:image/png;base64," + result.qrCode;
         document.getElementById('qr-content').innerText = currentOrderCode;
 
         document.getElementById('qr-modal').classList.remove('hidden');
 
-        // Bắt đầu lắng nghe webhook qua Firebase (giữ nguyên hàm listenForPayment)
-        listenForPayment(currentOrderCode.replace("CF", ""), currentTotal); // PayOS dùng orderCode số, nên bỏ "CF"
+        listenForPayment(currentOrderCode, currentTotal); // Dùng full CFxxxx
       } else {
-        alert("Lỗi tạo QR PayOS: " + result.message);
+        alert("Lỗi tạo payment PayOS: " + result.message);
       }
     })
     .withFailureHandler(function(err) {
-      alert("Lỗi server: " + err);
+      alert("Lỗi GAS: " + err.message);
     })
-    .createPayment({ amount: currentTotal, orderCode: currentOrderCode.replace("CF", "") });
+    .createPayment({ amount: currentTotal }); // Chỉ gửi amount thôi
 }
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
@@ -2680,6 +2681,7 @@ function showPaymentQR() {
 </div>
 </body>
 </html>
+
 
 
 
