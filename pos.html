@@ -549,7 +549,7 @@ body { font-family: 'Inter', sans-serif; background: #f3f4f6; overflow: hidden; 
     </div>
 </div>
 
-    <div class="flex-1 flex flex-col overflow-hidden relative bg-[#F2F2F7]">
+    <div id="view-menu" class="flex-1 flex flex-col overflow-hidden relative bg-[#F2F2F7]">
 
     <div id="category-bar" class="hidden md:flex px-6 py-2 border-b border-gray-50 bg-gray-50/30 gap-2 overflow-x-auto">
         <div id="tabs-container" class="flex gap-2"></div>
@@ -1399,20 +1399,26 @@ function handleItemClick(name, pM, pL) {
 
 function closeSize() { document.getElementById('size-modal').classList.remove('modal-active'); }
 
-function addToCart(name, size, price) { 
-    const ex = cart.find(i => i.name === name && i.size === size); 
-    if (ex) ex.qty++; else cart.push({ name, size, price, qty: 1 }); 
-    renderCart(); 
+function addToCart(name, size, price) {
+    const ex = cart.find(i => i.name === name && i.size === size);
+    if (ex) ex.qty++; else cart.push({ name, size, price, qty: 1 });
+    
+    // 1. Cập nhật giao diện (Giờ đã an toàn, không gây crash)
+    renderCart();
+    
+    // 2. Bắt buộc đóng popup chọn size ngay lập tức
+    closeSize();
 }
 
 /* --- ĐÃ SỬA: renderCart (Tự động Ẩn/Hiện thanh Bar trên Mobile) --- */
+/* --- ĐÃ SỬA: Hàm renderCart (Fix lỗi Crash do thiếu ID) --- */
 function renderCart() {
     const list = document.getElementById('cart-list');
     if (!list) return;
-    
+
     currentTotal = 0;
 
-    // 1. Render cho Sidebar Desktop (Giữ nguyên logic cũ)
+    // 1. Render cho Sidebar Desktop (Bản L - Giữ nguyên không đụng)
     list.innerHTML = cart.map((i, idx) => {
         currentTotal += i.price * i.qty;
         return `<div class="bg-gray-50 p-2.5 rounded-xl flex justify-between items-center shadow-sm border border-white text-xs mb-1">
@@ -1430,14 +1436,19 @@ function renderCart() {
     const topTotal = document.getElementById('top-total-mobile');
     if(topTotal) topTotal.innerText = currentTotal.toLocaleString() + 'đ';
 
-    // 3. LOGIC MỚI: ĐIỀU KHIỂN THANH BOTTOM BAR (MOBILE)
+    // 3. LOGIC MOBILE (Bản M): Điều khiển Bottom Bar
     const isMobile = window.innerWidth <= 768;
     const sidebarCart = document.getElementById('sidebar-cart');
-    const isMenuOpen = !document.getElementById('view-menu').classList.contains('hidden');
+    
+    // Tìm thẻ view-menu (Giờ đã có ID nhờ Bước 1)
+    const viewMenuEl = document.getElementById('view-menu');
 
     if (isMobile && sidebarCart) {
-        // Chỉ hiện thanh Bar khi: Có món trong giỏ VÀ Đang ở trang Menu
-        if (cart.length > 0 && isMenuOpen) {
+        // Điều kiện hiện Bar: Có món VÀ (Không tìm thấy viewMenu HOẶC viewMenu đang hiện)
+        // Lưu ý: Thêm kiểm tra viewMenuEl để tránh crash nếu lỡ quên Bước 1
+        const isMenuVisible = viewMenuEl ? !viewMenuEl.classList.contains('hidden') : true;
+
+        if (cart.length > 0 && isMenuVisible) {
             sidebarCart.classList.remove('hidden');
         } else {
             sidebarCart.classList.add('hidden');
@@ -3739,6 +3750,7 @@ function backMobileStep() {
 </div>
 </body>
 </html>
+
 
 
 
