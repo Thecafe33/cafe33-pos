@@ -505,6 +505,8 @@ let currentTab = "Tất cả";
 let isPaymentMode = false;
 let myChart = null;
 let selectedRefundItems = [];
+let paymentListener = null; // Biến để theo dõi tiền về
+let currentOrderCode = "";  // Biến lưu mã đơn hàng đang chờ
 
 
 // Biến quản lý Bed
@@ -798,6 +800,7 @@ function setMethod(m) {
     input.value = currentTotal;
 
     if (isBank) {
+        showPaymentQR();
         // --- CHẾ ĐỘ CHUYỂN KHOẢN ---
         // Vô hiệu hóa click
         box.style.pointerEvents = "none";
@@ -2515,6 +2518,46 @@ function deletePenalty(phone, bookingId) {
         });
     });
 }
+// --- HÀM LẮNG NGHE TIỀN VỀ TỪ PAYOS (CHÈN MỚI) ---
+function listenForPayment(code, amount) {
+    if (paymentListener) db.ref('payment_events').off('child_added', paymentListener);
+
+    paymentListener = db.ref('payment_events').limitToLast(5).on('child_added', (snap) => {
+        const data = snap.val();
+        if (!data) return;
+
+        // Kiểm tra mã CFxxxx và số tiền
+        if (data.content.includes(code) && Number(data.amount) >= amount) {
+            const statusEl = document.getElementById('qr-status');
+            if(statusEl) statusEl.innerHTML = '<b class="text-green-600 text-lg">✅ ĐÃ NHẬN TIỀN!</b>';
+            
+            setTimeout(() => {
+                document.getElementById('qr-modal')?.classList.add('hidden');
+                completeOrder(); // Gọi hàm hoàn tất đơn hàng có sẵn của bà
+            }, 1500);
+
+            db.ref('payment_events').off('child_added', paymentListener);
+        }
+    });
+}
+// --- HÀM HIỂN THỊ QR VÀ ĐỢI TIỀN (CHÈN MỚI) ---
+function showPaymentQR() {
+    currentOrderCode = "CF" + Math.floor(1000 + Math.random() * 9000);
+    
+    const BANK_ID = "970418"; // BIDV
+    const ACCOUNT_NO = "8834204587"; // <--- BÀ THAY SỐ TÀI KHOẢN VÀO ĐÂY
+    const AMOUNT = currentTotal;
+    const INFO = currentOrderCode;
+
+    const qrImg = document.getElementById('vietqr-img');
+    const qrText = document.getElementById('qr-content');
+    
+    if(qrImg) qrImg.src = `https://img.vietqr.io/image/${BANK_ID}-${ACCOUNT_NO}-compact.png?amount=${AMOUNT}&addInfo=${INFO}`;
+    if(qrText) qrText.innerText = INFO;
+
+    document.getElementById('qr-modal')?.classList.remove('hidden');
+    listenForPayment(INFO, AMOUNT);
+}
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
     <div class="bg-white/95 backdrop-blur-2xl w-full max-w-[340px] rounded-[35px] shadow-[0_30px_70px_rgba(0,0,0,0.3)] text-center border border-white/60 p-8 transform scale-100 transition-all">
@@ -2566,6 +2609,18 @@ function deletePenalty(phone, bookingId) {
         </div>
     </div>
 </div>
+<div id="qr-modal" class="fixed inset-0 bg-black/80 z-[100000] hidden flex items-center justify-center p-6 backdrop-blur-md">
+    <div class="bg-white rounded-[30px] p-8 max-w-sm w-full text-center shadow-2xl relative">
+        <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 text-2xl">✕</button>
+        <h3 class="text-[#006241] font-black text-xl uppercase mb-6">Quét mã thanh toán</h3>
+        <img id="vietqr-img" src="" class="w-64 h-64 mx-auto mb-4 rounded-xl border border-gray-100">
+        <div class="bg-yellow-50 p-3 rounded-xl mb-4">
+            <p class="text-[10px] text-gray-500 font-bold uppercase">Nội dung chuyển khoản</p>
+            <p id="qr-content" class="text-xl font-black text-[#006241]">--</p>
+        </div>
+        <div id="qr-status" class="text-gray-400 font-bold text-xs animate-pulse">Đang đợi tiền về...</div>
+    </div>
+</div>
 <div id="modal-cancel-reason" class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-[4px] transition-opacity duration-300 p-6">
     <div class="bg-white/95 backdrop-blur-xl w-full max-w-[340px] rounded-[35px] shadow-[0_30px_70px_rgba(0,0,0,0.25)] text-center transform scale-100 transition-all border border-white/50 p-8">
         
@@ -2595,6 +2650,7 @@ function deletePenalty(phone, bookingId) {
 </div>
 </body>
 </html>
+
 
 
 
