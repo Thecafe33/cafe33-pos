@@ -1960,69 +1960,84 @@ function renderChart(labels, chartData, type) {
 /* --- ĐÃ SỬA: Hàm switchView (Logic ẩn/hiện chuẩn xác cho Mobile) --- */
 /* --- ĐÃ SỬA: switchView (Chặn thanh Bar đi lung tung) --- */
 // --- HÀM CHUYỂN VIEW (ĐÃ FIX LỖI CRASH NULL PROPERTY) ---
+// --- HÀM CHUYỂN VIEW (ĐÃ FIX TOÀN DIỆN LỖI NULL) ---
 function switchView(v) {
     isPaymentMode = (v === 'payment');
 
-    // 1. Ẩn tất cả view cũ & Reset nút Nav
+    // 1. Ẩn tất cả view cũ & Reset trạng thái nút Nav
     ['menu', 'payment', 'history', 'bed', 'revenue'].forEach(id => {
-        // Ẩn view
+        // Ẩn view tương ứng
         var viewEl = document.getElementById('view-' + id);
         if (viewEl) viewEl.classList.add('hidden');
 
-        // Reset nút (Safety Check)
+        // Reset style của nút Nav (nếu nút đó tồn tại)
         var btn = document.getElementById('btn-nav-' + id);
         if (btn) {
             btn.classList.remove('tab-active');
+            // Trả về style mặc định (xám)
             btn.className = 'bg-gray-100 text-gray-400 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-all';
         }
     });
 
-    // 2. Active nút Nav tương ứng & Hiện View
+    // 2. Active nút Nav tương ứng & Hiện View mới
+    // Style cho nút đang được chọn (xanh, chữ trắng)
     let activeBtnClass = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
 
     if (v === 'revenue' || v === 'history') {
-        document.getElementById('view-history').classList.remove('hidden');
-        let btnId = v === 'revenue' ? 'btn-nav-revenue' : 'btn-nav-history';
+        // Cả doanh thu và lịch sử đều dùng chung khung view-history
+        var historyView = document.getElementById('view-history');
+        if (historyView) historyView.classList.remove('hidden');
+
+        // Xác định nút nào cần sáng lên
+        let btnId = (v === 'revenue') ? 'btn-nav-revenue' : 'btn-nav-history';
         let btn = document.getElementById(btnId);
-        if (btn) btn.className = activeBtnClass; // [FIX]: Kiểm tra tồn tại trước khi set class
+        if (btn) btn.className = activeBtnClass; 
+
     } else if (v === 'bed') {
-        document.getElementById('view-bed').classList.remove('hidden');
+        // Mở view Bed
+        var bedView = document.getElementById('view-bed');
+        if (bedView) bedView.classList.remove('hidden');
+
+        // [FIX QUAN TRỌNG]: Kiểm tra nút btn-nav-bed trước khi gán class
+        // (Trên Mobile nút này không có, nên nếu không check sẽ bị lỗi null)
         let btnBed = document.getElementById('btn-nav-bed');
-        if (btnBed) btnBed.className = activeBtnClass; // [FIX]: Đây là chỗ gây lỗi cũ
+        if (btnBed) btnBed.className = activeBtnClass;
+
     } else {
+        // Các view còn lại (menu, payment)
         var viewTarget = document.getElementById('view-' + v);
         if (viewTarget) viewTarget.classList.remove('hidden');
     }
 
-    // 3. Hiển thị Sidebar Cart (Logic ẩn hiện giỏ hàng)
+    // 3. Logic hiển thị Giỏ hàng (Sidebar Cart)
     var isMobile = window.innerWidth <= 768;
     var showCart = false;
 
     if (isMobile) {
-        // [Mobile]: Chỉ hiện giỏ hàng ở trang Menu
+        // Mobile: Chỉ hiện giỏ hàng ở Menu, ẩn ở Payment
         showCart = (v === 'menu');
     } else {
-        // [Tablet/PC]: Hiện ở cả Menu và Payment
+        // PC/Tablet: Hiện ở cả Menu và Payment
         showCart = (v === 'menu' || v === 'payment');
     }
 
-    // Áp dụng ẩn/hiện Sidebar Cart
     var sidebarCart = document.getElementById('sidebar-cart');
     if (sidebarCart) sidebarCart.classList.toggle('hidden', !showCart);
 
-    // Ẩn/Hiện thanh danh mục
+    // Ẩn/Hiện thanh danh mục (chỉ hiện ở Menu)
     var catBar = document.getElementById('category-bar');
     if (catBar) catBar.classList.toggle('hidden', v !== 'menu');
 
-    // Ẩn nút "Thanh toán" ở Sidebar nếu đang ở màn hình Payment
+    // Ẩn nút "Thanh toán" ở Sidebar nếu đang ở màn hình Payment (để tránh lặp lại nút)
     var sidebarPayBtn = document.getElementById('sidebar-pay-btn');
     if (sidebarPayBtn) {
         if (v === 'payment') sidebarPayBtn.classList.add('hidden');
         else sidebarPayBtn.classList.remove('hidden');
     }
 
-    // 4. LOGIC LUXURY THEME
-    const isServingBed = (pendingBedOrder || (activeOrderingBedId && activeOrderingBedId != 0));
+    // 4. Logic Luxury Theme (Giao diện đen vàng khi phục vụ Bed)
+    const isServingBed = (typeof pendingBedOrder !== 'undefined' && pendingBedOrder) || 
+                         (typeof activeOrderingBedId !== 'undefined' && activeOrderingBedId && activeOrderingBedId != 0);
 
     if (isServingBed && (v === 'menu' || v === 'payment')) {
         document.body.classList.add('luxury-theme');
@@ -2030,9 +2045,11 @@ function switchView(v) {
         if (headerTitle) headerTitle.classList.add('text-[#D4AF37]');
     } else {
         document.body.classList.remove('luxury-theme');
+        var headerTitle = document.querySelector('#header-bar h2');
+        if (headerTitle) headerTitle.classList.remove('text-[#D4AF37]');
     }
 
-    // 5. Reset Payment khi vào màn hình thanh toán
+    // 5. Reset các trạng thái khi vào màn hình Thanh Toán
     if (v === 'payment') {
         // Reset giao diện mobile payment về bước 1
         var mobStep1 = document.getElementById('mob-step-1');
@@ -2044,74 +2061,34 @@ function switchView(v) {
         if(mobTitle) mobTitle.innerText = "Thanh toán";
 
         // Hiển thị tổng tiền
-        var txtTotal = currentTotal.toLocaleString();
+        var txtTotal = (typeof currentTotal !== 'undefined') ? currentTotal.toLocaleString() : "0";
         if (document.getElementById('pay-total-display-1')) document.getElementById('pay-total-display-1').innerText = txtTotal;
         if (document.getElementById('pay-total-display-2')) document.getElementById('pay-total-display-2').innerText = txtTotal;
         if (document.getElementById('pay-total-display')) document.getElementById('pay-total-display').innerText = txtTotal;
 
-        // Đồng bộ SĐT
-        var sdtOld = document.getElementById('kh-sdt').value;
+        // Đồng bộ SĐT từ giỏ hàng sang màn hình thanh toán
+        var sdtInput = document.getElementById('kh-sdt');
         var sdtMobInput = document.getElementById('pay-sdt-mobile');
-        if (sdtMobInput) {
-            sdtMobInput.value = sdtOld;
+        if (sdtInput && sdtMobInput) {
+            sdtMobInput.value = sdtInput.value;
             if (typeof syncMobileInputs === 'function') syncMobileInputs();
         }
 
-        // Reset ô tiền khách đưa
+        // Reset ô tiền khách đưa trên Mobile
         var cashMobInput = document.getElementById('cash-paid-mobile');
         if (cashMobInput) cashMobInput.value = "";
 
-        setMethod('Tiền mặt');
-        if(document.getElementById('cash-paid')) document.getElementById('cash-paid').value = currentTotal;
+        // Reset phương thức thanh toán về Tiền mặt
+        if (typeof setMethod === 'function') setMethod('Tiền mặt');
+        
+        // Reset ô tiền khách đưa trên PC
+        var cashPaidInput = document.getElementById('cash-paid');
+        if(cashPaidInput && typeof currentTotal !== 'undefined') cashPaidInput.value = currentTotal;
+        
+        // Tính lại tiền thừa
         if (typeof calcChange === 'function') calcChange();
     }
 }
-    // 4. Các xử lý phụ (ĐÃ SỬA LỖI HIỆN NHẦM TAB DESKTOP TRÊN MOBILE)
-    
-    // Kiểm tra kích thước màn hình
-    if (window.innerWidth > 768) {
-        // [DESKTOP]: Chỉ hiện khi ở Menu, các trang khác thì ẩn
-        document.getElementById('category-bar').classList.toggle('hidden', v !== 'menu');
-    } else {
-        // [MOBILE]: Bắt buộc LUÔN LUÔN ẨN thanh này
-        // (Vì mobile dùng nút chọn danh mục riêng, không dùng thanh ngang này)
-        document.getElementById('category-bar').classList.add('hidden');
-    }
-    
-    // Luxury Theme Check
-    const isServingBed = (pendingBedOrder || (activeOrderingBedId && activeOrderingBedId != 0));
-    if (isServingBed && (v === 'menu' || v === 'payment')) {
-        document.body.classList.add('luxury-theme');
-        var headerTitle = document.querySelector('#header-bar h2');
-        if(headerTitle) headerTitle.classList.add('text-[#D4AF37]');
-    } else {
-        document.body.classList.remove('luxury-theme');
-    }
-
-    // Reset Payment Screen
-    if (v === 'payment') {
-        document.getElementById('mob-step-1')?.classList.remove('hidden');
-        document.getElementById('mob-step-2')?.classList.add('hidden');
-        if(document.getElementById('mob-pay-title')) document.getElementById('mob-pay-title').innerText = "Thanh toán";
-        
-        var txtTotal = currentTotal.toLocaleString();
-        if(document.getElementById('pay-total-display-1')) document.getElementById('pay-total-display-1').innerText = txtTotal;
-        
-        var sdtOld = document.getElementById('kh-sdt').value;
-        var sdtMobInput = document.getElementById('pay-sdt-mobile');
-        if (sdtMobInput) {
-            sdtMobInput.value = sdtOld;
-            if(typeof syncMobileInputs === 'function') syncMobileInputs();
-        }
-        var cashMobInput = document.getElementById('cash-paid-mobile');
-        if (cashMobInput) cashMobInput.value = "";
-        
-        setMethod('Tiền mặt');
-        document.getElementById('cash-paid').value = currentTotal;
-        if(typeof calcChange === 'function') calcChange();
-    }
-}
-
 // Bed Functions
 // --- HÀM OPEN BED MANAGER (ĐÃ SỬA LỖI NGÀY GIỜ) ---
 // =========================================================
@@ -3648,5 +3625,6 @@ function backMobileStep() {
 </div>
 </body>
 </html>
+
 
 
