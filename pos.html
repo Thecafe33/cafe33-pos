@@ -121,26 +121,40 @@ input, button, select, textarea { font-size: 1rem; }
     
     /* Container chính của Menu */
     #view-menu, #view-bed {
-    padding: 10px 10px 180px 10px !important; /* Tăng padding-bottom mạnh hơn */
+    padding: 10px 10px 220px 10px !important; /* Tăng thêm chút để chắc chắn scroll qua island */
     overflow-y: auto !important;
     height: 100% !important;
-    background: #F2F2F7 !important; /* Đảm bảo background solid, không bị lộ body */
+    background: #F2F2F7 !important;
     position: relative;
+    z-index: 10;
 }
 
-/* Thêm một lớp overlay giả để chặn blur từ sidebar-cart lộ màu xám */
-#view-menu::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 160px; /* Cao hơn chiều cao dynamic island */
-    background: linear-gradient(to top, #F2F2F7 30%, rgba(242,242,247,0));
-    pointer-events: none;
-    z-index: 1;
+#sidebar-cart:not(.hidden) {
+    display: flex !important;
+    flex-direction: row !important;
+    position: fixed !important;
+    bottom: calc(env(safe-area-inset-bottom) + 15px) !important;
+    left: 14px !important;
+    right: 14px !important;
+    width: auto !important;
+    height: auto !important;
+    max-height: 72px !important;
+    background: rgba(255, 255, 255, 0.94) !important; /* Tăng opacity để che blur tốt hơn */
+    backdrop-filter: blur(20px) !important; /* Giảm blur nhẹ */
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 999px !important;
+    overflow: hidden !important;
+    border: none !important;
+    box-shadow: 
+        0 15px 35px -8px rgba(0,0,0,0.15),
+        0 0 0 1px rgba(0,0,0,0.05),
+        inset 0 1px 0 rgba(255,255,255,0.8),
+        0 -12px 30px 12px #F2F2F7 !important; /* ĐỔ BÓNG SOLID LÊN TRÊN ĐỂ CHE VÙNG BLUR */
+    padding: 8px 20px !important;
+    z-index: 9998 !important;
+    align-items: center !important;
+    justify-content: space-between !important;
 }
-
     /* Lưới món ăn */
     #menu-grid {
         grid-template-columns: repeat(2, 1fr) !important;
@@ -422,8 +436,8 @@ input, button, select, textarea { font-size: 1rem; }
     <div id="view-menu-content" class="flex-1 p-4 pt-0 overflow-y-auto custom-scrollbar">
         <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 pb-10"></div>
     </div>
-        <!-- Đặt ngay sau <div id="view-menu-content" class="flex-1 p-4 pt-0 overflow-y-auto custom-scrollbar"> -->
-<div id="mobile-category-button" class="md:hidden fixed top-20 right-4 z-40 pointer-events-auto">
+<!-- NÚT VIÊN THUỐC CHỌN DANH MỤC MOBILE -->
+<div id="mobile-category-button" class="md:hidden hidden fixed top-[calc(env(safe-area-inset-top)+92px)] right-4 z-50 pointer-events-auto">
     <button onclick="openCategorySheet()" class="flex items-center gap-2 bg-[#006241]/90 backdrop-blur-md text-white pl-4 pr-3 py-2.5 rounded-full shadow-[0_8px_20px_rgba(0,98,65,0.4)] active:scale-95 transition-all border border-white/10">
         <span class="text-[9px] font-bold uppercase tracking-widest text-green-100 opacity-80">Menu</span>
         <span id="mob-cat-label-new" class="text-xs font-black text-white uppercase border-l border-white/20 pl-2">Tất cả</span>
@@ -3576,6 +3590,7 @@ function backMobileStep() {
 </div>
 </body>
 </html>
+
 
 
 
