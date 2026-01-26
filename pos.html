@@ -313,6 +313,10 @@ input, button, select, textarea { font-size: 1rem; }
     
     /* Tinh chỉnh nút Category */
     .category-tab { padding: 8px 16px !important; font-size: 13px !important; }
+    body.cart-empty #view-menu,
+    body.cart-empty #view-bed {
+        padding-bottom: 20px !important; /* Chỉ để chút khoảng thở, không lộ mảng xám */
+    }
 }
 </style>
 </head>
@@ -867,6 +871,7 @@ input, button, select, textarea { font-size: 1rem; }
         </div>
     </div>
 </div>
+
 <script>    
 function normalizePhone(p){
     return String(p || "").replace(/[^0-9]/g, "");
@@ -1256,6 +1261,7 @@ function addToCart(name, size, price) {
     
     // 2. Bắt buộc đóng popup chọn size ngay lập tức
     closeSize();
+    updateCartPadding();
 }
 
 /* --- ĐÃ SỬA: renderCart (Tự động Ẩn/Hiện thanh Bar trên Mobile) --- */
@@ -1497,7 +1503,17 @@ function quickPaidMobile(v) {
         if(navigator.vibrate) navigator.vibrate(50);
     }
 }
-
+// Hàm kiểm tra và cập nhật class cart-empty
+function updateCartPadding() {
+    const cartList = document.getElementById('cart-list');
+    const hasItems = cartList && cartList.children.length > 0;
+    
+    if (hasItems) {
+        document.body.classList.remove('cart-empty');
+    } else {
+        document.body.classList.add('cart-empty');
+    }
+}
 // Hàm hỗ trợ bấm nút trên Mobile
 function quickPaidMobile(v) {
     // Điền tiền vào ô Mobile
@@ -1509,7 +1525,7 @@ function quickPaidMobile(v) {
 }
 function quickPaid(v) { document.getElementById('cash-paid').value = v; calcChange(); }
 function calcChange() { const paid = Number(document.getElementById('cash-paid').value) || currentTotal; document.getElementById('cash-change').innerText = (paid - currentTotal > 0 ? (paid - currentTotal).toLocaleString(): 0) + 'đ'; }
-function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart(); }
+function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart();updateCartPadding(); }
 
 // =========================================================
 // 6. LỊCH SỬ & DOANH THU (ĐÃ SỬA LỖI HIỂN THỊ)
@@ -3546,6 +3562,7 @@ function backMobileStep() {
         switchView('menu');
     }
 }
+document.addEventListener('DOMContentLoaded', updateCartPadding);
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
     <div class="bg-white/95 backdrop-blur-2xl w-full max-w-[340px] rounded-[35px] shadow-[0_30px_70px_rgba(0,0,0,0.3)] text-center border border-white/60 p-8 transform scale-100 transition-all">
@@ -3638,4 +3655,5 @@ function backMobileStep() {
 </div>
 </body>
 </html>
+
 
