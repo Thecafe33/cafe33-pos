@@ -122,12 +122,24 @@ input, button, select, textarea { font-size: 1rem; }
     /* --- SỬA LẠI ĐỂ MENU TRÀN FULL MÀN HÌNH --- */
     
     /* Container chính của Menu */
-   #view-menu, #view-bed {
-    padding: 10px 10px 180px 10px !important; /* Giảm xuống, vẫn đủ scroll qua bar mà không thừa vùng trống */
+   /* MENU CONTAINER – CLIP CỨNG PSEUDO LAYER LEAK XUỐNG DƯỚI */
+#view-menu, #view-bed {
+    padding: 10px 10px 200px 10px !important; /* Giữ đủ scroll qua bar */
+    overflow: hidden !important; /* CLIP PARENT – key diệt layer leak từ trên */
+    height: 100% !important;
     background: #F2F2F7 !important;
+    position: relative !important;
     z-index: 10 !important;
 }
 
+/* Child scroll thật sự (nếu có #view-menu-content hoặc grid) */
+#view-menu-content, #menu-grid {
+    overflow-y: auto !important;
+    height: 100% !important;
+    padding-bottom: 200px !important; /* Đẩy scroll vào child để parent clip sạch */
+}
+
+/* BOTTOM BAR – ĐẨY LÊN CAO NHẤT + SOLID CHE LEAK */
 #sidebar-cart:not(.hidden) {
     display: flex !important;
     flex-direction: row !important;
@@ -137,19 +149,19 @@ input, button, select, textarea { font-size: 1rem; }
     right: 12px !important;
     height: auto !important;
     max-height: 80px !important;
-    background: #F2F2F7 !important; /* MATCH CHÍNH XÁC BACKGROUND MENU – key diệt leak xám */
-    backdrop-filter: blur(20px) !important; /* Giữ blur đẹp Android */
-    -webkit-backdrop-filter: blur(20px);
+    background: #F2F2F7 !important; /* Solid match menu để blur không leak */
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px);
     border-radius: 999px !important;
     padding: 12px 28px !important;
     align-items: center !important;
     justify-content: space-between !important;
-    z-index: 9998 !important;
-
-    /* Shadow che leak lên trên */
+    z-index: 9999 !important; /* Cao nhất che layer leak */
+    border: 1px solid rgba(0,0,0,0.06) !important;
     box-shadow: 
-        0 20px 40px -10px rgba(0,0,0,0.18),
-        0 -50px 80px 50px #F2F2F7 !important; /* DÒNG NÀY CHE SẠCH VÙNG XÁM TRONG PADDING */
+        0 20px 40px -10px rgba(0,0,0,0.2),
+        inset 0 1px 0 rgba(255,255,255,0.8),
+        0 -40px 80px 40px #F2F2F7 !important; /* Che thêm nếu leak sót */
 }
     /* Lưới món ăn */
     #menu-grid {
@@ -3594,6 +3606,7 @@ setTimeout(() => hideLoading(), 15000);
 </div>
 </body>
 </html>
+
 
 
 
