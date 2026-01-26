@@ -121,15 +121,25 @@ input, button, select, textarea { font-size: 1rem; }
     
     /* Container chính của Menu */
     #view-menu, #view-bed {
-        padding: 10px !important; /* Padding ngang */
-        
-        /* QUAN TRỌNG: */
-        padding-top: 10px !important; /* Đẩy sát lên trên (tràn vào vùng tím phía trên) */
-        padding-bottom: 120px !important; /* Đẩy sâu xuống dưới để món cuối cùng vượt qua Bottom Bar */
-        
-        overflow-y: auto !important;
-        height: 100% !important; /* Chiếm hết chiều cao còn lại */
-    }
+    padding: 10px 10px 180px 10px !important; /* Tăng padding-bottom mạnh hơn */
+    overflow-y: auto !important;
+    height: 100% !important;
+    background: #F2F2F7 !important; /* Đảm bảo background solid, không bị lộ body */
+    position: relative;
+}
+
+/* Thêm một lớp overlay giả để chặn blur từ sidebar-cart lộ màu xám */
+#view-menu::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 160px; /* Cao hơn chiều cao dynamic island */
+    background: linear-gradient(to top, #F2F2F7 30%, rgba(242,242,247,0));
+    pointer-events: none;
+    z-index: 1;
+}
 
     /* Lưới món ăn */
     #menu-grid {
@@ -377,12 +387,6 @@ input, button, select, textarea { font-size: 1rem; }
         </div>
     </div>
 </div>
-    <div class="absolute top-[80px] right-4 z-40 md:hidde"> <button onclick="openCategorySheet()" class="flex items-center gap-2 bg-[#006241]/90 backdrop-blur-md text-white pl-4 pr-3 py-2.5 rounded-full shadow-[0_8px_20px_rgba(0,98,65,0.4)] active:scale-95 transition-all border border-white/10">
-        <span class="text-[9px] font-bold uppercase tracking-widest text-green-100 opacity-80">Menu</span>
-        <span id="mob-cat-label-new" class="text-xs font-black text-white uppercase border-l border-white/20 pl-2">Tất cả</span>
-        <span class="text-xs text-white">▾</span>
-    </button>
-</div>
 
     <div id="view-menu" class="flex-1 flex flex-col overflow-hidden relative bg-[#F2F2F7]">
 
@@ -418,6 +422,14 @@ input, button, select, textarea { font-size: 1rem; }
     <div id="view-menu-content" class="flex-1 p-4 pt-0 overflow-y-auto custom-scrollbar">
         <div id="menu-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 pb-10"></div>
     </div>
+        <!-- Đặt ngay sau <div id="view-menu-content" class="flex-1 p-4 pt-0 overflow-y-auto custom-scrollbar"> -->
+<div id="mobile-category-button" class="md:hidden fixed top-20 right-4 z-40 pointer-events-auto">
+    <button onclick="openCategorySheet()" class="flex items-center gap-2 bg-[#006241]/90 backdrop-blur-md text-white pl-4 pr-3 py-2.5 rounded-full shadow-[0_8px_20px_rgba(0,98,65,0.4)] active:scale-95 transition-all border border-white/10">
+        <span class="text-[9px] font-bold uppercase tracking-widest text-green-100 opacity-80">Menu</span>
+        <span id="mob-cat-label-new" class="text-xs font-black text-white uppercase border-l border-white/20 pl-2">Tất cả</span>
+        <span class="text-xs text-white">▾</span>
+    </button>
+</div>
 </div>
 
        <div id="view-payment" class="hidden h-full flex-col animate-fade-in relative bg-[#f2f2f7]"> <div class="hidden md:flex flex-col h-full p-8 bg-white">
@@ -2018,6 +2030,14 @@ function switchView(v) {
         document.getElementById('cash-paid').value = currentTotal;
         if(typeof calcChange === 'function') calcChange();
     }
+    const mobCatBtn = document.getElementById('mobile-category-button');
+    if (mobCatBtn) {
+        if (view === 'menu') {
+            mobCatBtn.style.display = 'block';
+        } else {
+            mobCatBtn.style.display = 'none';
+        }
+    }
 }
 
 // Bed Functions
@@ -3556,6 +3576,7 @@ function backMobileStep() {
 </div>
 </body>
 </html>
+
 
 
 
