@@ -158,19 +158,18 @@ input, button, select, textarea { font-size: 1rem; }
         height: 100% !important;
     }
     /* Lưới món ăn */
+    /* --- SỬA LẠI GRID MENU: 3 CỘT, VUÔNG VỨC, SÁT NHAU --- */
     #menu-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 12px !important;
-        /* Không set padding-bottom ở đây nữa, để container cha lo */
+        grid-template-columns: repeat(3, 1fr) !important; /* Chia 3 cột */
+        gap: 8px !important; /* Khoảng cách hẹp lại (Sát nhau) */
     }
-    #menu-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 12px !important;
-    }
+    
     #menu-grid > div {
         height: auto !important;
-        min-height: 120px;
-        padding: 15px !important;
+        min-height: 0 !important; /* Reset chiều cao cũ */
+        aspect-ratio: 1 / 1;      /* Ép thành hình vuông */
+        padding: 6px !important;  /* Đệm mỏng lại cho thoáng */
+        border-radius: 16px !important; /* Bo góc vừa phải (Hơi vuông) */
     }
 
     /* 4. THANH CART "DYNAMIC ISLAND" (Viên thuốc nổi) */
@@ -473,11 +472,19 @@ input, button, select, textarea { font-size: 1rem; }
     <div id="sheet-cart-edit" class="md:hidden fixed inset-0 z-[100] hidden">
         <div onclick="closeCartModal()" class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
         <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-[32px] flex flex-col max-h-[80vh] shadow-2xl animate-slide-up">
+            
             <div class="p-5 border-b border-gray-50 flex justify-between items-center">
-                <h3 class="text-lg font-black text-[#006241] uppercase">Giỏ hàng</h3>
+                <div class="flex items-center gap-3">
+                    <h3 class="text-lg font-black text-[#006241] uppercase">Giỏ hàng</h3>
+                    <button onclick="clearAllMobile()" class="text-[10px] font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-full uppercase active:scale-95 transition-all">
+                        Xóa hết
+                    </button>
+                </div>
                 <button onclick="closeCartModal()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 font-bold">✕</button>
             </div>
+
             <div id="sheet-cart-list" class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#F9FAFB]"></div>
+            
             <div class="p-4 border-t border-gray-100 bg-white pb-8">
                 <button onclick="closeCartModal()" class="w-full py-3.5 bg-[#006241] text-white rounded-xl font-bold uppercase">Đóng & Tiếp tục</button>
             </div>
@@ -1236,13 +1243,27 @@ function updateQtyMobile(idx, delta) {
     else openCartModal(); // Vẽ lại modal để thấy số lượng mới
 }
 
+// --- LOGIC XÓA GIỎ HÀNG NHANH (KHÔNG HỎI) ---
+
+// 1. Xóa từng món (Bấm là bay)
 function removeItemMobile(idx) {
-    if(confirm("Xóa món này khỏi giỏ hén?")) {
-        cart.splice(idx, 1);
-        renderCart();
-        if(cart.length === 0) closeCartModal();
-        else openCartModal();
+    // Không confirm nữa, xóa thẳng tay
+    cart.splice(idx, 1);
+    
+    renderCart(); // Cập nhật lại tiền
+    
+    if(cart.length === 0) {
+        closeCartModal(); // Hết sạch thì đóng luôn
+    } else {
+        openCartModal();  // Còn thì vẽ lại danh sách
     }
+}
+
+// 2. Xóa hết tất cả (Nút mới)
+function clearAllMobile() {
+    cart = []; // Reset giỏ về rỗng
+    renderCart(); // Cập nhật tiền về 0
+    closeCartModal(); // Đóng modal ngay
 }
 
 // --- HÀM ĐÓNG MỞ DROPDOWN ---
@@ -1304,10 +1325,18 @@ function renderMenu() {
         return; 
     }
     
+    // --- GIAO DIỆN MỚI: 3 CỘT - VUÔNG VỨC - CHỮ RÕ ---
     grid.innerHTML = filtered.map(m => 
-        `<div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})" class="bg-white p-5 rounded-[2rem] border-2 border-gray-50 shadow-sm flex flex-col justify-center items-center text-center h-32 active:scale-95 cursor-pointer transition-all">
-            <p class="font-bold text-[#006241] menu-item-name text-center">${m.name}</p>
-            <p class="text-[10px] font-bold text-[#006241] mt-2 text-center">${m.priceM > 0 ? m.priceM.toLocaleString() : m.priceL.toLocaleString()}</p>
+        `<div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})" class="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center aspect-square active:scale-95 cursor-pointer transition-all hover:border-[#006241]/30 relative overflow-hidden">
+            
+            <div class="flex-1 flex items-end justify-center w-full px-1 pb-0.5">
+                <p class="font-black text-[#1e3932] text-xs leading-tight line-clamp-2 uppercase tracking-tight">${m.name}</p>
+            </div>
+
+            <div class="flex-1 flex items-start justify-center w-full pt-0.5">
+                <p class="text-[10px] font-bold text-[#006241] opacity-90 bg-green-50 px-2 py-0.5 rounded-full">${m.priceM > 0 ? m.priceM.toLocaleString() : m.priceL.toLocaleString()}</p>
+            </div>
+
         </div>`
     ).join('');
 }
@@ -3765,6 +3794,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
