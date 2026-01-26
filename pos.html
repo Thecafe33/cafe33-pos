@@ -141,11 +141,35 @@ input, button, select, textarea { font-size: 1rem; }
         flex-direction: column !important;
     }
 
-    /* 2. Nội dung bên trong: Đẩy đệm lên để né Bottom Bar */
+   /* --- 1. ẨN THANH CUỘN (Code mới để ẩn cái thanh dọc rác mắt) --- */
+    .custom-scrollbar::-webkit-scrollbar {
+        display: none !important;
+    }
+    .custom-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* --- 2. KHUNG CHỨA (Tràn viền, vẫn giữ chức năng cuộn) --- */
     #view-menu-content, #col-left-list {
-        padding-bottom: 120px !important; 
-        overflow-y: auto !important;
+        padding: 5px !important;          /* Cách mép màn hình 5px (Siêu sát) */
+        padding-bottom: 120px !important; /* QUAN TRỌNG: Giữ để né Bottom Bar */
+        overflow-y: auto !important;      /* QUAN TRỌNG: Giữ để vuốt được */
         height: 100% !important;
+    }
+
+    /* --- 3. LƯỚI MENU (3 Cột, Khoảng cách nhỏ) --- */
+    #menu-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 6px !important; /* Khoảng cách giữa các ô rút xuống còn 6px */
+    }
+    
+    #menu-grid > div {
+        height: auto !important;
+        min-height: 0 !important;
+        aspect-ratio: 1 / 1 !important;   /* Vuông vức */
+        padding: 2px !important;          /* Đệm trong cực nhỏ để tận dụng đất */
+        border-radius: 12px !important;   /* Bo góc vừa phải */
     }
 
     /* 3. Đảm bảo class hidden của Tailwind có quyền lực tối cao */
@@ -157,21 +181,7 @@ input, button, select, textarea { font-size: 1rem; }
         background-color: #f3f4f6 !important;
         height: 100% !important;
     }
-    /* Lưới món ăn */
-    /* --- SỬA LẠI GRID MENU: 3 CỘT, VUÔNG VỨC, SÁT NHAU --- */
-    #menu-grid {
-        grid-template-columns: repeat(3, 1fr) !important; /* Chia 3 cột */
-        gap: 8px !important; /* Khoảng cách hẹp lại (Sát nhau) */
-    }
     
-    #menu-grid > div {
-        height: auto !important;
-        min-height: 0 !important; /* Reset chiều cao cũ */
-        aspect-ratio: 1 / 1;      /* Ép thành hình vuông */
-        padding: 6px !important;  /* Đệm mỏng lại cho thoáng */
-        border-radius: 16px !important; /* Bo góc vừa phải (Hơi vuông) */
-    }
-
     /* 4. THANH CART "DYNAMIC ISLAND" (Viên thuốc nổi) */
     
     /* Trạng thái ẨN: Bắt buộc ẩn tuyệt đối */
@@ -1260,10 +1270,28 @@ function removeItemMobile(idx) {
 }
 
 // 2. Xóa hết tất cả (Nút mới)
+// --- XÓA HẾT (GIỮ NGUYÊN MÀN HÌNH) ---
 function clearAllMobile() {
-    cart = []; // Reset giỏ về rỗng
-    renderCart(); // Cập nhật tiền về 0
-    closeCartModal(); // Đóng modal ngay
+    // 1. Xóa dữ liệu
+    cart = []; 
+    
+    // 2. Cập nhật tiền ở Bottom Bar (về 0đ)
+    renderCart(); 
+    
+    // 3. Thay vì đóng Modal, ta vẽ lại nội dung bên trong thành "Trống"
+    const listEl = document.getElementById('sheet-cart-list');
+    if(listEl) {
+        listEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-64 text-gray-300 animate-fade-in">
+                <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <span class="text-xs font-bold uppercase tracking-wider">Giỏ hàng trống trơn</span>
+            </div>
+        `;
+    }
 }
 
 // --- HÀM ĐÓNG MỞ DROPDOWN ---
@@ -3794,6 +3822,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
