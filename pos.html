@@ -146,38 +146,58 @@ input, button, select, textarea { font-size: 1rem; }
     .custom-scrollbar::-webkit-scrollbar { display: none !important; }
     .custom-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* --- 2. MOBILE (Dưới 768px): 3 CỘT - VUÔNG - SÁT LỀ --- */
+   /* --- GIAO DIỆN MOBILE (< 768px): 3 CỘT - SIÊU SÁT - TRÀN VIỀN --- */
     @media only screen and (max-width: 768px) {
+        
+        /* 1. Khung chứa: Kéo sát ra mép (padding 4px) */
         #view-menu-content, #col-left-list {
-            padding: 5px !important;
-            padding-bottom: 120px !important;
+            padding: 4px !important;          
+            padding-bottom: 120px !important; /* Né bottom bar */
             overflow-y: auto !important;
             height: 100% !important;
         }
+
+        /* 2. Lưới: 3 Cột, Khoảng cách (gap) siêu nhỏ 4px */
         #menu-grid {
             grid-template-columns: repeat(3, 1fr) !important;
-            gap: 6px !important;
+            gap: 4px !important; 
         }
+        
+        /* 3. Ô món ăn: Vuông, bo góc nhỏ, nội dung gọn */
         #menu-grid > div {
-            aspect-ratio: 1 / 1 !important;   /* Ép vuông */
+            aspect-ratio: 1 / 1 !important;   /* Hình vuông */
             min-height: 0 !important;
-            padding: 2px !important;
-            border-radius: 12px !important;
+            padding: 4px !important;          /* Đệm trong nhỏ */
+            border-radius: 8px !important;    /* Bo góc nhỏ lại cho sắc nét */
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+        }
+        
+        /* 4. Tinh chỉnh chữ bên trong cho Mobile */
+        #menu-grid p.menu-name {
+            font-size: 11px !important;
+            line-height: 1.2 !important;
+            margin-bottom: 2px !important;
+        }
+        #menu-grid p.menu-price {
+            font-size: 10px !important;
+            padding: 2px 4px !important;
         }
     }
 
-    /* --- 3. PC / TABLET (Trên 769px): TRẢ VỀ NHƯ CŨ (RỘNG RÃI) --- */
+    /* --- GIAO DIỆN PC (> 769px): GIỮ NGUYÊN NHƯ CŨ --- */
     @media only screen and (min-width: 769px) {
         #menu-grid {
             grid-template-columns: repeat(3, 1fr) !important;
-            gap: 20px !important; /* Khoảng cách rộng như cũ */
+            gap: 20px !important;
             padding-bottom: 20px !important;
         }
         #menu-grid > div {
-            aspect-ratio: auto !important;    /* KHÔNG ép vuông */
-            height: 140px !important;         /* Chiều cao cố định hình chữ nhật */
-            padding: 20px !important;         /* Đệm rộng */
-            border-radius: 2rem !important;   /* Bo góc to như cũ */
+            aspect-ratio: auto !important;
+            height: 140px !important;
+            padding: 20px !important;
+            border-radius: 2rem !important;
         }
     }
 
@@ -1362,22 +1382,33 @@ function renderMenu() {
         return; 
     }
     
-    // --- RENDER THÔNG MINH: MOBILE VUÔNG - PC CHỮ NHẬT ---
+    // --- RENDER MENU ĐA NĂNG (Mobile: Vuông 3 cột / PC: Chữ nhật to) ---
     grid.innerHTML = filtered.map(m => 
-        `<div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})" class="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col justify-center items-center text-center active:scale-95 cursor-pointer transition-all relative overflow-hidden group hover:border-[#006241]/50 aspect-square md:aspect-auto">
+        `<div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})" 
+            class="bg-white border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)] hover:border-[#006241] flex flex-col justify-center items-center text-center cursor-pointer transition-all active:scale-95 relative overflow-hidden group
+            
+            /* MOBILE: Vuông, Padding nhỏ, Bo góc 12px */
+            aspect-square p-1 rounded-xl 
+            
+            /* PC (md): Chữ nhật (h-32), Padding to (p-5), Bo góc lớn (2rem) - TRẢ VỀ NHƯ CŨ */
+            md:aspect-auto md:h-32 md:p-5 md:rounded-[2rem] md:border-2 md:border-gray-50 md:shadow-sm">
             
             <div class="flex-1 flex items-center justify-center w-full px-0.5 overflow-hidden">
-                <p class="font-black text-[#1e3932] text-[11px] md:text-[1rem] leading-tight line-clamp-3 uppercase break-words group-hover:text-[#006241] transition-colors">${m.name}</p>
+                <p class="font-black text-[#1e3932] leading-tight line-clamp-3 uppercase break-words group-hover:text-[#006241] transition-colors
+                          text-[10px] md:text-[1rem]"> ${m.name}
+                </p>
             </div>
 
-            <div class="w-full pb-1 md:pb-0 pt-0.5">
-                <p class="text-[9px] md:text-sm font-bold text-[#006241] bg-green-50/80 mx-2 py-0.5 md:py-0 md:bg-transparent rounded text-center">${m.priceM > 0 ? m.priceM.toLocaleString() : m.priceL.toLocaleString()}</p>
+            <div class="w-full pb-0.5 pt-0.5 md:mt-2 md:pb-0">
+                <p class="font-bold text-[#006241] bg-green-50/80 mx-1 rounded text-center
+                          text-[9px] md:text-[11px] md:bg-transparent md:p-0">
+                    ${m.priceM > 0 ? (m.priceM/1000) + 'k' : (m.priceL/1000) + 'k'}
+                </p>
             </div>
 
         </div>`
     ).join('');
 }
-
 function handleItemClick(name, pM, pL) { 
     if(isPaymentMode) return; 
     const vM = Number(pM), vL = Number(pL);
@@ -3831,6 +3862,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
