@@ -141,35 +141,45 @@ input, button, select, textarea { font-size: 1rem; }
         flex-direction: column !important;
     }
 
-   /* --- 1. ẨN THANH CUỘN (Code mới để ẩn cái thanh dọc rác mắt) --- */
-    .custom-scrollbar::-webkit-scrollbar {
-        display: none !important;
-    }
-    .custom-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
+ /* --- 1. ẨN THANH CUỘN (Chung cho cả 2) --- */
+    .custom-scrollbar::-webkit-scrollbar { display: none !important; }
+    .custom-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* --- 2. GIAO DIỆN MOBILE (< 768px): 3 CỘT, VUÔNG, SÁT VIỀN --- */
+    @media only screen and (max-width: 768px) {
+        #view-menu-content, #col-left-list {
+            padding: 5px !important;          /* Cách mép 5px */
+            padding-bottom: 120px !important; 
+            overflow-y: auto !important;
+            height: 100% !important;
+        }
+        #menu-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 6px !important;
+        }
+        #menu-grid > div {
+            aspect-ratio: 1 / 1 !important;   /* Ép vuông cho Mobile */
+            min-height: 0 !important;
+            padding: 4px !important;
+            border-radius: 12px !important;
+        }
     }
 
-    /* --- 2. KHUNG CHỨA (Tràn viền, vẫn giữ chức năng cuộn) --- */
-    #view-menu-content, #col-left-list {
-        padding: 5px !important;          /* Cách mép màn hình 5px (Siêu sát) */
-        padding-bottom: 120px !important; /* QUAN TRỌNG: Giữ để né Bottom Bar */
-        overflow-y: auto !important;      /* QUAN TRỌNG: Giữ để vuốt được */
-        height: 100% !important;
-    }
-
-    /* --- 3. LƯỚI MENU (3 Cột, Khoảng cách nhỏ) --- */
-    #menu-grid {
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 6px !important; /* Khoảng cách giữa các ô rút xuống còn 6px */
-    }
-    
-    #menu-grid > div {
-        height: auto !important;
-        min-height: 0 !important;
-        aspect-ratio: 1 / 1 !important;   /* Vuông vức */
-        padding: 2px !important;          /* Đệm trong cực nhỏ để tận dụng đất */
-        border-radius: 12px !important;   /* Bo góc vừa phải */
+    /* --- 3. GIAO DIỆN PC (> 769px): TRẢ VỀ CŨ --- */
+    @media only screen and (min-width: 769px) {
+        #menu-grid {
+            grid-template-columns: repeat(3, 1fr) !important; /* PC vẫn 3 cột nhưng thoáng */
+            gap: 20px !important;
+        }
+        #menu-grid > div {
+            aspect-ratio: auto !important;    /* Bỏ ép vuông */
+            height: auto !important;
+            min-height: 140px !important;     /* Cao ráo */
+            padding: 20px !important;         /* Đệm rộng */
+        }
+        /* Phục hồi chữ cho PC */
+        #menu-grid p.font-black { font-size: 1rem !important; } 
+        #menu-grid p.bg-green-50 { font-size: 0.85rem !important; margin-top: 8px !important; }
     }
 
     /* 3. Đảm bảo class hidden của Tailwind có quyền lực tối cao */
@@ -1353,16 +1363,16 @@ function renderMenu() {
         return; 
     }
     
-    // --- GIAO DIỆN MỚI: 3 CỘT - VUÔNG VỨC - CHỮ RÕ ---
+    // Lưu ý: Đã bỏ class "aspect-square" cứng trong HTML để CSS điều khiển
     grid.innerHTML = filtered.map(m => 
-        `<div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})" class="bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center aspect-square active:scale-95 cursor-pointer transition-all hover:border-[#006241]/30 relative overflow-hidden">
+        `<div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})" class="bg-white rounded-xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.05)] flex flex-col justify-between items-center text-center active:scale-95 cursor-pointer transition-all relative overflow-hidden group hover:border-[#006241]/50">
             
-            <div class="flex-1 flex items-end justify-center w-full px-1 pb-0.5">
-                <p class="font-black text-[#1e3932] text-xs leading-tight line-clamp-2 uppercase tracking-tight">${m.name}</p>
+            <div class="flex-1 flex items-center justify-center w-full px-0.5 overflow-hidden">
+                <p class="font-black text-[#1e3932] text-[11px] md:text-base leading-tight line-clamp-3 uppercase break-words group-hover:text-[#006241] transition-colors">${m.name}</p>
             </div>
 
-            <div class="flex-1 flex items-start justify-center w-full pt-0.5">
-                <p class="text-[10px] font-bold text-[#006241] opacity-90 bg-green-50 px-2 py-0.5 rounded-full">${m.priceM > 0 ? m.priceM.toLocaleString() : m.priceL.toLocaleString()}</p>
+            <div class="w-full pb-1 pt-0.5">
+                <p class="text-[9px] md:text-xs font-bold text-[#006241] bg-green-50/80 mx-2 py-0.5 rounded text-center">${m.priceM > 0 ? (m.priceM/1000) + 'k' : (m.priceL/1000) + 'k'}</p>
             </div>
 
         </div>`
@@ -3822,6 +3832,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
