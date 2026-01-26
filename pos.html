@@ -1267,17 +1267,36 @@ function renderMenu() {
 function handleItemClick(name, pM, pL) { 
     if(isPaymentMode) return; 
     const vM = Number(pM), vL = Number(pL);
+    
+    // Nếu món có 2 size -> Mở Popup
     if (vM > 0 && vL > 0) { 
         document.getElementById('modal-item-name').innerText = name; 
         document.getElementById('price-m').innerText = vM.toLocaleString() + 'đ';
         document.getElementById('price-l').innerText = vL.toLocaleString() + 'đ'; 
+        
         document.getElementById('btn-size-m').onclick = () => { addToCart(name, 'M', vM); closeSize(); };
         document.getElementById('btn-size-l').onclick = () => { addToCart(name, 'L', vL); closeSize(); }; 
-        document.getElementById('size-modal').classList.add('modal-active'); 
-    } else if (vM > 0) addToCart(name, 'M', vM); else if (vL > 0) addToCart(name, 'L', vL); 
+        
+        // --- SỬA LỖI TẠI ĐÂY: Xóa class hidden để popup hiện lên ---
+        var modal = document.getElementById('size-modal');
+        modal.classList.remove('hidden');      // Gỡ bỏ lệnh ẩn
+        modal.classList.add('modal-active');   // Kích hoạt flexbox
+        // -----------------------------------------------------------
+        
+    } else if (vM > 0) {
+        addToCart(name, 'M', vM); 
+    } else if (vL > 0) {
+        addToCart(name, 'L', vL); 
+    }
 }
 
-function closeSize() { document.getElementById('size-modal').classList.remove('modal-active'); }
+function closeSize() { 
+    // --- SỬA LỖI TẠI ĐÂY: Thêm lại class hidden để đóng ---
+    var modal = document.getElementById('size-modal');
+    modal.classList.remove('modal-active');
+    modal.classList.add('hidden');
+    // ------------------------------------------------------
+}
 
 function addToCart(name, size, price) {
     const ex = cart.find(i => i.name === name && i.size === size);
@@ -3696,6 +3715,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
