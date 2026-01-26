@@ -13,6 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
 <style>
@@ -906,7 +907,29 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.database();
+// --- BẮT ĐẦU CODE ĐĂNG NHẬP TỰ ĐỘNG ---
+const auth = firebase.auth();
 
+function autoLoginPOS() {
+    // Thay email/pass bằng cái bà tạo ở BƯỚC 1
+    const email = "elio@thecafe33.com"; 
+    const pass = "Thecafe33ty"; 
+
+    auth.signInWithEmailAndPassword(email, pass)
+        .then((userCredential) => {
+            console.log("✅ Đã đăng nhập Admin thành công!");
+            // Đăng nhập xong mới tải dữ liệu cho chắc
+            // (Các hàm tải dữ liệu cũ vẫn sẽ tự chạy nhờ listener, nên không cần gọi lại ở đây cũng được)
+        })
+        .catch((error) => {
+            console.error("❌ Lỗi đăng nhập:", error.message);
+            alert("Lỗi: Không thể đăng nhập vào hệ thống! Kiểm tra lại Email/Pass trong code.");
+        });
+}
+
+// Gọi hàm này ngay khi chạy App
+autoLoginPOS();
+// --- KẾT THÚC CODE ĐĂNG NHẬP ---
 // =========================================================
 // 2. BIẾN TOÀN CỤC
 // =========================================================
@@ -3625,6 +3648,7 @@ function backMobileStep() {
 </div>
 </body>
 </html>
+
 
 
 
