@@ -317,6 +317,27 @@ input, button, select, textarea { font-size: 1rem; }
     body.cart-empty #view-bed {
         padding-bottom: 20px !important; /* Chỉ để chút khoảng thở, không lộ mảng xám */
     }
+    /* Ưu tiên nếu cả cart-empty và cart-modal-open cùng có (tránh conflict) */
+    body.cart-empty.cart-modal-open #view-menu,
+    body.cart-empty.cart-modal-open #view-bed {
+        padding-bottom: 20px !important;
+    }
+        /* Ẩn hoàn toàn thanh category tabs desktop trên mobile */
+    /* Selector phổ biến cho Tailwind desktop tabs */
+    .hidden.md\:flex,
+    .md\:flex,
+    .md\:block,
+    .md\:grid,
+    .category-tabs-container,  /* nếu có class này */
+    #category-bar,             /* nếu có id này */
+    .flex.gap-2.items-center.justify-start.overflow-x-auto {  /* selector gần đúng từ ảnh */
+        display: none !important;
+    }
+
+    /* Ẩn cụ thể các tab nếu dùng class category-tab cho desktop */
+    .category-tab:not(.mobile-category) {
+        display: none !important;
+    }
 }
 </style>
 </head>
@@ -1146,9 +1167,13 @@ function openCartModal() {
     listEl.style.paddingBottom = "200px"; 
 
     document.getElementById('sheet-cart-edit').classList.remove('hidden');
+    document.body.classList.add('cart-modal-open');     // ← THÊM DÒNG NÀY
+    updateCartPadding();
 }
 function closeCartModal() {
     document.getElementById('sheet-cart-edit').classList.add('hidden');
+    document.body.classList.remove('cart-modal-open');  // ← THÊM DÒNG NÀY
+    updateCartPadding();
 }
 
 function updateQtyMobile(idx, delta) {
@@ -3655,5 +3680,6 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
