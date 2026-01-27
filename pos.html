@@ -3842,26 +3842,40 @@ function completeOrder() {
     saveOrderToFirebase(method);
 }
     // Biến toàn cục cho thu tiền riêng
-let expandedCart = [];          // Danh sách món đã tách riêng (mỗi qty=1)
-let selectedForPayment = new Set(); // Các instanceId đang chọn để thu
-let paidInstances = new Set();     // Các instanceId đã thu tiền (chỉ để hiển thị xám)
+// Biến toàn cục cho thu tiền riêng
+let expandedCart = [];          
+let selectedForPayment = new Set(); 
+let paidInstances = new Set();     
 
 // Mở modal thu tiền riêng
 function openSplitModal() {
-    if (cart.length === 0) {
-        showAppModal("Thông báo", "Giỏ hàng đang trống!", "⚠️");
+    if (typeof cart === 'undefined' || !Array.isArray(cart) || cart.length === 0) {
+        if (typeof showAppModal === 'function') {
+            showAppModal("Thông báo", "Giỏ hàng đang trống!", "⚠️");
+        } else {
+            alert("Giỏ hàng đang trống!");
+        }
         return;
     }
 
-    // Tách mỗi món thành các hàng riêng (để check độc lập)
     expandedCart = [];
     let instanceId = 0;
     cart.forEach(item => {
-        const unitPrice = item.size === 'M' ? item.priceM : item.priceL;
-        for (let i = 0; i < item.qty; i++) {
+        // FIX CHÍNH Ở ĐÂY: Lấy giá an toàn, ưu tiên priceM/L theo size, fallback về price chung hoặc 0
+        let unitPrice = 0;
+        if (item.size === 'L' && item.priceL !== undefined) unitPrice = item.priceL;
+        else if (item.size === 'M' && item.priceM !== undefined) unitPrice = item.priceM;
+        else if (item.price !== undefined) unitPrice = item.price;
+        // Nếu vẫn undefined → log console để debug sau
+        if (unitPrice === undefined || unitPrice === 0) {
+            console.warn("Món thiếu giá:", item.name, item);
+            unitPrice = 0;
+        }
+
+        for (let i = 0; i < (item.qty || 1); i++) {
             expandedCart.push({
-                name: item.name,
-                size: item.size,
+                name: item.name || "Món không tên",
+                size: item.size || "",
                 price: unitPrice,
                 instanceId: instanceId++
             });
@@ -3869,27 +3883,44 @@ function openSplitModal() {
     });
 
     selectedForPayment.clear();
-    paidInstances.clear(); // Reset lại mỗi lần mở mới
+    paidInstances.clear();
     renderSplitList();
-    document.getElementById('split-payment-modal').classList.remove('hidden');
+
+    const modal = document.getElementById('split-payment-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    } else {
+        console.error("Không tìm thấy modal #split-payment-modal");
+    }
 }
 
-// Đóng modal (không lưu gì cả)
 function closeSplitModal() {
-    document.getElementById('split-payment-modal').classList.add('hidden');
+    const modal = document.getElementById('split-payment-modal');
+    if (modal) modal.classList.add('hidden');
     selectedForPayment.clear();
 }
 
-// Render danh sách
 function renderSplitList() {
     const container = document.getElementById('split-list');
+    if (!container) {
+        console.error("Không tìm thấy #split-list");
+        return;
+    }
     container.innerHTML = '';
+
+    if (expandedCart.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-500 py-8">Không có món nào trong giỏ</p>';
+        return;
+    }
 
     expandedCart.forEach(exItem => {
         const isPaid = paidInstances.has(exItem.instanceId);
         const checked = selectedForPayment.has(exItem.instanceId) ? 'checked' : '';
         const disabled = isPaid ? 'disabled' : '';
         const rowClass = isPaid ? 'opacity-50 bg-gray-100' : '';
+
+        // FIX AN TOÀN: Luôn có giá (fallback 0)
+        const displayPrice = (exItem.price || 0).toLocaleString();
 
         const rowHTML = `
         <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl ${rowClass}">
@@ -3898,11 +3929,11 @@ function renderSplitList() {
                        onchange="toggleSplitSelect(${exItem.instanceId}, this.checked)"
                        class="w-6 h-6 rounded-full border-2 border-gray-300 accent-[#006241]">
                 <div>
-                    <p class="font-bold text-base">${exItem.name} (${exItem.size})</p>
+                    <p class="font-bold text-base">${exItem.name} ${exItem.size ? '(' + exItem.size + ')' : ''}</p>
                     ${isPaid ? '<p class="text-xs text-green-600 font-black uppercase">✓ ĐÃ THU</p>' : ''}
                 </div>
             </div>
-            <p class="font-black text-lg">${exItem.price.toLocaleString()}đ</p>
+            <p class="font-black text-lg">${displayPrice}đ</p>
         </div>`;
         container.innerHTML += rowHTML;
     });
@@ -3910,7 +3941,6 @@ function renderSplitList() {
     updateSplitTotal();
 }
 
-// Toggle checkbox
 function toggleSplitSelect(id, checked) {
     if (checked) {
         selectedForPayment.add(id);
@@ -3920,46 +3950,49 @@ function toggleSplitSelect(id, checked) {
     updateSplitTotal();
 }
 
-// Cập nhật tổng phần chọn + trạng thái nút
 function updateSplitTotal() {
     let total = 0;
     selectedForPayment.forEach(id => {
         const item = expandedCart.find(it => it.instanceId === id);
-        if (item) total += item.price;
+        if (item && item.price !== undefined) total += item.price;
     });
 
-    document.getElementById('split-total').innerText = total.toLocaleString() + 'đ';
-    document.getElementById('pay-selected-btn').disabled = selectedForPayment.size === 0;
+    const totalEl = document.getElementById('split-total');
+    if (totalEl) totalEl.innerText = total.toLocaleString() + 'đ';
+    
+    const btn = document.getElementById('pay-selected-btn');
+    if (btn) btn.disabled = selectedForPayment.size === 0;
 
-    // Kiểm tra tất cả đã thu chưa → hiện nút hoàn tất
     const allPaid = expandedCart.every(it => paidInstances.has(it.instanceId));
-    document.getElementById('complete-all-btn').classList.toggle('hidden', !allPaid);
+    const completeBtn = document.getElementById('complete-all-btn');
+    if (completeBtn) completeBtn.classList.toggle('hidden', !allPaid);
 }
 
-// Bấm “Đã thu các món này” → chỉ đánh dấu xám, không lưu gì
 function markAsPaidSelected() {
     if (selectedForPayment.size === 0) return;
 
-    // Đánh dấu các món đã chọn là đã thu
     selectedForPayment.forEach(id => paidInstances.add(id));
-
     selectedForPayment.clear();
     renderSplitList();
 
-    showAppModal("Đã thu", "Đã đánh dấu thu tiền cho phần này.", "💰");
+    if (typeof showAppModal === 'function') {
+        showAppModal("Đã thu", "Đã đánh dấu thu tiền cho phần này.", "💰");
+    } else {
+        alert("Đã thu phần này!");
+    }
 }
 
-// Khi tất cả đã thu → bấm hoàn tất → lưu đơn chung như bình thường
 function completeWholePayment() {
-    // Kiểm tra chắc chắn đã thu hết
     if (expandedCart.length !== paidInstances.size) {
-        showAppModal("Chưa xong", "Còn món chưa thu tiền!", "⚠️");
+        if (typeof showAppModal === 'function') {
+            showAppModal("Chưa xong", "Còn món chưa thu tiền!", "⚠️");
+        } else {
+            alert("Còn món chưa thu tiền!");
+        }
         return;
     }
 
     closeSplitModal();
-    
-    // Gọi hàm hoàn tất thanh toán bình thường của bạn (lưu 1 đơn duy nhất)
     completeOrder(); 
 }
 document.addEventListener('DOMContentLoaded', updateCartPadding);
@@ -4101,4 +4134,5 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
