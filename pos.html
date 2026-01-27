@@ -539,7 +539,9 @@ input, button, select, textarea { font-size: 1rem; }
 </div>
        <div id="view-payment" class="hidden h-full flex-col animate-fade-in relative bg-[#f2f2f7]"> <div class="hidden md:flex flex-col h-full p-8 bg-white">
          <div class="flex justify-between items-center mb-6"><h2 class="brand-font text-4xl text-[#006241] uppercase font-black text-center w-full">Thanh toán</h2><button onclick="switchView('menu')" class="text-gray-400 font-bold uppercase text-xs border-b-2 absolute right-10">Quay lại</button></div>
-         <div class="grid grid-cols-2 gap-6 flex-1"><div class="space-y-4"><button id="btn-cash" onclick="setMethod('Tiền mặt')" class="w-full p-6 rounded-3xl border-4 border-[#006241] bg-white text-xl font-bold text-[#006241] flex justify-between items-center shadow-md">Tiền mặt ✓</button><button id="btn-bank" onclick="setMethod('Chuyển khoản')" class="w-full p-6 rounded-3xl border-4 border-transparent bg-white text-xl font-bold text-gray-300 flex justify-between items-center shadow-md uppercase tracking-tighter">Chuyển khoản</button></div><div id="cash-detail-box" class="bg-white p-6 rounded-[2.5rem] shadow-md flex flex-col justify-center text-center"><label class="block font-bold text-gray-300 uppercase text-[9px] mb-3 tracking-widest text-center">Khách đưa</label><div id="cash-suggestions" class="flex flex-wrap justify-center gap-2 mb-4"></div><input type="number" id="cash-paid" onfocus="this.value=''" onblur="if(this.value=='') this.value=currentTotal; calcChange();" oninput="calcChange()" class="w-full p-5 bg-gray-50 rounded-2xl text-4xl font-black text-[#006241] outline-none text-center" placeholder="0"><div class="mt-6 pt-5 border-t border-dashed text-center"><p class="font-bold text-gray-300 uppercase text-[9px] mb-1">Tiền thừa</p><p id="cash-change" class="text-5xl font-black text-amber-500">0đ</p></div></div></div><button onclick="completeOrder()" id="btn-done" class="w-full py-8 mt-4 sb-green text-white font-black text-2xl rounded-3xl uppercase shadow-2xl active:scale-95 transition-all tracking-[0.2em]">Hoàn tất</button>
+         <div class="grid grid-cols-2 gap-6 flex-1"><div class="space-y-4"><button id="btn-cash" onclick="setMethod('Tiền mặt')" class="w-full p-6 rounded-3xl border-4 border-[#006241] bg-white text-xl font-bold text-[#006241] flex justify-between items-center shadow-md">Tiền mặt ✓</button><button id="btn-bank" onclick="setMethod('Chuyển khoản')" class="w-full p-6 rounded-3xl border-4 border-transparent bg-white text-xl font-bold text-gray-300 flex justify-between items-center shadow-md uppercase tracking-tighter">Chuyển khoản</button></div><div id="cash-detail-box" class="bg-white p-6 rounded-[2.5rem] shadow-md flex flex-col justify-center text-center"><label class="block font-bold text-gray-300 uppercase text-[9px] mb-3 tracking-widest text-center">Khách đưa</label><div id="cash-suggestions" class="flex flex-wrap justify-center gap-2 mb-4"></div><input type="number" id="cash-paid" onfocus="this.value=''" onblur="if(this.value=='') this.value=currentTotal; calcChange();" oninput="calcChange()" class="w-full p-5 bg-gray-50 rounded-2xl text-4xl font-black text-[#006241] outline-none text-center" placeholder="0"><div class="mt-6 pt-5 border-t border-dashed text-center"><p class="font-bold text-gray-300 uppercase text-[9px] mb-1">Tiền thừa</p><p id="cash-change" class="text-5xl font-black text-amber-500">0đ</p></div></div></div><button onclick="completeOrder()" id="btn-done" class="w-full py-8 mt-4 sb-green text-white font-black text-2xl rounded-3xl uppercase shadow-2xl active:scale-95 transition-all tracking-[0.2em]">Hoàn tất</button><button onclick="openSplitModal()" class="w-full py-8 mt-6 bg-gray-200 text-gray-800 font-black text-2xl rounded-3xl uppercase shadow-2xl active:scale-95 transition-all tracking-[0.2em]">
+    Thu tiền riêng
+</button>
     </div>
 
   <div class="flex md:hidden flex-col h-full bg-[#F2F2F7] relative overflow-hidden font-sans">
@@ -582,6 +584,10 @@ input, button, select, textarea { font-size: 1rem; }
                         <span class="text-base font-bold text-gray-800">Chuyển khoản</span>
                     </button>
                 </div>
+                <button onclick="openSplitModal()" class="neo-btn-secondary w-full py-6 flex flex-col items-center justify-center gap-2 mt-6">
+    <span class="text-4xl mb-1">💸</span>
+    <span class="text-base font-bold text-gray-800 uppercase tracking-wider">Thu tiền riêng</span>
+</button>
             </div>
 
             <div id="mob-step-2" class="hidden flex flex-col gap-5 animate-slide-up">
@@ -3835,6 +3841,127 @@ function completeOrder() {
     // Gọi hàm xử lý chính
     saveOrderToFirebase(method);
 }
+    // Biến toàn cục cho thu tiền riêng
+let expandedCart = [];          // Danh sách món đã tách riêng (mỗi qty=1)
+let selectedForPayment = new Set(); // Các instanceId đang chọn để thu
+let paidInstances = new Set();     // Các instanceId đã thu tiền (chỉ để hiển thị xám)
+
+// Mở modal thu tiền riêng
+function openSplitModal() {
+    if (cart.length === 0) {
+        showAppModal("Thông báo", "Giỏ hàng đang trống!", "⚠️");
+        return;
+    }
+
+    // Tách mỗi món thành các hàng riêng (để check độc lập)
+    expandedCart = [];
+    let instanceId = 0;
+    cart.forEach(item => {
+        const unitPrice = item.size === 'M' ? item.priceM : item.priceL;
+        for (let i = 0; i < item.qty; i++) {
+            expandedCart.push({
+                name: item.name,
+                size: item.size,
+                price: unitPrice,
+                instanceId: instanceId++
+            });
+        }
+    });
+
+    selectedForPayment.clear();
+    paidInstances.clear(); // Reset lại mỗi lần mở mới
+    renderSplitList();
+    document.getElementById('split-payment-modal').classList.remove('hidden');
+}
+
+// Đóng modal (không lưu gì cả)
+function closeSplitModal() {
+    document.getElementById('split-payment-modal').classList.add('hidden');
+    selectedForPayment.clear();
+}
+
+// Render danh sách
+function renderSplitList() {
+    const container = document.getElementById('split-list');
+    container.innerHTML = '';
+
+    expandedCart.forEach(exItem => {
+        const isPaid = paidInstances.has(exItem.instanceId);
+        const checked = selectedForPayment.has(exItem.instanceId) ? 'checked' : '';
+        const disabled = isPaid ? 'disabled' : '';
+        const rowClass = isPaid ? 'opacity-50 bg-gray-100' : '';
+
+        const rowHTML = `
+        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl ${rowClass}">
+            <div class="flex items-center gap-4">
+                <input type="checkbox" ${checked} ${disabled}
+                       onchange="toggleSplitSelect(${exItem.instanceId}, this.checked)"
+                       class="w-6 h-6 rounded-full border-2 border-gray-300 accent-[#006241]">
+                <div>
+                    <p class="font-bold text-base">${exItem.name} (${exItem.size})</p>
+                    ${isPaid ? '<p class="text-xs text-green-600 font-black uppercase">✓ ĐÃ THU</p>' : ''}
+                </div>
+            </div>
+            <p class="font-black text-lg">${exItem.price.toLocaleString()}đ</p>
+        </div>`;
+        container.innerHTML += rowHTML;
+    });
+
+    updateSplitTotal();
+}
+
+// Toggle checkbox
+function toggleSplitSelect(id, checked) {
+    if (checked) {
+        selectedForPayment.add(id);
+    } else {
+        selectedForPayment.delete(id);
+    }
+    updateSplitTotal();
+}
+
+// Cập nhật tổng phần chọn + trạng thái nút
+function updateSplitTotal() {
+    let total = 0;
+    selectedForPayment.forEach(id => {
+        const item = expandedCart.find(it => it.instanceId === id);
+        if (item) total += item.price;
+    });
+
+    document.getElementById('split-total').innerText = total.toLocaleString() + 'đ';
+    document.getElementById('pay-selected-btn').disabled = selectedForPayment.size === 0;
+
+    // Kiểm tra tất cả đã thu chưa → hiện nút hoàn tất
+    const allPaid = expandedCart.every(it => paidInstances.has(it.instanceId));
+    document.getElementById('complete-all-btn').classList.toggle('hidden', !allPaid);
+}
+
+// Bấm “Đã thu các món này” → chỉ đánh dấu xám, không lưu gì
+function markAsPaidSelected() {
+    if (selectedForPayment.size === 0) return;
+
+    // Đánh dấu các món đã chọn là đã thu
+    selectedForPayment.forEach(id => paidInstances.add(id));
+
+    selectedForPayment.clear();
+    renderSplitList();
+
+    showAppModal("Đã thu", "Đã đánh dấu thu tiền cho phần này.", "💰");
+}
+
+// Khi tất cả đã thu → bấm hoàn tất → lưu đơn chung như bình thường
+function completeWholePayment() {
+    // Kiểm tra chắc chắn đã thu hết
+    if (expandedCart.length !== paidInstances.size) {
+        showAppModal("Chưa xong", "Còn món chưa thu tiền!", "⚠️");
+        return;
+    }
+
+    closeSplitModal();
+    
+    // Gọi hàm hoàn tất thanh toán bình thường của bạn (lưu 1 đơn duy nhất)
+    completeOrder(); 
+}
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
 </script>
@@ -3944,5 +4071,34 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
         </svg>
     </button>
 </div>
+    <div id="split-payment-modal" class="hidden fixed inset-0 z-[100000] flex items-end md:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div class="bg-white w-full md:max-w-2xl max-h-[90vh] rounded-t-3xl md:rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+        <div class="p-5 border-b flex justify-between items-center bg-gray-50">
+            <h3 class="text-lg font-black uppercase text-[#006241]">Thu tiền riêng</h3>
+            <button onclick="closeSplitModal()" class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-xl">✕</button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-5 space-y-3" id="split-list">
+            <!-- Danh sách món sẽ render bằng JS -->
+        </div>
+        
+        <div class="p-5 border-t bg-gray-50 space-y-4">
+            <div class="flex justify-between items-center">
+                <span class="font-bold text-gray-600">Tổng phần đang chọn:</span>
+                <span id="split-total" class="text-2xl font-black text-[#006241]">0đ</span>
+            </div>
+            
+            <button id="pay-selected-btn" onclick="markAsPaidSelected()" disabled 
+                    class="w-full py-4 bg-[#006241] text-white font-black rounded-xl uppercase shadow-lg active:scale-95 disabled:opacity-50 disabled:active:scale-100">
+                Đã thu các món này
+            </button>
+            
+            <button id="complete-all-btn" onclick="completeWholePayment()" class="hidden w-full py-4 bg-amber-500 text-white font-black rounded-xl uppercase shadow-lg active:scale-95">
+                Hoàn tất thanh toán toàn bộ
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
