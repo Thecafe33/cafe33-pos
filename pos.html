@@ -1514,7 +1514,7 @@ function updateQty(idx, d) {
 // =========================================================
 // --- HÀM THANH TOÁN (ĐÃ SỬA: RESET SẠCH SẼ THÔNG TIN KHÁCH) ---
 // --- HÀM THANH TOÁN (ĐÃ FIX LỖI RESET BIẾN TRƯỚC KHI ĐÓNG BED) ---
-function completeOrder() {
+function completeOrder_OLD() {
     if (cart.length === 0) return showAppModal("Hic!", "Chưa có món nào!", '🛒');
     
     let pVal = document.getElementById('cash-paid').value;
@@ -3758,7 +3758,85 @@ function backMobileStep() {
         switchView('menu');
     }
 }
+// --- HÀM LƯU ĐƠN HÀNG LÊN FIREBASE (TÁCH RIÊNG CHO CHẮC ĂN) ---
+function saveOrderToFirebase(method) {
+    // 1. Kiểm tra giỏ hàng lần cuối
+    if (!cart || cart.length === 0) return alert("Giỏ hàng đang trống!");
+
+    const pVal = document.getElementById('cash-paid').value;
+    const paid = (method === 'Chuyển khoản') ? currentTotal : (Number(pVal) || currentTotal);
+    
+    // 2. Chuẩn bị dữ liệu (Giống cấu trúc Bot cần)
+    const orderData = {
+        id: Date.now(), // ID đơn hàng
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        sdt: document.getElementById('kh-sdt').value || "Khách vãng lai",
+        
+        // Gom món ăn thành chuỗi đẹp để Bot ghi vào Sheet
+        items: cart.map(i => `${i.name} (${i.size}) x${i.qty}`).join(', '),
+        
+        // Dữ liệu chi tiết (nếu sau này cần thống kê sâu)
+        itemsArray: cart,
+        
+        total: currentTotal,
+        paid: paid,
+        change: Math.max(0, paid - currentTotal),
+        method: method,
+        points: Math.floor(currentTotal / 1000), // 1000đ = 1 điểm
+        
+        // Thông tin Bed (Nếu có)
+        bedId: (pendingBedOrder && pendingBedOrder.bedId) ? pendingBedOrder.bedId : (activeOrderingBedId || ""),
+        customerName: (pendingBedOrder && pendingBedOrder.name) ? pendingBedOrder.name : "Khách lẻ"
+    };
+
+    console.log("🚀 Đang đẩy đơn lên Firebase...", orderData);
+
+    // 3. Gửi lên Firebase (Nhánh 'orders')
+    // Khi gửi thành công -> Bot Backend sẽ tự bắt lấy và ghi vào Sheet
+    db.ref('orders').push(orderData, (error) => {
+        if (error) {
+            alert("❌ Lỗi lưu đơn: " + error.message);
+        } else {
+            console.log("✅ Đã lưu đơn thành công!");
+            
+            // 4. Dọn dẹp sau khi lưu
+            cart = [];
+            renderCart();
+            document.getElementById('kh-sdt').value = "";
+            
+            // Reset các biến Bed tạm
+            pendingBedOrder = null;
+            activeOrderingBedId = null;
+
+            // Thông báo & Reset giao diện
+            if(document.getElementById('qr-modal')) document.getElementById('qr-modal').classList.add('hidden');
+            switchView('menu');
+            
+            // Show popup đẹp (nếu có hàm này)
+            if(typeof showAppModal === 'function') {
+                showAppModal("Thành công", "Đơn hàng đã được lưu & đồng bộ!", "✅");
+            } else {
+                alert("Đơn hàng đã được lưu thành công!");
+            }
+        }
+    });
+}
+// --- HÀM NỐI VÀO NÚT THANH TOÁN TRÊN UI ---
+function completeOrder() {
+    // Tự động phát hiện phương thức thanh toán dựa trên UI
+    let method = 'Tiền mặt';
+    
+    // Kiểm tra xem nút Chuyển khoản có đang được chọn không
+    const btnBank = document.getElementById('btn-bank');
+    if (btnBank && (btnBank.classList.contains('sb-green') || btnBank.classList.contains('border-[#006241]'))) {
+        method = 'Chuyển khoản';
+    }
+
+    // Gọi hàm xử lý chính
+    saveOrderToFirebase(method);
+}
 document.addEventListener('DOMContentLoaded', updateCartPadding);
+
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
     <div class="bg-white/95 backdrop-blur-2xl w-full max-w-[340px] rounded-[35px] shadow-[0_30px_70px_rgba(0,0,0,0.3)] text-center border border-white/60 p-8 transform scale-100 transition-all">
