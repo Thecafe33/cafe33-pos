@@ -565,6 +565,57 @@ input, button, select, textarea { font-size: 1rem; }
     #view-payment:has(#mob-step-2:not(.hidden)) .overflow-y-auto {
         overflow: hidden !important;
     }
+    /* ============================================================ */
+/* --- MODULE: CAFE IN BED MOBILE (IOS DESIGN) --- */
+/* ============================================================ */
+    /* Ẩn giao diện Bed cũ của PC trên Mobile */
+    #view-bed {
+        display: none !important;
+    }
+
+    /* Container chính cho Bed Mobile */
+    #view-bed-mobile {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background-color: #F2F2F7;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Các Utility Classes từ thiết kế mẫu */
+    .ios-blur {
+        backdrop-filter: blur(20px) saturate(180%);
+        -webkit-backdrop-filter: blur(20px) saturate(180%);
+    }
+    .squircle {
+        border-radius: 24px;
+    }
+    .header-gradient {
+        background: linear-gradient(135deg, #065F46 0%, #064E3B 100%);
+    }
+    .text-primary {
+        color: #064E3B;
+    }
+    .bg-primary {
+        background-color: #064E3B;
+    }
+    
+    /* Animation chuyển trang */
+    .page-enter {
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .page-enter-active {
+        transform: translateX(0);
+    }
+    .page-exit {
+        transform: translateX(0);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .page-exit-active {
+        transform: translateX(100%);
+    }
 }
 </style>
 </head>
@@ -995,6 +1046,51 @@ input, button, select, textarea { font-size: 1rem; }
                 <div class="flex-1 bg-white rounded-[20px] shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden"><h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3><div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div></div>
             </div>
         </div>
+    <div id="view-bed-mobile" class="hidden h-full flex flex-col relative">
+    
+    <div id="mob-bed-list-screen" class="flex flex-col h-full w-full absolute inset-0 z-10 bg-[#F2F2F7]">
+        <header class="flex justify-between items-end px-5 pt-6 pb-6 bg-[#F2F2F7] shrink-0">
+            <div>
+                <p class="text-[11px] font-bold tracking-widest text-slate-400 uppercase">The Cafe 33</p>
+                <h1 class="text-3xl font-bold tracking-tight text-slate-900">Danh sách</h1>
+            </div>
+            <div class="bg-white px-3 py-1.5 rounded-full shadow-sm flex items-center gap-2 border border-slate-200">
+                <input type="date" id="mob-date-picker" onchange="changeBedDateMobile(this.value)" class="text-sm font-bold bg-transparent border-none p-0 outline-none w-[90px] text-slate-700">
+                <span class="material-symbols-outlined text-lg text-slate-400">calendar_today</span>
+            </div>
+        </header>
+
+        <div id="mob-bed-list-container" class="flex-1 overflow-y-auto px-5 pb-32 space-y-3 custom-scrollbar">
+            </div>
+
+        <div class="absolute bottom-6 left-0 right-0 px-6 pointer-events-none z-20">
+            <button onclick="openBookingModal()" class="pointer-events-auto mx-auto flex items-center justify-center gap-2 bg-[#064E3B] text-white w-full h-16 rounded-[22px] shadow-2xl shadow-emerald-900/30 active:scale-95 transition-all">
+                <span class="material-symbols-outlined text-2xl font-bold">add</span>
+                <span class="text-lg font-bold tracking-wide">ĐẶT MỚI</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="mob-bed-detail-screen" class="flex flex-col h-full w-full absolute inset-0 z-30 bg-[#F2F2F7] transform translate-x-full transition-transform duration-300">
+        
+        <nav class="flex items-center justify-between px-4 py-3 bg-[#F2F2F7]/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200/50">
+            <button onclick="closeMobileBedDetail()" class="p-2 flex items-center text-[#007AFF] active:opacity-50">
+                <span class="material-symbols-outlined text-[24px]">chevron_left</span>
+                <span class="text-[17px] font-medium">Quay lại</span>
+            </button>
+            <h1 class="text-[17px] font-semibold text-slate-900">Chi tiết đặt chỗ</h1>
+            <button onclick="openCancelMenuMobile()" class="p-2 text-[#007AFF] active:opacity-50">
+                <span class="material-symbols-outlined text-[24px]">more_horiz</span>
+            </button>
+        </nav>
+
+        <main id="mob-bed-detail-content" class="flex-1 overflow-y-auto px-4 pt-4 pb-32 space-y-5">
+            </main>
+
+        <div id="mob-detail-actions" class="absolute bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-gray-200 z-40">
+            </div>
+    </div>
+</div>
     </div>
 </div>
 
@@ -2485,6 +2581,17 @@ function renderChart(labels, chartData, type) {
 // --- HÀM CHUYỂN VIEW (ĐÃ FIX LỖI CRASH NULL PROPERTY) ---
 // --- HÀM CHUYỂN VIEW (ĐÃ FIX TOÀN DIỆN LỖI NULL) ---
 function switchView(v) {
+    // Thêm vào trong switchView(v)
+if (v === 'bed') {
+    if (window.innerWidth <= 768) {
+        // MOBILE: Gọi hàm quản lý Bed mới
+        openBedManagerMobile();
+        // Cập nhật nút nav active
+        let btnBed = document.getElementById('btn-nav-bed'); // (Nếu có nút này trên mobile navbar)
+        // ... Logic active button giữ nguyên
+        return; // Dừng lại, không chạy logic PC bên dưới
+    }
+}
     isPaymentMode = (v === 'payment');
 
     // 1. Ẩn tất cả view cũ & Reset trạng thái nút Nav
@@ -4293,6 +4400,262 @@ function completeWholePayment() {
     closeSplitModal();
     completeOrder(); 
 }
+    // =========================================================
+// MOBILE SPECIFIC LOGIC: CAFE IN BED
+// =========================================================
+
+// 1. Hàm mở tab Bed trên Mobile
+function openBedManagerMobile() {
+    // Gọi hàm load dữ liệu gốc (để lấy data về biến globalAllBookings)
+    // Lưu ý: openBedManager cũ sẽ vẽ giao diện PC, nhưng ta sẽ override bằng việc hiển thị #view-bed-mobile
+    
+    document.getElementById('loading-overlay').style.display = 'flex';
+    switchView('bed'); // Hàm này đã được sửa ở bước trước để active tab button
+    
+    // Set ngày hiện tại cho date picker mobile
+    const today = new Date().toISOString().split('T')[0];
+    const picker = document.getElementById('mob-date-picker');
+    if(picker && !picker.value) picker.value = today;
+
+    // Đảm bảo ẩn PC, hiện Mobile
+    document.getElementById('view-bed').classList.add('hidden');
+    document.getElementById('view-bed-mobile').classList.remove('hidden');
+
+    // Lắng nghe dữ liệu (Tái sử dụng logic lấy data, nhưng render bằng hàm mới)
+    db.ref('bedBookings').on('value', snap => {
+        const data = snap.val() || {};
+        // Map dữ liệu (Logic giống PC nhưng giữ biến riêng để an toàn)
+        globalAllBookings = Object.keys(data).map(k => {
+            const item = data[k];
+            let rawDate = item.date || item.bookingDate || "";
+            if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
+                const p = rawDate.split('-'); 
+                rawDate = `${p[2]}/${p[1]}/${p[0]}`;
+            }
+            return {
+                id: k, ...item,
+                start: item.start || "--:--", 
+                end: item.end || "--:--",
+                displayDate: rawDate 
+            };
+        });
+
+        document.getElementById('loading-overlay').style.display = 'none';
+        changeBedDateMobile(picker ? picker.value : today);
+    });
+}
+
+// 2. Xử lý đổi ngày trên Mobile
+function changeBedDateMobile(dateVal) {
+    if(!dateVal) return;
+    const parts = dateVal.split('-');
+    const targetDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`; // dd/mm/yyyy
+    
+    // Lọc dữ liệu
+    const list = globalAllBookings.filter(b => {
+        const isToday = (targetDateStr === new Date().toLocaleDateString('en-GB'));
+        if (isToday) return b.displayDate === targetDateStr || (b.status && b.status.includes('active'));
+        return b.displayDate === targetDateStr;
+    });
+
+    renderMobileBedList(list);
+}
+
+// 3. Render Danh sách (List View) - Giao diện Card
+function renderMobileBedList(list) {
+    const container = document.getElementById('mob-bed-list-container');
+    if(!container) return;
+
+    if(list.length === 0) {
+        container.innerHTML = `<div class="flex flex-col items-center justify-center h-64 text-slate-400">
+            <span class="material-symbols-outlined text-4xl mb-2">event_busy</span>
+            <p class="text-sm font-medium">Không có lịch đặt</p>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = list.map(b => {
+        // Logic Style
+        const isWaiting = !b.bedId || b.bedId == "WAITING";
+        const isActive = b.status === 'active';
+        const isDone = b.status === 'đã xong';
+        
+        let cardBg = "bg-white";
+        let titleColor = "text-slate-900";
+        let statusText = isWaiting ? "CHỜ XẾP" : `BED 0${b.bedId}`;
+        let statusColor = isWaiting ? "text-amber-600" : "text-slate-500";
+        let dotColor = isWaiting ? "bg-amber-500" : (isActive ? "bg-green-500 animate-pulse" : "bg-slate-300");
+        
+        // Style đặc biệt cho trạng thái "CHỜ XẾP" (Giống ảnh mẫu)
+        if (isWaiting) {
+            cardBg = "bg-[#064E3B]"; // Xanh đậm
+            titleColor = "text-white";
+            statusText = "CHỜ XẾP";
+            statusColor = "text-emerald-200/80";
+            dotColor = "bg-red-500 border-2 border-[#064E3B]";
+        }
+
+        return `
+        <div onclick="showMobileBedDetail('${b.id}')" 
+             class="${cardBg} squircle p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] active:scale-[0.98] transition-transform border border-slate-100/50 relative overflow-hidden">
+            
+            <div class="flex justify-between items-start mb-1.5 relative z-10">
+                <span class="text-[11px] font-bold tracking-widest uppercase ${statusColor}">${statusText}</span>
+                <div class="w-2.5 h-2.5 rounded-full ${dotColor}"></div>
+            </div>
+            
+            <h3 class="text-xl font-bold mb-3 ${titleColor} relative z-10">${b.name}</h3>
+            
+            <div class="flex items-center gap-2 text-sm ${isWaiting ? 'text-white/70' : 'text-slate-500'} relative z-10">
+                <span class="material-symbols-outlined text-base">schedule</span>
+                <span class="font-medium">Check-out: ${isDone ? b.realEndTime : b.end}</span>
+            </div>
+
+            ${isWaiting ? '<div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full z-0"></div>' : ''}
+        </div>`;
+    }).join('');
+}
+
+// 4. Hiển thị Chi tiết (Detail View) - Trượt ngang
+function showMobileBedDetail(bookingId) {
+    const booking = globalAllBookings.find(b => b.id === bookingId);
+    if(!booking) return;
+
+    // Lưu biến tạm để dùng cho các nút hành động
+    window.currentMobileBooking = booking; 
+
+    // Render nội dung
+    renderDetailContentMobile(booking);
+
+    // Hiệu ứng trượt
+    const screen = document.getElementById('mob-bed-detail-screen');
+    screen.classList.remove('translate-x-full');
+}
+
+function closeMobileBedDetail() {
+    const screen = document.getElementById('mob-bed-detail-screen');
+    screen.classList.add('translate-x-full');
+    window.currentMobileBooking = null;
+}
+
+// 5. Render Nội dung Chi tiết (Giống ảnh mẫu)
+function renderDetailContentMobile(b) {
+    const container = document.getElementById('mob-bed-detail-content');
+    const actionContainer = document.getElementById('mob-detail-actions');
+    
+    const isWaiting = !b.bedId || b.bedId == "WAITING";
+    const statusText = isWaiting ? "CHỜ XẾP" : `BED 0${b.bedId}`;
+    
+    // Tính tổng tiền (Call hàm có sẵn hoặc dùng số có sẵn)
+    const totalDisplay = b.totalSpend ? Number(b.totalSpend).toLocaleString() + 'đ' : "0đ";
+
+    // --- HTML NỘI DUNG ---
+    container.innerHTML = `
+    <div class="header-gradient squircle p-6 shadow-xl shadow-emerald-900/20 relative overflow-hidden text-white">
+        <div class="flex justify-between items-center relative z-10">
+            <div class="space-y-1">
+                <p class="text-[11px] uppercase tracking-[0.1em] text-emerald-200/70 font-bold">Trạng thái hiện tại</p>
+                <h2 class="text-3xl font-extrabold tracking-tight">${statusText}</h2>
+            </div>
+            ${b.status === 'đã hủy' ? 
+                '<span class="bg-red-500/90 px-3 py-1 rounded-full text-xs font-bold border border-white/20">ĐÃ HỦY</span>' : ''}
+        </div>
+        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/5 rounded-full"></div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white squircle p-4 flex flex-col items-center text-center shadow-sm border border-slate-50">
+            <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2">
+                <span class="material-symbols-outlined text-xl">person</span>
+            </div>
+            <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Người đặt</p>
+            <p class="font-bold text-slate-900 text-[14px] leading-tight truncate w-full">${b.name}</p>
+            <p class="text-[12px] text-slate-500 font-mono">${b.phone}</p>
+        </div>
+        <div class="bg-white squircle p-4 flex flex-col items-center text-center shadow-sm border border-slate-50">
+            <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center mb-2">
+                <span class="material-symbols-outlined text-xl">group</span>
+            </div>
+            <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Đi cùng</p>
+            <p class="font-bold text-slate-900 text-[14px] leading-tight truncate w-full">${b.compName || "--"}</p>
+            <p class="text-[12px] text-slate-500 font-mono">${b.compPhone || "--"}</p>
+        </div>
+    </div>
+
+    <div class="bg-white squircle shadow-sm overflow-hidden border border-slate-50">
+        <div class="flex justify-between items-center p-4 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+                <div class="bg-emerald-50 p-1.5 rounded-lg text-emerald-600"><span class="material-symbols-outlined text-[20px]">schedule</span></div>
+                <span class="text-[14px] font-medium text-slate-600">Bắt đầu</span>
+            </div>
+            <span class="text-[16px] font-bold text-slate-900">${b.start}</span>
+        </div>
+        <div class="flex justify-between items-center p-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-red-50 p-1.5 rounded-lg text-red-600"><span class="material-symbols-outlined text-[20px]">timer_off</span></div>
+                <span class="text-[14px] font-medium text-slate-600">Kết thúc</span>
+            </div>
+            <span class="text-[16px] font-bold text-slate-900">${b.end}</span>
+        </div>
+    </div>
+
+    <div class="flex justify-between items-baseline px-2 mt-2">
+        <span class="text-[12px] font-bold text-slate-400 uppercase tracking-widest">TỔNG CHI TIÊU</span>
+        <span class="text-3xl font-black text-[#064E3B] tracking-tight">${totalDisplay}</span>
+    </div>
+
+    ${(b.status !== 'đã xong' && b.status !== 'đã hủy') ? `
+    <div class="bg-[#FFF8F1] rounded-[24px] p-5 border border-orange-100 shadow-inner">
+        <div class="flex items-center justify-center gap-2 mb-4">
+            <span class="material-symbols-outlined text-orange-500 text-lg">warning</span>
+            <span class="text-[11px] font-bold text-orange-700 uppercase tracking-wide">PHÍ VỆ SINH (NỢ LẦN SAU)</span>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+            <button onclick="submitCleaningFee(20000)" class="bg-white py-3 rounded-xl text-sm font-bold shadow-sm text-slate-700 active:scale-95 transition-all">20K</button>
+            <button onclick="submitCleaningFee(30000)" class="bg-white py-3 rounded-xl text-sm font-bold shadow-sm text-slate-700 active:scale-95 transition-all">30K</button>
+            <button onclick="submitCleaningFee(50000)" class="bg-white py-3 rounded-xl text-sm font-bold shadow-sm text-slate-700 active:scale-95 transition-all">50K</button>
+        </div>
+    </div>` : ''}
+    `;
+
+    // --- BUTTON HÀNH ĐỘNG CUỐI CÙNG (Thay đổi theo ngữ cảnh) ---
+    let actionBtnHtml = '';
+    
+    if (isWaiting) {
+        // Nếu đang chờ -> Nút Xếp Bed
+        actionBtnHtml = `
+        <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" 
+                class="w-full bg-[#064E3B] text-white py-4 rounded-[20px] font-bold text-lg shadow-xl shadow-emerald-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined">bed</span>
+            XẾP BED NGAY
+        </button>`;
+    } else if (b.status === 'active' || b.status.includes('đang dùng')) {
+        // Nếu đang dùng -> Nút Menu chọn Gọi Món / Thanh Toán
+        actionBtnHtml = `
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="activeOrderingBedId='${b.bedId}'; pendingBedOrder=window.currentMobileBooking; switchView('menu');" 
+                    class="bg-amber-50 text-amber-700 border border-amber-100 py-4 rounded-[20px] font-bold text-sm uppercase flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">coffee</span> Gọi món
+            </button>
+            <button onclick="handleBedCheckout(window.currentMobileBooking)" 
+                    class="bg-[#064E3B] text-white py-4 rounded-[20px] font-bold text-sm uppercase shadow-lg flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">check_circle</span> Trả Bed
+            </button>
+        </div>`;
+    } else {
+        // Đã xong/hủy -> Không hiện nút hoặc nút Đóng
+        actionBtnHtml = `<button onclick="closeMobileBedDetail()" class="w-full bg-slate-100 text-slate-500 py-4 rounded-[20px] font-bold text-sm uppercase">Đóng</button>`;
+    }
+
+    actionContainer.innerHTML = actionBtnHtml;
+}
+
+// 6. Menu mở rộng (Hủy)
+function openCancelMenuMobile() {
+    if(!window.currentMobileBooking) return;
+    window.pendingCancelId = window.currentMobileBooking.id;
+    document.getElementById('modal-cancel-reason').classList.remove('hidden');
+}
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
 </script>
@@ -4440,6 +4803,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
