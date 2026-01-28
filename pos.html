@@ -691,9 +691,9 @@ input, button, select, textarea { font-size: 1rem; }
     </div>
 </div>
 
-        <div id="view-bed" class="hidden h-full flex flex-col md:flex-row gap-3 bg-[#F2F2F7] p-3 md:rounded-[24px]">
+       <div id="view-bed" class="hidden h-full flex flex-col md:flex-row gap-3 bg-[#F2F2F7] p-3 md:rounded-[24px]">
     
-    <div id="bed-list-panel" class="w-full md:w-[30%] flex flex-col bg-[#F2F2F7] md:bg-white md:rounded-[20px] md:shadow-sm md:border md:border-gray-100 overflow-hidden h-full relative">
+    <div id="bed-col-list" class="w-full md:w-[30%] flex flex-col bg-[#F2F2F7] md:bg-white md:rounded-[20px] md:shadow-sm md:border md:border-gray-100 overflow-hidden h-full relative">
         
         <div class="px-1 pt-2 pb-4 shrink-0 flex justify-between items-end">
              <div>
@@ -701,7 +701,7 @@ input, button, select, textarea { font-size: 1rem; }
                 <h1 class="text-3xl font-bold tracking-tight text-slate-900">Danh sách</h1>
             </div>
             <div class="relative bg-white px-3 py-1.5 rounded-full shadow-sm flex items-center gap-2 border border-slate-200">
-                <span id="display-date-label" class="text-sm font-medium text-slate-700">Today</span>
+                <span id="display-date-label" class="text-sm font-medium text-slate-700">Hôm nay</span>
                 <span class="text-lg text-slate-400">📅</span>
                 <input type="date" id="date-picker-btn" onchange="changeBedDate(this.value)" 
                        class="absolute inset-0 opacity-0 w-full h-full z-10 cursor-pointer">
@@ -718,7 +718,7 @@ input, button, select, textarea { font-size: 1rem; }
         </div>
     </div>
 
-    <div id="bed-detail-panel" class="hidden md:flex w-full md:w-[50%] flex-col bg-[#F2F2F7] md:bg-white md:rounded-[20px] md:shadow-sm md:border md:border-gray-100 overflow-hidden relative h-full">
+    <div id="bed-col-detail" class="hidden md:flex w-full md:w-[50%] flex-col bg-[#F2F2F7] md:bg-white md:rounded-[20px] md:shadow-sm md:border md:border-gray-100 overflow-hidden relative h-full">
         
         <div id="detail-empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
             <p class="font-medium text-xs">Chọn lịch để xem chi tiết</p>
@@ -728,7 +728,7 @@ input, button, select, textarea { font-size: 1rem; }
             </div>
     </div>
 
-    <div class="hidden md:flex w-[20%] flex-col gap-3">
+    <div id="bed-col-map" class="hidden md:flex w-[20%] flex-col gap-3">
         <button onclick="openBookingModal()" class="w-full bg-[#006241] hover:bg-[#004f32] text-white py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1">
             <span class="text-xs uppercase tracking-wider">Đặt Mới</span>
         </button>
@@ -2535,11 +2535,14 @@ function renderLeftColumnList() {
     var container = document.getElementById('col-left-list');
     if (!container) return;
 
-    // Cập nhật nhãn ngày tháng trên Header
+    // Cập nhật nhãn ngày
     const picker = document.getElementById('date-picker-btn');
     if(picker && picker.value) {
-        const d = new Date(picker.value);
-        document.getElementById('display-date-label').innerText = d.toLocaleDateString('en-GB');
+        // Fix lỗi hiển thị ngày (chuyển đổi an toàn)
+        const parts = picker.value.split('-');
+        if(parts.length === 3) {
+            document.getElementById('display-date-label').innerText = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
     }
 
     if (!currentBedList || currentBedList.length === 0) {
@@ -2547,7 +2550,7 @@ function renderLeftColumnList() {
         return;
     }
 
-    // Sort: Đưa trạng thái 'chờ khách' lên đầu
+    // Sort: Chờ xếp lên đầu
     const sortedList = [...currentBedList].sort((a, b) => {
         const aWaiting = (!a.bedId || a.bedId == "WAITING");
         const bWaiting = (!b.bedId || b.bedId == "WAITING");
@@ -2555,36 +2558,29 @@ function renderLeftColumnList() {
     });
 
     container.innerHTML = sortedList.map(function(b, index) {
-        // Mapping lại index gốc để click cho đúng
         const originalIndex = currentBedList.findIndex(item => item.id === b.id);
         
         var isWaiting = (!b.bedId || b.bedId == "WAITING");
         var isDone = (b.status && b.status.includes('đã xong'));
         var isCancelled = (b.status && b.status.includes('đã hủy'));
         
-        // STYLE CARD LIST
-        // Mặc định: Nền trắng, bo tròn 24px (squircle)
-        let cardClass = "p-5 rounded-[24px] shadow-sm border border-slate-200/50 active:scale-[0.98] transition-all cursor-pointer mb-2 ";
-        let titleColor = "text-slate-900";
-        let subColor = "text-slate-500";
+        let cardClass = "p-5 rounded-[24px] bg-white text-slate-900 shadow-sm border border-slate-200/50 active:scale-[0.98] transition-all cursor-pointer mb-2 relative overflow-hidden";
         let badgeColor = "bg-slate-300";
         let labelText = isWaiting ? "CHỜ XẾP" : `BED 0${b.bedId}`;
-        
+        let timeText = b.start + ' - ' + b.end;
+
         if (isWaiting && !isCancelled) {
-            // Style CHỜ XẾP: Nền Xanh đậm (#006442), Chữ trắng
-            cardClass = "p-5 rounded-[24px] bg-[#006442] text-white shadow-lg shadow-emerald-900/20 active:scale-[0.98] transition-all cursor-pointer mb-2";
-            titleColor = "text-white";
-            subColor = "text-white/80";
-            badgeColor = "bg-red-500 border-2 border-[#006442]";
+            cardClass = "p-5 rounded-[24px] bg-[#006442] text-white shadow-lg shadow-emerald-900/20 active:scale-[0.98] transition-all cursor-pointer mb-2 relative overflow-hidden";
+            badgeColor = "bg-red-500 border-2 border-[#006442] animate-pulse";
+            timeText = "Đang chờ...";
         } else if (isCancelled) {
-            cardClass += "bg-red-50 border-red-100 opacity-60";
+            cardClass = "p-5 rounded-[24px] bg-red-50 text-red-900 border border-red-100 opacity-70 cursor-pointer mb-2";
             badgeColor = "bg-red-300";
             labelText = "ĐÃ HỦY";
+            timeText = "Đã hủy";
         } else if (isDone) {
-            cardClass += "bg-gray-100 opacity-60";
-        } else {
-            // Style Active (Đã có Bed): Nền trắng
-            cardClass += "bg-white";
+            cardClass = "p-5 rounded-[24px] bg-gray-100 text-gray-500 border border-gray-200 cursor-pointer mb-2";
+            timeText = "Check-out: " + (b.realEndTime || "--:--");
         }
 
         return `
@@ -2593,10 +2589,10 @@ function renderLeftColumnList() {
                 <span class="text-[11px] font-bold tracking-widest opacity-80 uppercase">${labelText}</span>
                 <div class="w-2.5 h-2.5 rounded-full ${badgeColor}"></div>
             </div>
-            <h3 class="text-xl font-bold mb-3 ${titleColor} truncate">${b.name}</h3>
-            <div class="flex items-center gap-2 ${subColor} text-sm">
+            <h3 class="text-xl font-bold mb-3 truncate">${b.name}</h3>
+            <div class="flex items-center gap-2 opacity-80 text-sm">
                 <span class="material-icons-round text-base">schedule</span>
-                <span class="font-medium">${isDone ? 'Check-out: ' + b.realEndTime : (b.start + ' - ' + b.end)}</span>
+                <span class="font-medium">${timeText}</span>
             </div>
         </div>`;
     }).join('');
@@ -2637,53 +2633,65 @@ function closeIOSModal() {
 // --- HÀM CHỌN BED ITEM (NÂNG CẤP: TÍNH TIỀN + PHẠT VỆ SINH) ---
 // --- HÀM SELECT BED ITEM (BẢN CHUẨN: COMPACT UI + ĐỦ TÍNH NĂNG) ---
 // --- HÀM CHỌN BED ITEM (ĐÃ NÂNG CẤP: QUẢN LÝ PHẠT VỆ SINH) ---
+// --- HÀM ĐIỀU HƯỚNG ---
+function backToBedList() {
+    // Chỉ hoạt động trên Mobile
+    if (window.innerWidth <= 768) {
+        document.getElementById('bed-col-detail').classList.add('hidden');
+        document.getElementById('bed-col-list').classList.remove('hidden');
+        selectedBedIndex = -1;
+    }
+}
+
 function selectBedItem(index) {
     selectedBedIndex = index;
     var data = currentBedList[index];
     
-    // --- MOBILE NAVIGATION LOGIC ---
+    // 1. MOBILE LOGIC: Chuyển màn hình an toàn
     if (window.innerWidth <= 768) {
-        document.getElementById('bed-list-panel').classList.add('hidden');
-        document.getElementById('bed-detail-panel').classList.remove('hidden');
-        document.getElementById('bed-detail-panel').classList.add('flex');
+        document.getElementById('bed-col-list').classList.add('hidden');
+        document.getElementById('bed-col-detail').classList.remove('hidden');
+        document.getElementById('bed-col-detail').classList.add('flex'); // Đảm bảo flex
     }
 
+    // 2. HIỆN PANEL CHI TIẾT
     var panel = document.getElementById('detail-content-panel');
     var empty = document.getElementById('detail-empty-state');
     
     if(empty) empty.classList.add('hidden');
     if(panel) { panel.classList.remove('hidden'); panel.classList.add('flex'); }
 
+    // 3. XỬ LÝ DỮ LIỆU
     var isWaiting = (!data.bedId || data.bedId == "WAITING");
     var isCancelled = (data.status && data.status.includes('đã hủy'));
+    var isDone = (data.status && data.status.includes('đã xong'));
     var bookingId = data.id || data.key;
-    
-    // Render Detail View
+    var statusTitle = isCancelled ? "ĐÃ HỦY" : (isDone ? "ĐÃ XONG" : (isWaiting ? "CHỜ XẾP" : `BED 0${data.bedId}`));
+
+    // 4. RENDER GIAO DIỆN (Luôn có nút Back)
     panel.innerHTML = `
-    <div class="relative bg-gradient-to-br from-[#065F46] to-[#064E3B] rounded-b-[32px] p-6 pb-12 shadow-xl -mx-1 -mt-1 pt-12">
+    <div class="relative bg-gradient-to-br from-[#065F46] to-[#064E3B] rounded-b-[32px] p-6 pb-12 shadow-xl -mx-1 -mt-1 pt-12 shrink-0">
         
-        <div class="absolute top-4 left-4 flex items-center md:hidden">
-            <button onclick="backToBedList()" class="flex items-center text-white/80 hover:text-white p-2 -ml-2">
-                <span class="text-2xl font-bold mr-1">‹</span>
-                <span class="text-[17px] font-medium">Quay lại</span>
+        <div class="absolute top-4 left-4 flex items-center md:hidden z-50">
+            <button onclick="backToBedList()" class="flex items-center text-white/90 hover:text-white p-2 -ml-2 bg-black/10 rounded-full backdrop-blur-md">
+                <span class="text-xl font-bold mr-1">‹</span>
+                <span class="text-[15px] font-medium">Quay lại</span>
             </button>
         </div>
 
-        <div class="flex justify-between items-center relative z-10 mt-8">
+        <div class="flex justify-between items-center relative z-10 mt-6">
             <div class="space-y-1">
-                <p class="text-[11px] uppercase tracking-[0.1em] text-emerald-200/70 font-bold">Trạng thái hiện tại</p>
-                <h2 class="text-3xl font-extrabold text-white tracking-tight leading-none">
-                    ${isCancelled ? "ĐÃ HỦY" : (isWaiting ? "CHỜ XẾP" : `BED 0${data.bedId}`)}
-                </h2>
+                <p class="text-[10px] uppercase tracking-[0.1em] text-emerald-200/70 font-bold">Trạng thái hiện tại</p>
+                <h2 class="text-3xl font-extrabold text-white tracking-tight leading-none">${statusTitle}</h2>
             </div>
-            ${isCancelled ? `<button class="bg-red-500/90 backdrop-blur-md text-white text-[10px] font-bold px-3 py-1 rounded-full border border-white/20">CANCELED</button>` : ''}
+            ${isCancelled ? '<span class="bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">CANCELLED</span>' : ''}
+             ${isDone ? '<span class="bg-gray-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">COMPLETED</span>' : ''}
         </div>
         
         <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/5 rounded-full pointer-events-none"></div>
-        <div class="absolute right-12 top-0 w-20 h-20 bg-white/5 rounded-full pointer-events-none"></div>
     </div>
 
-    <div class="px-4 -mt-8 relative z-20 space-y-4">
+    <div class="px-4 -mt-8 relative z-20 space-y-4 pb-10">
         
         <div class="grid grid-cols-2 gap-3">
             <div class="bg-white/90 backdrop-blur-md rounded-[24px] p-4 flex flex-col items-center text-center shadow-sm border border-white/50">
@@ -2703,30 +2711,31 @@ function selectBedItem(index) {
         <div class="bg-white rounded-[24px] shadow-sm overflow-hidden border border-slate-100">
             <div class="flex justify-between items-center p-4">
                 <div class="flex items-center gap-3">
-                    <div class="bg-emerald-50 p-2 rounded-xl text-emerald-600 font-bold text-lg">🕒</div>
-                    <span class="text-[14px] font-medium text-slate-600">Bắt đầu</span>
+                    <span class="text-xl">🕒</span> <span class="text-[14px] font-medium text-slate-600">Bắt đầu</span>
                 </div>
                 <span class="text-[16px] font-bold text-slate-900">${data.start}</span>
             </div>
             <div class="mx-4 h-[1px] bg-slate-50"></div>
             <div class="flex justify-between items-center p-4">
                 <div class="flex items-center gap-3">
-                    <div class="bg-red-50 p-2 rounded-xl text-red-600 font-bold text-lg">🛑</div>
-                    <span class="text-[14px] font-medium text-slate-600">Kết thúc</span>
+                    <span class="text-xl">🛑</span> <span class="text-[14px] font-medium text-slate-600">Kết thúc</span>
                 </div>
                 <span class="text-[16px] font-bold text-slate-900">${data.end}</span>
             </div>
-             <div class="mx-4 h-[1px] bg-slate-50"></div>
+            ${isDone ? `
+            <div class="flex justify-between items-center p-4 bg-gray-50">
+                <span class="text-[14px] font-bold text-gray-500">Thực tế trả:</span>
+                <span class="text-[16px] font-black text-red-600">${data.realEndTime || "--:--"}</span>
+            </div>` : ''}
             <div class="flex justify-between items-center p-4 bg-slate-50/50">
-                <div class="flex items-center gap-3">
-                    <div class="bg-slate-200/50 p-2 rounded-xl text-slate-500 font-bold">ℹ️</div>
-                    <span class="text-[14px] font-medium text-slate-600">Ghi chú</span>
+                 <div class="flex items-center gap-3">
+                    <span class="text-xl">ℹ️</span> <span class="text-[14px] font-medium text-slate-600">Ghi chú</span>
                 </div>
                 <span class="text-[12px] font-semibold text-red-500 italic">${data.note || "Hủy tự động (Quá 50p)"}</span>
             </div>
         </div>
 
-        ${!isCancelled ? `
+        ${(!isCancelled && !isDone) ? `
         <div id="dynamic-total-spend" class="flex justify-between items-baseline px-2 mt-2">
              <span class="text-[13px] font-bold text-slate-400 uppercase tracking-widest">TỔNG CHI TIÊU</span>
              <span class="text-3xl font-black text-[#064E3B] tracking-tight">...</span>
@@ -2738,14 +2747,14 @@ function selectBedItem(index) {
                 <span class="text-[11px] font-bold text-orange-700 uppercase tracking-wide">PHÍ VỆ SINH (NỢ LẦN SAU)</span>
             </div>
             <div class="grid grid-cols-3 gap-3">
-                <button onclick="submitCleaningFee(20000)" class="bg-white py-3 rounded-[18px] text-[14px] font-bold shadow-sm border border-white text-slate-700 active:scale-95 transition-all">20K</button>
-                <button onclick="submitCleaningFee(30000)" class="bg-white py-3 rounded-[18px] text-[14px] font-bold shadow-sm border border-white text-slate-700 active:scale-95 transition-all">30K</button>
-                <button onclick="submitCleaningFee(50000)" class="bg-white py-3 rounded-[18px] text-[14px] font-bold shadow-sm border border-white text-slate-700 active:scale-95 transition-all">50K</button>
+                <button onclick="submitCleaningFee(20000)" class="bg-white py-3 rounded-[18px] text-[14px] font-bold shadow-sm text-slate-700 active:scale-95 transition-all">20K</button>
+                <button onclick="submitCleaningFee(30000)" class="bg-white py-3 rounded-[18px] text-[14px] font-bold shadow-sm text-slate-700 active:scale-95 transition-all">30K</button>
+                <button onclick="submitCleaningFee(50000)" class="bg-white py-3 rounded-[18px] text-[14px] font-bold shadow-sm text-slate-700 active:scale-95 transition-all">50K</button>
             </div>
             <p id="fee-status-${bookingId}" class="text-[10px] text-center mt-2 text-gray-400 italic"></p>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 pt-2 pb-10">
+        <div class="grid grid-cols-2 gap-3 pt-2">
             <button id="btn-action-order" class="py-4 rounded-[20px] bg-white border border-gray-200 text-slate-700 font-bold shadow-sm flex items-center justify-center gap-2 active:scale-95">
                 <span>☕</span> GỌI MÓN
             </button>
@@ -2753,35 +2762,32 @@ function selectBedItem(index) {
                 <span>🛏️</span> ${isWaiting ? "XẾP BED" : "TRẢ BED"}
             </button>
         </div>
-        ` : '<div class="text-center py-10 text-gray-400 font-bold">Đơn này đã bị hủy</div>'}
+        ` : ''}
+        
+        ${(!isCancelled && !isDone) ? `
+        <div class="mt-2">
+             <button id="btn-action-cancel" class="w-full py-3 text-red-400 font-bold text-[12px] uppercase tracking-widest border border-dashed border-red-200 rounded-xl hover:bg-red-50">Hủy lịch này</button>
+        </div>` : ''}
 
     </div>
     `;
 
-    // Tính tiền (Async)
-    if (!isCancelled && data.phone) {
-         calculateSessionSpend(data.phone, data.start, data.realEndTime || data.end).then(total => {
-             const el = document.getElementById('dynamic-total-spend');
-             if(el) el.innerHTML = `<span class="text-[13px] font-bold text-slate-400 uppercase tracking-widest">TỔNG CHI TIÊU</span>
-             <span class="text-3xl font-black text-[#064E3B] tracking-tight">${total.toLocaleString()}đ</span>`;
-         });
-    }
-
-    // Gán sự kiện cho các nút Action (giữ logic cũ)
-    setupActionButtons(bookingId, data, !isWaiting, 
-        document.getElementById('btn-action-order'), 
-        document.getElementById('btn-action-checkout'), 
-        null // Cancel btn handled differently in new UI if needed
-    );
-}
-
-// --- HÀM HELPER: QUAY LẠI DANH SÁCH (MOBILE) ---
-function backToBedList() {
-    if (window.innerWidth <= 768) {
-        document.getElementById('bed-detail-panel').classList.add('hidden');
-        document.getElementById('bed-list-panel').classList.remove('hidden');
-        // Reset selection
-        selectedBedIndex = -1;
+    // 5. SETUP LOGIC & BUTTONS (An toàn - Kiểm tra null)
+    if (!isCancelled && !isDone) {
+        if (data.phone) {
+             calculateSessionSpend(data.phone, data.start, data.end).then(total => {
+                 const el = document.getElementById('dynamic-total-spend');
+                 if(el) el.innerHTML = `<span class="text-[13px] font-bold text-slate-400 uppercase tracking-widest">TỔNG CHI TIÊU</span>
+                 <span class="text-3xl font-black text-[#064E3B] tracking-tight">${total.toLocaleString()}đ</span>`;
+             });
+        }
+        
+        // Chỉ setup button khi chúng thực sự tồn tại trong DOM
+        var btnOrder = document.getElementById('btn-action-order');
+        var btnCheckout = document.getElementById('btn-action-checkout');
+        var btnCancel = document.getElementById('btn-action-cancel');
+        
+        setupActionButtons(bookingId, data, !isWaiting, btnOrder, btnCheckout, btnCancel);
     }
 }
 // Hàm phụ để gán nút (cho code gọn)
@@ -4165,6 +4171,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
