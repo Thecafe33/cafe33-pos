@@ -691,47 +691,120 @@ input, button, select, textarea { font-size: 1rem; }
     </div>
 </div>
 
-      <div id="view-bed" class="hidden h-full flex flex-col md:flex-row gap-3 bg-[#F2F2F7] p-3 md:rounded-[24px]">
+        <div id="view-bed" class="hidden h-full flex gap-3 bg-[#F2F2F7] p-3 rounded-[24px]">
+            <div class="w-[30%] flex flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-4 py-3 border-b border-gray-50 bg-white sticky top-0 z-10 flex justify-between items-center">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Danh sách</span>
+                    <input type="date" id="date-picker-btn" onchange="changeBedDate(this.value)" 
+       class="text-[10px] font-bold text-[#006241] bg-green-50 px-2 py-1 rounded-md border-none outline-none cursor-pointer hover:bg-green-100 transition-colors">
+                </div>
+                <div id="col-left-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
+            </div>
+            <div class="w-[50%] flex flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden relative">
+                <div id="detail-empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
+                    <p class="font-medium text-xs">Chọn lịch để xem</p>
+                </div>
+                <div id="detail-content-panel" class="hidden flex-col h-full bg-[#F2F2F7] relative overflow-hidden">
     
-    <div id="bed-col-list" class="w-full md:w-[30%] flex flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden h-full">
-        <div class="px-4 py-3 border-b border-gray-50 bg-white sticky top-0 z-10 flex justify-between items-center">
-            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Danh sách</span>
-            <input type="date" id="date-picker-btn" onchange="changeBedDate(this.value)" 
-                   class="text-[10px] font-bold text-[#006241] bg-green-50 px-2 py-1 rounded-md border-none outline-none cursor-pointer hover:bg-green-100 transition-colors">
+    <div class="relative z-10 bg-white/80 backdrop-blur-xl border-b border-gray-200 pt-6 pb-6 px-6 shadow-sm sticky top-0">
+        <div class="flex justify-between items-start">
+            <div>
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Đang chọn</p>
+                </div>
+                <h1 class="text-4xl font-black text-[#1e3932] tracking-tight" id="detail-bed-name">BED 01</h1>
+            </div>
+            
+            <div id="detail-status-badge" class="px-4 py-1.5 bg-amber-100 text-amber-700 rounded-full text-[11px] font-black uppercase tracking-wide border border-amber-200/50 shadow-sm">
+                WAITING
+            </div>
         </div>
-        <div id="col-left-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
     </div>
 
-    <div class="hidden md:flex w-[50%] flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden relative">
-        <div id="detail-empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
-            <p class="font-medium text-xs">Chọn lịch để xem</p>
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-5">
+
+        <div id="detail-timer-box" class="hidden text-center py-6 bg-white rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 relative overflow-hidden group">
+            <div class="absolute inset-0 bg-green-50/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <span class="relative z-10 text-[10px] text-gray-400 uppercase font-bold tracking-widest bg-white px-3 py-1 rounded-full border border-gray-100">Thời gian còn lại</span>
+            <div id="detail-countdown" class="relative z-10 text-5xl font-black text-[#006241] font-mono tracking-tighter mt-3 drop-shadow-sm">00:00</div>
         </div>
-        <div id="detail-content-panel" class="hidden flex-col h-full bg-[#F2F2F7] relative overflow-hidden">
-             </div>
+
+        <div class="bg-white rounded-[24px] shadow-sm border border-gray-200/60 overflow-hidden">
+            <div class="p-4 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl shadow-inner shrink-0">
+                    👤
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Người đặt</p>
+                    <p class="font-bold text-gray-900 text-lg truncate leading-tight" id="detail-cust-name">--</p>
+                    <p class="font-mono text-xs text-gray-500 font-medium mt-0.5" id="detail-cust-phone">--</p>
+                </div>
+            </div>
+            
+            <div class="h-[1px] bg-gray-100 mx-4"></div>
+
+            <div class="p-4 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-xl shadow-inner shrink-0">
+                    👥
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Người đi cùng</p>
+                    <p class="font-bold text-gray-900 text-lg truncate leading-tight" id="detail-comp-name">--</p>
+                    <p class="font-mono text-xs text-gray-500 font-medium mt-0.5" id="detail-comp-phone">--</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-[24px] shadow-sm border border-gray-200/60 p-5 flex justify-between items-center relative overflow-hidden">
+            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-[#006241]"></div>
+            
+            <div class="pl-2">
+                <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Bắt đầu</p>
+                <p class="text-2xl font-black text-[#1e3932]" id="detail-start">--:--</p>
+            </div>
+            
+            <div class="text-gray-200 text-2xl font-light">➝</div>
+
+            <div class="text-right">
+                <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Kết thúc</p>
+                <p class="text-2xl font-black text-[#1e3932]" id="detail-end">--:--</p>
+            </div>
+        </div>
+        
+        <div id="row-checkout-time" class="hidden bg-gray-100 rounded-[20px] p-4 border border-gray-200 flex justify-between items-center">
+            <span class="text-xs font-bold text-gray-500 uppercase">Thực tế trả:</span>
+            <span class="font-black text-red-600 text-lg" id="detail-real-end">--:--</span>
+        </div>
+
     </div>
 
-    <div class="hidden md:flex w-[20%] flex-col gap-3">
-        <button onclick="openBookingModal()" class="w-full bg-[#006241] hover:bg-[#004f32] text-white py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1">
-            <span class="text-xs uppercase tracking-wider">Đặt Mới</span>
-        </button>
-        <div class="flex-1 bg-white rounded-[20px] shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden">
-            <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3>
-            <div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div>
+    <div id="detail-action-buttons" class="p-5 pb-8 bg-white/90 backdrop-blur-md border-t border-gray-200 mt-auto z-20">
+        <div class="grid grid-cols-2 gap-3">
+            <button id="btn-action-order" class="py-4 rounded-[18px] bg-amber-50 text-amber-700 font-bold border border-amber-100 shadow-sm active:scale-95 transition-all flex justify-center items-center gap-2 group">
+                <span class="text-lg group-hover:scale-110 transition-transform">☕</span>
+                <span class="uppercase text-xs tracking-wider">Gọi Món</span>
+            </button>
+            
+            <button id="btn-action-checkout" class="py-4 rounded-[18px] bg-[#006241] text-white font-bold shadow-lg shadow-green-900/20 active:scale-95 transition-all flex justify-center items-center gap-2">
+                <span class="text-lg">🛏️</span>
+                <span class="uppercase text-xs tracking-wider">Xếp Bed Ngay</span>
+            </button>
+        </div>
+
+        <div id="wrapper-btn-cancel" class="mt-3 hidden">
+            <button id="btn-action-cancel" class="w-full py-3 rounded-[18px] text-red-400 font-bold bg-transparent hover:bg-red-50 transition-colors text-[10px] uppercase tracking-widest border border-dashed border-gray-300 hover:border-red-200">
+                Hủy Lịch Này
+            </button>
         </div>
     </div>
 </div>
-
-<div id="mobile-fab-add" class="md:hidden fixed bottom-6 left-0 right-0 px-6 z-[80] pointer-events-none hidden">
-     <button onclick="openBookingModal()" class="pointer-events-auto w-full bg-[#064E3B] text-white h-16 rounded-[24px] shadow-2xl shadow-emerald-900/40 active:scale-95 transition-all flex items-center justify-center gap-3 border border-white/10 backdrop-blur-md">
-        <span class="text-2xl font-bold">+</span>
-        <span class="text-[15px] font-bold tracking-wide uppercase">Đặt Mới</span>
-    </button>
-</div>
-
-<div id="mobile-bed-detail-modal" class="md:hidden fixed inset-0 z-[99999] bg-[#F2F2F7] hidden flex-col animate-slide-up overflow-y-auto">
-    </div>
-
-    
+            </div>
+            <div class="w-[20%] flex flex-col gap-3">
+                <button onclick="openBookingModal()" class="w-full bg-[#006241] hover:bg-[#004f32] text-white py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1"><span class="text-xs uppercase tracking-wider">Đặt Mới</span></button>
+                <div class="flex-1 bg-white rounded-[20px] shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden"><h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3><div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -2361,12 +2434,6 @@ var mobBar = document.getElementById('mobile-bottom-bar');
             mobBar.classList.remove('flex');
         }
     }
-    // Thêm đoạn này:
-    var fab = document.getElementById('mobile-fab-add');
-    if(fab) {
-        if(v === 'bed' && window.innerWidth <= 768) fab.classList.remove('hidden');
-        else fab.classList.add('hidden');
-    }
 }
 // Bed Functions
 // --- HÀM OPEN BED MANAGER (ĐÃ SỬA LỖI NGÀY GIỜ) ---
@@ -2533,74 +2600,71 @@ function renderLeftColumnList() {
     var container = document.getElementById('col-left-list');
     if (!container) return;
 
-    // Cập nhật nhãn ngày
-    const picker = document.getElementById('date-picker-btn');
-    if(picker && picker.value) {
-        // Fix lỗi hiển thị ngày (chuyển đổi an toàn)
-        const parts = picker.value.split('-');
-        if(parts.length === 3) {
-            document.getElementById('display-date-label').innerText = `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-    }
-
     if (!currentBedList || currentBedList.length === 0) {
-        container.innerHTML = '<div class="text-center text-gray-300 text-[10px] py-10 font-bold uppercase tracking-widest">Không có lịch nào</div>';
+        container.innerHTML = '<div class="text-center text-gray-300 text-[10px] py-10 font-bold uppercase tracking-widest">Không có lịch</div>';
         return;
     }
 
-    // Sort: Chờ xếp lên đầu
-    const sortedList = [...currentBedList].sort((a, b) => {
-        const aWaiting = (!a.bedId || a.bedId == "WAITING");
-        const bWaiting = (!b.bedId || b.bedId == "WAITING");
-        return (aWaiting === bWaiting) ? 0 : aWaiting ? -1 : 1;
-    });
-
-    container.innerHTML = sortedList.map(function(b, index) {
-        const originalIndex = currentBedList.findIndex(item => item.id === b.id);
-        
-        var isWaiting = (!b.bedId || b.bedId == "WAITING");
+    container.innerHTML = currentBedList.map(function(b, index) {
         var isDone = (b.status && b.status.includes('đã xong'));
         var isCancelled = (b.status && b.status.includes('đã hủy'));
-        
-        let cardClass = "p-5 rounded-[24px] bg-white text-slate-900 shadow-sm border border-slate-200/50 active:scale-[0.98] transition-all cursor-pointer mb-2 relative overflow-hidden";
-        let badgeColor = "bg-slate-300";
-        let labelText = isWaiting ? "CHỜ XẾP" : `BED 0${b.bedId}`;
-        let timeText = b.start + ' - ' + b.end;
+        var isActive = (b.status && (b.status.includes('active') || b.status.includes('đang dùng')));
+        var isSelected = (index === selectedBedIndex);
 
-        if (isWaiting && !isCancelled) {
-            cardClass = "p-5 rounded-[24px] bg-[#006442] text-white shadow-lg shadow-emerald-900/20 active:scale-[0.98] transition-all cursor-pointer mb-2 relative overflow-hidden";
-            badgeColor = "bg-red-500 border-2 border-[#006442] animate-pulse";
-            timeText = "Đang chờ...";
+        // Style cơ bản: Bo tròn 24px, padding rộng hơn
+        var wrapperClass = "cursor-pointer p-4 rounded-[24px] transition-all duration-200 mb-3 border relative group ";
+        var statusTextUI = ""; 
+
+        if (isSelected) {
+            // Đang chọn: Xanh đậm, nổi khối
+            wrapperClass += "bg-[#006241] border-[#006241] text-white shadow-lg scale-[1.02] z-10";
         } else if (isCancelled) {
-            cardClass = "p-5 rounded-[24px] bg-red-50 text-red-900 border border-red-100 opacity-70 cursor-pointer mb-2";
-            badgeColor = "bg-red-300";
-            labelText = "ĐÃ HỦY";
-            timeText = "Đã hủy";
+            // Đã hủy: Đỏ nhạt
+            if (b.cancelType === 'auto_timeout') {
+                wrapperClass += "bg-red-50 border-red-100 text-red-900";
+                statusTextUI = "AUTO TIMEOUT";
+            } else {
+                wrapperClass += "bg-red-50 border-red-100 text-red-800 opacity-70 grayscale-[0.5]";
+                statusTextUI = "ĐÃ HỦY";
+            }
         } else if (isDone) {
-            cardClass = "p-5 rounded-[24px] bg-gray-100 text-gray-500 border border-gray-200 cursor-pointer mb-2";
-            timeText = "Check-out: " + (b.realEndTime || "--:--");
+            // Đã xong: Xám sạch sẽ
+            wrapperClass += "bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200";
+        } else if (isActive) {
+            // Đang dùng: Xanh nhạt
+            wrapperClass += "bg-[#E6F4F1] border-[#bce3db] text-[#006241] shadow-sm";
+        } else {
+            // Chờ: Trắng
+            wrapperClass += "bg-white border-gray-100 text-gray-600 hover:bg-gray-50 hover:shadow-md hover:border-gray-200";
         }
 
+        // Dấu chấm trạng thái
+        var statusDot = "";
+        if (isCancelled) statusDot = "bg-red-500";
+        else if (isDone) statusDot = "bg-gray-400";
+        else if (isActive) statusDot = "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]";
+        else statusDot = "bg-amber-400";
+
+        // Hiển thị giờ
+        var timeDisplay = `${b.start} - ${b.end}`;
+        if (isDone && b.realEndTime) timeDisplay = `Check-out: ${b.realEndTime}`;
+        else if (isCancelled) timeDisplay = statusTextUI;
+
+        var bedLabel = (b.bedId && b.bedId != "WAITING") ? `BED 0${b.bedId}` : "CHỜ XẾP";
+
         return `
-        <div onclick="selectBedItem(${originalIndex})" class="${cardClass}">
-            <div class="flex justify-between items-start mb-1">
-                <span class="text-[11px] font-bold tracking-widest opacity-80 uppercase">${labelText}</span>
-                <div class="w-2.5 h-2.5 rounded-full ${badgeColor}"></div>
+        <div onclick="selectBedItem(${index})" class="${wrapperClass}">
+            <div class="flex justify-between items-center mb-1.5">
+                <span class="font-black text-[10px] opacity-70 uppercase tracking-widest">${bedLabel}</span>
+                <div class="w-2.5 h-2.5 rounded-full ${statusDot}"></div>
             </div>
-            <h3 class="text-xl font-bold mb-3 truncate">${b.name}</h3>
-            <div class="flex items-center gap-2 opacity-80 text-sm">
-                <span class="material-icons-round text-base">schedule</span>
-                <span class="font-medium">${timeText}</span>
+            <div class="font-black text-sm truncate mb-1.5 leading-tight">${b.name}</div>
+            <div class="text-[10px] font-mono flex justify-between opacity-80 font-bold items-center">
+                <span>${timeDisplay}</span>
+                ${b.totalSpend ? `<span class="bg-black/10 px-1.5 rounded text-[9px]">${Number(b.totalSpend).toLocaleString()}đ</span>` : ''}
             </div>
         </div>`;
     }).join('');
-    // THÊM ĐOẠN NÀY Ở CUỐI HÀM:
-    // Hiển thị nút FAB Add trên Mobile nếu đang ở tab Bed
-    var fab = document.getElementById('mobile-fab-add');
-    if(fab) {
-        if(window.innerWidth <= 768) fab.classList.remove('hidden');
-        else fab.classList.add('hidden');
-    }
 }
 function renderRightColumnMap() { var container = document.getElementById('vertical-map-container'); if(!container) return; var html = ''; for (var i = 1; i <= 4; i++) { var booking = currentBedList.find(b => b.bedId == i && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); var boxStyle = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "bg-green-500 border-green-600 text-white shadow-md ring-2 ring-green-100 hover:scale-105 cursor-pointer" : "bg-amber-50 border-amber-300 text-amber-500 hover:scale-105 cursor-pointer") : "bg-gray-50 border-gray-200 text-gray-300"; var label = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "ACTIVE" : "ĐẶT") : "TRỐNG"; var actionAttr = booking ? `onclick="selectBedFromMap(${i})"` : ""; html += `<div ${actionAttr} class="flex-1 rounded-xl border-2 border-dashed ${boxStyle} flex flex-col items-center justify-center transition-all min-h-[50px] mb-2 relative group"><span class="text-lg font-black">0${i}</span><span class="text-[8px] font-bold tracking-wider">${label}</span>${booking ? `<div class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity"><span class="text-[10px] font-bold text-white">Xem</span></div>` : ''}</div>`; } container.innerHTML = html; }
 function selectBedFromMap(bedId) { var index = currentBedList.findIndex(b => b.bedId == bedId && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); if (index !== -1) { (index); var listItem = document.getElementById('col-left-list').children[index]; if(listItem) listItem.scrollIntoView({behavior: 'smooth', block: 'center'}); } }
@@ -2638,268 +2702,171 @@ function closeIOSModal() {
 // --- HÀM CHỌN BED ITEM (NÂNG CẤP: TÍNH TIỀN + PHẠT VỆ SINH) ---
 // --- HÀM SELECT BED ITEM (BẢN CHUẨN: COMPACT UI + ĐỦ TÍNH NĂNG) ---
 // --- HÀM CHỌN BED ITEM (ĐÃ NÂNG CẤP: QUẢN LÝ PHẠT VỆ SINH) ---
-// --- HÀM ĐIỀU HƯỚNG ---
-function backToBedList() {
-    // Chỉ hoạt động trên Mobile
-    if (window.innerWidth <= 768) {
-        document.getElementById('bed-col-detail').classList.add('hidden');
-        document.getElementById('bed-col-list').classList.remove('hidden');
-        selectedBedIndex = -1;
-    }
-}
-
-// --- HÀM MỞ CHI TIẾT (TÁCH BIỆT MOBILE/PC) ---
 function selectBedItem(index) {
     selectedBedIndex = index;
-    var data = currentBedList[index];
-    
-    // 1. NẾU LÀ MOBILE -> MỞ MODAL RIÊNG (UI MỚI)
-    if (window.innerWidth <= 768) {
-        renderMobileDetailModal(data);
-        return; 
-    }
+    renderLeftColumnList(); 
 
-    // 2. NẾU LÀ PC -> CHẠY LOGIC CŨ (RENDER VÀO CỘT GIỮA)
-    // (Đoạn này giữ nguyên logic cũ của bạn để không hỏng PC)
+    var data = currentBedList[index];
     var panel = document.getElementById('detail-content-panel');
     var empty = document.getElementById('detail-empty-state');
+    
+    // --- ẨN MÀN HÌNH CHỜ ---
     if(empty) empty.classList.add('hidden');
     if(panel) { panel.classList.remove('hidden'); panel.classList.add('flex'); }
-    
-    // ... [Phần code render HTML cho PC của bạn ở đây được giữ nguyên] ...
-    // Để đảm bảo PC chạy đúng, tôi gọi lại hàm render cũ (giả định bạn chưa xóa logic render nội dung PC). 
-    // Nếu bạn cần tôi viết lại đoạn render PC chuẩn, hãy báo tôi. Hiện tại tôi sẽ tập trung fix lỗi Mobile.
-    
-    // Tạm thời gọi hàm render giao diện PC (tôi phục hồi lại code render PC cũ ở đây cho chắc chắn)
-    renderPCContent(data, panel);
-}
 
-// --- HÀM RENDER MODAL MOBILE (THEO THIẾT KẾ MỚI) ---
-function renderMobileDetailModal(data) {
-    var modal = document.getElementById('mobile-bed-detail-modal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    
-    // Ẩn nút FAB đặt mới để không che nội dung
-    var fab = document.getElementById('mobile-fab-add');
-    if(fab) fab.classList.add('hidden');
-
-    var isWaiting = (!data.bedId || data.bedId == "WAITING");
-    var isCancelled = (data.status && data.status.includes('đã hủy'));
+    // --- TRẠNG THÁI ---
     var isDone = (data.status && data.status.includes('đã xong'));
+    var isCancelled = (data.status && data.status.includes('đã hủy'));
+    var isActive = (data.status && (data.status.includes('active') || data.status.includes('đang dùng')));
+    var hasBed = (data.bedId && data.bedId != "WAITING");
     var bookingId = data.id || data.key;
     
-    // Header text
-    var statusTitle = isCancelled ? "ĐÃ HỦY" : (isDone ? "HOÀN THÀNH" : (isWaiting ? "CHỜ XẾP" : `BED 0${data.bedId}`));
+    // Kiểm tra xem đơn này đã bị phạt chưa?
+    var hasPenalty = data.hasPenalty === true;
+    var penaltyAmt = data.penaltyAmount || 0;
 
-    modal.innerHTML = `
-    <div class="relative bg-gradient-to-br from-[#065F46] to-[#064E3B] rounded-b-[32px] p-6 pb-12 shadow-xl pt-12 shrink-0">
-        <div class="absolute top-4 left-4 z-50">
-            <button onclick="closeMobileDetail()" class="flex items-center text-white/90 hover:text-white p-2 -ml-2 bg-black/10 rounded-full backdrop-blur-md">
-                <span class="text-xl font-bold mr-1">‹</span>
-                <span class="text-[15px] font-medium">Quay lại</span>
-            </button>
-        </div>
-        <div class="flex justify-between items-center relative z-10 mt-6">
-            <div class="space-y-1">
-                <p class="text-[10px] uppercase tracking-[0.1em] text-emerald-200/70 font-bold">Trạng thái</p>
-                <h2 class="text-3xl font-extrabold text-white tracking-tight leading-none">${statusTitle}</h2>
-            </div>
-            ${isCancelled ? '<span class="bg-red-500/90 text-white text-[10px] font-bold px-4 py-1.5 rounded-full border border-white/20 shadow-lg">ĐÃ HỦY</span>' : ''}
-            ${isDone ? '<span class="bg-gray-500/90 text-white text-[10px] font-bold px-4 py-1.5 rounded-full border border-white/20 shadow-lg">XONG</span>' : ''}
-        </div>
-        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-white/5 rounded-full pointer-events-none"></div>
-    </div>
-
-    <div class="px-4 -mt-8 relative z-20 space-y-4 pb-20">
-        
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white/70 backdrop-blur-xl rounded-[28px] p-4 flex flex-col items-center text-center shadow-sm border border-white/60">
-                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mb-2 text-blue-600 text-xl font-bold">👤</div>
-                <p class="text-[10px] uppercase font-bold text-blue-500/80 tracking-wider mb-1">NGƯỜI ĐẶT</p>
-                <p class="font-bold text-slate-900 text-[15px] truncate w-full">${data.name}</p>
-                <p class="text-[13px] text-slate-500 mt-0.5 font-medium">${data.phone || "--"}</p>
-            </div>
-            <div class="bg-white/70 backdrop-blur-xl rounded-[28px] p-4 flex flex-col items-center text-center shadow-sm border border-white/60">
-                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center mb-2 text-purple-600 text-xl font-bold">👥</div>
-                <p class="text-[10px] uppercase font-bold text-purple-500/80 tracking-wider mb-1">ĐI CÙNG</p>
-                <p class="font-bold text-slate-900 text-[15px] truncate w-full">${data.compName || "---"}</p>
-                <p class="text-[13px] text-slate-500 mt-0.5 font-medium">${data.compPhone || "--"}</p>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-[28px] shadow-sm overflow-hidden border border-slate-100">
-            <div class="flex justify-between items-center p-5">
-                <div class="flex items-center gap-3">
-                    <div class="bg-emerald-50 p-2 rounded-xl text-emerald-700">
-                        <span class="material-icons-round text-lg">schedule</span>
-                    </div>
-                    <span class="text-[15px] font-medium text-slate-600">Bắt đầu</span>
-                </div>
-                <span class="text-[17px] font-bold text-slate-900">${data.start}</span>
-            </div>
-            <div class="mx-5 h-[1px] bg-slate-50"></div>
-            <div class="flex justify-between items-center p-5">
-                <div class="flex items-center gap-3">
-                    <div class="bg-red-50 p-2 rounded-xl text-red-600">
-                        <span class="material-icons-round text-lg">timer_off</span>
-                    </div>
-                    <span class="text-[15px] font-medium text-slate-600">Kết thúc</span>
-                </div>
-                <span class="text-[17px] font-bold text-slate-900">${data.end}</span>
-            </div>
-            
-            ${isDone ? `
-            <div class="mx-5 h-[1px] bg-slate-50"></div>
-            <div class="flex justify-between items-center p-5 bg-slate-50/50">
-                <span class="text-[14px] font-medium text-slate-500">Thực tế trả:</span>
-                <span class="text-[16px] font-black text-red-600">${data.realEndTime}</span>
-            </div>` : ''}
-
-            <div class="mx-5 h-[1px] bg-slate-50"></div>
-            <div class="flex justify-between items-center p-5 bg-slate-50/30">
-                <div class="flex items-center gap-3">
-                    <div class="bg-gray-100 p-2 rounded-xl text-gray-500">
-                        <span class="material-icons-round text-lg">info</span>
-                    </div>
-                    <span class="text-[15px] font-medium text-slate-600">Ghi chú</span>
-                </div>
-                <span class="text-[13px] font-semibold text-red-500 italic truncate max-w-[150px]">${data.note || "..."}</span>
-            </div>
-        </div>
-
-        ${(!isCancelled && !isDone) ? `
-            <div id="mob-total-spend-box" class="flex justify-between items-baseline px-4 mt-4">
-                 <span class="text-[13px] font-bold text-slate-400 uppercase tracking-widest">TỔNG CHI TIÊU</span>
-                 <span class="text-4xl font-black text-[#064E3B] tracking-tight" id="mob-total-val">...</span>
-            </div>
-
-            <div class="bg-[#FFF8F1] rounded-[28px] p-6 border border-orange-100/50 shadow-inner mt-2">
-                <div class="flex items-center justify-center gap-2 mb-4">
-                    <span class="material-icons-round text-orange-500 text-lg">warning</span>
-                    <span class="text-[12px] font-bold text-orange-700 uppercase tracking-wide">PHÍ VỆ SINH (NỢ LẦN SAU)</span>
-                </div>
-                <div class="grid grid-cols-3 gap-3">
-                    <button onclick="submitCleaningFee(20000)" class="bg-white py-3.5 rounded-[20px] text-[15px] font-bold shadow-sm border border-white text-slate-700 active:scale-95 transition-all">20K</button>
-                    <button onclick="submitCleaningFee(30000)" class="bg-white py-3.5 rounded-[20px] text-[15px] font-bold shadow-sm border border-white text-slate-700 active:scale-95 transition-all">30K</button>
-                    <button onclick="submitCleaningFee(50000)" class="bg-white py-3.5 rounded-[20px] text-[15px] font-bold shadow-sm border border-white text-slate-700 active:scale-95 transition-all">50K</button>
-                </div>
-                <p id="fee-status-mob-${bookingId}" class="text-[11px] text-center mt-3 text-gray-400 italic"></p>
-            </div>
-
-            <div class="pt-4 space-y-3">
-                <button id="btn-mob-checkout" class="w-full bg-gradient-to-r from-[#065F46] to-[#064E3B] text-white py-5 rounded-[24px] font-bold text-lg shadow-2xl shadow-emerald-900/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                    <span class="material-icons-round">bed</span>
-                    ${isWaiting ? "XẾP BED NGAY" : "TRẢ BED & THANH TOÁN"}
-                </button>
-                
-                <div class="grid grid-cols-2 gap-3">
-                     <button id="btn-mob-order" class="py-4 bg-white border border-gray-200 text-slate-700 rounded-[20px] font-bold shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                        <span class="material-icons-round text-emerald-700">coffee</span> GỌI MÓN
-                    </button>
-                    <button id="btn-mob-cancel" class="py-4 bg-white border border-red-200 text-red-500 rounded-[20px] font-bold shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                        <span class="material-icons-round">delete</span> HỦY LỊCH
-                    </button>
-                </div>
-            </div>
-        ` : ''}
-
-        <div class="h-10"></div>
-    </div>
-    `;
-
-    // LOGIC JS CHO MOBILE (Gán sự kiện nút bấm)
-    if (!isCancelled && !isDone) {
-        // Tính tiền (Async)
-        if (data.phone) {
-             calculateSessionSpend(data.phone, data.start, data.end).then(total => {
-                 const el = document.getElementById('mob-total-val');
-                 if(el) el.innerText = total.toLocaleString() + 'đ';
-             });
-        }
-        
-        // Setup nút bấm Mobile (Tránh lỗi null bằng cách check exist)
-        const btnOrder = document.getElementById('btn-mob-order');
-        const btnCheckout = document.getElementById('btn-mob-checkout');
-        const btnCancel = document.getElementById('btn-mob-cancel');
-        
-        // Order
-        if (btnOrder) btnOrder.onclick = function() { showBedDetail(data.bedId); };
-        
-        // Checkout / Checkin
-        if (btnCheckout) {
-            if (isWaiting) {
-                // Xếp Bed
-                btnCheckout.onclick = function() {
-                    pendingBedOrder = data;
-                    renderBedSelection();
-                    document.getElementById('bed-select-modal').classList.remove('hidden');
-                };
-            } else {
-                // Trả Bed
-                btnCheckout.onclick = function() { handleBedCheckout(data); };
-            }
-        }
-        
-        // Cancel
-        if (btnCancel) {
-            btnCancel.onclick = function() {
-                window.pendingCancelId = bookingId;
-                document.getElementById('modal-cancel-reason').classList.remove('hidden');
-            };
-        }
-    }
-}
-
-function closeMobileDetail() {
-    var modal = document.getElementById('mobile-bed-detail-modal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    
-    // Hiện lại nút FAB Đặt mới
-    var fab = document.getElementById('mobile-fab-add');
-    if(fab) fab.classList.remove('hidden');
-}
-
-// --- HÀM PHỤC HỒI RENDER PC (ĐỂ KHÔNG BỊ TRẮNG CỘT GIỮA) ---
-function renderPCContent(data, panel) {
-    // (Đây là copy lại đoạn code render PC cũ của bạn để đảm bảo PC hiển thị đúng)
-    // Tối giản để code ngắn gọn, bạn có thể paste lại code render cũ vào đây
-    var isWaiting = (!data.bedId || data.bedId == "WAITING");
-    var isDone = (data.status && data.status.includes('đã xong'));
-    var isCancelled = (data.status && data.status.includes('đã hủy'));
-    
+    // --- XÂY DỰNG GIAO DIỆN ---
     panel.innerHTML = `
     <div class="bg-white border-b border-gray-100 p-4 sticky top-0 z-10 shadow-sm">
         <div class="flex justify-between items-center">
             <div>
                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Đang chọn</p>
-                <h1 class="text-3xl font-black text-[#1e3932] leading-none">${isWaiting ? "CHỜ XẾP" : `BED 0${data.bedId}`}</h1>
+                <h1 class="text-3xl font-black text-[#1e3932] leading-none" id="detail-bed-name">${hasBed ? `BED 0${data.bedId}` : "CHỜ XẾP"}</h1>
             </div>
-            <div class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-500">
-                ${isCancelled ? "ĐÃ HỦY" : (isDone ? "ĐÃ XONG" : (isWaiting ? "CHỜ KHÁCH" : "ĐANG DÙNG"))}
+            <div id="detail-status-badge" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                ${isDone ? "ĐÃ XONG" : (isCancelled ? "ĐÃ HỦY" : (isActive ? "ĐANG DÙNG" : "CHỜ KHÁCH"))}
             </div>
         </div>
     </div>
-    <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#F9FAFB]">
-        <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm"><p class="font-bold text-[#1e3932]">${data.name}</p><p class="text-xs text-gray-500">${data.phone}</p></div>
-        <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm"><p class="text-xs text-gray-500">Bắt đầu: <span class="text-[#1e3932] font-bold">${data.start}</span></p><p class="text-xs text-gray-500">Kết thúc: <span class="text-[#1e3932] font-bold">${data.end}</span></p></div>
+
+    <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 bg-[#F9FAFB]">
+        <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+                <p class="text-[9px] font-bold text-gray-400 uppercase">Người đặt</p>
+                <p class="font-bold text-[#1e3932] text-sm truncate">${data.name || "Khách lẻ"}</p>
+                <p class="font-mono text-[10px] text-gray-500 font-bold">${data.phone || "--"}</p>
+            </div>
+            <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+                <p class="text-[9px] font-bold text-gray-400 uppercase">Đi cùng</p>
+                <p class="font-bold text-[#1e3932] text-sm truncate">${data.compName || "---"}</p>
+                <p class="font-mono text-[10px] text-gray-500 font-bold">${data.compPhone || "--"}</p>
+            </div>
+        </div>
+
+        <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center text-xs">
+            <div><p class="text-[9px] text-gray-400 font-bold uppercase">Bắt đầu</p><p class="font-black text-[#1e3932] text-lg">${data.start}</p></div>
+            <div class="text-gray-300">➜</div>
+            <div class="text-right"><p class="text-[9px] text-gray-400 font-bold uppercase">Kết thúc</p><p class="font-black text-[#1e3932] text-lg">${data.end}</p></div>
+        </div>
         
-        ${(!isCancelled && !isDone) ? `
-        <div class="grid grid-cols-2 gap-3 mt-4">
-            <button id="btn-pc-order" class="py-3 bg-amber-50 text-amber-700 font-bold rounded-xl border border-amber-100">Gọi Món</button>
-            <button id="btn-pc-checkout" class="py-3 bg-[#006241] text-white font-bold rounded-xl shadow-md">${isWaiting ? "Xếp Bed" : "Trả Bed"}</button>
-        </div>` : ''}
-    </div>`;
-    
-    // Gán sự kiện PC (nếu nút tồn tại)
-    if (!isCancelled && !isDone) {
-        document.getElementById('btn-pc-order').onclick = () => showBedDetail(data.bedId);
-        if (isWaiting) {
-             document.getElementById('btn-pc-checkout').onclick = () => { pendingBedOrder = data; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden'); };
-        } else {
-             document.getElementById('btn-pc-checkout').onclick = () => handleBedCheckout(data);
+        <div id="row-checkout-time" class="hidden bg-gray-100 rounded-xl p-3 flex justify-between items-center">
+            <span class="text-[10px] font-bold text-gray-500 uppercase">Check-out lúc:</span>
+            <span class="font-black text-red-600 text-sm">${isCancelled ? (data.note || "Đã hủy") : (data.realEndTime || "--:--")}</span>
+        </div>
+
+        <div id="done-session-info" class="hidden"></div>
+
+    </div>
+
+    <div id="detail-action-buttons" class="p-4 bg-white border-t border-gray-100 mt-auto">
+        <div class="grid grid-cols-2 gap-3">
+            <button id="btn-action-order" class="py-3 rounded-xl bg-amber-50 text-amber-700 font-bold border border-amber-100 shadow-sm active:scale-95 transition-all flex justify-center items-center gap-1.5">
+                <span>☕</span> <span class="uppercase text-[10px] tracking-wider">Gọi Món</span>
+            </button>
+            <button id="btn-action-checkout" class="py-3 rounded-xl bg-[#006241] text-white font-bold shadow-md shadow-green-900/10 active:scale-95 transition-all flex justify-center items-center gap-1.5">
+                <span>🛏️</span> <span class="uppercase text-[10px] tracking-wider">Xếp Bed</span>
+            </button>
+        </div>
+        <div id="wrapper-btn-cancel" class="mt-2 hidden">
+            <button id="btn-action-cancel" class="w-full py-2.5 rounded-xl text-red-400 font-bold bg-white border border-dashed border-gray-300 hover:bg-red-50 hover:border-red-200 transition-all text-[10px] uppercase tracking-widest">Hủy Lịch Này</button>
+        </div>
+    </div>
+    `;
+
+    // ... (Code cập nhật màu Badge Badge giữ nguyên) ...
+    var badge = document.getElementById('detail-status-badge');
+    if (isDone) badge.className = "px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold uppercase"; 
+    else if (isCancelled) badge.className = "px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-[10px] font-bold uppercase"; 
+    else if (isActive) badge.className = "px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-[10px] font-bold uppercase animate-pulse border border-green-200"; 
+    else badge.className = "px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold uppercase border border-amber-200"; 
+
+    // --- LOGIC ẨN HIỆN & RENDER NÚT PHẠT ---
+    var rowCheckout = document.getElementById('row-checkout-time');
+    var actionBtns = document.getElementById('detail-action-buttons');
+    var wrapperCancel = document.getElementById('wrapper-btn-cancel');
+
+    if (isDone || isCancelled) {
+        if(rowCheckout) rowCheckout.classList.remove('hidden');
+        if(actionBtns) actionBtns.classList.add('hidden');
+        if(wrapperCancel) wrapperCancel.classList.add('hidden');
+
+        // [QUAN TRỌNG] HIỆN TỔNG TIỀN + LOGIC NÚT PHẠT THÔNG MINH
+        if (isDone && !isCancelled && data.phone) {
+            calculateSessionSpend(data.phone, data.start, data.realEndTime).then(total => {
+                var infoDiv = document.getElementById('done-session-info');
+                if (infoDiv) {
+                    
+                    // A. NẾU CHƯA BỊ PHẠT -> HIỆN NÚT CÂY CHỔI
+                    var penaltyHTML = `
+                    <div class="mt-4 bg-white rounded-[24px] p-4 border border-red-100 shadow-[0_8px_20px_-8px_rgba(239,68,68,0.3)] flex items-center justify-between relative overflow-hidden group cursor-pointer" onclick="openCleaningModal('${data.phone}', '${bookingId}')">
+                        <div class="flex items-center gap-4 z-10">
+                            <div class="w-16 h-16 rounded-full bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center shadow-md shadow-red-300/50 group-active:scale-90 transition-all duration-300">
+                                <span class="text-3xl drop-shadow-sm group-hover:-rotate-12 transition-transform">🧹</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-black text-gray-900 leading-none mb-1 group-hover:text-red-600 transition-colors">Phí Vệ Sinh</h3>
+                                <p class="text-[11px] text-gray-500 font-medium">Chạm để thêm phí dọn dẹp</p>
+                            </div>
+                        </div>
+                        <div class="text-gray-300 text-2xl z-10">➜</div>
+                    </div>`;
+
+                    // B. NẾU ĐÃ BỊ PHẠT -> HIỆN THÔNG BÁO + NÚT SỬA/XÓA
+                    if (hasPenalty) {
+                        penaltyHTML = `
+                        <div class="mt-4 bg-red-50 rounded-[24px] p-4 border border-red-200 flex flex-col gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-xl">⚠️</div>
+                                <div>
+                                    <p class="text-[10px] font-bold text-red-400 uppercase tracking-wider">Đã tính phí lần sau</p>
+                                    <p class="text-xl font-black text-red-600 leading-none">${penaltyAmt.toLocaleString()}đ</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 mt-1">
+                                <button onclick="openCleaningModal('${data.phone}', '${bookingId}')" class="flex-1 py-2.5 bg-white border border-red-100 text-red-500 font-bold text-[10px] rounded-xl uppercase shadow-sm active:scale-95">✏️ Thay đổi</button>
+                                <button onclick="deletePenalty('${data.phone}', '${bookingId}')" class="flex-1 py-2.5 bg-red-500 text-white font-bold text-[10px] rounded-xl uppercase shadow-sm active:scale-95">🗑️ Xóa phí</button>
+                            </div>
+                        </div>`;
+                    }
+
+                    infoDiv.innerHTML = `
+                    <div class="bg-white border border-[#006241]/30 rounded-[20px] p-5 shadow-sm relative overflow-hidden mt-3">
+                        <div class="absolute -right-5 -bottom-5 w-24 h-24 bg-[#006241]/10 rounded-full blur-xl pointer-events-none"></div>
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng chi session này</p>
+                        <div class="flex items-baseline gap-1">
+                            <p class="text-4xl font-black text-[#1e3932] tracking-tight">${total.toLocaleString()}</p>
+                            <span class="text-lg font-bold text-[#006241]">vnđ</span>
+                        </div>
+                    </div>
+                    ${penaltyHTML}
+                    `;
+                    infoDiv.classList.remove('hidden');
+                }
+            });
         }
+    } else {
+        // ... (Code hiển thị khi đang chạy - Giữ nguyên như cũ) ...
+        var oldInfo = document.getElementById('done-session-info');
+        if(oldInfo) oldInfo.classList.add('hidden');
+        if(rowCheckout) rowCheckout.classList.add('hidden');
+        if(actionBtns) actionBtns.classList.remove('hidden');
+        if(isActive) { if(wrapperCancel) wrapperCancel.classList.add('hidden'); }
+        else { if(wrapperCancel) wrapperCancel.classList.remove('hidden'); }
+        setupActionButtons(bookingId, data, hasBed, 
+            document.getElementById('btn-action-order'), 
+            document.getElementById('btn-action-checkout'), 
+            document.getElementById('btn-action-cancel')
+        );
     }
 }
 // Hàm phụ để gán nút (cho code gọn)
@@ -4283,11 +4250,6 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
-
-
-
-
-
 
 
 
