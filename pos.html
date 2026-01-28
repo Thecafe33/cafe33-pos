@@ -3600,6 +3600,7 @@ function listenForPayment(code, amount) {
 // --- HÀM HIỂN THỊ QR VÀ ĐỢI TIỀN (CHÈN MỚI) ---
 // --- HÀM TẠO QR DÀNH RIÊNG CHO GITHUB / WEB NGOÀI ---
 // --- HÀM TẠO QR (BẢN FIX LỖI ẢNH BỊ GÃY) ---
+// --- HÀM TẠO QR (ĐÃ FIX: KẾT NỐI TRỰC TIẾP FIREBASE BACKEND) ---
 function showPaymentQR() {
     // 1. KIỂM TRA SỐ TIỀN
     if (!currentTotal || currentTotal < 2000) {
@@ -3608,9 +3609,9 @@ function showPaymentQR() {
         return;
     }
 
-    // 2. DÁN LINK WEB APP CỦA BÀ VÀO ĐÂY
-    // (Nhớ giữ nguyên cái link bà đang dùng, đừng xóa đi nhé)
-    const API_URL = "https://script.google.com/macros/s/AKfycbwJ4KQT1oO5cG1xsahyZcHtmDiiTfg0FqK_pw-pSViiz_AlJXm2059Rcxst1ccqGyQYYw/exec"; 
+    // 2. LINK BACKEND MỚI (Lấy từ Firebase Functions của Tiên sinh)
+    // Lưu ý: Đây là link function createPayment, không phải webhook
+    const API_URL = "https://us-central1-the-cafe-33.cloudfunctions.net/createPayment"; 
 
     // Hiển thị Popup chờ
     const modal = document.getElementById('qr-modal');
@@ -3622,16 +3623,15 @@ function showPaymentQR() {
     
     // Ảnh loading
     qrImg.src = "https://i.gifer.com/ZZ5H.gif"; 
-    qrText.innerText = "Đang kết nối PayOS...";
+    qrText.innerText = "Đang tạo QR...";
     statusEl.innerText = "Vui lòng đợi giây lát...";
 
-    // 3. GỌI SERVER
+    // 3. GỌI SERVER FIREBASE (Dùng JSON chuẩn)
     fetch(API_URL, {
         method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            action: "createPayment",
-            amount: currentTotal
+            amount: parseInt(currentTotal) // Chỉ cần gửi số tiền, backend tự sinh mã
         })
     })
     .then(response => response.json())
@@ -3639,21 +3639,27 @@ function showPaymentQR() {
         console.log("PayOS Result:", result);
         
         if (result.status === "success") {
+            // Hiển thị mã QR từ PayOS trả về
+            // Dùng api.qrserver để đảm bảo ảnh nét
             qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=" + encodeURIComponent(result.qrCode);
-            currentOrderCode = result.orderCodeFull;
+            
+            currentOrderCode = result.orderCodeFull; // Lưu mã đơn: CF123456...
             qrText.innerText = currentOrderCode; 
             statusEl.innerHTML = '<b class="text-amber-500 animate-pulse">Đang chờ thanh toán...</b>';
             
-            listenForPayment(result.orderCodeFull, result.amount);
+            // Bắt đầu lắng nghe Firebase Realtime Database
+            listenForPayment(result.orderCodeFull, currentTotal);
         } else {
             alert("Lỗi từ PayOS: " + result.message);
             modal.classList.add('hidden');
+            setMethod('Tiền mặt');
         }
     })
     .catch(error => {
         console.error("Lỗi Fetch:", error);
-        alert("Lỗi kết nối! Vui lòng thử lại.");
+        alert("Lỗi kết nối Server! Vui lòng thử lại.");
         modal.classList.add('hidden');
+        setMethod('Tiền mặt');
     });
 }
 // --- HÀM ĐỌC ÂM THANH KHI NHẬN TIỀN ---
@@ -4183,6 +4189,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
