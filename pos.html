@@ -4405,26 +4405,41 @@ function completeWholePayment() {
 // =========================================================
 
 // 1. Hàm mở tab Bed trên Mobile
+// =========================================================
+// [FIX] MOBILE SPECIFIC LOGIC: CAFE IN BED (ĐÃ SỬA LỖI TREO MÁY)
+// =========================================================
+
+// 1. Hàm mở tab Bed trên Mobile
 function openBedManagerMobile() {
-    // Gọi hàm load dữ liệu gốc (để lấy data về biến globalAllBookings)
-    // Lưu ý: openBedManager cũ sẽ vẽ giao diện PC, nhưng ta sẽ override bằng việc hiển thị #view-bed-mobile
-    
+    // A. Hiển thị Loading
     document.getElementById('loading-overlay').style.display = 'flex';
-    switchView('bed'); // Hàm này đã được sửa ở bước trước để active tab button
+
+    // B. [QUAN TRỌNG] XỬ LÝ GIAO DIỆN THỦ CÔNG (Thay vì gọi switchView gây lặp)
+    // 1. Ẩn tất cả các view chính
+    const views = ['view-menu', 'view-payment', 'view-history', 'view-bed', 'view-revenue'];
+    views.forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.classList.add('hidden');
+    });
+
+    // 2. Hiện view Bed Mobile & Ẩn view Bed PC
+    const bedMobile = document.getElementById('view-bed-mobile');
+    if(bedMobile) bedMobile.classList.remove('hidden');
     
-    // Set ngày hiện tại cho date picker mobile
+    // 3. Ẩn Sidebar Cart nếu đang mở (cho gọn)
+    const sidebar = document.getElementById('sidebar-cart');
+    if(sidebar) sidebar.classList.add('hidden');
+
+    // C. Logic dữ liệu (Giữ nguyên)
     const today = new Date().toISOString().split('T')[0];
     const picker = document.getElementById('mob-date-picker');
     if(picker && !picker.value) picker.value = today;
 
-    // Đảm bảo ẩn PC, hiện Mobile
-    document.getElementById('view-bed').classList.add('hidden');
-    document.getElementById('view-bed-mobile').classList.remove('hidden');
-
-    // Lắng nghe dữ liệu (Tái sử dụng logic lấy data, nhưng render bằng hàm mới)
+    // Lắng nghe dữ liệu từ Firebase
     db.ref('bedBookings').on('value', snap => {
         const data = snap.val() || {};
-        // Map dữ liệu (Logic giống PC nhưng giữ biến riêng để an toàn)
+        
+        // Map dữ liệu
         globalAllBookings = Object.keys(data).map(k => {
             const item = data[k];
             let rawDate = item.date || item.bookingDate || "";
@@ -4440,7 +4455,10 @@ function openBedManagerMobile() {
             };
         });
 
+        // Tắt Loading khi đã tải xong
         document.getElementById('loading-overlay').style.display = 'none';
+        
+        // Render dữ liệu
         changeBedDateMobile(picker ? picker.value : today);
     });
 }
@@ -4803,6 +4821,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
