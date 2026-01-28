@@ -798,16 +798,69 @@ input, button, select, textarea { font-size: 1rem; }
     </div>
 </div>
 
-        <div id="view-bed" class="hidden h-full flex gap-3 bg-[#F2F2F7] p-3 rounded-[24px]">
-            <div class="md:hidden px-5 py-4 flex items-center justify-between sticky top-0 z-20 bg-[#F2F2F7]/90 backdrop-blur-xl border-b border-gray-100/50">
-    <button onclick="switchView('menu')" class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-gray-800 shadow-sm active:scale-90 transition-transform border border-gray-100">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-        </svg>
-    </button>
-    <h2 class="text-2xl text-gray-900 font-black tracking-tight uppercase">Quản lý Bed</h2>
-    <div class="w-12"></div>
-</div>
+        <div id="view-bed" class="hidden h-full flex flex-col bg-[#FAFAFA] overflow-hidden">
+
+    <!-- MOBILE LAYOUT (chỉ hiện ≤768px) -->
+    <div class="md:hidden flex flex-col h-full overflow-hidden">
+
+        <!-- Header mobile -->
+        <div class="px-5 py-4 flex items-center justify-between sticky top-0 z-50 bg-[#F2F2F7]/90 backdrop-blur-xl border-b border-gray-100/50">
+            <button onclick="switchView('menu')" class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-gray-800 shadow-sm active:scale-95 transition-transform border border-gray-100">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+            </button>
+            <h2 class="text-2xl text-gray-900 font-black tracking-tight uppercase">Quản lý Bed</h2>
+            <div class="w-12"></div>
+        </div>
+
+        <!-- 3 nút tab -->
+        <div class="flex bg-white border-b border-gray-100">
+            <button onclick="switchBedMobileTab('list')" id="bed-mobile-tab-list" class="flex-1 py-4 font-black text-[#006241] border-b-4 border-[#006241]">Danh sách</button>
+            <button onclick="switchBedMobileTab('map')" id="bed-mobile-tab-map" class="flex-1 py-4 font-black text-gray-500">Live Map</button>
+            <button onclick="openBookingModal()" class="px-6 py-4 font-black text-white bg-[#006241] shadow-lg">Đặt mới</button>
+        </div>
+
+        <!-- Nội dung tab (absolute để switch mượt) -->
+        <div class="flex-1 relative overflow-hidden">
+
+            <!-- Tab Danh sách (mặc định hiện) -->
+            <div id="bed-mobile-list-tab" class="absolute inset-0 overflow-y-auto p-4 pb-32">
+                <div class="px-4 py-3 border-b border-gray-50 bg-white sticky top-0 z-10 flex justify-between items-center mb-4">
+                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Danh sách</span>
+                    <input type="date" id="date-picker-btn" onchange="changeBedDate(this.value)"
+                           class="text-[10px] font-bold text-[#006241] bg-green-50 px-2 py-1 rounded-md border-none outline-none cursor-pointer hover:bg-green-100 transition-colors">
+                </div>
+                <div id="col-left-list" class="space-y-2 custom-scrollbar"></div>
+            </div>
+
+            <!-- Tab Live Map -->
+            <div id="bed-mobile-map-tab" class="absolute inset-0 hidden overflow-y-auto p-4 pb-32 bg-white">
+                <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3>
+                <div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div>
+            </div>
+        </div>
+
+        <!-- Modal chi tiết khi bấm item list -->
+        <div id="bed-mobile-detail-modal" class="hidden fixed inset-0 z-[9999] bg-[#FAFAFA] flex flex-col">
+            <div class="px-5 py-4 flex items-center justify-between sticky top-0 z-50 bg-[#F2F2F7]/90 backdrop-blur-xl border-b border-gray-100/50">
+                <button onclick="closeBedMobileDetail()" class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-gray-800 shadow-sm active:scale-95 border border-gray-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                </button>
+                <h3 class="text-xl font-black text-[#006241]">Chi tiết lịch</h3>
+                <div class="w-12"></div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-5 space-y-5" id="bed-mobile-detail-content">
+                <!-- Nội dung chi tiết sẽ được JS copy từ middle panel cũ khi bấm item -->
+            </div>
+            <div class="p-5 pb-8 bg-white/90 backdrop-blur-md border-t border-gray-200" id="bed-mobile-detail-actions">
+                <!-- Nút action sẽ được JS copy từ detail-action-buttons cũ -->
+            </div>
+        </div>
+    </div>
+            <div class="hidden md:flex gap-3 p-3 h-full">
             <div class="w-[30%] flex flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden">
                 <div class="px-4 py-3 border-b border-gray-50 bg-white sticky top-0 z-10 flex justify-between items-center">
                     <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Danh sách</span>
@@ -921,6 +974,12 @@ input, button, select, textarea { font-size: 1rem; }
                 <div class="flex-1 bg-white rounded-[20px] shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden"><h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3><div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div></div>
             </div>
         </div>
+        </div>
+
+
+
+
+    
     </div>
 </div>
 
@@ -4205,6 +4264,46 @@ function completeWholePayment() {
     closeSplitModal();
     completeOrder(); 
 }
+    function switchBedMobileTab(tab) {
+    const listTab = document.getElementById('bed-mobile-list-tab');
+    const mapTab = document.getElementById('bed-mobile-map-tab');
+    const tabListBtn = document.getElementById('bed-mobile-tab-list');
+    const tabMapBtn = document.getElementById('bed-mobile-tab-map');
+
+    listTab.classList.toggle('hidden', tab !== 'list');
+    mapTab.classList.toggle('hidden', tab !== 'map');
+
+    tabListBtn.classList.toggle('text-[#006241]', tab === 'list');
+    tabListBtn.classList.toggle('border-b-4', tab === 'list');
+    tabListBtn.classList.toggle('border-[#006241]', tab === 'list');
+    tabListBtn.classList.toggle('text-gray-500', tab !== 'list');
+
+    tabMapBtn.classList.toggle('text-[#006241]', tab === 'map');
+    tabMapBtn.classList.toggle('text-gray-500', tab !== 'map');
+}
+
+function openBedMobileDetail() {
+    const modalContent = document.getElementById('bed-mobile-detail-content');
+    const modalActions = document.getElementById('bed-mobile-detail-actions');
+    const pcDetail = document.querySelector('#view-bed .hidden.md\\:flex > div:nth-child(2) #detail-content-panel');
+    const pcActions = document.getElementById('detail-action-buttons');
+
+    modalContent.innerHTML = pcDetail.innerHTML;
+    modalActions.innerHTML = pcActions.innerHTML;
+
+    document.getElementById('bed-mobile-detail-modal').classList.remove('hidden');
+}
+
+function closeBedMobileDetail() {
+    document.getElementById('bed-mobile-detail-modal').classList.add('hidden');
+}
+
+// Mặc định tab Danh sách khi mở view-bed
+// Thêm vào cuối hàm openBedManager():
+if (window.innerWidth <= 768) switchBedMobileTab('list');
+
+// Trong hàm bấm item list cũ (hàm chọn booking), thêm:
+if (window.innerWidth <= 768) openBedMobileDetail();
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
 </script>
@@ -4352,6 +4451,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
