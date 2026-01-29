@@ -2307,38 +2307,37 @@ let sheetCurrentY = 0;
 let isSheetDragging = false;
 
 // --- 2. HÀM HIỆN CHI TIẾT (Logic mới) ---
+// --- LOGIC HIỂN THỊ CHI TIẾT (ĐÃ FIX: SỐ LƯỢNG & KHOẢNG CÁCH) ---
 function showHistoryDetailMobile(idx) {
     const h = historyData[idx];
     if (!h) return;
 
-    // A. Điền thông tin vào Khối Xám (Dưới cùng)
+    // A. Điền thông tin
     document.getElementById('detail-mob-time').innerText = h.timeStr + " - " + h.dateStr.slice(0,5); 
     document.getElementById('detail-mob-cust').innerText = h.sdt || 'Vãng lai';
     document.getElementById('detail-mob-method').innerText = h.method;
-    
-    // B. Điền Tổng tiền & Số lượng
     document.getElementById('detail-mob-total').innerText = Number(h.total).toLocaleString();
     
-    // C. Render Danh sách món (Logic tìm giá thông minh)
+    // B. Render Danh sách món
     const itemsContainer = document.getElementById('detail-mob-items-list');
     let itemsHtml = '';
     let totalQty = 0;
     
     const itemsArr = h.items.split(',');
     
-    itemsArr.forEach((itemStr, index) => {
+    itemsArr.forEach((itemStr) => {
         const raw = itemStr.trim();
-        const lastX = raw.lastIndexOf('x'); // Tìm chữ 'x' cuối cùng (vd: Tra (M) x2)
+        const lastX = raw.lastIndexOf('x');
         
         if (lastX !== -1) {
             let namePart = raw.substring(0, lastX).trim();
-            const qty = parseInt(raw.substring(lastX + 1)) || 1;
+            const qty = parseInt(raw.substring(lastX + 1)) || 1; // Lấy số lượng
             totalQty += qty;
             
-            // Tách Size và Tên
+            // Tách Size
             let finalName = namePart;
             let size = "";
-            let unitPrice = 0; // Giá đơn vị
+            let unitPrice = 0;
 
             if(namePart.includes('(')) {
                 let parts = namePart.split('(');
@@ -2346,39 +2345,39 @@ function showHistoryDetailMobile(idx) {
                 size = parts[1].replace(')', '').trim();
             }
 
-            // [LOGIC MỚI] Tìm giá trong Menu gốc để lấp vào chỗ trống
-            // (Vì lịch sử cũ chỉ lưu chuỗi string, không lưu giá từng món)
+            // Tìm giá
             const menuItem = menu.find(m => m.name.toLowerCase() === finalName.toLowerCase());
             if (menuItem) {
                 if (size === 'L') unitPrice = menuItem.priceL;
-                else unitPrice = menuItem.priceM || menuItem.priceL; // Mặc định M hoặc giá duy nhất
+                else unitPrice = menuItem.priceM || menuItem.priceL;
             }
             
-            // Tính thành tiền
-            let subTotal = unitPrice * qty;
-            let displayPrice = subTotal > 0 ? subTotal.toLocaleString() : "--";
-            let displayUnit = unitPrice > 0 ? unitPrice.toLocaleString() : "...";
+            let displayPrice = (unitPrice * qty).toLocaleString();
+            if(unitPrice === 0) displayPrice = "--"; // Nếu không tìm thấy giá
 
-            // HTML Item (Chuẩn mẫu: Số thứ tự to, Size trong box, Giá bên phải)
+            // --- HTML ITEM (FIXED) ---
+            // 1. Số lượng (qty) thay vì số thứ tự
+            // 2. Class py-3 (giảm khoảng cách)
+            // 3. Text màu đậm (text-gray-900)
             itemsHtml += `
-            <div class="py-4 border-b border-gray-100 dark:border-gray-800/50 flex justify-between items-start group">
-                <div class="flex gap-3.5">
+            <div class="py-3 border-b border-dashed border-gray-100 flex justify-between items-start group">
+                <div class="flex gap-3">
                     <div class="w-6 text-center pt-0.5">
-                        <span class="text-[17px] font-bold text-[#006B44]">${index + 1}</span>
+                        <span class="text-[16px] font-black text-[#006B44]">${qty}</span>
                     </div>
                     
                     <div>
-                        <h3 class="text-[17px] font-semibold text-gray-900 dark:text-gray-100 leading-snug">
+                        <h3 class="text-[15px] font-bold text-gray-900 leading-snug">
                             ${finalName}
                         </h3>
-                        <div class="flex items-center gap-2 mt-1.5">
-                            ${size ? `<span class="text-[10px] font-bold text-[#006B44] bg-[#006B44]/10 px-1.5 py-[2px] rounded text-center min-w-[20px]">${size}</span>` : ''}
-                            <span class="text-[13px] text-gray-400 font-medium">${displayUnit}</span>
+                        <div class="flex items-center gap-2 mt-1">
+                            ${size ? `<span class="text-[10px] font-black text-[#006B44] bg-[#006B44]/10 px-1.5 py-[2px] rounded text-center min-w-[20px]">${size}</span>` : ''}
+                            <span class="text-[12px] text-gray-400 font-bold tracking-wide">${unitPrice.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
                 
-                <span class="text-[17px] font-bold text-gray-900 dark:text-gray-100 tabular-nums">${displayPrice}</span>
+                <span class="text-[15px] font-bold text-gray-900 tabular-nums tracking-tight">${displayPrice}</span>
             </div>`;
         }
     });
@@ -2386,21 +2385,21 @@ function showHistoryDetailMobile(idx) {
     itemsContainer.innerHTML = itemsHtml;
     document.getElementById('detail-item-count').innerText = `Số lượng: ${totalQty} món`;
 
-    // D. Nút Hủy (Ẩn nếu đã hủy)
+    // C. Xử lý nút Hủy
     const btnCancel = document.getElementById('btn-cancel-order-mobile');
     const totalText = document.getElementById('detail-mob-total');
     
     if(h.total < 0) {
-        btnCancel.classList.add('hidden'); // Đã hủy
+        btnCancel.classList.add('hidden');
         totalText.parentElement.classList.add('text-red-500'); 
         totalText.parentElement.classList.remove('text-[#006B44]');
+        document.getElementById('detail-mob-total').innerText = "ĐÃ HỦY";
     } else {
         btnCancel.classList.remove('hidden');
         totalText.parentElement.classList.remove('text-red-500');
         totalText.parentElement.classList.add('text-[#006B44]');
         
         btnCancel.onclick = function() {
-            // Dùng confirm native cho nhanh hoặc IOS confirm
             if(confirm("Xác nhận hủy đơn hàng này?")) {
                 executeRefundAction(idx, true);
                 closeHistoryDetailMobile();
@@ -2408,15 +2407,15 @@ function showHistoryDetailMobile(idx) {
         };
     }
 
-    // E. Hiệu ứng mở & Swipe
+    // D. Mở Sheet
     const sheet = document.getElementById('sheet-history-detail');
     const content = document.getElementById('sheet-content-main');
-    
     sheet.classList.remove('hidden');
     requestAnimationFrame(() => {
         content.classList.remove('translate-y-full');
     });
-
+    
+    // Kích hoạt vuốt
     setupSwipeToDismiss(content);
 }
 
@@ -6393,68 +6392,70 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 <div id="sheet-history-detail" class="fixed inset-0 z-[100002] hidden flex items-end justify-center">
     <div onclick="closeHistoryDetailMobile()" class="absolute inset-0 bg-black/40 backdrop-blur-[4px] transition-opacity duration-300" id="sheet-backdrop"></div>
     
-    <div id="sheet-content-main" class="mt-auto h-[94vh] w-full bg-white dark:bg-[#1C1C1E] rounded-t-[32px] shadow-2xl flex flex-col relative z-10 overflow-hidden transform translate-y-full transition-transform duration-300 touch-none">
+    <div id="sheet-content-main" class="mt-auto h-[94vh] w-full bg-white rounded-t-[32px] shadow-2xl flex flex-col relative z-10 overflow-hidden transform translate-y-full transition-transform duration-300 touch-none">
         
-        <div class="px-5 pt-4 pb-2 flex items-center justify-between shrink-0 z-20">
-            <button onclick="closeHistoryDetailMobile()" class="flex items-center text-[#006B44] font-medium active:opacity-60 transition-opacity p-2 -ml-2">
+        <div class="px-5 pt-4 pb-2 flex items-center justify-between shrink-0 z-20 bg-white">
+            <button onclick="closeHistoryDetailMobile()" class="flex items-center text-[#006B44] font-bold active:opacity-60 transition-opacity p-2 -ml-2">
                 <span class="material-symbols-outlined text-[26px]">chevron_left</span>
-                <span class="text-[17px] leading-none pb-0.5">Quay lại</span>
+                <span class="text-[16px] leading-none pb-0.5">Quay lại</span>
             </button>
-            <div class="absolute left-1/2 -translate-x-1/2 top-3 w-10 h-1 bg-gray-200 dark:bg-gray-700 rounded-full opacity-60"></div>
+            <div class="absolute left-1/2 -translate-x-1/2 top-3 w-10 h-1 bg-gray-200 rounded-full opacity-60"></div>
             
-            <button onclick="closeHistoryDetailMobile()" class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center active:bg-gray-200 transition-colors">
+            <button onclick="closeHistoryDetailMobile()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:bg-gray-200 transition-colors">
                 <span class="material-symbols-outlined text-gray-500 text-[20px]">close</span>
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pt-2 pb-6 flex flex-col" id="sheet-scroll-body">
+        <div class="flex-1 overflow-y-auto custom-scrollbar px-6 pt-0 pb-6 flex flex-col bg-white" id="sheet-scroll-body">
             
-            <div class="mb-6 shrink-0">
-                <h1 class="text-[32px] font-bold text-[#006B44] tracking-tight leading-tight">The cafe 33</h1>
+            <div class="mb-4 shrink-0 mt-2">
+                <h1 class="text-[30px] font-black text-[#006B44] tracking-tight leading-tight">The cafe 33</h1>
                 <div class="flex items-center gap-2 mt-1">
                     <span class="relative flex h-2 w-2">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
-                    <p class="text-[13px] font-medium text-gray-400 uppercase tracking-widest">Hóa đơn điện tử</p>
+                    <p class="text-[12px] font-bold text-gray-400 uppercase tracking-widest">Hóa đơn điện tử</p>
                 </div>
             </div>
 
             <div id="detail-mob-items-list" class="flex-1 flex flex-col justify-start">
                 </div>
 
-            <div class="h-8"></div> <div class="mt-4 bg-gray-50 dark:bg-gray-900/40 rounded-2xl p-4 shrink-0">
-                <div class="flex items-center justify-between text-xs divide-x divide-gray-200 dark:divide-gray-700">
+            <div class="h-6"></div> 
+
+            <div class="mt-2 bg-[#F9FAFB] rounded-2xl p-4 shrink-0 border border-gray-100">
+                <div class="flex items-center justify-between text-xs divide-x divide-gray-200">
                     <div class="px-2 flex-1 flex flex-col gap-1 first:pl-0">
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Thời gian</span>
-                        <span id="detail-mob-time" class="font-semibold text-gray-800 dark:text-gray-200 truncate">--:--</span>
+                        <span id="detail-mob-time" class="font-bold text-gray-800 truncate">--:--</span>
                     </div>
                     <div class="px-4 flex-1 flex flex-col gap-1 items-center">
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Khách</span>
-                        <span id="detail-mob-cust" class="font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[80px]">--</span>
+                        <span id="detail-mob-cust" class="font-bold text-gray-800 truncate max-w-[90px]">--</span>
                     </div>
                     <div class="px-2 flex-1 flex flex-col gap-1 items-end last:pr-0">
                         <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Thanh toán</span>
-                        <span id="detail-mob-method" class="font-bold text-[#006B44] truncate uppercase">--</span>
+                        <span id="detail-mob-method" class="font-black text-[#006B44] truncate uppercase">--</span>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <div class="shrink-0 bg-white/90 dark:bg-[#1C1C1E]/95 backdrop-blur-xl border-t border-gray-100 dark:border-gray-800 px-6 pt-4 pb-10 z-20">
+        <div class="shrink-0 bg-white/95 backdrop-blur-md border-t border-gray-100 px-6 pt-4 pb-10 z-20">
             <div class="flex items-end justify-between">
-                <button id="btn-cancel-order-mobile" class="w-14 h-14 rounded-full bg-[#FF3B30] text-white flex items-center justify-center shadow-lg shadow-red-500/25 active:scale-95 transition-transform group">
-                    <span class="material-symbols-outlined text-[24px] group-active:rotate-12 transition-transform">delete</span>
+                <button id="btn-cancel-order-mobile" class="w-14 h-14 rounded-full bg-[#FF3B30] text-white flex items-center justify-center shadow-lg shadow-red-500/30 active:scale-95 transition-transform group">
+                    <span class="material-symbols-outlined text-[26px] group-active:rotate-12 transition-transform">delete</span>
                 </button>
 
                 <div class="text-right flex flex-col items-end">
-                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng Bill</span>
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Tổng Bill</span>
                     <div class="flex items-baseline gap-1 text-[#006B44]">
-                        <span id="detail-mob-total" class="text-[40px] font-black tracking-tight leading-none">0</span>
+                        <span id="detail-mob-total" class="text-[42px] font-black tracking-tighter leading-none">0</span>
                         <span class="text-xl font-bold">đ</span>
                     </div>
-                    <span id="detail-item-count" class="text-[11px] font-medium text-gray-400 mt-1">Số lượng: 0 món</span>
+                    <span id="detail-item-count" class="text-[11px] font-bold text-gray-400 mt-1">Số lượng: 0 món</span>
                 </div>
             </div>
         </div>
@@ -6463,6 +6464,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
