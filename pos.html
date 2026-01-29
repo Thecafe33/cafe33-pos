@@ -4803,16 +4803,56 @@ function updateRevenueUIMobile(stats, mode) {
     // --- LOGIC DATE RANGE PICKER MỚI ---
 
 // 1. Mở Modal chọn ngày
+// ============================================================
+// --- LOGIC BỘ LỌC NGÀY MOBILE (MODAL DATE PICKER) ---
+// ============================================================
+
+// 1. Hàm mở Modal chọn ngày (Thay thế hàm prompt cũ)
 function openMobileDateFilter() {
     const modal = document.getElementById('modal-date-range');
-    if(modal) modal.classList.remove('hidden');
-    
-    // Set mặc định là ngày hôm nay nếu chưa chọn
-    const today = new Date().toISOString().split('T')[0];
-    if(!document.getElementById('filter-start-date').value) {
-        document.getElementById('filter-start-date').value = today;
-        document.getElementById('filter-end-date').value = today;
+    if(modal) {
+        modal.classList.remove('hidden');
+        
+        // Tự động điền ngày hôm nay nếu ô trống
+        const today = new Date().toISOString().split('T')[0];
+        const startInput = document.getElementById('filter-start-date');
+        const endInput = document.getElementById('filter-end-date');
+        
+        if(startInput && !startInput.value) startInput.value = today;
+        if(endInput && !endInput.value) endInput.value = today;
+    } else {
+        console.error("Không tìm thấy modal-date-range");
     }
+}
+
+// 2. Hàm xử lý khi bấm nút "Áp dụng"
+function submitDateFilter() {
+    const start = document.getElementById('filter-start-date').value;
+    const end = document.getElementById('filter-end-date').value;
+
+    // Kiểm tra dữ liệu đầu vào
+    if(!start || !end) return alert("Vui lòng chọn đầy đủ ngày bắt đầu và kết thúc");
+    if(new Date(start) > new Date(end)) return alert("Ngày bắt đầu không được lớn hơn ngày kết thúc");
+
+    // Đóng modal
+    document.getElementById('modal-date-range').classList.add('hidden');
+
+    // Cập nhật chế độ xem
+    currentRevMode = 'custom';
+
+    // Reset style các nút tab tuần/tháng/năm để user biết đang ở chế độ Custom
+    ['week', 'month', 'year'].forEach(m => {
+        const btn = document.getElementById(`tab-rev-${m}`);
+        if(btn) btn.className = "flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all";
+    });
+
+    // Cập nhật nhãn hiển thị trên biểu đồ
+    const label = document.getElementById('mob-chart-label');
+    if(label) label.innerText = "Tùy chọn";
+
+    // Gọi hàm tải dữ liệu với khoảng ngày vừa chọn
+    // fetchRevenueDataMobile(mode, startDate, endDate)
+    fetchRevenueDataMobile('custom', start, end);
 }
 
 // 2. Xử lý khi bấm nút "Áp dụng"
@@ -5103,42 +5143,9 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
         </div>
     </div>
 </div>
-    <div id="modal-date-range" class="fixed inset-0 z-[100000] hidden flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
-    <div class="bg-white w-[90%] max-w-[340px] rounded-[30px] p-6 shadow-2xl relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-2 bg-[#006241]"></div>
-        
-        <h3 class="text-xl font-black text-[#1e3932] uppercase text-center mb-6 tracking-tight">Chọn Khoảng Thời Gian</h3>
-        
-        <div class="space-y-4">
-            <div>
-                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Từ ngày</label>
-                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center">
-                    <span class="material-symbols-outlined text-gray-400 mr-2">date_range</span>
-                    <input type="date" id="filter-start-date" class="bg-transparent w-full text-sm font-bold text-[#1e3932] outline-none">
-                </div>
-            </div>
-            
-            <div>
-                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Đến ngày</label>
-                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center">
-                    <span class="material-symbols-outlined text-gray-400 mr-2">event</span>
-                    <input type="date" id="filter-end-date" class="bg-transparent w-full text-sm font-bold text-[#1e3932] outline-none">
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 mt-8">
-            <button onclick="document.getElementById('modal-date-range').classList.add('hidden')" class="py-3.5 rounded-xl bg-gray-100 text-gray-500 font-bold text-xs uppercase hover:bg-gray-200 transition-all">
-                Đóng
-            </button>
-            <button onclick="submitDateFilter()" class="py-3.5 rounded-xl bg-[#006241] text-white font-bold text-xs uppercase shadow-lg shadow-green-900/20 active:scale-95 transition-all">
-                Áp dụng
-            </button>
-        </div>
-    </div>
-</div>
 </body>
 </html>
+
 
 
 
