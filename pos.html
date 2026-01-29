@@ -4933,7 +4933,13 @@ function getCountdownStr(endTimeStr) {
 
 // HÀM RENDER CHÍNH (ĐÃ CẬP NHẬT GIAO DIỆN & LOGIC)
 // HÀM RENDER CHÍNH (ĐÃ CẬP NHẬT LOGIC GỌI MÓN TỰ ĐIỀN SĐT)
+// --- [FINAL] HÀM RENDER CHI TIẾT BED MOBILE ---
+// Đã đồng bộ logic tính tiền phạt lố giờ với PC
+
 function renderDetailContentMobile(b) {
+    // Lưu booking hiện tại vào biến toàn cục để các nút bấm sử dụng được
+    window.currentMobileBooking = b;
+
     const container = document.getElementById('mob-bed-detail-content');
     const actionContainer = document.getElementById('mob-detail-actions');
     
@@ -4943,16 +4949,16 @@ function renderDetailContentMobile(b) {
     const isCancelled = b.status === 'đã hủy';
     const isActive = (b.status === 'active' || (b.status && b.status.includes('active')) || (b.status && b.status.includes('đang dùng')));
 
-    // --- LOGIC TÍNH TIỀN ---
+    // 1. LOGIC TÍNH TIỀN ĐANG CHẠY (Session Spend)
     calculateSessionSpend(b.phone, b.start, (isDone ? b.realEndTime : b.end)).then(total => {
         const el = document.getElementById('mob-detail-total-display');
         if(el) el.innerText = total.toLocaleString() + 'đ';
     });
 
-    // --- LOGIC ĐẾM NGƯỢC ---
+    // 2. LOGIC ĐỒNG HỒ ĐẾM NGƯỢC
     const countdown = getCountdownStr(isDone ? b.realEndTime : b.end);
 
-    // --- RENDER HTML NỘI DUNG (Main Content) ---
+    // 3. RENDER GIAO DIỆN
     container.innerHTML = `
     <div class="bg-primary squircle p-8 text-white relative overflow-hidden shadow-2xl shadow-[#006241]/20 min-h-[220px] flex flex-col justify-between">
         <div class="relative z-10">
@@ -4963,8 +4969,8 @@ function renderDetailContentMobile(b) {
         
         ${(!isDone && !isCancelled) ? `
         <div class="relative z-10 flex items-baseline justify-between mt-4">
-            <div class="timer-font text-6xl font-medium tracking-tight">${countdown.timeStr}</div>
-            <div class="${countdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md">
+            <div id="mob-live-timer" class="timer-font text-6xl font-medium tracking-tight">${countdown.timeStr}</div>
+            <div id="mob-live-badge" class="${countdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md">
                 ${countdown.label}
             </div>
         </div>
@@ -5040,39 +5046,40 @@ function renderDetailContentMobile(b) {
     ` : ''}
     `;
 
-    // --- ACTION BUTTONS (ĐÃ UPDATE NÚT GỌI MÓN) ---
+    // 4. THANH ĐIỀU KHIỂN (BOTTOM BAR)
     let btnHtml = '';
 
+    // A. Đang chờ: Nút GỌI MÓN (mới) + XẾP BED
     if (isWaiting && !isCancelled) {
-        // TRẠNG THÁI CHỜ: NÚT GỌI MÓN (DÙNG HÀM MỚI) + XẾP BED
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
             <button onclick="handleMobileBedOrder('${b.id}')" 
                 class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">
                 GỌI MÓN
             </button>
-            <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" 
+            <button onclick="renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" 
                 class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">
                 XẾP BED
             </button>
         </div>`;
     } 
+    // B. Đang dùng: Nút GỌI MÓN (mới) + TRẢ BED (chuẩn logic PC)
     else if (isActive && !isCancelled) {
-        // TRẠNG THÁI ĐANG DÙNG: GỌI MÓN (DÙNG HÀM MỚI) + TRẢ BED
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
             <button onclick="handleMobileBedOrder('${b.id}')" 
                 class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">
                 GỌI MÓN
             </button>
+            
             <button onclick="handleBedCheckout(window.currentMobileBooking)" 
                 class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">
                 TRẢ BED
             </button>
         </div>`;
     } 
+    // C. Đã xong/hủy: Nút Đóng
     else {
-        // ĐÃ XONG / ĐÃ HỦY: NÚT ĐÓNG
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
             <button onclick="closeMobileBedDetail()" class="w-full h-16 bg-slate-200 text-slate-500 rounded-full font-bold text-[15px] uppercase">
@@ -5082,6 +5089,25 @@ function renderDetailContentMobile(b) {
     }
 
     actionContainer.innerHTML = btnHtml;
+
+    // 5. KÍCH HOẠT ĐỒNG HỒ CHẠY (Chỉ khi chưa xong)
+    if (!isDone && !isCancelled) {
+        // Clear interval cũ nếu có
+        if (typeof mobileTimerInterval !== 'undefined' && mobileTimerInterval) clearInterval(mobileTimerInterval);
+        
+        // Tạo interval mới
+        mobileTimerInterval = setInterval(() => {
+            const currentCountdown = getCountdownStr(b.end);
+            const tEl = document.getElementById('mob-live-timer');
+            const bEl = document.getElementById('mob-live-badge');
+            
+            if (tEl && bEl) {
+                tEl.innerText = currentCountdown.timeStr;
+                bEl.innerText = currentCountdown.label;
+                bEl.className = `${currentCountdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md transition-colors`;
+            }
+        }, 1000);
+    }
 }
          // =========================================================
 // MOBILE REVENUE LOGIC
@@ -6650,6 +6676,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
