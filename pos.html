@@ -4932,6 +4932,7 @@ function getCountdownStr(endTimeStr) {
 }
 
 // HÀM RENDER CHÍNH (ĐÃ CẬP NHẬT GIAO DIỆN & LOGIC)
+// HÀM RENDER CHÍNH (ĐÃ CẬP NHẬT LOGIC GỌI MÓN TỰ ĐIỀN SĐT)
 function renderDetailContentMobile(b) {
     const container = document.getElementById('mob-bed-detail-content');
     const actionContainer = document.getElementById('mob-detail-actions');
@@ -5039,16 +5040,14 @@ function renderDetailContentMobile(b) {
     ` : ''}
     `;
 
-    // --- ACTION BUTTONS (BOTTOM BAR) ---
-    // Sửa style để giống file thiết kế (Bo tròn, bóng đổ, border)
-    
+    // --- ACTION BUTTONS (ĐÃ UPDATE NÚT GỌI MÓN) ---
     let btnHtml = '';
 
     if (isWaiting && !isCancelled) {
-        // TRẠNG THÁI CHỜ: NÚT GỌI MÓN + XẾP BED
+        // TRẠNG THÁI CHỜ: NÚT GỌI MÓN (DÙNG HÀM MỚI) + XẾP BED
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
-            <button onclick="activeOrderingBedId='${b.bedId}'; pendingBedOrder=window.currentMobileBooking; switchView('menu');" 
+            <button onclick="handleMobileBedOrder('${b.id}')" 
                 class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">
                 GỌI MÓN
             </button>
@@ -5059,10 +5058,10 @@ function renderDetailContentMobile(b) {
         </div>`;
     } 
     else if (isActive && !isCancelled) {
-        // TRẠNG THÁI ĐANG DÙNG: GỌI MÓN + TRẢ BED
+        // TRẠNG THÁI ĐANG DÙNG: GỌI MÓN (DÙNG HÀM MỚI) + TRẢ BED
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
-            <button onclick="activeOrderingBedId='${b.bedId}'; pendingBedOrder=window.currentMobileBooking; switchView('menu');" 
+            <button onclick="handleMobileBedOrder('${b.id}')" 
                 class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">
                 GỌI MÓN
             </button>
@@ -5082,9 +5081,6 @@ function renderDetailContentMobile(b) {
         </div>`;
     }
 
-    // Gán vào container nút bấm, nhưng lưu ý: Do thiết kế dùng position fixed bottom, 
-    // ta nên xóa nội dung cũ của mob-detail-actions và append trực tiếp vào body hoặc xử lý trong container này.
-    // Ở đây tôi gán vào mob-detail-actions và CSS của nó đã được xử lý ở bước trước để không bị đè.
     actionContainer.innerHTML = btnHtml;
 }
          // =========================================================
@@ -6284,6 +6280,58 @@ function filterHistoryMobile(keyword) {
     );
     renderHistoryMobile(filtered);
 }
+    // --- [MỚI] HÀM XỬ LÝ GỌI MÓN TỪ MOBILE (TỰ ĐIỀN SĐT) ---
+function handleMobileBedOrder(bookingId) {
+    // 1. Tìm thông tin đơn đặt trong biến toàn cục
+    const booking = globalAllBookings.find(b => b.id === bookingId);
+    
+    if (!booking) return console.error("Không tìm thấy booking ID:", bookingId);
+
+    // 2. Cập nhật biến trạng thái Bed
+    // Nếu Bed đang chờ (WAITING) thì chưa có bedId, ta dùng activeOrderingBedId để hệ thống biết đang xử lý đơn nào
+    activeOrderingBedId = booking.bedId || "WAITING"; 
+    pendingBedOrder = booking; 
+
+    // 3. TỰ ĐỘNG ĐIỀN SỐ ĐIỆN THOẠI
+    var sdtInput = document.getElementById('kh-sdt');
+    if (sdtInput && booking.phone) {
+        sdtInput.value = booking.phone;
+        
+        // Kích hoạt hàm kiểm tra khách hàng (để hiện tên và điểm tích lũy)
+        if (typeof checkSdtLive === 'function') {
+            checkSdtLive(); 
+        }
+    }
+
+    // 4. Chuyển sang giao diện Menu
+    switchView('menu');
+
+    // 5. (Tùy chọn) Hiển thị thanh thông báo nhỏ trên giỏ hàng để biết đang order cho ai
+    setTimeout(function() {
+        var cartInfo = document.getElementById('cart-bed-info');
+        var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between');
+        
+        // Nếu chưa có thanh thông báo thì tạo mới (Logic lấy từ PC sang)
+        if (!cartInfo && headerContainer) {
+            cartInfo = document.createElement('div');
+            cartInfo.id = 'cart-bed-info';
+            headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling);
+        }
+        
+        if (cartInfo) {
+            var guestName = booking.name || "Khách hàng";
+            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1 animate-pulse";
+            
+            if (booking.bedId && booking.bedId != "WAITING") {
+                cartInfo.innerText = `🟢 ĐANG GỌI: BED 0${booking.bedId} - ${guestName}`;
+                cartInfo.style.color = "#006241";
+            } else {
+                cartInfo.innerText = `🟠 ĐANG GỌI: KHÁCH CHỜ - ${guestName}`;
+                cartInfo.style.color = "#d97706";
+            }
+        }
+    }, 100);
+}
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -6602,6 +6650,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
