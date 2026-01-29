@@ -5103,11 +5103,11 @@ function updateRevenueItemsUI(data) {
 // 2. Cập nhật hàm fetchRevenueDataMobile để hỗ trợ Custom Date
 // (GHI ĐÈ hàm cũ ở dòng ~2965)
 function fetchRevenueDataMobile(mode, startVal, endVal) {
-    // 1. Quản lý hiển thị UI (Ẩn 2 ô Card Tổng khi xem chi tiết Món/Nhóm)
+    // 1. Quản lý hiển thị UI chung
     const summaryCards = document.getElementById('mob-revenue-summary-cards');
     
-    // [CẬP NHẬT] Ẩn card nếu là 'items' HOẶC 'groups'
-    if (currentRevenueView === 'items' || currentRevenueView === 'groups') {
+    // Ẩn ô tổng thu mặc định nếu không phải Overview
+    if (currentRevenueView !== 'overview') {
         if(summaryCards) summaryCards.classList.add('hidden');
     } else {
         if(summaryCards) summaryCards.classList.remove('hidden');
@@ -5115,22 +5115,31 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
 
     document.getElementById('mob-rev-total').innerText = "...";
     
-    // Check view bed (Giữ nguyên)
+    // --- [MỚI] RẼ NHÁNH CHO DOANH THU BED ---
     if (currentRevenueView === 'bed') {
-        document.getElementById('mob-rev-chart-bars').innerHTML = 
-            '<div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">Tính năng đang cập nhật...</div>';
-        document.getElementById('mob-rev-total').innerText = "0";
-        if(summaryCards) summaryCards.classList.add('hidden');
-        return;
+        // Gọi Firebase lấy dữ liệu Bed
+        db.ref('bedBookings').once('value', snap => {
+            const data = snap.val();
+            let bookings = [];
+            if(data) bookings = Object.values(data);
+            
+            // Tính toán số liệu Bed
+            const bedStats = calculateBedStats(bookings, mode, startVal, endVal);
+            
+            // Vẽ giao diện Bed
+            updateRevenueBedUI(bedStats);
+        });
+        return; // DỪNG LẠI, không chạy phần orders bên dưới
     }
 
+    // ... (Phần logic cho orders cũ giữ nguyên) ...
     db.ref('orders').once('value', snap => {
+        // ... code cũ ...
         const data = snap.val();
         let orders = [];
         if(data) orders = Object.values(data);
         
         if (currentRevenueView === 'overview') {
-            // --- LOGIC TỔNG QUAN (Giữ nguyên) ---
             const chartBox = document.getElementById('mob-rev-chart-bars');
             let isScrollMode = (mode === 'month') || (mode === 'custom' && (!startVal || !endVal || Math.abs(new Date(endVal) - new Date(startVal)) > 12 * 86400000));
 
@@ -5144,12 +5153,10 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
             if(stats) updateRevenueUIMobile(stats, mode);
             
         } else if (currentRevenueView === 'items') {
-            // --- LOGIC MÓN (Giữ nguyên) ---
             const result = calculateTopItems(orders, mode, startVal, endVal);
             updateRevenueItemsUI(result);
             
         } else if (currentRevenueView === 'groups') {
-            // --- [MỚI] LOGIC NHÓM ---
             const result = calculateGroupRevenue(orders, mode, startVal, endVal);
             updateRevenueGroupsUI(result);
         }
@@ -5496,6 +5503,213 @@ function selectDurationNew(hours) {
     const activeBtn = document.getElementById(`btn-dur-${hours}`);
     if(activeBtn) activeBtn.className = "border border-green-600 bg-green-50 text-[#006241] py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all";
 }
+function calculateBedStats(bookings, mode, customStart, customEnd) {
+    // A. Lọc thời gian (Logic chuẩn)
+    var now = new Date();
+    var startTime, endTime;
+    
+    if (mode === 'week') {
+        var day = now.getDay() || 7; 
+        startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
+        endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999);
+    } else if (mode === 'month') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), 1);
+        endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (mode === 'year') {
+        startTime = new Date(now.getFullYear(), 0, 1);
+        endTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else { 
+        if(!customStart || !customEnd) return null;
+        startTime = new Date(customStart); startTime.setHours(0,0,0,0);
+        endTime = new Date(customEnd); endTime.setHours(23,59,59,999);
+    }
+
+    let stats = {
+        totalRevenue: 0,
+        totalUsage: 0,
+        topSpenders: {},
+        topFrequent: {},
+        cancelTimeout: 0,
+        cancelCustomer: 0,
+        cancelList: []
+    };
+
+    bookings.forEach(b => {
+        // Parse ngày booking (dd/mm/yyyy -> Date object)
+        let parts = (b.date || "").split('/');
+        if(parts.length !== 3) return;
+        let bDate = new Date(parts[2], parts[1]-1, parts[0]);
+        
+        // Kiểm tra trong khoảng thời gian
+        if (bDate >= startTime && bDate <= endTime) {
+            
+            // 1. Nếu đã xong (Tính tiền & Số lượt)
+            if (b.status === 'đã xong') {
+                stats.totalRevenue += Number(b.totalSpend || 0);
+                stats.totalUsage++;
+
+                // Thống kê Top Spender (Cộng dồn tiền)
+                let key = b.phone || "Vãng lai";
+                if (!stats.topSpenders[key]) stats.topSpenders[key] = { name: b.name, total: 0, phone: key };
+                stats.topSpenders[key].total += Number(b.totalSpend || 0);
+
+                // Thống kê Top Frequent (Cộng dồn số lần)
+                if (!stats.topFrequent[key]) stats.topFrequent[key] = { name: b.name, count: 0, phone: key };
+                stats.topFrequent[key].count++;
+            } 
+            // 2. Nếu đã hủy (Phân loại)
+            else if (b.status === 'đã hủy') {
+                if (b.cancelType === 'auto_timeout') stats.cancelTimeout++;
+                else if (b.cancelType === 'customer') stats.cancelCustomer++;
+                
+                // Lưu vào danh sách để hiện chi tiết
+                stats.cancelList.push(b);
+            }
+        }
+    });
+
+    // Sắp xếp và lấy Top 5
+    stats.topSpendersArr = Object.values(stats.topSpenders).sort((a,b) => b.total - a.total).slice(0, 5);
+    stats.topFrequentArr = Object.values(stats.topFrequent).sort((a,b) => b.count - a.count).slice(0, 5);
+
+    return stats;
+}
+function updateRevenueBedUI(stats) {
+    if(!stats) return;
+
+    // Cập nhật tổng tiền dưới đáy (Hiển thị tổng thu Bed)
+    document.getElementById('mob-chart-total').innerText = stats.totalRevenue.toLocaleString() + ' ₫';
+
+    const container = document.getElementById('mob-rev-chart-bars');
+    
+    // Reset layout container: Cho phép cuộn dọc nội dung bên trong
+    container.className = "w-full flex flex-col gap-5 pb-4 overflow-visible"; 
+    
+    // --- 1. HAI Ô TỔNG QUAN (Bed Rev & Bed Usage) ---
+    let html = `
+    <div class="grid grid-cols-2 gap-3 mb-2">
+        <div class="bg-emerald-50/50 p-4 rounded-[20px] border border-emerald-100 flex flex-col items-center justify-center text-center">
+            <p class="text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-1">Tổng thu Bed</p>
+            <p class="text-2xl font-black text-[#006241]">${stats.totalRevenue.toLocaleString()}<span class="text-xs ml-1 opacity-70">đ</span></p>
+        </div>
+        <div class="bg-blue-50/50 p-4 rounded-[20px] border border-blue-100 flex flex-col items-center justify-center text-center">
+            <p class="text-[9px] font-black uppercase tracking-widest text-blue-600 mb-1">Số lượt dùng</p>
+            <p class="text-2xl font-black text-blue-700">${stats.totalUsage}<span class="text-xs ml-1 opacity-70">lượt</span></p>
+        </div>
+    </div>
+    `;
+
+    // --- 2. TOP 5 KHÁCH CHI TIÊU ---
+    html += `
+    <div class="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
+        <div class="flex items-center gap-2 mb-3">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            <h4 class="text-[11px] font-black uppercase tracking-wider text-gray-500">Top 5 Chi Tiêu</h4>
+        </div>
+        <div class="space-y-2.5">`;
+    
+    if(stats.topSpendersArr.length === 0) html += '<p class="text-xs text-center text-gray-400 py-2">Chưa có dữ liệu</p>';
+    else {
+        stats.topSpendersArr.forEach((user, idx) => {
+            let medal = idx === 0 ? "🥇" : (idx === 1 ? "🥈" : (idx === 2 ? "🥉" : `#${idx+1}`));
+            html += `
+            <div class="flex justify-between items-center text-sm">
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <span class="text-xs w-5 text-center font-bold text-gray-400">${medal}</span>
+                    <span class="font-bold text-slate-700 truncate">${user.name}</span>
+                </div>
+                <span class="font-black text-[#006241] whitespace-nowrap">${user.total.toLocaleString()}</span>
+            </div>`;
+        });
+    }
+    html += `</div></div>`;
+
+    // --- 3. TOP 5 KHÁCH ĐẶT NHIỀU ---
+    html += `
+    <div class="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
+        <div class="flex items-center gap-2 mb-3">
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+            <h4 class="text-[11px] font-black uppercase tracking-wider text-gray-500">Top 5 Thường Xuyên</h4>
+        </div>
+        <div class="space-y-2.5">`;
+        
+    if(stats.topFrequentArr.length === 0) html += '<p class="text-xs text-center text-gray-400 py-2">Chưa có dữ liệu</p>';
+    else {
+        stats.topFrequentArr.forEach((user, idx) => {
+            html += `
+            <div class="flex justify-between items-center text-sm">
+                <div class="flex items-center gap-2 overflow-hidden">
+                    <span class="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold">${idx+1}</span>
+                    <span class="font-bold text-slate-700 truncate">${user.name}</span>
+                </div>
+                <span class="font-black text-blue-600">${user.count} <span class="text-[9px] font-medium text-gray-400">lần</span></span>
+            </div>`;
+        });
+    }
+    html += `</div></div>`;
+
+    // --- 4. THÔNG TIN HỦY ---
+    // Lưu biến toàn cục tạm để dùng cho modal
+    window.currentCancelList = stats.cancelList; 
+
+    html += `
+    <div class="bg-red-50 rounded-2xl p-4 border border-red-100 relative overflow-hidden">
+        <div class="flex justify-between items-start mb-3 relative z-10">
+            <div>
+                <h4 class="text-[11px] font-black uppercase tracking-wider text-red-500 mb-1">Thống kê hủy</h4>
+                <p class="text-[9px] font-medium text-red-400">Tổng cộng: ${stats.cancelTimeout + stats.cancelCustomer} lịch</p>
+            </div>
+            <button onclick="showCancelDetailsModal()" class="bg-white text-red-500 text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm active:scale-95 transition-all border border-red-100">
+                Xem chi tiết
+            </button>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3 relative z-10">
+            <div class="bg-white/60 rounded-xl p-2.5 flex flex-col items-center">
+                <span class="text-2xl font-black text-red-600">${stats.cancelTimeout}</span>
+                <span class="text-[9px] font-bold text-gray-500 uppercase">Quá giờ</span>
+            </div>
+            <div class="bg-white/60 rounded-xl p-2.5 flex flex-col items-center">
+                <span class="text-2xl font-black text-red-600">${stats.cancelCustomer}</span>
+                <span class="text-[9px] font-bold text-gray-500 uppercase">Khách hủy</span>
+            </div>
+        </div>
+    </div>
+    `;
+
+    container.innerHTML = html;
+}
+
+// --- HÀM PHỤ: MỞ MODAL CHI TIẾT HỦY ---
+function showCancelDetailsModal() {
+    const list = window.currentCancelList || [];
+    const container = document.getElementById('cancel-list-content');
+    
+    if(list.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 py-10">Không có lịch hủy nào trong khoảng thời gian này.</div>';
+    } else {
+        container.innerHTML = list.map(b => {
+            let reason = b.cancelType === 'auto_timeout' ? 'Quá giờ (Auto)' : 'Khách yêu cầu';
+            let date = b.date || b.bookingDate || '--/--';
+            
+            return `
+            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                <div class="flex justify-between mb-1">
+                    <span class="font-bold text-sm text-gray-800">${b.name}</span>
+                    <span class="text-[10px] font-bold text-red-500 bg-white px-2 py-0.5 rounded border border-red-100">${reason}</span>
+                </div>
+                <div class="flex justify-between text-[10px] text-gray-500">
+                    <span>${date} • ${b.start}-${b.end}</span>
+                    <span class="font-mono">${b.phone}</span>
+                </div>
+                ${b.note ? `<p class="text-[10px] text-gray-400 italic mt-1 border-t border-gray-200 pt-1">"${b.note}"</p>` : ''}
+            </div>
+            `;
+        }).join('');
+    }
+    
+    document.getElementById('modal-cancel-list').classList.remove('hidden');
+}
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -5702,8 +5916,24 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
         </div>
     </div>
 </div>
+    <div id="modal-cancel-list" class="fixed inset-0 z-[100002] hidden flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white w-[90%] max-w-[360px] rounded-[30px] flex flex-col max-h-[80vh] shadow-2xl relative overflow-hidden">
+        
+        <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-red-50">
+            <div>
+                <h3 class="text-lg font-black text-red-600 uppercase">Lịch sử hủy Bed</h3>
+                <p class="text-[10px] text-red-400 font-bold">Danh sách chi tiết</p>
+            </div>
+            <button onclick="document.getElementById('modal-cancel-list').classList.add('hidden')" class="w-8 h-8 rounded-full bg-white flex items-center justify-center text-red-500 font-bold shadow-sm">✕</button>
+        </div>
+
+        <div id="cancel-list-content" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar bg-white">
+            </div>
+    </div>
+</div>
 </body>
 </html>
+
 
 
 
