@@ -1132,10 +1132,11 @@ input, button, select, textarea { font-size: 1rem; }
                 <span class="material-symbols-outlined text-slate-600 text-[18px]">more_horiz</span>
             </button>
             <div id="mob-revenue-dropdown" class="hidden absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden origin-top-right transition-all">
-                <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu theo món</button>
-                <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu theo nhóm</button>
-                <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu Cafe in Bed</button>
-            </div>
+    <button class="revenue-dropdown-item" onclick="switchRevenueView('overview')">Tổng quan (Biểu đồ)</button>
+    <button class="revenue-dropdown-item" onclick="switchRevenueView('items')">Doanh thu theo món</button>
+    <button class="revenue-dropdown-item" onclick="switchRevenueView('groups')">Doanh thu theo nhóm</button>
+    <button class="revenue-dropdown-item" onclick="switchRevenueView('bed')">Doanh thu Cafe in Bed</button>
+</div>
             <div id="mob-revenue-overlay" onclick="toggleRevenueDropdown()" class="hidden fixed inset-0 z-40"></div>
         </div>
     </div>
@@ -1173,7 +1174,7 @@ input, button, select, textarea { font-size: 1rem; }
             <div class="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-slate-50 p-8">
                 
                 <div class="flex items-center justify-between mb-10">
-                    <h3 class="font-bold text-xl tracking-tight text-slate-800">Biểu đồ doanh thu</h3>
+                    <h3 id="mob-chart-title" class="font-bold text-xl tracking-tight text-slate-800">Biểu đồ doanh thu</h3>
                     <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full">
                         <div class="w-2 h-2 rounded-full bg-[#065F46]"></div>
                         <span class="text-[10px] font-bold text-[#065F46] uppercase tracking-wider" id="mob-chart-label">Tuần này</span>
@@ -4714,25 +4715,186 @@ function openRevenueMobile() {
     // 4. Load Data
     fetchRevenueDataMobile(currentRevMode);
 }
+// =========================================================
+// MODULE: DOANH THU MỞ RỘNG (ITEMS, GROUPS, BED)
+// =========================================================
 
+let currentRevenueView = 'overview'; // Mặc định là tổng quan
+
+// 1. Hàm chuyển đổi chế độ xem
+function switchRevenueView(viewMode) {
+    currentRevenueView = viewMode;
+    toggleRevenueDropdown(); // Đóng menu
+    
+    // Đổi tiêu đề biểu đồ
+    const titleEl = document.getElementById('mob-chart-title');
+    if (titleEl) {
+        if(viewMode === 'overview') titleEl.innerText = "Biểu đồ doanh thu";
+        else if(viewMode === 'items') titleEl.innerText = "Top 10 Món Bán Chạy";
+        else if(viewMode === 'groups') titleEl.innerText = "Doanh Thu Theo Nhóm";
+        else if(viewMode === 'bed') titleEl.innerText = "Doanh Thu Cafe in Bed";
+    }
+
+    // Tải lại dữ liệu ngay lập tức
+    fetchRevenueDataMobile(currentRevMode);
+}
+
+// 2. Hàm Tính toán Top Món (Logic cốt lõi)
+function calculateTopItems(orders, mode, customStart, customEnd) {
+    // A. Lọc đơn hàng theo thời gian (Tái sử dụng logic cũ)
+    var now = new Date();
+    var startTime, endTime;
+    
+    // ... (Logic xác định thời gian y hệt calculateStats, viết gọn lại) ...
+    if (mode === 'week') {
+        var day = now.getDay() || 7; 
+        startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
+        endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999);
+    } else if (mode === 'month') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), 1);
+        endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (mode === 'year') {
+        startTime = new Date(now.getFullYear(), 0, 1);
+        endTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else { // custom
+        if(!customStart || !customEnd) return [];
+        startTime = new Date(customStart); startTime.setHours(0,0,0,0);
+        endTime = new Date(customEnd); endTime.setHours(23,59,59,999);
+    }
+
+    // B. Tổng hợp dữ liệu món ăn
+    let itemMap = {}; // { "Cà phê sữa": {qty: 5, total: 125000} }
+    let totalRevenue = 0; // Để update card tổng
+
+    orders.forEach(o => {
+        var d = new Date(o.createdAt || Date.now());
+        if (d >= startTime && d <= endTime) {
+            totalRevenue += Number(o.total || 0);
+
+            // Ưu tiên dùng itemsArray nếu có (chính xác hơn)
+            if (o.itemsArray && Array.isArray(o.itemsArray)) {
+                o.itemsArray.forEach(item => {
+                    let name = item.name; 
+                    // Gộp size vào tên luôn để phân biệt giá (hoặc bỏ size nếu muốn gộp chung)
+                    // Ở đây ta gộp chung tên món, bỏ qua size để xem "Món nào hot nhất"
+                    
+                    if (!itemMap[name]) itemMap[name] = { qty: 0, total: 0 };
+                    itemMap[name].qty += (item.qty || 0);
+                    itemMap[name].total += (item.price * item.qty || 0);
+                });
+            } else if (o.items) {
+                // Fallback: Parse chuỗi string (kém chính xác hơn về giá từng món)
+                // String: "Cafe (M) x2, Bạc xỉu (L) x1"
+                let parts = o.items.split(',');
+                parts.forEach(p => {
+                    let cleanP = p.trim(); 
+                    // Tách tên và số lượng (Logic đơn giản)
+                    let xIndex = cleanP.lastIndexOf('x');
+                    if(xIndex > -1) {
+                        let namePart = cleanP.substring(0, xIndex).trim();
+                        // Bỏ phần (Size) để lấy tên gốc
+                        let parenIndex = namePart.indexOf('(');
+                        if(parenIndex > -1) namePart = namePart.substring(0, parenIndex).trim();
+                        
+                        let qty = parseInt(cleanP.substring(xIndex+1)) || 1;
+                        
+                        if (!itemMap[namePart]) itemMap[namePart] = { qty: 0, total: 0 };
+                        itemMap[namePart].qty += qty;
+                        // Lưu ý: Không tính được tiền chính xác từ string nếu không tra menu, tạm bỏ qua tiền
+                    }
+                });
+            }
+        }
+    });
+
+    // C. Chuyển Map thành Array và Sắp xếp
+    let sortedItems = Object.keys(itemMap).map(key => {
+        return { name: key, ...itemMap[key] };
+    }).sort((a, b) => b.total - a.total); // Xếp theo doanh thu giảm dần
+
+    return {
+        topItems: sortedItems.slice(0, 10), // Lấy Top 10
+        totalRev: totalRevenue
+    };
+}
+
+// 3. Hàm vẽ UI Bảng Xếp Hạng (Thay thế biểu đồ)
+function updateRevenueItemsUI(data) {
+    // Update thẻ Card Tổng (Vẫn giữ nguyên để user biết tổng tiền)
+    document.getElementById('mob-rev-total').innerHTML = `
+        <span class="text-3xl">${data.totalRev.toLocaleString()}</span> 
+        <span class="text-xs font-bold opacity-60">₫</span>
+    `;
+    // Ẩn hoặc giữ Card Ăn vặt? Tạm giữ nguyên số cũ hoặc ẩn nếu muốn
+    // (Ở đây ta giữ nguyên UI Card, chỉ đổi phần biểu đồ)
+
+    const container = document.getElementById('mob-rev-chart-bars');
+    
+    // Xóa class cũ của biểu đồ (flex-row items-end) -> Đổi thành list dọc (flex-col)
+    container.className = "w-full flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 max-h-[300px]";
+    
+    if (data.topItems.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 py-10">Chưa có dữ liệu</div>';
+        return;
+    }
+
+    // Tìm giá trị lớn nhất để tính thanh %
+    const maxVal = data.topItems[0].total || 1;
+
+    // Render danh sách
+    container.innerHTML = data.topItems.map((item, index) => {
+        let percent = Math.round((item.total / maxVal) * 100);
+        let rankColor = index === 0 ? 'text-yellow-500' : (index === 1 ? 'text-gray-400' : (index === 2 ? 'text-amber-700' : 'text-slate-500'));
+        let barColor = index < 3 ? 'bg-[#006241]' : 'bg-slate-200';
+        
+        return `
+        <div class="w-full">
+            <div class="flex justify-between items-end mb-1">
+                <div class="flex items-center gap-2 max-w-[70%]">
+                    <span class="font-black text-sm w-4 ${rankColor}">#${index + 1}</span>
+                    <span class="font-bold text-sm text-slate-700 truncate">${item.name}</span>
+                    <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 rounded-full">x${item.qty}</span>
+                </div>
+                <span class="font-black text-sm text-[#006241]">${item.total.toLocaleString()}đ</span>
+            </div>
+            <div class="w-full h-2 bg-slate-50 rounded-full overflow-hidden">
+                <div class="h-full ${barColor} rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+            </div>
+        </div>
+        `;
+    }).join('');
+}
 // 2. Cập nhật hàm fetchRevenueDataMobile để hỗ trợ Custom Date
 // (GHI ĐÈ hàm cũ ở dòng ~2965)
 function fetchRevenueDataMobile(mode, startVal, endVal) {
     document.getElementById('mob-rev-total').innerText = "...";
     
+    // Nếu đang ở chế độ xem Nhóm hoặc Bed -> Thông báo chưa có
+    if (currentRevenueView === 'groups' || currentRevenueView === 'bed') {
+        document.getElementById('mob-rev-chart-bars').innerHTML = 
+            '<div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">Tính năng đang cập nhật...</div>';
+        document.getElementById('mob-rev-total').innerText = "0";
+        return;
+    }
+
     db.ref('orders').once('value', snap => {
         const data = snap.val();
         let orders = [];
         if(data) orders = Object.values(data);
         
-        // Tái sử dụng logic calculateStats của PC
-        // calculateStats(orders, mode, customStart, customEnd)
-        const stats = calculateStats(orders, mode, startVal, endVal);
-        
-        if(stats) {
-            updateRevenueUIMobile(stats, mode);
-        } else {
-             document.getElementById('mob-rev-total').innerText = "0";
+        if (currentRevenueView === 'overview') {
+            // --- LOGIC CŨ: BIỂU ĐỒ CỘT ---
+            // Reset lại class CSS cho container biểu đồ (trả về dạng ngang)
+            const chartBox = document.getElementById('mob-rev-chart-bars');
+            chartBox.className = "relative h-64 w-full flex items-end justify-between gap-2 mb-8";
+            
+            const stats = calculateStats(orders, mode, startVal, endVal);
+            if(stats) updateRevenueUIMobile(stats, mode);
+            
+        } else if (currentRevenueView === 'items') {
+            // --- LOGIC MỚI: TOP 10 MÓN ---
+            const result = calculateTopItems(orders, mode, startVal, endVal);
+            updateRevenueItemsUI(result);
         }
     });
 }
@@ -5120,6 +5282,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
