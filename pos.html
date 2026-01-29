@@ -3619,83 +3619,87 @@ function submitCancelBooking(type) {
     // =========================================================
 // XỬ LÝ TRẢ BED & TÍNH PHÍ LỐ GIỜ (THÔNG MINH)
 // =========================================================
+// --- [FIX] XỬ LÝ TRẢ BED & LƯU DOANH THU ---
 function handleBedCheckout(booking) {
     if (!booking) return;
 
-    // 1. Tính toán thời gian
     const now = new Date();
-    
-    // Lấy giờ kết thúc theo lịch
+    // 1. Tính toán giờ check-out thực tế
+    let realEndTimeStr = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+
+    // 2. Tính toán tiền lố giờ (Logic cũ giữ nguyên)
     let endParts = booking.end.split(':');
     let endTime = new Date();
     endTime.setHours(parseInt(endParts[0]), parseInt(endParts[1]), 0);
-    
-    // Tính phút chênh lệch (Lố bao nhiêu phút)
-    // Nếu diff > 0 là lố, diff < 0 là trả sớm
     let diffMinutes = Math.floor((now - endTime) / 60000);
 
-    // 2. LOGIC XỬ LÝ
     if (diffMinutes <= 5) {
-        // --- TRƯỜNG HỢP A: TRẢ ĐÚNG GIỜ HOẶC LỐ ÍT (< 5p) ---
-        // Hiện popup xác nhận trả bed bình thường
         showIOSConfirm(`Xác nhận trả Bed 0${booking.bedId}?`, () => {
-            processCheckoutFirebase(booking);
+            // [FIX QUAN TRỌNG] Tính tiền trước khi lưu
+            calculateAndSaveCheckout(booking, realEndTimeStr);
         });
     } else {
-        // --- TRƯỜNG HỢP B: LỐ GIỜ (> 5p) -> TÍNH TIỀN ---
-        
-        // Tính số giờ phải thu thêm (Làm tròn lên: 6p -> 1h, 65p -> 2h)
+        // Logic lố giờ (Giữ nguyên)
         let extraHoursQty = Math.ceil(diffMinutes / 60);
-        
-        // Tính thời gian khách ĐÃ MUA trước đó (để biết đang ở giờ thứ mấy)
-        // Ví dụ: Đặt 2h30p -> Hệ thống tính là 3h (Math.ceil)
         let startParts = booking.start.split(':');
         let startTime = new Date();
         startTime.setHours(parseInt(startParts[0]), parseInt(startParts[1]), 0);
-        
-        // Tổng phút đã đặt ban đầu
         let bookedMinutes = (endTime - startTime) / 60000;
-        // Quy đổi ra giờ đã trả tiền (Ví dụ 2.5h -> 3h)
         let paidHours = Math.ceil(bookedMinutes / 60);
 
         let msg = `⚠️ KHÁCH QUÁ GIỜ: ${diffMinutes} PHÚT\n\nHệ thống sẽ tự động cộng thêm ${extraHoursQty} giờ vào Bill.\n(Bấm Đồng ý để chuyển sang Menu)`;
 
         showIOSConfirm(msg, () => {
-            // --- THUẬT TOÁN TỰ ĐỘNG CHỌN MÓN (1h thường vs 1h từ h5) ---
-            
-            // Duyệt qua từng giờ lố để xem nó thuộc khung giá nào
             for (let i = 1; i <= extraHoursQty; i++) {
-                // Giờ hiện tại đang tính = Giờ đã trả + Giờ lố thứ i
                 let currentHourIndex = paidHours + i;
-
-                if (currentHourIndex <= 4) {
-                    // Nếu là giờ thứ 4 trở xuống -> Giá thường
-                    autoAddMenuItemToCart("1h bed"); 
-                } else {
-                    // Nếu là giờ thứ 5 trở lên -> Giá cao
-                    autoAddMenuItemToCart("1h bed từ h5");
-                }
+                if (currentHourIndex <= 4) autoAddMenuItemToCart("1h bed"); 
+                else autoAddMenuItemToCart("1h bed từ h5");
             }
             activeOrderingBedId = booking.bedId;
-        pendingBedOrder = booking; 
-        
-        isCheckoutFlow = true; // <--- QUAN TRỌNG: BẬT CỜ HIỆU LÊN!
-        var sdtInput = document.getElementById('kh-sdt');
-        if (sdtInput && booking.phone) {
-            sdtInput.value = booking.phone;
-            // Gọi hàm checkSdtLive để hiện tên khách & điểm tích lũy
-            if (typeof checkSdtLive === 'function') checkSdtLive();
-        }
-        
-        // Cập nhật giao diện giỏ hàng
-        switchView('menu');
-        
-        setTimeout(() => {
-            showAppModal("Đã tính phí lố giờ", `Đã thêm ${extraHoursQty}h vào hóa đơn. Vui lòng kiểm tra và thanh toán!`, "💰");
-        }, 300);
-            });
+            pendingBedOrder = booking; 
+            isCheckoutFlow = true; 
+            
+            var sdtInput = document.getElementById('kh-sdt');
+            if (sdtInput && booking.phone) {
+                sdtInput.value = booking.phone;
+                if (typeof checkSdtLive === 'function') checkSdtLive();
+            }
+            switchView('menu');
+            setTimeout(() => { showAppModal("Đã tính phí lố giờ", `Đã thêm ${extraHoursQty}h vào hóa đơn.`, "💰"); }, 300);
+        });
+    }
 }
+
+// [HÀM MỚI] Tính tổng tiền và Lưu vào Firebase
+function calculateAndSaveCheckout(booking, realTimeStr) {
+    let btnCheckout = document.getElementById('btn-action-checkout');
+    if(btnCheckout) btnCheckout.innerHTML = 'Đang tính tiền...';
+
+    // Gọi hàm tính tiền session
+    calculateSessionSpend(booking.phone, booking.start, realTimeStr).then(total => {
+        
+        let bookingId = booking.id || booking.key;
+        
+        // Cập nhật Firebase với đầy đủ thông tin: Trạng thái, Giờ ra, TỔNG TIỀN
+        db.ref('bedBookings/' + bookingId).update({
+            status: 'đã xong',
+            realEndTime: realTimeStr,
+            totalSpend: total // <--- QUAN TRỌNG: Lưu cái này để Báo cáo đọc được
+        }, (err) => { 
+            if(!err) {
+                openBedManager(); 
+                // Có thể show toast thông báo doanh thu session này
+                // alert(`Đã trả Bed. Doanh thu: ${total.toLocaleString()}đ`);
+            }
+            else {
+                alert("Lỗi: " + err.message);
+                if(btnCheckout) btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
+            }
+        });
+    });
 }
+
+// Hàm processCheckoutFirebase cũ có thể xóa hoặc để đó không dùng tới nữa
 
 // Hàm phụ: Tìm món trong menu và ném vào giỏ
 function autoAddMenuItemToCart(itemName) {
@@ -5504,7 +5508,7 @@ function selectDurationNew(hours) {
     if(activeBtn) activeBtn.className = "border border-green-600 bg-green-50 text-[#006241] py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all";
 }
 function calculateBedStats(bookings, mode, customStart, customEnd) {
-    // A. Lọc thời gian (Logic chuẩn)
+    // 1. THIẾT LẬP THỜI GIAN LỌC (Logic chuẩn)
     var now = new Date();
     var startTime, endTime;
     
@@ -5524,52 +5528,66 @@ function calculateBedStats(bookings, mode, customStart, customEnd) {
         endTime = new Date(customEnd); endTime.setHours(23,59,59,999);
     }
 
+    // 2. KHỞI TẠO BIẾN THỐNG KÊ
     let stats = {
         totalRevenue: 0,
         totalUsage: 0,
         topSpenders: {},
         topFrequent: {},
         cancelTimeout: 0,
-        cancelCustomer: 0,
+        cancelCustomer: 0, // Đếm chung cho hủy thủ công (Khách + Quán)
         cancelList: []
     };
 
+    // 3. DUYỆT QUA DANH SÁCH BOOKING
     bookings.forEach(b => {
-        // Parse ngày booking (dd/mm/yyyy -> Date object)
+        // Parse ngày booking (dữ liệu chuẩn dd/mm/yyyy)
         let parts = (b.date || "").split('/');
         if(parts.length !== 3) return;
         let bDate = new Date(parts[2], parts[1]-1, parts[0]);
         
-        // Kiểm tra trong khoảng thời gian
+        // Kiểm tra xem đơn này có nằm trong khoảng thời gian đang lọc không
         if (bDate >= startTime && bDate <= endTime) {
             
-            // 1. Nếu đã xong (Tính tiền & Số lượt)
+            // --- TRƯỜNG HỢP 1: ĐÃ XONG (TÍNH TIỀN & LƯỢT) ---
             if (b.status === 'đã xong') {
-                stats.totalRevenue += Number(b.totalSpend || 0);
+                // [FIX QUAN TRỌNG] Lấy totalSpend từ DB. 
+                // Lưu ý: Các đơn cũ trước khi update code trả bed sẽ không có trường này (là 0).
+                let money = Number(b.totalSpend || 0);
+                
+                stats.totalRevenue += money;
                 stats.totalUsage++;
 
-                // Thống kê Top Spender (Cộng dồn tiền)
+                // Thống kê Top Spender (Ai chi nhiều tiền nhất)
                 let key = b.phone || "Vãng lai";
                 if (!stats.topSpenders[key]) stats.topSpenders[key] = { name: b.name, total: 0, phone: key };
-                stats.topSpenders[key].total += Number(b.totalSpend || 0);
+                stats.topSpenders[key].total += money;
 
-                // Thống kê Top Frequent (Cộng dồn số lần)
+                // Thống kê Top Frequent (Ai đi nhiều lần nhất)
                 if (!stats.topFrequent[key]) stats.topFrequent[key] = { name: b.name, count: 0, phone: key };
                 stats.topFrequent[key].count++;
             } 
-            // 2. Nếu đã hủy (Phân loại)
+            // --- TRƯỜNG HỢP 2: ĐÃ HỦY (PHÂN LOẠI LÝ DO) ---
             else if (b.status === 'đã hủy') {
-                if (b.cancelType === 'auto_timeout') stats.cancelTimeout++;
-                else if (b.cancelType === 'customer') stats.cancelCustomer++;
+                if (b.cancelType === 'auto_timeout') {
+                    // Hủy tự động do quá giờ
+                    stats.cancelTimeout++;
+                } else {
+                    // [FIX] Hủy thủ công (Khách báo hủy HOẶC Quán hủy system)
+                    // Gom chung vào đây để hiện số liệu lên Dashboard
+                    stats.cancelCustomer++;
+                }
                 
-                // Lưu vào danh sách để hiện chi tiết
+                // Lưu vào danh sách để hiện chi tiết khi bấm nút Xem thêm
                 stats.cancelList.push(b);
             }
         }
     });
 
-    // Sắp xếp và lấy Top 5
+    // 4. SẮP XẾP VÀ CẮT LẤY TOP 5
+    // Top tiền: Cao -> Thấp
     stats.topSpendersArr = Object.values(stats.topSpenders).sort((a,b) => b.total - a.total).slice(0, 5);
+    // Top lần: Cao -> Thấp
     stats.topFrequentArr = Object.values(stats.topFrequent).sort((a,b) => b.count - a.count).slice(0, 5);
 
     return stats;
@@ -5686,17 +5704,28 @@ function showCancelDetailsModal() {
     const container = document.getElementById('cancel-list-content');
     
     if(list.length === 0) {
-        container.innerHTML = '<div class="text-center text-gray-400 py-10">Không có lịch hủy nào trong khoảng thời gian này.</div>';
+        container.innerHTML = '<div class="text-center text-gray-400 py-10">Không có lịch hủy nào.</div>';
     } else {
         container.innerHTML = list.map(b => {
-            let reason = b.cancelType === 'auto_timeout' ? 'Quá giờ (Auto)' : 'Khách yêu cầu';
+            // [FIX] Hiển thị đúng lý do
+            let reason = 'Khách yêu cầu';
+            let badgeColor = 'text-red-500 bg-red-50 border-red-100';
+            
+            if (b.cancelType === 'auto_timeout') {
+                reason = 'Quá giờ (Auto)';
+                badgeColor = 'text-gray-500 bg-gray-100 border-gray-200';
+            } else if (b.cancelType === 'store') {
+                reason = 'Quán hủy (System)';
+                badgeColor = 'text-orange-600 bg-orange-50 border-orange-100';
+            }
+            
             let date = b.date || b.bookingDate || '--/--';
             
             return `
             <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
                 <div class="flex justify-between mb-1">
                     <span class="font-bold text-sm text-gray-800">${b.name}</span>
-                    <span class="text-[10px] font-bold text-red-500 bg-white px-2 py-0.5 rounded border border-red-100">${reason}</span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${badgeColor}">${reason}</span>
                 </div>
                 <div class="flex justify-between text-[10px] text-gray-500">
                     <span>${date} • ${b.start}-${b.end}</span>
@@ -5933,6 +5962,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
