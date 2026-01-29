@@ -1402,13 +1402,12 @@ input, button, select, textarea { font-size: 1rem; }
                 </div>
                 
                 <div id="mode-duration-box" class="grid grid-cols-3 gap-2">
-                    <button onclick="selectDuration(1)" id="btn-dur-1" class="border border-green-600 bg-green-50 text-[#006241] py-2.5 rounded-xl text-sm font-bold hover:opacity-80 transition-all">1 Giờ</button>
-                    <button onclick="selectDuration(2)" id="btn-dur-2" class="border border-gray-200 bg-white text-gray-600 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all">2 Giờ</button>
-                    <button onclick="selectDuration(3)" id="btn-dur-3" class="border border-gray-200 bg-white text-gray-600 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all">3 Giờ</button>
+                    <button onclick="selectDurationNew(1)" id="btn-dur-1" class="border border-green-600 bg-green-50 text-[#006241] py-2.5 rounded-xl text-sm font-bold hover:opacity-80 transition-all">1 Giờ</button>
+                    <button onclick="selectDurationNew(2)" id="btn-dur-2" class="border border-gray-200 bg-white text-gray-600 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all">2 Giờ</button>
+                    <button onclick="selectDurationNew(3)" id="btn-dur-3" class="border border-gray-200 bg-white text-gray-600 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all">3 Giờ</button>
                 </div>
                 
-                <div id="mode-endtime-box" class="hidden">
-                    <input type="time" id="manual-end-time" class="w-full text-center bg-gray-50 border-2 border-gray-200 rounded-xl py-3 text-lg font-bold text-[#006241] focus:border-[#006241] outline-none">
+         r-2 border-gray-200 rounded-xl py-3 text-lg font-bold text-[#006241] focus:border-[#006241] outline-none">
                 </div>
             </div>
         </div>
@@ -2159,34 +2158,12 @@ function updateSuggestions() {
     }
 }
 
-// --- HÀM HỖ TRỢ BẤM TRÊN MOBILE ---
-function quickPaidMobile(v) {
-    // 1. Điền tiền vào ô Mobile
-    let input = document.getElementById('cash-paid-mobile');
-    if(input) {
-        input.value = v.toLocaleString('en-US'); // Thêm dấu phẩy
-        
-        // 2. Kích hoạt tính tiền thừa ngay lập tức
-        syncMobileInputs(); 
-        
-        // 3. (Tuỳ chọn) Rung nhẹ điện thoại để báo đã nhận
-        if(navigator.vibrate) navigator.vibrate(50);
-    }
-}
 // Hàm kiểm tra và cập nhật class cart-empty
 function updateCartPadding() {
     // Không làm gì cả. Logic cũ đã bị loại bỏ.
     return; 
 }
 // Hàm hỗ trợ bấm nút trên Mobile
-function quickPaidMobile(v) {
-    // Điền tiền vào ô Mobile
-    let input = document.getElementById('cash-paid-mobile');
-    if(input) {
-        input.value = v.toLocaleString('en-US'); // Thêm dấu phẩy cho đẹp
-        syncMobileInputs(); // Kích hoạt tính tiền thừa
-    }
-}
 // --- [MỚI] HÀM FORMAT SỐ KHI NHẬP (23000 -> 23,000) ---
 function formatCashInput(input) {
     // 1. Lấy vị trí con trỏ (để không bị nhảy khi sửa giữa chừng)
@@ -3526,7 +3503,6 @@ function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); 
 function startPanelCountdown(endTimeStr) { stopPanelCountdown(); var clockEl = document.getElementById('detail-countdown'); if(!clockEl) return; var timeParts = endTimeStr.split(':'); if(timeParts.length < 2) return; var endDate = new Date(); endDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0); bedCountdownInterval = setInterval(function() { var diff = endDate - new Date(); var isOver = diff < 0; diff = Math.abs(diff); var h = Math.floor(diff / 3600000); var m = Math.floor((diff % 3600000) / 60000); var s = Math.floor((diff % 60000) / 1000); var fmt = v => v < 10 ? "0"+v : v; clockEl.innerText = (isOver ? '-' : '') + fmt(h) + ":" + fmt(m) + ":" + fmt(s); clockEl.className = isOver ? "text-3xl font-black text-red-500 font-mono tracking-tighter" : "text-3xl font-black text-[#006241] font-mono tracking-tighter"; }, 1000); }
 function stopPanelCountdown() { if (bedCountdownInterval) clearInterval(bedCountdownInterval); }
 function switchTimeMode(mode) { var btnDur = document.getElementById('tab-duration'); var btnFix = document.getElementById('tab-fixed'); var divDur = document.getElementById('mode-duration'); var divFix = document.getElementById('mode-fixed'); if (mode === 'duration') { btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#006241]"; btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divDur.classList.remove('hidden'); divFix.classList.add('hidden'); document.getElementById('final_duration_minutes').value = 60; } else { btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#006241]"; btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divFix.classList.remove('hidden'); divDur.classList.add('hidden'); var now = new Date(); now.setMinutes(now.getMinutes() + 90); var hh = ("0" + now.getHours()).slice(-2); var mm = ("0" + now.getMinutes()).slice(-2); document.getElementById('custom_end_time').value = `${hh}:${mm}`; calculateDurationFromTime(); } }
-function selectDuration(minutes, btn) { document.getElementById('final_duration_minutes').value = minutes; document.querySelectorAll('.duration-btn').forEach(el => el.className = "duration-btn bg-white border border-gray-200 text-gray-600 font-bold py-2 rounded-lg text-xs hover:bg-gray-100"); btn.className = "duration-btn bg-[#006241] text-white border border-[#006241] font-bold py-2 rounded-lg text-xs shadow-md"; }
 function calculateDurationFromTime() { var timeStr = document.getElementById('custom_end_time').value; if (!timeStr) return; var now = new Date(); var parts = timeStr.split(':'); var end = new Date(); end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0); var diffMins = Math.floor((end - now) / 60000); if (diffMins <= 0) { document.getElementById('calculated-time-hint').innerText = "⚠️ Giờ về phải sau giờ hiện tại"; document.getElementById('final_duration_minutes').value = 0; } else { document.getElementById('calculated-time-hint').innerText = `Tổng cộng: ${Math.floor(diffMins/60)}h ${diffMins%60}p`; document.getElementById('final_duration_minutes').value = diffMins; } }
 // ================= CUSTOMER LOOKUP =================
 
@@ -3566,9 +3542,9 @@ function checkCustomer(){
     }
 }
 // --- LOGIC GIAO DIỆN MODAL CHECK-IN MỚI ---
-let selectedDurationHours = 1; // Mặc định 1 giờ
+// 2. Logic Chọn Giờ (Tách biệt để không đụng PC)
+let selectedDurationHours = 1; // Mặc định
 
-// Hàm chuyển tab (Theo tiếng / Chọn giờ về)
 function toggleTimeMode(mode) {
     const tabDur = document.getElementById('tab-duration');
     const tabEnd = document.getElementById('tab-end-time');
@@ -3576,34 +3552,32 @@ function toggleTimeMode(mode) {
     const boxEnd = document.getElementById('mode-endtime-box');
 
     if (mode === 'duration') {
-        // Active Tab Duration
-        tabDur.className = "flex-1 py-2 text-xs font-bold rounded-lg shadow-sm bg-white text-[#006241] transition-all";
-        tabEnd.className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:bg-gray-200 transition-all";
-        boxDur.classList.remove('hidden');
-        boxEnd.classList.add('hidden');
+        if(tabDur) tabDur.className = "flex-1 py-2 text-xs font-bold rounded-lg shadow-sm bg-white text-[#006241] transition-all";
+        if(tabEnd) tabEnd.className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:bg-gray-200 transition-all";
+        if(boxDur) boxDur.classList.remove('hidden');
+        if(boxEnd) boxEnd.classList.add('hidden');
+        // Reset về mặc định
+        if(document.getElementById('final_duration_minutes')) document.getElementById('final_duration_minutes').value = 60;
     } else {
-        // Active Tab EndTime
-        tabEnd.className = "flex-1 py-2 text-xs font-bold rounded-lg shadow-sm bg-white text-[#006241] transition-all";
-        tabDur.className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:bg-gray-200 transition-all";
-        boxEnd.classList.remove('hidden');
-        boxDur.classList.add('hidden');
+        if(tabEnd) tabEnd.className = "flex-1 py-2 text-xs font-bold rounded-lg shadow-sm bg-white text-[#006241] transition-all";
+        if(tabDur) tabDur.className = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:bg-gray-200 transition-all";
+        if(boxEnd) boxEnd.classList.remove('hidden');
+        if(boxDur) boxDur.classList.add('hidden');
+        
+        // Auto set giờ gợi ý (Hiện tại + 90p)
+        var now = new Date();
+        now.setMinutes(now.getMinutes() + 90);
+        var hh = ("0" + now.getHours()).slice(-2);
+        var mm = ("0" + now.getMinutes()).slice(-2);
+        var timeInput = document.getElementById('custom_end_time') || document.getElementById('manual-end-time');
+        if(timeInput) {
+            timeInput.value = `${hh}:${mm}`;
+            if(typeof calculateDurationFromTime === 'function') calculateDurationFromTime();
+        }
     }
 }
 
-// Hàm chọn giờ (1h, 2h, 3h) - Đổi màu nút
-function selectDuration(hours) {
-    selectedDurationHours = hours;
-    
-    // Reset màu tất cả nút về trắng
-    [1, 2, 3].forEach(h => {
-        const btn = document.getElementById(`btn-dur-${h}`);
-        btn.className = "border border-gray-200 bg-white text-gray-600 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all";
-    });
 
-    // Tô màu xanh cho nút được chọn
-    const activeBtn = document.getElementById(`btn-dur-${hours}`);
-    activeBtn.className = "border border-green-600 bg-green-50 text-[#006241] py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all";
-}
     // --- HÀM XỬ LÝ HỦY THEO LÝ DO ---
 function submitCancelBooking(type) {
     var bookingId = window.pendingCancelId;
@@ -4480,13 +4454,12 @@ function completeWholePayment() {
 function openBedManagerMobile() {
     document.getElementById('loading-overlay').style.display = 'flex';
     
-    // --- FIX 1: ẨN BOTTOM BAR THANH TOÁN ---
+    // Ẩn thanh thanh toán
     var mobBar = document.getElementById('mobile-bottom-bar');
     if(mobBar) {
         mobBar.classList.add('hidden');
         mobBar.classList.remove('flex');
     }
-    // ----------------------------------------
 
     // Ẩn các view khác
     ['view-menu', 'view-payment', 'view-history', 'view-bed', 'view-revenue'].forEach(id => {
@@ -4496,7 +4469,7 @@ function openBedManagerMobile() {
 
     document.getElementById('view-bed-mobile').classList.remove('hidden');
     
-    // Set Active Tab Button (để giữ trạng thái xanh)
+    // Reset Nav Button
     const btnBed = document.getElementById('btn-nav-bed');
     if(btnBed) {
         document.querySelectorAll('button[id^="btn-nav-"]').forEach(b => {
@@ -4846,6 +4819,40 @@ function toggleRevenueDropdown() {
         ol.classList.add('hidden');
     }
 }   
+    // --- [FIX] MODULE: CÁC HÀM HỖ TRỢ & MOBILE LOGIC (CLEAN) ---
+// ============================================================
+
+// 1. Hàm hỗ trợ chọn tiền nhanh Mobile (Đã gộp & Fix lỗi)
+function quickPaidMobile(v) {
+    let input = document.getElementById('cash-paid-mobile');
+    if(input) {
+        // Thêm dấu phẩy định dạng chuẩn US
+        input.value = v.toLocaleString('en-US'); 
+        // Kích hoạt tính toán lại tiền thừa
+        if(typeof syncMobileInputs === 'function') syncMobileInputs();
+        
+        // Rung phản hồi (nếu có)
+        if(navigator.vibrate) navigator.vibrate(50);
+    }
+}
+    // 3. Hàm Chọn Thời Lượng (Đổi tên để tránh xung đột với PC)
+function selectDurationNew(hours) {
+    selectedDurationHours = hours;
+    
+    // Cập nhật giá trị vào input ẩn (để logic cũ vẫn hiểu)
+    const hiddenInput = document.getElementById('final_duration_minutes');
+    if(hiddenInput) hiddenInput.value = hours * 60;
+
+    // Reset giao diện nút
+    [1, 2, 3].forEach(h => {
+        const btn = document.getElementById(`btn-dur-${h}`);
+        if(btn) btn.className = "border border-gray-200 bg-white text-gray-600 py-2.5 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all";
+    });
+
+    // Highlight nút được chọn
+    const activeBtn = document.getElementById(`btn-dur-${hours}`);
+    if(activeBtn) activeBtn.className = "border border-green-600 bg-green-50 text-[#006241] py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all";
+}
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
 </script>
@@ -4993,6 +5000,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
