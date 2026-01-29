@@ -2269,6 +2269,14 @@ function processHistoryData(data) {
 
 function renderHistoryList(data) { 
     if(!data || data.length === 0) return;
+
+    // --- RẼ NHÁNH MOBILE ---
+    if (window.innerWidth <= 768) {
+        renderHistoryMobile(data);
+        return;
+    }
+
+    // --- LOGIC PC (GIỮ NGUYÊN) ---
     const grouped = data.reduce((acc, obj) => { 
         const key = obj.dateStr; if (!acc[key]) acc[key] = []; acc [key].push(obj); return acc; 
     }, {}); 
@@ -2292,6 +2300,76 @@ function renderHistoryList(data) {
         html += '</div></div>'; 
     });
     document.getElementById('history-container').innerHTML = html; 
+}
+    function showHistoryDetailMobile(idx) {
+    const h = historyData[idx];
+    if (!h) return;
+
+    // Điền thông tin chung
+    document.getElementById('detail-mob-time').innerText = h.fullTime;
+    document.getElementById('detail-mob-id').innerText = '#' + h.id.toString().slice(-8); // Lấy 8 ký tự
+    document.getElementById('detail-mob-cust').innerText = h.sdt || 'Khách lẻ';
+    document.getElementById('detail-mob-method').innerText = h.method;
+    document.getElementById('detail-mob-total').innerText = Number(h.total).toLocaleString() + 'đ';
+
+    // Xử lý danh sách món ăn
+    const itemsContainer = document.getElementById('detail-mob-items');
+    let itemsHtml = '';
+    
+    // Parse chuỗi items (giống logic cũ)
+    const itemsArr = h.items.split(',');
+    itemsArr.forEach(itemStr => {
+        const raw = itemStr.trim();
+        const lastX = raw.lastIndexOf('x');
+        if (lastX !== -1) {
+            const namePart = raw.substring(0, lastX).trim();
+            const qty = raw.substring(lastX + 1);
+            
+            // Tìm giá (nếu có trong menu hiện tại để hiển thị đẹp hơn)
+            // Lưu ý: Đây là giá hiện tại, không phải giá lúc bán (do dữ liệu cũ chỉ lưu string)
+            // Nếu muốn chuẩn 100% cần dùng itemsArray nếu có.
+            
+            itemsHtml += `
+            <div class="flex justify-between items-start py-2 border-b border-gray-50 last:border-0">
+                <div class="flex gap-3">
+                    <span class="font-black text-gray-200 text-sm">x${qty}</span>
+                    <span class="font-bold text-sm text-gray-700 max-w-[180px]">${namePart}</span>
+                </div>
+                <span class="font-bold text-gray-400 text-xs">--</span> 
+            </div>`;
+        }
+    });
+    
+    itemsContainer.innerHTML = itemsHtml;
+
+    // Hiện Popup
+    const sheet = document.getElementById('sheet-history-detail');
+    sheet.classList.remove('hidden');
+    // Animation trượt lên
+    setTimeout(() => {
+        sheet.querySelector('div.transform').classList.remove('translate-y-full');
+    }, 10);
+}
+
+function closeHistoryDetailMobile() {
+    const sheet = document.getElementById('sheet-history-detail');
+    // Animation trượt xuống
+    sheet.querySelector('div.transform').classList.add('translate-y-full');
+    
+    setTimeout(() => {
+        sheet.classList.add('hidden');
+    }, 300);
+}
+
+function filterHistoryMobile(keyword) {
+    const kw = keyword.toLowerCase();
+    // Lọc đơn giản trên RAM
+    const filtered = historyData.filter(h => 
+        h.sdt.toLowerCase().includes(kw) || 
+        h.total.toString().includes(kw) ||
+        h.id.toLowerCase().includes(kw)
+    );
+    renderHistoryMobile(filtered);
 }
 // --- HÀM SELECT BILL ĐÃ FIX (CÓ NÚT HỦY/HOÀN) ---
 // --- COPY TỪ ĐÂY ---
@@ -2691,37 +2769,39 @@ function renderChart(labels, chartData, type) {
 // [FIX FINAL] HÀM CHUYỂN VIEW (ĐÃ FIX LỖI ĐÈ GIAO DIỆN)
 // =========================================================
 function switchView(v) {
+    // 1. Ẩn ngay giao diện Lịch sử Mobile trước khi làm gì khác
+    var histMob = document.getElementById('view-history-mobile');
+    if (histMob) histMob.classList.add('hidden');
+
     isPaymentMode = (v === 'payment');
     var isMobile = window.innerWidth <= 768;
 
-    // --- 1. QUẢN LÝ BOTTOM BAR (LOGIC TỐI ƯU NHẤT) ---
+    // --- 2. QUẢN LÝ BOTTOM BAR (LOGIC TỐI ƯU) ---
     var mobBar = document.getElementById('mobile-bottom-bar');
     if (mobBar) {
         if (v === 'menu') {
-            // CHỈ HIỆN KHI Ở MENU
             mobBar.classList.remove('hidden');
             mobBar.classList.add('flex');
         } else {
-            // TẤT CẢ CÁC TRƯỜNG HỢP KHÁC (Payment, History, Bed, Revenue...) ĐỀU ẨN
             mobBar.classList.add('hidden');
             mobBar.classList.remove('flex');
         }
     }
 
-    // --- 2. DỌN DẸP CÁC VIEW MOBILE ĐẶC BIỆT ---
+    // --- 3. DỌN DẸP CÁC VIEW MOBILE ĐẶC BIỆT ---
     var bedMob = document.getElementById('view-bed-mobile');
     if(bedMob) bedMob.classList.add('hidden');
     
     var revMob = document.getElementById('view-revenue-mobile');
     if(revMob) revMob.classList.add('hidden');
 
-    // --- 3. XỬ LÝ RIÊNG TAB BED TRÊN MOBILE ---
+    // --- 4. XỬ LÝ RIÊNG TAB BED TRÊN MOBILE ---
     if (v === 'bed' && isMobile) {
         openBedManagerMobile(); 
         return; 
     }
 
-    // --- 4. ẨN TẤT CẢ VIEW CHÍNH & RESET NAV BUTTON ---
+    // --- 5. ẨN TẤT CẢ VIEW CHÍNH & RESET NAV BUTTON PC ---
     ['menu', 'payment', 'history', 'bed', 'revenue'].forEach(id => {
         var viewEl = document.getElementById('view-' + id);
         if (viewEl) viewEl.classList.add('hidden');
@@ -2733,36 +2813,44 @@ function switchView(v) {
         }
     });
 
-    // --- 5. HIỆN VIEW MỤC TIÊU ---
+    // --- 6. HIỆN VIEW MỤC TIÊU ---
+    
+    // -> LOGIC DOANH THU
     if (v === 'revenue') {
         if (isMobile) {
-            // Mobile: Mở view riêng (Hàm này đã có lệnh ẩn bar ở bước 1 rồi, nhưng gọi lại cho chắc)
             openRevenueMobile(); 
-            return; // Dừng logic PC
+            return; 
         } else {
-            // PC: Dùng view history
             document.getElementById('view-history').classList.remove('hidden');
             let btn = document.getElementById('btn-nav-revenue');
             if(btn) btn.className = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
         }
     } 
+    // -> LOGIC LỊCH SỬ (ĐÃ CẬP NHẬT)
     else if (v === 'history') {
-        document.getElementById('view-history').classList.remove('hidden');
-        let btn = document.getElementById('btn-nav-history');
-        if(btn) btn.className = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
+        if (isMobile) {
+            // Mobile: Hiện giao diện mới
+            if(histMob) histMob.classList.remove('hidden');
+        } else {
+            // PC: Hiện giao diện cũ & Active nút
+            document.getElementById('view-history').classList.remove('hidden');
+            let btn = document.getElementById('btn-nav-history');
+            if(btn) btn.className = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
+        }
     }
+    // -> LOGIC BED (PC)
     else if (v === 'bed') {
         document.getElementById('view-bed').classList.remove('hidden');
         let btn = document.getElementById('btn-nav-bed');
         if(btn) btn.className = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
     }
+    // -> CÁC VIEW KHÁC (Menu, Payment)
     else {
-        // Menu, Payment
         var viewTarget = document.getElementById('view-' + v);
         if (viewTarget) viewTarget.classList.remove('hidden');
     }
 
-    // --- 6. XỬ LÝ SIDEBAR & CATEGORY ---
+    // --- 7. SIDEBAR & CATEGORY BAR ---
     var sidebarCart = document.getElementById('sidebar-cart');
     if (sidebarCart) {
         if (isMobile) sidebarCart.classList.toggle('hidden', v !== 'menu'); 
@@ -2775,8 +2863,8 @@ function switchView(v) {
     // Reset inputs payment nếu vào trang payment
     if (v === 'payment') {
         var mobStep1 = document.getElementById('mob-step-1');
-        if (mobStep1) mobStep1.classList.remove('hidden');
         var mobStep2 = document.getElementById('mob-step-2');
+        if (mobStep1) mobStep1.classList.remove('hidden');
         if (mobStep2) mobStep2.classList.add('hidden');
         
         if (typeof syncMobileInputs === 'function') syncMobileInputs();
@@ -5960,8 +6048,102 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
             </div>
     </div>
 </div>
+    <div id="view-history-mobile" class="hidden h-full flex-col bg-[#F2F2F7] relative overflow-hidden animate-fade-in">
+    <div class="px-5 pt-12 pb-4 bg-white sticky top-0 z-20 shadow-sm border-b border-gray-100">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-3xl font-black text-[#1e3932] tracking-tighter uppercase">Lịch sử đơn</h1>
+            <div class="bg-gray-100 p-2 rounded-full">
+                <span class="material-symbols-outlined text-gray-500">calendar_month</span>
+            </div>
+        </div>
+        <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[20px]">search</span>
+            <input type="text" id="mob-history-search" oninput="filterHistoryMobile(this.value)" placeholder="Tìm theo số tiền, SĐT..." class="w-full bg-[#F2F4F6] pl-10 pr-4 py-3 rounded-xl text-sm font-bold text-gray-700 outline-none focus:bg-white focus:ring-2 focus:ring-[#006241]/20 transition-all">
+        </div>
+    </div>
+
+    <div id="mob-history-list" class="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar pb-32">
+        </div>
+</div>
+
+<div id="sheet-history-detail" class="fixed inset-0 z-[100002] hidden flex items-end justify-center">
+    <div onclick="closeHistoryDetailMobile()" class="absolute inset-0 bg-black/30 backdrop-blur-[2px] transition-opacity"></div>
+    
+    <div class="bg-[#F2F2F7] w-full h-[92vh] rounded-t-[32px] flex flex-col shadow-2xl transform transition-transform duration-300 translate-y-0 relative overflow-hidden">
+        
+        <div class="flex justify-between items-center px-6 py-5 bg-white z-20 border-b border-gray-100">
+            <button onclick="closeHistoryDetailMobile()" class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <span class="text-sm font-black uppercase tracking-widest text-gray-400">Chi tiết đơn hàng</span>
+            <button class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-[#006241] active:scale-90 transition-transform">
+                <span class="material-symbols-outlined">print</span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto custom-scrollbar relative">
+            
+            <div class="bg-white pb-8 pt-4 px-6 rounded-b-[40px] shadow-sm mb-4 flex flex-col items-center">
+                <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-3 shadow-inner">
+                    <span class="material-symbols-outlined text-3xl text-[#006241]">check_circle</span>
+                </div>
+                <h2 class="text-2xl font-black text-[#1e3932] tracking-tight mb-1">Thanh toán thành công</h2>
+                <p id="detail-mob-time" class="text-xs font-bold text-gray-400 uppercase tracking-wider">--:--</p>
+            </div>
+
+            <div class="px-5 space-y-3 pb-32">
+                
+                <div class="bg-white p-5 rounded-[24px] shadow-sm border border-gray-100">
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 border-b border-dashed border-gray-100 pb-2">Thông tin</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center"><span class="material-symbols-outlined text-sm">tag</span></div>
+                                <span class="text-xs font-bold text-gray-500">Mã đơn</span>
+                            </div>
+                            <span id="detail-mob-id" class="font-black text-gray-800">#---</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center"><span class="material-symbols-outlined text-sm">person</span></div>
+                                <span class="text-xs font-bold text-gray-500">Khách hàng</span>
+                            </div>
+                            <span id="detail-mob-cust" class="font-black text-gray-800 truncate max-w-[150px]">--</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center"><span class="material-symbols-outlined text-sm">payments</span></div>
+                                <span class="text-xs font-bold text-gray-500">Phương thức</span>
+                            </div>
+                            <span id="detail-mob-method" class="font-black text-[#006241] bg-green-50 px-2 py-1 rounded-lg text-[10px] uppercase">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-[24px] shadow-sm border border-gray-100">
+                    <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 border-b border-dashed border-gray-100 pb-2">Chi tiết món</h3>
+                    <div id="detail-mob-items" class="space-y-4">
+                        </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-100 p-6 pb-10 z-30">
+            <div class="flex justify-between items-end mb-4">
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Tổng thanh toán</span>
+                <span id="detail-mob-total" class="text-3xl font-black text-[#1e3932] tracking-tighter">0đ</span>
+            </div>
+            <button class="w-full py-4 bg-gray-100 text-red-500 font-black rounded-[20px] uppercase text-xs flex items-center justify-center gap-2 hover:bg-red-50 transition-colors shadow-sm active:scale-95">
+                <span class="material-symbols-outlined">delete</span> Hủy đơn hàng này
+            </button>
+        </div>
+
+    </div>
+</div>
 </body>
 </html>
+
 
 
 
