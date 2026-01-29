@@ -617,6 +617,38 @@ input, button, select, textarea { font-size: 1rem; }
         transform: translateX(100%);
     }
 }
+    /* ============================================================ */
+/* --- MODULE: REVENUE MOBILE (ANALYTICS DASHBOARD) --- */
+/* ============================================================ */
+@media only screen and (max-width: 768px) {
+    /* Ẩn thanh cuộn ngang cho các thẻ Card */
+    .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .hide-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    /* Style cho Dropdown Menu (giống style Category) */
+    .revenue-dropdown-item {
+        width: 100%;
+        text-align: left;
+        padding: 12px 16px;
+        font-weight: 700;
+        font-size: 13px;
+        color: #1e293b;
+        border-bottom: 1px dashed #f1f5f9;
+        transition: all 0.2s;
+    }
+    .revenue-dropdown-item:last-child {
+        border-bottom: none;
+    }
+    .revenue-dropdown-item:active {
+        background-color: #f8fafc;
+        color: #065F46;
+    }
+}
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
@@ -1081,6 +1113,95 @@ input, button, select, textarea { font-size: 1rem; }
         <div id="mob-detail-actions" class="absolute bottom-0 left-0 right-0 p-5 bg-[#F2F2F7]/90 backdrop-blur-xl border-t border-white/50 z-40 pb-8">
             </div>
     </div>
+</div>
+    <div id="view-revenue-mobile" class="hidden h-full flex flex-col bg-white overflow-hidden relative animate-fade-in">
+    
+    <header class="px-6 pt-8 pb-4 flex items-end justify-between bg-white sticky top-0 z-30">
+        <div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Trình quản lý</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">The Cafe 33</h1>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button class="flex items-center gap-1 px-4 py-2.5 rounded-full bg-slate-50 border border-slate-100 active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-[18px] text-slate-600 font-bold">filter_list</span>
+                <span class="text-xs font-bold text-slate-700">Lọc</span>
+            </button>
+            
+            <div class="relative">
+                <button onclick="toggleRevenueDropdown()" class="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center active:scale-95 transition-transform">
+                    <span class="material-symbols-outlined text-slate-600">more_horiz</span>
+                </button>
+
+                <div id="mob-revenue-dropdown" class="hidden absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden origin-top-right transition-all">
+                    <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu theo món</button>
+                    <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu theo nhóm</button>
+                    <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu Cafe in Bed</button>
+                </div>
+                <div id="mob-revenue-overlay" onclick="toggleRevenueDropdown()" class="hidden fixed inset-0 z-40"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto pb-20 custom-scrollbar">
+        
+        <div class="px-6 mb-8 mt-2">
+            <div class="bg-slate-100 p-1.5 rounded-full flex items-center">
+                <button onclick="switchRevTime('week')" id="tab-rev-week" class="flex-1 py-2.5 rounded-full text-[11px] font-black bg-[#065F46] text-white shadow-sm transition-all">TUẦN</button>
+                <button onclick="switchRevTime('month')" id="tab-rev-month" class="flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all">THÁNG</button>
+                <button onclick="switchRevTime('year')" id="tab-rev-year" class="flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all">NĂM</button>
+            </div>
+        </div>
+
+        <div class="flex overflow-x-auto gap-4 px-6 mb-8 hide-scrollbar snap-x">
+            
+            <div class="min-w-[200px] bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-50 flex-shrink-0 snap-center">
+                <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">TỔNG THU</p>
+                <p class="text-3xl font-black text-[#065F46] tracking-tighter" id="mob-rev-total">0 <span class="text-sm font-bold opacity-60">₫</span></p>
+            </div>
+
+            <div class="min-w-[200px] bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-50 flex-shrink-0 snap-center">
+                <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">ĂN VẶT</p>
+                <p class="text-3xl font-black text-[#D97706] tracking-tighter" id="mob-rev-snack">0 <span class="text-sm font-bold opacity-60">₫</span></p>
+            </div>
+
+            <div class="min-w-[200px] bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-50 flex-shrink-0 snap-center">
+                <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">SO HÔM QUA</p>
+                <div class="flex items-center gap-1" id="mob-rev-compare-box">
+                    <span class="material-symbols-outlined text-slate-300 text-xl font-bold">remove</span>
+                    <p class="text-3xl font-black text-slate-300 tracking-tighter">--</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-5">
+            <div class="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-slate-50 p-8">
+                
+                <div class="flex items-center justify-between mb-10">
+                    <h3 class="font-bold text-xl tracking-tight text-slate-800">Biểu đồ doanh thu</h3>
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full">
+                        <div class="w-2 h-2 rounded-full bg-[#065F46]"></div>
+                        <span class="text-[10px] font-bold text-[#065F46] uppercase tracking-wider" id="mob-chart-label">Tuần này</span>
+                    </div>
+                </div>
+
+                <div class="relative h-64 w-full flex items-end justify-between gap-2 mb-8" id="mob-rev-chart-bars">
+                    <div class="w-full h-full flex items-center justify-center text-slate-300">Đang tải...</div>
+                </div>
+
+                <div class="pt-8 border-t border-slate-50 flex items-center justify-between">
+                    <div class="flex flex-col">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tổng cộng</span>
+                        <span class="text-2xl font-black tracking-tight text-slate-900" id="mob-chart-total">0 ₫</span>
+                    </div>
+                    <button class="w-12 h-12 rounded-full bg-[#10172A] flex items-center justify-center text-white shadow-xl active:scale-90 transition-transform">
+                        <span class="material-symbols-outlined font-bold">arrow_forward</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        </main>
 </div>
     </div>
 </div>
@@ -4602,6 +4723,129 @@ function renderDetailContentMobile(b) {
     }
     actionContainer.innerHTML = actionBtnHtml;
 }
+         // =========================================================
+// MOBILE REVENUE LOGIC
+// =========================================================
+let currentRevMode = 'week';
+
+function openRevenueMobile() {
+    // 1. Ẩn tất cả view
+    ['view-menu', 'view-payment', 'view-history', 'view-bed', 'view-revenue'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.classList.add('hidden');
+    });
+    // Ẩn sidebar cart
+    document.getElementById('sidebar-cart').classList.add('hidden');
+    document.getElementById('view-bed-mobile').classList.add('hidden');
+    
+    // 2. Hiện view Revenue Mobile
+    document.getElementById('view-revenue-mobile').classList.remove('hidden');
+    
+    // 3. Set Active Tab Nav (Chỉ để đổi màu icon nếu cần)
+    const btnRev = document.getElementById('btn-nav-revenue');
+    if(btnRev) { /* Logic active button PC */ }
+
+    // 4. Load Data & Render
+    fetchRevenueDataMobile(currentRevMode);
+}
+
+function fetchRevenueDataMobile(mode) {
+    // Giả lập loading nhẹ
+    document.getElementById('mob-rev-total').innerText = "...";
+    
+    // Tận dụng hàm calculateStats có sẵn của PC để lấy số liệu
+    db.ref('orders').once('value', snap => {
+        const data = snap.val();
+        let orders = [];
+        if(data) orders = Object.values(data);
+        
+        // Gọi hàm tính toán (Reuse logic PC)
+        const stats = calculateStats(orders, mode);
+        
+        if(stats) {
+            updateRevenueUIMobile(stats, mode);
+        }
+    });
+}
+
+function updateRevenueUIMobile(stats, mode) {
+    // 1. Cập nhật Cards
+    document.getElementById('mob-rev-total').innerHTML = `${stats.drinkTotal + stats.snackTotal < 1000000 ? (stats.drinkTotal + stats.snackTotal).toLocaleString() : ((stats.drinkTotal + stats.snackTotal)/1000000).toFixed(2) + 'M'} <span class="text-sm font-bold opacity-60">₫</span>`;
+    document.getElementById('mob-rev-snack').innerHTML = `${stats.snackTotal.toLocaleString()} <span class="text-sm font-bold opacity-60">₫</span>`;
+    
+    // So sánh hôm qua
+    const diff = stats.today - stats.yesterday;
+    const isUp = diff >= 0;
+    const diffHtml = `
+        <span class="material-symbols-outlined ${isUp ? 'text-emerald-500' : 'text-rose-500'} text-xl font-bold">${isUp ? 'north_east' : 'south_east'}</span>
+        <p class="text-2xl font-black ${isUp ? 'text-emerald-500' : 'text-rose-500'} tracking-tighter">${Math.abs(diff).toLocaleString()}</p>
+    `;
+    document.getElementById('mob-rev-compare-box').innerHTML = diffHtml;
+
+    // 2. Vẽ Biểu đồ (HTML Bars)
+    const chartBox = document.getElementById('mob-rev-chart-bars');
+    const labels = stats.labels; // ['T2', 'T3',...]
+    const data = stats.chartData; // [100000, 200000,...]
+    const maxVal = Math.max(...data) || 1; // Tránh chia cho 0
+
+    let barsHtml = '';
+    labels.forEach((lbl, index) => {
+        const val = data[index] || 0;
+        const heightPct = Math.round((val / maxVal) * 100);
+        // Style cột: Nếu là hôm nay hoặc max thì màu đậm, còn lại màu nhạt hơn
+        // Ở đây làm đơn giản: Tuần tự màu xanh
+        
+        // Fix chiều cao tối thiểu để đẹp (min 10%)
+        const displayHeight = val > 0 ? Math.max(heightPct, 10) : 5; 
+        const isMax = val === maxVal && val > 0;
+        
+        barsHtml += `
+        <div class="flex-1 flex flex-col items-center group">
+            <div class="w-full rounded-full transition-all duration-500 relative ${isMax ? 'bg-[#065F46] ring-4 ring-emerald-50' : 'bg-[#065F46]/80'}" 
+                 style="height: ${displayHeight}%;">
+                 <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-active:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                    ${(val/1000).toFixed(0)}k
+                 </div>
+            </div>
+            <span class="mt-3 text-[10px] font-bold ${isMax ? 'text-[#065F46]' : 'text-slate-400'}">${lbl}</span>
+        </div>`;
+    });
+    chartBox.innerHTML = barsHtml;
+
+    // Tổng dự kiến/tổng chart
+    const totalChart = data.reduce((a, b) => a + b, 0);
+    document.getElementById('mob-chart-total').innerText = totalChart.toLocaleString() + ' ₫';
+    
+    // Label
+    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay'};
+    document.getElementById('mob-chart-label').innerText = labelMap[mode];
+}
+
+function switchRevTime(mode) {
+    currentRevMode = mode;
+    // Update active tab style
+    ['week', 'month', 'year'].forEach(m => {
+        const btn = document.getElementById(`tab-rev-${m}`);
+        if(m === mode) {
+            btn.className = "flex-1 py-2.5 rounded-full text-[11px] font-black bg-[#065F46] text-white shadow-sm transition-all";
+        } else {
+            btn.className = "flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all";
+        }
+    });
+    fetchRevenueDataMobile(mode);
+}
+
+function toggleRevenueDropdown() {
+    const dd = document.getElementById('mob-revenue-dropdown');
+    const ol = document.getElementById('mob-revenue-overlay');
+    if(dd.classList.contains('hidden')) {
+        dd.classList.remove('hidden');
+        ol.classList.remove('hidden');
+    } else {
+        dd.classList.add('hidden');
+        ol.classList.add('hidden');
+    }
+}   
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
 </script>
@@ -4749,6 +4993,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
