@@ -4741,11 +4741,10 @@ function switchRevenueView(viewMode) {
 
 // 2. Hàm Tính toán Top Món (Logic cốt lõi)
 function calculateTopItems(orders, mode, customStart, customEnd) {
-    // A. Lọc đơn hàng theo thời gian (Tái sử dụng logic cũ)
+    // A. Lọc thời gian
     var now = new Date();
     var startTime, endTime;
     
-    // ... (Logic xác định thời gian y hệt calculateStats, viết gọn lại) ...
     if (mode === 'week') {
         var day = now.getDay() || 7; 
         startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
@@ -4756,113 +4755,226 @@ function calculateTopItems(orders, mode, customStart, customEnd) {
     } else if (mode === 'year') {
         startTime = new Date(now.getFullYear(), 0, 1);
         endTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-    } else { // custom
-        if(!customStart || !customEnd) return [];
+    } else { 
+        if(!customStart || !customEnd) return { topItems: [], totalRev: 0 };
         startTime = new Date(customStart); startTime.setHours(0,0,0,0);
         endTime = new Date(customEnd); endTime.setHours(23,59,59,999);
     }
 
-    // B. Tổng hợp dữ liệu món ăn
-    let itemMap = {}; // { "Cà phê sữa": {qty: 5, total: 125000} }
-    let totalRevenue = 0; // Để update card tổng
+    // B. Tổng hợp dữ liệu (Tất cả các món bán được)
+    let itemMap = {}; 
+    let totalRevenue = 0; 
 
     orders.forEach(o => {
         var d = new Date(o.createdAt || Date.now());
         if (d >= startTime && d <= endTime) {
             totalRevenue += Number(o.total || 0);
-
-            // Ưu tiên dùng itemsArray nếu có (chính xác hơn)
             if (o.itemsArray && Array.isArray(o.itemsArray)) {
                 o.itemsArray.forEach(item => {
                     let name = item.name; 
-                    // Gộp size vào tên luôn để phân biệt giá (hoặc bỏ size nếu muốn gộp chung)
-                    // Ở đây ta gộp chung tên món, bỏ qua size để xem "Món nào hot nhất"
-                    
                     if (!itemMap[name]) itemMap[name] = { qty: 0, total: 0 };
                     itemMap[name].qty += (item.qty || 0);
                     itemMap[name].total += (item.price * item.qty || 0);
                 });
             } else if (o.items) {
-                // Fallback: Parse chuỗi string (kém chính xác hơn về giá từng món)
-                // String: "Cafe (M) x2, Bạc xỉu (L) x1"
                 let parts = o.items.split(',');
                 parts.forEach(p => {
                     let cleanP = p.trim(); 
-                    // Tách tên và số lượng (Logic đơn giản)
                     let xIndex = cleanP.lastIndexOf('x');
                     if(xIndex > -1) {
                         let namePart = cleanP.substring(0, xIndex).trim();
-                        // Bỏ phần (Size) để lấy tên gốc
                         let parenIndex = namePart.indexOf('(');
                         if(parenIndex > -1) namePart = namePart.substring(0, parenIndex).trim();
-                        
                         let qty = parseInt(cleanP.substring(xIndex+1)) || 1;
-                        
                         if (!itemMap[namePart]) itemMap[namePart] = { qty: 0, total: 0 };
                         itemMap[namePart].qty += qty;
-                        // Lưu ý: Không tính được tiền chính xác từ string nếu không tra menu, tạm bỏ qua tiền
                     }
                 });
             }
         }
     });
 
-    // C. Chuyển Map thành Array và Sắp xếp
-    let sortedItems = Object.keys(itemMap).map(key => {
-        return { name: key, ...itemMap[key] };
-    }).sort((a, b) => b.total - a.total); // Xếp theo doanh thu giảm dần
+    // C. Xử lý danh sách kết quả
+    let finalItems = [];
 
-    return {
-        topItems: sortedItems.slice(0, 10), // Lấy Top 10
-        totalRev: totalRevenue
-    };
+    if (customSelectedItems && customSelectedItems.length > 0) {
+        // [CHẾ ĐỘ TÙY CHỌN]: Chỉ lấy món trong danh sách (kể cả doanh thu = 0)
+        customSelectedItems.forEach(name => {
+            if (itemMap[name]) {
+                finalItems.push({ name: name, ...itemMap[name] });
+            } else {
+                // Món này chưa bán được cái nào trong kỳ -> Hiển thị 0đ
+                finalItems.push({ name: name, qty: 0, total: 0 });
+            }
+        });
+    } else {
+        // [CHẾ ĐỘ AUTO]: Lấy Top 10 bán chạy nhất
+        let sorted = Object.keys(itemMap).map(k => ({name: k, ...itemMap[k]}));
+        sorted.sort((a, b) => b.total - a.total);
+        finalItems = sorted.slice(0, 10);
+    }
+
+    // D. Sắp xếp kết quả hiển thị (User có thể sort lại bảng này)
+    if (currentItemSort === 'desc') {
+        finalItems.sort((a, b) => b.total - a.total);
+    } else {
+        finalItems.sort((a, b) => a.total - b.total);
+    }
+
+    return { topItems: finalItems, totalRev: totalRevenue };
+}
+function toggleItemSort() {
+    currentItemSort = (currentItemSort === 'desc') ? 'asc' : 'desc';
+    fetchRevenueDataMobile(currentRevMode);
+}
+    function openItemSelectModal() {
+    // Lấy danh sách tất cả món từ MENU gốc (biến menu toàn cục)
+    // Để đảm bảo người dùng có thể chọn món chưa bán được bao giờ
+    let uniqueItems = [...new Set(menu.map(m => m.name))].sort();
+    
+    const listEl = document.getElementById('item-select-list');
+    listEl.innerHTML = uniqueItems.map(name => {
+        // Kiểm tra xem món này có đang được chọn không
+        let isChecked = false;
+        if (customSelectedItems) {
+            isChecked = customSelectedItems.includes(name);
+        }
+        
+        return `
+        <label class="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-xl cursor-pointer active:bg-gray-50 transition-colors">
+            <span class="font-bold text-gray-700 text-sm select-none">${name}</span>
+            <input type="checkbox" value="${name}" 
+                ${isChecked ? 'checked' : ''} 
+                onchange="handleItemCheck(this)"
+                class="w-5 h-5 rounded border-gray-300 accent-[#006241]">
+        </label>
+        `;
+    }).join('');
+
+    updateSelectCount();
+    document.getElementById('modal-item-select').classList.remove('hidden');
+}
+    function handleItemCheck(el) {
+    // Đếm số lượng đã chọn
+    const checkboxes = document.querySelectorAll('#item-select-list input[type="checkbox"]:checked');
+    // if (checkboxes.length > 10) {
+    //     alert("Chỉ được chọn tối đa 10 món!");
+    //     el.checked = false;
+    //     return;
+    // }
+    updateSelectCount();
+}
+    function updateSelectCount() {
+    const count = document.querySelectorAll('#item-select-list input[type="checkbox"]:checked').length;
+    document.getElementById('item-select-count').innerText = `Đã chọn: ${count} món`;
 }
 
+function filterItemSelectionList(keyword) {
+    const kw = keyword.toLowerCase();
+    const labels = document.querySelectorAll('#item-select-list label');
+    labels.forEach(lbl => {
+        const text = lbl.querySelector('span').innerText.toLowerCase();
+        lbl.style.display = text.includes(kw) ? 'flex' : 'none';
+    });
+}
+    function resetItemSelection() {
+    customSelectedItems = null; // Reset về Null -> Auto Top 10
+    document.getElementById('modal-item-select').classList.add('hidden');
+    fetchRevenueDataMobile(currentRevMode);
+}
+
+function applyItemSelection() {
+    const checkboxes = document.querySelectorAll('#item-select-list input[type="checkbox"]:checked');
+    if (checkboxes.length === 0) {
+        alert("Vui lòng chọn ít nhất 1 món hoặc bấm 'Mặc định'");
+        return;
+    }
+    
+    // Lưu danh sách món đã chọn vào biến
+    customSelectedItems = Array.from(checkboxes).map(cb => cb.value);
+    
+    document.getElementById('modal-item-select').classList.add('hidden');
+    fetchRevenueDataMobile(currentRevMode);
+}
 // 3. Hàm vẽ UI Bảng Xếp Hạng (Thay thế biểu đồ)
+let currentItemSort = 'desc'; // desc: Cao->Thấp, asc: Thấp->Cao
+let customSelectedItems = null; // null = Auto Top 10, Array = Danh sách tùy chọn
+
+// 1. Hàm vẽ UI (Thêm nút Tùy chỉnh danh sách)
 function updateRevenueItemsUI(data) {
-    // Update thẻ Card Tổng (Vẫn giữ nguyên để user biết tổng tiền)
+    // Update thẻ Card Tổng
     document.getElementById('mob-rev-total').innerHTML = `
         <span class="text-3xl">${data.totalRev.toLocaleString()}</span> 
         <span class="text-xs font-bold opacity-60">₫</span>
     `;
-    // Ẩn hoặc giữ Card Ăn vặt? Tạm giữ nguyên số cũ hoặc ẩn nếu muốn
-    // (Ở đây ta giữ nguyên UI Card, chỉ đổi phần biểu đồ)
 
     const container = document.getElementById('mob-rev-chart-bars');
+    container.className = "w-full flex flex-col gap-3 pb-4"; 
     
-    // Xóa class cũ của biểu đồ (flex-row items-end) -> Đổi thành list dọc (flex-col)
-    container.className = "w-full flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1 max-h-[300px]";
-    
+    // Header điều khiển: Nút Tùy chỉnh + Nút Sắp xếp
+    let sortLabel = currentItemSort === 'desc' ? "Cao ⬇" : "Thấp ⬆";
+    let filterLabel = customSelectedItems ? "Danh sách: Tùy chọn" : "Danh sách: Top 10";
+    let filterClass = customSelectedItems ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-50 text-gray-600 border-gray-200";
+
+    let html = `
+    <div class="flex flex-col gap-2 mb-3 pb-3 border-b border-dashed border-gray-200">
+        <div class="flex justify-between items-center">
+            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Bảng Xếp Hạng</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="openItemSelectModal()" class="flex-1 flex items-center justify-center gap-1.5 ${filterClass} border px-3 py-2 rounded-lg active:scale-95 transition-all">
+                <span class="material-symbols-outlined text-[16px]">tune</span>
+                <span class="text-[10px] font-bold uppercase">${filterLabel}</span>
+            </button>
+            
+            <button onclick="toggleItemSort()" class="w-[100px] flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg active:scale-95 transition-all">
+                <span class="material-symbols-outlined text-[16px] text-gray-500">sort</span>
+                <span class="text-[10px] font-bold text-gray-600">${sortLabel}</span>
+            </button>
+        </div>
+    </div>
+    `;
+
     if (data.topItems.length === 0) {
-        container.innerHTML = '<div class="text-center text-gray-400 py-10">Chưa có dữ liệu</div>';
+        container.innerHTML = html + '<div class="text-center text-gray-400 py-10 text-xs">Không có dữ liệu</div>';
         return;
     }
 
-    // Tìm giá trị lớn nhất để tính thanh %
-    const maxVal = data.topItems[0].total || 1;
+    const maxVal = Math.max(...data.topItems.map(i => i.total), 1);
 
-    // Render danh sách
-    container.innerHTML = data.topItems.map((item, index) => {
+    html += data.topItems.map((item, index) => {
         let percent = Math.round((item.total / maxVal) * 100);
-        let rankColor = index === 0 ? 'text-yellow-500' : (index === 1 ? 'text-gray-400' : (index === 2 ? 'text-amber-700' : 'text-slate-500'));
-        let barColor = index < 3 ? 'bg-[#006241]' : 'bg-slate-200';
+        
+        // Màu sắc bảng xếp hạng
+        let rankBg = 'bg-gray-100 text-gray-500';
+        if(currentItemSort === 'desc' && !customSelectedItems) {
+            if(index === 0) rankBg = 'bg-yellow-100 text-yellow-700';
+            else if(index === 1) rankBg = 'bg-gray-200 text-gray-700';
+            else if(index === 2) rankBg = 'bg-orange-100 text-orange-800';
+        }
+
+        let barColor = (item.total > 0) ? 'bg-[#006241]' : 'bg-gray-300';
         
         return `
         <div class="w-full">
             <div class="flex justify-between items-end mb-1">
-                <div class="flex items-center gap-2 max-w-[70%]">
-                    <span class="font-black text-sm w-4 ${rankColor}">#${index + 1}</span>
+                <div class="flex items-center gap-2 max-w-[75%]">
+                    <div class="w-5 h-5 rounded-full ${rankBg} flex items-center justify-center text-[10px] font-black shrink-0">
+                        ${index + 1}
+                    </div>
                     <span class="font-bold text-sm text-slate-700 truncate">${item.name}</span>
-                    <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 rounded-full">x${item.qty}</span>
+                    ${item.qty > 0 ? `<span class="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">x${item.qty}</span>` : ''}
                 </div>
-                <span class="font-black text-sm text-[#006241]">${item.total.toLocaleString()}đ</span>
+                <span class="font-black text-sm text-[#006241]">${item.total.toLocaleString()}</span>
             </div>
-            <div class="w-full h-2 bg-slate-50 rounded-full overflow-hidden">
+            <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                 <div class="h-full ${barColor} rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
             </div>
         </div>
         `;
     }).join('');
+
+    container.innerHTML = html;
 }
 // 2. Cập nhật hàm fetchRevenueDataMobile để hỗ trợ Custom Date
 // (GHI ĐÈ hàm cũ ở dòng ~2965)
@@ -5280,8 +5392,35 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
         </div>
     </div>
 </div>
+    <div id="modal-item-select" class="fixed inset-0 z-[100001] hidden flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white w-[90%] max-w-[360px] rounded-[30px] flex flex-col max-h-[85vh] shadow-2xl relative overflow-hidden">
+        
+        <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white z-10">
+            <div>
+                <h3 class="text-lg font-black text-[#1e3932] uppercase">Chọn món theo dõi</h3>
+                <p class="text-[10px] text-gray-400 font-bold" id="item-select-count">Đã chọn: 0/10</p>
+            </div>
+            <button onclick="document.getElementById('modal-item-select').classList.add('hidden')" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold">✕</button>
+        </div>
+
+        <div class="p-4 bg-gray-50 border-b border-gray-100">
+            <input type="text" oninput="filterItemSelectionList(this.value)" placeholder="Tìm tên món..." class="w-full bg-white px-4 py-3 rounded-xl text-sm font-bold border border-gray-200 focus:border-[#006241] outline-none">
+        </div>
+
+        <div id="item-select-list" class="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar bg-white">
+            </div>
+
+        <div class="p-4 border-t border-gray-100 bg-white z-10">
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="resetItemSelection()" class="py-3 rounded-xl bg-gray-100 text-gray-600 font-bold text-xs uppercase">Mặc định (Top 10)</button>
+                <button onclick="applyItemSelection()" class="py-3 rounded-xl bg-[#006241] text-white font-bold text-xs uppercase shadow-lg shadow-green-900/20 active:scale-95 transition-all">Xem kết quả</button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
 
 
 
