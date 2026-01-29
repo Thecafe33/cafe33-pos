@@ -2301,80 +2301,171 @@ function renderHistoryList(data) {
     });
     document.getElementById('history-container').innerHTML = html; 
 }
- function showHistoryDetailMobile(idx) {
+// Biến toàn cục để quản lý vuốt
+let sheetStartY = 0;
+let sheetCurrentY = 0;
+let isSheetDragging = false;
+
+function showHistoryDetailMobile(idx) {
     const h = historyData[idx];
     if (!h) return;
 
-    // 1. Điền thông tin vào Header (3 Cột)
-    document.getElementById('detail-mob-id').innerText = '#' + h.id.toString().slice(-4);
+    // --- 1. ĐỔ DỮ LIỆU VÀO GIAO DIỆN ---
+    document.getElementById('detail-mob-time').innerText = h.timeStr + " - " + h.dateStr.slice(0,5); // 19:44 - 28/01
     document.getElementById('detail-mob-cust').innerText = h.sdt || 'Vãng lai';
     document.getElementById('detail-mob-method').innerText = h.method;
+    document.getElementById('detail-mob-total').innerText = Number(h.total).toLocaleString();
 
-    // 2. Render Danh sách món (Card trắng nổi bật)
+    // Render món ăn (Style Clean List)
     const itemsContainer = document.getElementById('detail-mob-items-list');
     let itemsHtml = '';
+    let totalQty = 0;
     
     const itemsArr = h.items.split(',');
-    itemsArr.forEach(itemStr => {
+    itemsArr.forEach((itemStr, index) => {
         const raw = itemStr.trim();
         const lastX = raw.lastIndexOf('x');
         if (lastX !== -1) {
             const namePart = raw.substring(0, lastX).trim();
-            const qty = raw.substring(lastX + 1);
+            const qty = parseInt(raw.substring(lastX + 1)) || 1;
+            totalQty += qty;
             
-            // Style Card Món Ăn: Nền trắng, bo tròn, sạch sẽ
+            // Tách size nếu có (Ví dụ: Cà phê (M))
+            let finalName = namePart;
+            let sizeBadge = "";
+            if(namePart.includes('(')) {
+                let parts = namePart.split('(');
+                finalName = parts[0].trim();
+                let size = parts[1].replace(')', '').trim();
+                sizeBadge = `<span class="text-[10px] font-bold text-[#006241] bg-green-50 px-1.5 py-[2px] rounded text-center min-w-[20px]">${size}</span>`;
+            }
+
+            // Giao diện dòng món ăn (Giống ảnh mẫu)
             itemsHtml += `
-            <div class="bg-white p-4 rounded-[20px] shadow-sm border border-white flex justify-between items-center">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-[#1e3932] font-black text-sm">
-                        x${qty}
+            <div class="py-4 border-b border-gray-100 flex justify-between items-start">
+                <div class="flex gap-3.5">
+                    <div class="w-6 text-center pt-0.5">
+                        <span class="text-[17px] font-bold text-[#006241]">${index + 1}</span>
                     </div>
-                    <span class="font-bold text-sm text-[#1e3932] leading-tight max-w-[160px]">${namePart}</span>
+                    <div>
+                        <h3 class="text-[17px] font-semibold text-gray-900 leading-snug">${finalName}</h3>
+                        <div class="flex items-center gap-2 mt-1.5">
+                            ${sizeBadge}
+                            <span class="text-[13px] text-gray-400 font-medium">...</span>
+                        </div>
+                    </div>
                 </div>
-                </div>`;
+                <span class="text-[17px] font-bold text-gray-900 tabular-nums">--</span>
+            </div>`;
         }
     });
     itemsContainer.innerHTML = itemsHtml;
+    document.getElementById('detail-item-count').innerText = `Số lượng: ${totalQty} món`;
 
-    // 3. Footer: Tổng tiền & Nút Hủy
-    document.getElementById('detail-mob-total').innerText = Number(h.total).toLocaleString() + 'đ';
-    
+    // Nút Hủy
     const btnCancel = document.getElementById('btn-cancel-order-mobile');
+    const totalEl = document.getElementById('detail-mob-total');
     
-    // Nếu đơn đã hủy (tiền âm) -> Ẩn nút xóa, đổi màu tiền thành đỏ
     if(h.total < 0) {
-        btnCancel.classList.add('hidden'); // Ẩn nút xóa
-        document.getElementById('detail-mob-total').classList.add('text-red-500');
-        document.getElementById('detail-mob-total').innerText = "ĐÃ HỦY";
+        btnCancel.classList.add('hidden'); // Đã hủy
+        totalEl.parentElement.classList.add('text-red-500'); // Đổi màu tiền thành đỏ
+        totalEl.parentElement.classList.remove('text-[#006241]');
     } else {
         btnCancel.classList.remove('hidden');
-        document.getElementById('detail-mob-total').classList.remove('text-red-500');
-        
-        // Gán sự kiện hủy
+        totalEl.parentElement.classList.remove('text-red-500');
+        totalEl.parentElement.classList.add('text-[#006241]');
         btnCancel.onclick = function() {
-            // Dùng popup native confirm cho nhanh, hoặc bạn có thể thay bằng showIOSConfirm nếu muốn
             if(confirm("Xác nhận hủy đơn hàng này?")) {
-                executeRefundAction(idx, true); // Gọi hàm hủy của hệ thống
+                executeRefundAction(idx, true);
                 closeHistoryDetailMobile();
             }
         };
     }
 
-    // 4. Mở Popup
+    // --- 2. HIỆU ỨNG MỞ SHEET ---
     const sheet = document.getElementById('sheet-history-detail');
+    const content = document.getElementById('sheet-content-main');
+    
     sheet.classList.remove('hidden');
-    setTimeout(() => {
-        sheet.querySelector('div.transform').classList.remove('translate-y-full');
-    }, 10);
+    // Đợi 1 chút để browser render xong class hidden mới chạy animation
+    requestAnimationFrame(() => {
+        content.classList.remove('translate-y-full');
+    });
+
+    // --- 3. GẮN SỰ KIỆN VUỐT (SWIPE LOGIC) ---
+    setupSwipeToDismiss(content);
 }
+
 function closeHistoryDetailMobile() {
     const sheet = document.getElementById('sheet-history-detail');
-    // Animation trượt xuống
-    sheet.querySelector('div.transform').classList.add('translate-y-full');
+    const content = document.getElementById('sheet-content-main');
     
+    // Slide xuống
+    content.style.transform = ''; // Reset inline style nếu đang dở dang
+    content.classList.add('translate-y-full');
+    
+    // Đợi animation xong mới ẩn
     setTimeout(() => {
         sheet.classList.add('hidden');
+        // Reset trạng thái kéo
+        content.style.transform = ''; 
     }, 300);
+}
+
+// --- HÀM XỬ LÝ CẢM ỨNG (CORE) ---
+function setupSwipeToDismiss(element) {
+    const scrollBody = document.getElementById('sheet-scroll-body');
+    
+    // 1. CHẠM VÀO (TOUCH START)
+    element.ontouchstart = (e) => {
+        // Chỉ cho phép kéo nếu danh sách đang ở trên cùng (scrollTop = 0)
+        // Nếu danh sách đang cuộn ở giữa, thì ưu tiên cuộn danh sách chứ không kéo sheet
+        if (scrollBody.scrollTop > 0) {
+            isSheetDragging = false;
+            return;
+        }
+
+        isSheetDragging = true;
+        sheetStartY = e.touches[0].clientY;
+        element.style.transition = 'none'; // Tắt animation để kéo cho mượt (theo ngón tay)
+    };
+
+    // 2. DI CHUYỂN (TOUCH MOVE)
+    element.ontouchmove = (e) => {
+        if (!isSheetDragging) return;
+
+        const currentY = e.touches[0].clientY;
+        const deltaY = currentY - sheetStartY;
+
+        // Chỉ xử lý khi kéo xuống (deltaY > 0)
+        if (deltaY > 0) {
+            // Ngăn chặn cuộn trang web gốc (pull-to-refresh)
+            if (e.cancelable) e.preventDefault(); 
+            
+            // Di chuyển sheet theo ngón tay
+            element.style.transform = `translateY(${deltaY}px)`;
+        }
+    };
+
+    // 3. THẢ TAY (TOUCH END)
+    element.ontouchend = (e) => {
+        if (!isSheetDragging) return;
+        isSheetDragging = false;
+
+        // Bật lại animation để đóng hoặc bật ngược lại
+        element.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+
+        const currentY = e.changedTouches[0].clientY;
+        const deltaY = currentY - sheetStartY;
+
+        // NGƯỠNG ĐÓNG: Nếu kéo xuống quá 150px -> Đóng luôn
+        if (deltaY > 150) {
+            closeHistoryDetailMobile();
+        } else {
+            // Nếu kéo ít quá -> Bật ngược lại vị trí cũ (Reset)
+            element.style.transform = '';
+        }
+    };
 }
 
 // --- HÀM SELECT BILL ĐÃ FIX (CÓ NÚT HỦY/HOÀN) ---
@@ -6248,52 +6339,62 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
     </div>
 </div>
 <div id="sheet-history-detail" class="fixed inset-0 z-[100002] hidden flex items-end justify-center">
-    <div onclick="closeHistoryDetailMobile()" class="absolute inset-0 bg-black/40 backdrop-blur-[4px] transition-opacity"></div>
+    <div onclick="closeHistoryDetailMobile()" class="absolute inset-0 bg-black/40 backdrop-blur-[4px] transition-opacity duration-300" id="sheet-backdrop"></div>
     
-    <div class="bg-[#F2F2F7] w-full h-[90vh] rounded-t-[35px] flex flex-col shadow-2xl transform transition-transform duration-300 translate-y-0 relative overflow-hidden">
+    <div id="sheet-content-main" class="bg-[#F2F2F7] w-full h-[92vh] rounded-t-[35px] flex flex-col shadow-2xl transform translate-y-full transition-transform duration-300 relative overflow-hidden touch-none">
         
-        <div class="bg-white rounded-b-[40px] px-6 pt-5 pb-8 shadow-sm z-20 shrink-0 relative">
+        <div class="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-300 rounded-full z-50 pointer-events-none opacity-50"></div>
+
+        <div class="bg-white rounded-b-[40px] px-6 pt-8 pb-8 shadow-sm z-20 shrink-0 relative" id="sheet-header-area">
             
             <div class="flex justify-between items-center mb-6">
-                <button onclick="closeHistoryDetailMobile()" class="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 active:scale-90 transition-transform">
-                    <span class="material-symbols-outlined font-bold">arrow_back</span>
+                <button onclick="closeHistoryDetailMobile()" class="flex items-center gap-1 text-[#006241] active:opacity-60 transition-opacity -ml-2">
+                    <span class="material-symbols-outlined text-3xl">chevron_left</span>
+                    <span class="text-lg font-bold">Quay lại</span>
                 </button>
-                <span class="text-sm font-black uppercase tracking-widest text-gray-400">Hóa đơn</span>
-                <div class="w-10"></div> </div>
+                
+                <button onclick="closeHistoryDetailMobile()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold active:bg-gray-200">
+                    <span class="material-symbols-outlined text-xl">close</span>
+                </button>
+            </div>
 
-            <div class="flex justify-between items-start">
-                <div class="flex flex-col gap-1">
-                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Mã đơn</span>
-                    <span id="detail-mob-id" class="text-2xl font-black text-[#1e3932] tracking-tighter">#---</span>
+            <div class="flex justify-between items-start text-xs divide-x divide-gray-100">
+                <div class="flex flex-col gap-1 pr-4">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Thời gian</span>
+                    <span id="detail-mob-time" class="text-sm font-bold text-gray-800">--:--</span>
                 </div>
                 
-                <div class="flex flex-col gap-1 items-center">
-                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Khách hàng</span>
-                    <span id="detail-mob-cust" class="text-sm font-bold text-gray-800 max-w-[100px] truncate text-center">--</span>
+                <div class="flex flex-col gap-1 px-4 items-center flex-1">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Khách</span>
+                    <span id="detail-mob-cust" class="text-sm font-bold text-gray-800 text-center truncate w-full">--</span>
                 </div>
 
-                <div class="flex flex-col gap-1 items-end">
-                    <span class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Phương thức</span>
-                    <span id="detail-mob-method" class="text-[10px] font-black text-[#006241] bg-[#E6F4F1] px-2 py-1 rounded-lg uppercase">--</span>
+                <div class="flex flex-col gap-1 pl-4 items-end">
+                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Thanh toán</span>
+                    <span id="detail-mob-method" class="text-sm font-bold text-[#006241] uppercase">--</span>
                 </div>
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto custom-scrollbar p-5 pb-32">
-            <h3 class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-2">Chi tiết món</h3>
-            <div id="detail-mob-items-list" class="space-y-3">
-                </div>
-        </div>
-
-        <div class="absolute bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-white/50 p-6 pb-8 z-30 flex items-center justify-between">
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-5 pb-32" id="sheet-scroll-body">
             
-            <button id="btn-cancel-order-mobile" class="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center shadow-lg shadow-red-200/50 active:scale-90 transition-transform border border-red-100">
+            <div id="detail-mob-items-list" class="space-y-4 pt-2"></div>
+            
+            <div class="h-10"></div> </div>
+
+        <div class="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-gray-100 p-6 pb-8 z-30 flex items-center justify-between">
+            
+            <button id="btn-cancel-order-mobile" class="w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-500/30 active:scale-90 transition-transform hover:bg-red-600">
                 <span class="material-symbols-outlined text-2xl">delete</span>
             </button>
 
             <div class="flex flex-col items-end">
-                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng thanh toán</span>
-                <span id="detail-mob-total" class="text-4xl font-black text-[#1e3932] tracking-tighter drop-shadow-sm">0đ</span>
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">TỔNG BILL</span>
+                <div class="flex items-baseline gap-1">
+                    <span id="detail-mob-total" class="text-4xl font-black text-[#006241] tracking-tighter drop-shadow-sm">0</span>
+                    <span class="text-xl font-bold text-[#006241]">đ</span>
+                </div>
+                <span id="detail-item-count" class="text-[11px] font-medium text-gray-400 mt-1">Số lượng: 0 món</span>
             </div>
         </div>
 
@@ -6301,6 +6402,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
