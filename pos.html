@@ -1116,32 +1116,30 @@ input, button, select, textarea { font-size: 1rem; }
 </div>
     <div id="view-revenue-mobile" class="hidden h-full flex flex-col bg-white overflow-hidden relative animate-fade-in">
     
-    <header class="px-6 pt-8 pb-4 flex items-end justify-between bg-white sticky top-0 z-30">
-        <div>
-            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Trình quản lý</p>
-            <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">The Cafe 33</h1>
-        </div>
+    <header class="px-5 pt-6 pb-2 flex items-center justify-between bg-white sticky top-0 z-30 border-b border-gray-50/50">
+    <div>
+        <h1 class="text-2xl font-black tracking-tight text-[#1e3932] uppercase">Doanh Thu</h1>
+    </div>
+    
+    <div class="flex items-center gap-2">
+        <button onclick="openMobileDateFilter()" class="flex items-center gap-1 px-3 py-2 rounded-full bg-slate-50 border border-slate-100 active:scale-95 transition-transform">
+            <span class="material-symbols-outlined text-[16px] text-slate-600 font-bold">calendar_month</span>
+            <span class="text-[10px] font-bold text-slate-700 uppercase">Lọc ngày</span>
+        </button>
         
-        <div class="flex items-center gap-2">
-           <button onclick="openMobileDateFilter()" class="flex items-center gap-1 px-4 py-2.5 rounded-full bg-slate-50 border border-slate-100 active:scale-95 transition-transform">
-                <span class="material-symbols-outlined text-[18px] text-slate-600 font-bold">filter_list</span>
-                <span class="text-xs font-bold text-slate-700">Lọc</span>
+        <div class="relative">
+            <button onclick="toggleRevenueDropdown()" class="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center active:scale-95 transition-transform">
+                <span class="material-symbols-outlined text-slate-600 text-[18px]">more_horiz</span>
             </button>
-            
-            <div class="relative">
-                <button onclick="toggleRevenueDropdown()" class="w-10 h-10 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center active:scale-95 transition-transform">
-                    <span class="material-symbols-outlined text-slate-600">more_horiz</span>
-                </button>
-
-                <div id="mob-revenue-dropdown" class="hidden absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden origin-top-right transition-all">
-                    <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu theo món</button>
-                    <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu theo nhóm</button>
-                    <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu Cafe in Bed</button>
-                </div>
-                <div id="mob-revenue-overlay" onclick="toggleRevenueDropdown()" class="hidden fixed inset-0 z-40"></div>
+            <div id="mob-revenue-dropdown" class="hidden absolute top-full right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 z-50 overflow-hidden origin-top-right transition-all">
+                <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu theo món</button>
+                <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu theo nhóm</button>
+                <button class="revenue-dropdown-item" onclick="alert('Tính năng đang phát triển')">Doanh thu Cafe in Bed</button>
             </div>
+            <div id="mob-revenue-overlay" onclick="toggleRevenueDropdown()" class="hidden fixed inset-0 z-40"></div>
         </div>
-    </header>
+    </div>
+</header>
 
     <main class="flex-1 overflow-y-auto pb-20 custom-scrollbar">
         
@@ -2671,30 +2669,29 @@ function renderChart(labels, chartData, type) {
 // =========================================================
 function switchView(v) {
     isPaymentMode = (v === 'payment');
-    // --- 1. [QUAN TRỌNG NHẤT] DỌN DẸP GIAO DIỆN BED MOBILE ---
-    // Phải ẩn giao diện này đi trước khi chuyển sang bất kỳ tab nào khác
+    var isMobile = window.innerWidth <= 768;
+
+    // --- 1. DỌN DẸP GIAO DIỆN MOBILE ĐẶC BIỆT ---
+    // Luôn ẩn các view mobile overlay trước khi chuyển tab
     var bedMob = document.getElementById('view-bed-mobile');
     if(bedMob) bedMob.classList.add('hidden');
-    // [MỚI] Phải ẩn giao diện Doanh Thu Mobile (THÊM ĐOẠN NÀY)
+    
     var revMob = document.getElementById('view-revenue-mobile');
     if(revMob) revMob.classList.add('hidden');
 
-    // --- 2. XỬ LÝ RIÊNG KHI VÀO TAB BED TRÊN MOBILE ---
-    if (v === 'bed') {
-        if (window.innerWidth <= 768) {
-            // Gọi hàm quản lý riêng cho Mobile
-            openBedManagerMobile(); 
-            return; // Dừng ngay, không chạy logic PC bên dưới nữa
-        }
+    // --- 2. XỬ LÝ RIÊNG TAB BED TRÊN MOBILE ---
+    if (v === 'bed' && isMobile) {
+        openBedManagerMobile(); 
+        return; // Dừng ngay, không chạy logic PC bên dưới
     }
 
-    // --- 3. ẨN TẤT CẢ CÁC VIEW CHÍNH (LOGIC CHUNG) ---
+    // --- 3. ẨN TẤT CẢ CÁC VIEW CHÍNH & RESET NAV ---
     ['menu', 'payment', 'history', 'bed', 'revenue'].forEach(id => {
-        // Ẩn view
+        // Ẩn view chính
         var viewEl = document.getElementById('view-' + id);
         if (viewEl) viewEl.classList.add('hidden');
 
-        // Reset nút Nav (Dành cho PC)
+        // Reset nút Nav (Chỉ có trên PC)
         var btn = document.getElementById('btn-nav-' + id);
         if (btn) {
             btn.classList.remove('tab-active', 'sb-green', 'text-white');
@@ -2702,54 +2699,55 @@ function switchView(v) {
         }
     });
 
-    // --- 4. HIỆN VIEW MỤC TIÊU ---
+    // --- 4. HIỆN VIEW MỤC TIÊU (TÁCH LOGIC MOBILE/PC) ---
     
-    // Nhóm History & Revenue (Dùng chung khung view-history)
-    if (v === 'revenue' || v === 'history') {
-        var historyView = document.getElementById('view-history');
-        if (historyView) historyView.classList.remove('hidden');
-        
-        // Active nút Nav tương ứng
-        let btnId = (v === 'revenue') ? 'btn-nav-revenue' : 'btn-nav-history';
-        let btn = document.getElementById(btnId);
-        if (btn) btn.className = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
+    if (v === 'revenue') {
+        // [QUAN TRỌNG] Tách luồng: Mobile dùng view riêng, PC dùng view chung
+        if (isMobile) {
+            if(revMob) revMob.classList.remove('hidden');
+        } else {
+            // PC: Dùng chung view-history
+            document.getElementById('view-history').classList.remove('hidden');
+            let btn = document.getElementById('btn-nav-revenue');
+            if(btn) btn.className = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
+        }
     } 
-    // Tab Bed (Dành cho PC, vì Mobile đã return ở trên)
+    else if (v === 'history') {
+        document.getElementById('view-history').classList.remove('hidden');
+        // PC: Active nút History
+        let btn = document.getElementById('btn-nav-history');
+        if(btn) btn.className = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
+    }
     else if (v === 'bed') {
-        var bedView = document.getElementById('view-bed');
-        if (bedView) bedView.classList.remove('hidden');
-        
-        let btnBed = document.getElementById('btn-nav-bed');
-        if (btnBed) btnBed.className = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
-    } 
-    // Các tab còn lại (Menu, Payment)
+        // PC: Hiện view bed (Mobile đã return ở bước 2 rồi)
+        document.getElementById('view-bed').classList.remove('hidden');
+        let btn = document.getElementById('btn-nav-bed');
+        if(btn) btn.className = 'sb-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tab-active';
+    }
     else {
+        // Menu, Payment
         var viewTarget = document.getElementById('view-' + v);
         if (viewTarget) viewTarget.classList.remove('hidden');
     }
 
-    // --- 5. LOGIC SIDEBAR CART & CATEGORY BAR ---
-    var isMobile = window.innerWidth <= 768;
-    
-    // Sidebar PC
+    // --- 5. SIDEBAR & CATEGORY BAR ---
     var sidebarCart = document.getElementById('sidebar-cart');
     if (sidebarCart) {
         if (isMobile) sidebarCart.classList.toggle('hidden', v !== 'menu'); 
         else sidebarCart.classList.toggle('hidden', v !== 'menu' && v !== 'payment');
     }
 
-    // Thanh danh mục
     var catBar = document.getElementById('category-bar');
     if (catBar) catBar.classList.toggle('hidden', v !== 'menu');
 
-    // --- 6. FIX BOTTOM BAR (THANH THANH TOÁN MOBILE) ---
+    // --- 6. [FIX] ẨN BOTTOM BAR KHI KHÔNG PHẢI MENU ---
     var mobBar = document.getElementById('mobile-bottom-bar');
     if (mobBar) {
         if (v === 'menu') {
             mobBar.classList.remove('hidden');
             mobBar.classList.add('flex');
         } else {
-            // Khi vào Doanh thu, Lịch sử, Bed... -> ẨN TUYỆT ĐỐI
+            // Ẩn tiệt khi vào Doanh thu, Lịch sử...
             mobBar.classList.add('hidden');
             mobBar.classList.remove('flex');
         }
@@ -2762,7 +2760,6 @@ function switchView(v) {
         if (mobStep1) mobStep1.classList.remove('hidden');
         if (mobStep2) mobStep2.classList.add('hidden');
         
-        // Reset input tiền
         var cashMobInput = document.getElementById('cash-paid-mobile');
         if (cashMobInput) cashMobInput.value = "";
         
@@ -4743,10 +4740,8 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
 }
 
 function updateRevenueUIMobile(stats, mode) {
-    // 1. Cập nhật Số tiền (Chỉ còn 2 ô)
+    // 1. Cập nhật Số tiền (Full số 1,700,000 đ)
     const totalRev = stats.drinkTotal + stats.snackTotal;
-    
-    // Format tiền đẹp: 1,700,000
     document.getElementById('mob-rev-total').innerHTML = `
         <span class="text-3xl">${totalRev.toLocaleString()}</span> 
         <span class="text-xs font-bold opacity-60">₫</span>
@@ -4757,34 +4752,41 @@ function updateRevenueUIMobile(stats, mode) {
         <span class="text-xs font-bold opacity-60">₫</span>
     `;
     
-    // --- ĐÃ XÓA LOGIC SO SÁNH HÔM QUA ---
-
-    // 2. Vẽ biểu đồ (Giữ nguyên logic chuẩn maxVal)
+    // 2. Vẽ biểu đồ (Hiện số tiền trên đỉnh cột)
     const chartBox = document.getElementById('mob-rev-chart-bars');
     const labels = stats.labels; 
     const data = stats.chartData;
-    
     const maxVal = Math.max(...data, 1); 
 
     let barsHtml = '';
     labels.forEach((lbl, index) => {
         const val = data[index] || 0;
+        
+        // Tính chiều cao %, tối thiểu 10% để đẹp
         let heightPct = 0;
         if (val > 0) {
             heightPct = Math.round((val / maxVal) * 100);
-            if (heightPct < 8) heightPct = 8; 
+            if (heightPct < 15) heightPct = 15; 
         }
         
         const isMax = val === maxVal && val > 0;
         
+        // Format số trên cột: 150000 -> 150k (để vừa chiều ngang mobile)
+        let labelVal = "";
+        if (val >= 1000000) labelVal = (val/1000000).toFixed(1) + "tr";
+        else if (val > 0) labelVal = (val/1000).toFixed(0) + "k";
+
         barsHtml += `
-        <div class="flex-1 flex flex-col items-center group h-full justify-end">
-            <div class="w-full relative flex flex-col justify-end items-center" style="height: 100%;">
-                <div class="w-2.5 sm:w-4 rounded-t-full transition-all duration-1000 ease-out relative ${isMax ? 'bg-[#006241]' : 'bg-[#006241]/30'}" 
+        <div class="flex-1 flex flex-col items-center group h-full justify-end relative">
+            <div class="w-full relative flex flex-col justify-end items-center h-full">
+                
+                ${val > 0 ? `
+                <div class="mb-1 text-[9px] font-black text-slate-500 bg-white/90 backdrop-blur px-1.5 py-0.5 rounded-md shadow-sm border border-slate-100 z-10 whitespace-nowrap">
+                    ${labelVal}
+                </div>` : ''}
+
+                <div class="w-3 sm:w-5 rounded-t-lg transition-all duration-1000 ease-out ${isMax ? 'bg-[#006241]' : 'bg-[#006241]/40'}" 
                      style="height: ${heightPct}%;">
-                </div>
-                <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-active:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-sm">
-                    ${val.toLocaleString()}
                 </div>
             </div>
             <span class="mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider">${lbl}</span>
@@ -5139,6 +5141,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
