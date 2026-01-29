@@ -1152,7 +1152,7 @@ input, button, select, textarea { font-size: 1rem; }
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 px-4 mb-6">
+        <div id="mob-revenue-summary-cards" class="grid grid-cols-2 gap-4 px-4 mb-6">
     
     <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
         <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Tổng thu</p>
@@ -4902,20 +4902,11 @@ let customSelectedItems = null; // null = Auto Top 10, Array = Danh sách tùy c
 
 // 1. Hàm vẽ UI (Thêm nút Tùy chỉnh danh sách)
 function updateRevenueItemsUI(data) {
-    // 1. Update thẻ Card Tổng
-    document.getElementById('mob-rev-total').innerHTML = `
-        <span class="text-3xl">${data.totalRev.toLocaleString()}</span> 
-        <span class="text-xs font-bold opacity-60">₫</span>
-    `;
-
     const container = document.getElementById('mob-rev-chart-bars');
     container.className = "w-full flex flex-col gap-3 pb-4"; 
     
-    // --- [RE-DESIGN] HEADER ĐIỀU KHIỂN (GIAO DIỆN MỚI) ---
+    // Header điều khiển
     let sortLabel = currentItemSort === 'desc' ? "Cao ⬇" : "Thấp ⬆";
-    
-    // Style cho nút Tùy chọn (Active/Inactive)
-    // Dùng rounded-full (viên thuốc) và shadow nhẹ
     let filterLabel = customSelectedItems ? "Tùy chọn" : "Top 10 (Mặc định)";
     let filterClass = customSelectedItems 
         ? "bg-amber-50 text-amber-700 border-amber-200 ring-1 ring-amber-100" 
@@ -4943,17 +4934,26 @@ function updateRevenueItemsUI(data) {
 
     if (data.topItems.length === 0) {
         container.innerHTML = html + '<div class="flex flex-col items-center justify-center py-10 text-gray-300 gap-2"><span class="text-3xl">📭</span><span class="text-xs font-medium">Chưa có số liệu</span></div>';
+        // Reset tổng về 0
+        document.getElementById('mob-chart-total').innerText = "0 ₫";
         return;
     }
 
     const maxVal = Math.max(...data.topItems.map(i => i.total), 1);
 
-    html += '<div class="space-y-3">'; // Wrapper cho list
+    // --- [MỚI] TÍNH TỔNG DOANH THU CỦA DANH SÁCH ĐANG HIỂN THỊ ---
+    // Cộng tổng tiền của 10 món (hoặc danh sách tùy chọn)
+    const displayedTotal = data.topItems.reduce((acc, item) => acc + item.total, 0);
+    
+    // Cập nhật vào vị trí "Tổng cộng" ở dưới cùng
+    document.getElementById('mob-chart-total').innerText = displayedTotal.toLocaleString() + ' ₫';
+    // -------------------------------------------------------------
+
+    html += '<div class="space-y-3">'; 
 
     html += data.topItems.map((item, index) => {
         let percent = Math.round((item.total / maxVal) * 100);
         
-        // Màu sắc bảng xếp hạng (Giữ nguyên logic cũ nhưng chỉnh màu dịu hơn)
         let rankBg = 'bg-slate-100 text-slate-500';
         let rankText = 'text-slate-500';
         
@@ -4998,6 +4998,19 @@ function updateRevenueItemsUI(data) {
 // 2. Cập nhật hàm fetchRevenueDataMobile để hỗ trợ Custom Date
 // (GHI ĐÈ hàm cũ ở dòng ~2965)
 function fetchRevenueDataMobile(mode, startVal, endVal) {
+    // 1. Quản lý hiển thị các thành phần UI dựa trên chế độ xem
+    const summaryCards = document.getElementById('mob-revenue-summary-cards');
+    const chartTitle = document.getElementById('mob-chart-total-label'); // Label "Tổng cộng" ở dưới
+    
+    if (currentRevenueView === 'items') {
+        // Chế độ Món: Ẩn 2 ô tổng thu, đổi label dưới đáy
+        if(summaryCards) summaryCards.classList.add('hidden');
+    } else {
+        // Chế độ Tổng quan: Hiện 2 ô tổng thu
+        if(summaryCards) summaryCards.classList.remove('hidden');
+    }
+
+    // 2. Reset trạng thái loading
     document.getElementById('mob-rev-total').innerText = "...";
     
     // Nếu đang ở chế độ xem Nhóm hoặc Bed -> Thông báo chưa có
@@ -5005,6 +5018,7 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
         document.getElementById('mob-rev-chart-bars').innerHTML = 
             '<div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">Tính năng đang cập nhật...</div>';
         document.getElementById('mob-rev-total').innerText = "0";
+        if(summaryCards) summaryCards.classList.add('hidden'); // Cũng ẩn luôn cho gọn
         return;
     }
 
@@ -5439,6 +5453,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
