@@ -1153,26 +1153,23 @@ input, button, select, textarea { font-size: 1rem; }
             </div>
         </div>
 
-        <div class="flex overflow-x-auto gap-4 px-6 mb-8 hide-scrollbar snap-x">
-            
-            <div class="min-w-[200px] bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-50 flex-shrink-0 snap-center">
-                <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">TỔNG THU</p>
-                <p class="text-3xl font-black text-[#065F46] tracking-tighter" id="mob-rev-total">0 <span class="text-sm font-bold opacity-60">₫</span></p>
-            </div>
-
-            <div class="min-w-[200px] bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-50 flex-shrink-0 snap-center">
-                <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">ĂN VẶT</p>
-                <p class="text-3xl font-black text-[#D97706] tracking-tighter" id="mob-rev-snack">0 <span class="text-sm font-bold opacity-60">₫</span></p>
-            </div>
-
-            <div class="min-w-[200px] bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-slate-50 flex-shrink-0 snap-center">
-                <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-3">SO HÔM QUA</p>
-                <div class="flex items-center gap-1" id="mob-rev-compare-box">
-                    <span class="material-symbols-outlined text-slate-300 text-xl font-bold">remove</span>
-                    <p class="text-3xl font-black text-slate-300 tracking-tighter">--</p>
-                </div>
-            </div>
+        <div class="grid grid-cols-2 gap-4 px-4 mb-6">
+    
+    <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
+        <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Tổng thu</p>
+        <div id="mob-rev-total" class="text-[#065F46] font-black tracking-tighter leading-none flex flex-col items-center">
+            0 <span class="text-[10px] opacity-60">₫</span>
         </div>
+    </div>
+
+    <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
+        <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Ăn vặt</p>
+        <div id="mob-rev-snack" class="text-[#D97706] font-black tracking-tighter leading-none flex flex-col items-center">
+            0 <span class="text-[10px] opacity-60">₫</span>
+        </div>
+    </div>
+
+</div>
 
         <div class="px-5">
             <div class="bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.06)] border border-slate-50 p-8">
@@ -2749,11 +2746,10 @@ function switchView(v) {
     var mobBar = document.getElementById('mobile-bottom-bar');
     if (mobBar) {
         if (v === 'menu') {
-            // Chỉ hiện khi ở Menu Order
             mobBar.classList.remove('hidden');
             mobBar.classList.add('flex');
         } else {
-            // Ẩn tiệt khi ở Bed, History, Payment...
+            // Khi vào Doanh thu, Lịch sử, Bed... -> ẨN TUYỆT ĐỐI
             mobBar.classList.add('hidden');
             mobBar.classList.remove('flex');
         }
@@ -4747,56 +4743,100 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
 }
 
 function updateRevenueUIMobile(stats, mode) {
-    // 1. Cập nhật Cards
-    document.getElementById('mob-rev-total').innerHTML = `${stats.drinkTotal + stats.snackTotal < 1000000 ? (stats.drinkTotal + stats.snackTotal).toLocaleString() : ((stats.drinkTotal + stats.snackTotal)/1000000).toFixed(2) + 'M'} <span class="text-sm font-bold opacity-60">₫</span>`;
-    document.getElementById('mob-rev-snack').innerHTML = `${stats.snackTotal.toLocaleString()} <span class="text-sm font-bold opacity-60">₫</span>`;
+    // 1. Cập nhật Số tiền (Chỉ còn 2 ô)
+    const totalRev = stats.drinkTotal + stats.snackTotal;
     
-    // So sánh hôm qua
-    const diff = stats.today - stats.yesterday;
-    const isUp = diff >= 0;
-    const diffHtml = `
-        <span class="material-symbols-outlined ${isUp ? 'text-emerald-500' : 'text-rose-500'} text-xl font-bold">${isUp ? 'north_east' : 'south_east'}</span>
-        <p class="text-2xl font-black ${isUp ? 'text-emerald-500' : 'text-rose-500'} tracking-tighter">${Math.abs(diff).toLocaleString()}</p>
+    // Format tiền đẹp: 1,700,000
+    document.getElementById('mob-rev-total').innerHTML = `
+        <span class="text-3xl">${totalRev.toLocaleString()}</span> 
+        <span class="text-xs font-bold opacity-60">₫</span>
     `;
-    document.getElementById('mob-rev-compare-box').innerHTML = diffHtml;
+    
+    document.getElementById('mob-rev-snack').innerHTML = `
+        <span class="text-3xl">${stats.snackTotal.toLocaleString()}</span>
+        <span class="text-xs font-bold opacity-60">₫</span>
+    `;
+    
+    // --- ĐÃ XÓA LOGIC SO SÁNH HÔM QUA ---
 
-    // 2. Vẽ Biểu đồ (HTML Bars)
+    // 2. Vẽ biểu đồ (Giữ nguyên logic chuẩn maxVal)
     const chartBox = document.getElementById('mob-rev-chart-bars');
-    const labels = stats.labels; // ['T2', 'T3',...]
-    const data = stats.chartData; // [100000, 200000,...]
-    const maxVal = Math.max(...data) || 1; // Tránh chia cho 0
+    const labels = stats.labels; 
+    const data = stats.chartData;
+    
+    const maxVal = Math.max(...data, 1); 
 
     let barsHtml = '';
     labels.forEach((lbl, index) => {
         const val = data[index] || 0;
-        const heightPct = Math.round((val / maxVal) * 100);
-        // Style cột: Nếu là hôm nay hoặc max thì màu đậm, còn lại màu nhạt hơn
-        // Ở đây làm đơn giản: Tuần tự màu xanh
+        let heightPct = 0;
+        if (val > 0) {
+            heightPct = Math.round((val / maxVal) * 100);
+            if (heightPct < 8) heightPct = 8; 
+        }
         
-        // Fix chiều cao tối thiểu để đẹp (min 10%)
-        const displayHeight = val > 0 ? Math.max(heightPct, 10) : 5; 
         const isMax = val === maxVal && val > 0;
         
         barsHtml += `
-        <div class="flex-1 flex flex-col items-center group">
-            <div class="w-full rounded-full transition-all duration-500 relative ${isMax ? 'bg-[#065F46] ring-4 ring-emerald-50' : 'bg-[#065F46]/80'}" 
-                 style="height: ${displayHeight}%;">
-                 <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-active:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
-                    ${(val/1000).toFixed(0)}k
-                 </div>
+        <div class="flex-1 flex flex-col items-center group h-full justify-end">
+            <div class="w-full relative flex flex-col justify-end items-center" style="height: 100%;">
+                <div class="w-2.5 sm:w-4 rounded-t-full transition-all duration-1000 ease-out relative ${isMax ? 'bg-[#006241]' : 'bg-[#006241]/30'}" 
+                     style="height: ${heightPct}%;">
+                </div>
+                <div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-bold px-2 py-1 rounded opacity-0 group-active:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none shadow-sm">
+                    ${val.toLocaleString()}
+                </div>
             </div>
-            <span class="mt-3 text-[10px] font-bold ${isMax ? 'text-[#065F46]' : 'text-slate-400'}">${lbl}</span>
+            <span class="mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider">${lbl}</span>
         </div>`;
     });
     chartBox.innerHTML = barsHtml;
 
-    // Tổng dự kiến/tổng chart
+    // Tổng cộng dưới biểu đồ
     const totalChart = data.reduce((a, b) => a + b, 0);
     document.getElementById('mob-chart-total').innerText = totalChart.toLocaleString() + ' ₫';
     
-    // Label
-    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay'};
-    document.getElementById('mob-chart-label').innerText = labelMap[mode];
+    // Label hiển thị
+    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
+    document.getElementById('mob-chart-label').innerText = labelMap[mode] || 'Chi tiết';
+}
+    // --- LOGIC DATE RANGE PICKER MỚI ---
+
+// 1. Mở Modal chọn ngày
+function openMobileDateFilter() {
+    const modal = document.getElementById('modal-date-range');
+    if(modal) modal.classList.remove('hidden');
+    
+    // Set mặc định là ngày hôm nay nếu chưa chọn
+    const today = new Date().toISOString().split('T')[0];
+    if(!document.getElementById('filter-start-date').value) {
+        document.getElementById('filter-start-date').value = today;
+        document.getElementById('filter-end-date').value = today;
+    }
+}
+
+// 2. Xử lý khi bấm nút "Áp dụng"
+function submitDateFilter() {
+    const start = document.getElementById('filter-start-date').value;
+    const end = document.getElementById('filter-end-date').value;
+
+    if(!start || !end) return alert("Vui lòng chọn đầy đủ ngày bắt đầu và kết thúc");
+    if(new Date(start) > new Date(end)) return alert("Ngày bắt đầu không được lớn hơn ngày kết thúc");
+
+    // Đóng modal
+    document.getElementById('modal-date-range').classList.add('hidden');
+
+    // Cập nhật biến mode
+    currentRevMode = 'custom';
+
+    // Reset style các nút tab (để người dùng biết đang ở mode Custom)
+    ['week', 'month', 'year'].forEach(m => {
+        const btn = document.getElementById(`tab-rev-${m}`);
+        if(btn) btn.className = "flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all";
+    });
+
+    // Gọi hàm lấy dữ liệu
+    fetchRevenueDataMobile('custom', start, end);
 }
 
 function switchRevTime(mode) {
@@ -5029,8 +5069,77 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
         </div>
     </div>
 </div>
+    <div id="modal-date-range" class="fixed inset-0 z-[100000] hidden flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white w-[90%] max-w-[340px] rounded-[30px] p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-[#006241]"></div>
+        
+        <h3 class="text-xl font-black text-[#1e3932] uppercase text-center mb-6 tracking-tight">Chọn Khoảng Thời Gian</h3>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Từ ngày</label>
+                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center">
+                    <span class="material-symbols-outlined text-gray-400 mr-2">date_range</span>
+                    <input type="date" id="filter-start-date" class="bg-transparent w-full text-sm font-bold text-[#1e3932] outline-none">
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Đến ngày</label>
+                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center">
+                    <span class="material-symbols-outlined text-gray-400 mr-2">event</span>
+                    <input type="date" id="filter-end-date" class="bg-transparent w-full text-sm font-bold text-[#1e3932] outline-none">
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mt-8">
+            <button onclick="document.getElementById('modal-date-range').classList.add('hidden')" class="py-3.5 rounded-xl bg-gray-100 text-gray-500 font-bold text-xs uppercase hover:bg-gray-200 transition-all">
+                Đóng
+            </button>
+            <button onclick="submitDateFilter()" class="py-3.5 rounded-xl bg-[#006241] text-white font-bold text-xs uppercase shadow-lg shadow-green-900/20 active:scale-95 transition-all">
+                Áp dụng
+            </button>
+        </div>
+    </div>
+</div>
+    <div id="modal-date-range" class="fixed inset-0 z-[100000] hidden flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white w-[90%] max-w-[340px] rounded-[30px] p-6 shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-2 bg-[#006241]"></div>
+        
+        <h3 class="text-xl font-black text-[#1e3932] uppercase text-center mb-6 tracking-tight">Chọn Khoảng Thời Gian</h3>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Từ ngày</label>
+                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center">
+                    <span class="material-symbols-outlined text-gray-400 mr-2">date_range</span>
+                    <input type="date" id="filter-start-date" class="bg-transparent w-full text-sm font-bold text-[#1e3932] outline-none">
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Đến ngày</label>
+                <div class="bg-gray-50 rounded-2xl p-3 border border-gray-100 flex items-center">
+                    <span class="material-symbols-outlined text-gray-400 mr-2">event</span>
+                    <input type="date" id="filter-end-date" class="bg-transparent w-full text-sm font-bold text-[#1e3932] outline-none">
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mt-8">
+            <button onclick="document.getElementById('modal-date-range').classList.add('hidden')" class="py-3.5 rounded-xl bg-gray-100 text-gray-500 font-bold text-xs uppercase hover:bg-gray-200 transition-all">
+                Đóng
+            </button>
+            <button onclick="submitDateFilter()" class="py-3.5 rounded-xl bg-[#006241] text-white font-bold text-xs uppercase shadow-lg shadow-green-900/20 active:scale-95 transition-all">
+                Áp dụng
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
 
 
 
