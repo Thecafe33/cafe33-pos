@@ -4782,10 +4782,12 @@ function openBedManagerMobile() {
     if(picker && !picker.value) picker.value = today;
 
     // Load dữ liệu
+    // Load dữ liệu
     db.ref('bedBookings').on('value', snap => {
         const data = snap.val() || {};
         globalAllBookings = Object.keys(data).map(k => {
             const item = data[k];
+            // Format lại ngày tháng chuẩn
             let rawDate = item.date || item.bookingDate || "";
             if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
                 const p = rawDate.split('-'); 
@@ -4798,8 +4800,19 @@ function openBedManagerMobile() {
                 displayDate: rawDate 
             };
         });
+
+        // >>> [QUAN TRỌNG] GỌI HÀM QUÉT HỦY TỰ ĐỘNG <<<
+        // Giúp Mobile tự dọn dẹp đơn treo giống hệt PC
+        runAutoCancelScan(globalAllBookings); 
+        // ---------------------------------------------
+
         document.getElementById('loading-overlay').style.display = 'none';
-        changeBedDateMobile(picker ? picker.value : today);
+        
+        // Render lại list
+        const picker = document.getElementById('mob-date-picker');
+        // Fix lỗi ngày tháng nếu chưa có giá trị
+        const todayISO = new Date().toISOString().split('T')[0];
+        changeBedDateMobile(picker && picker.value ? picker.value : todayISO);
     });
 }
 
@@ -4897,47 +4910,48 @@ function closeMobileBedDetail() {
 
 // 5. Render Nội dung (Đã nối API tính tiền)
 // Hàm phụ trợ: Tính thời gian còn lại (Đếm ngược)
+// Biến toàn cục để quản lý đồng hồ đếm ngược
+var mobileTimerInterval = null;
+
+// Hàm tiện ích: Tính giờ đếm ngược
 function getCountdownStr(endTimeStr) {
-    if (!endTimeStr || endTimeStr === "--:--") return "--:--";
+    if (!endTimeStr || endTimeStr === "--:--") return { timeStr: "--:--", label: "...", style: "bg-gray-400" };
+    
     const now = new Date();
     const parts = endTimeStr.split(':');
     const end = new Date();
     end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
 
-    // Nếu qua đêm (Giờ kết thúc nhỏ hơn giờ hiện tại nhiều) thì cộng thêm ngày
+    // Xử lý qua đêm
     if (end < now && (now.getHours() - end.getHours()) > 12) {
         end.setDate(end.getDate() + 1);
     }
     
-    // Nếu end < now (đã quá giờ) nhưng khoảng cách nhỏ -> coi như quá giờ
-    // Nếu end > now -> tính thời gian còn lại
     let diff = end - now;
-    
     let label = "CÒN LẠI";
-    let style = "bg-white/20 text-white";
+    let style = "bg-white/20 text-white"; // Màu mặc định
     
     if (diff < 0) {
         diff = Math.abs(diff);
         label = "QUÁ GIỜ";
-        style = "bg-red-500 text-white animate-pulse";
+        style = "bg-red-500 text-white animate-pulse border border-white/30"; // Màu đỏ cảnh báo
     }
 
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000); // Thêm giây cho sinh động
     
-    // Format 00:00
-    const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    // Format HH:MM:SS
+    const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     
     return { timeStr, label, style };
 }
 
-// HÀM RENDER CHÍNH (ĐÃ CẬP NHẬT GIAO DIỆN & LOGIC)
-// HÀM RENDER CHÍNH (ĐÃ CẬP NHẬT LOGIC GỌI MÓN TỰ ĐIỀN SĐT)
-// --- [FINAL] HÀM RENDER CHI TIẾT BED MOBILE ---
-// Đã đồng bộ logic tính tiền phạt lố giờ với PC
-
+// --- HÀM RENDER CHÍNH ---
 function renderDetailContentMobile(b) {
-    // Lưu booking hiện tại vào biến toàn cục để các nút bấm sử dụng được
+    // 1. Dọn dẹp timer cũ
+    if (mobileTimerInterval) clearInterval(mobileTimerInterval);
+    
     window.currentMobileBooking = b;
 
     const container = document.getElementById('mob-bed-detail-content');
@@ -4949,16 +4963,16 @@ function renderDetailContentMobile(b) {
     const isCancelled = b.status === 'đã hủy';
     const isActive = (b.status === 'active' || (b.status && b.status.includes('active')) || (b.status && b.status.includes('đang dùng')));
 
-    // 1. LOGIC TÍNH TIỀN ĐANG CHẠY (Session Spend)
+    // 2. Tính tiền thực tế (Async)
     calculateSessionSpend(b.phone, b.start, (isDone ? b.realEndTime : b.end)).then(total => {
         const el = document.getElementById('mob-detail-total-display');
         if(el) el.innerText = total.toLocaleString() + 'đ';
     });
 
-    // 2. LOGIC ĐỒNG HỒ ĐẾM NGƯỢC
+    // 3. Lấy giá trị đồng hồ khởi tạo
     const countdown = getCountdownStr(isDone ? b.realEndTime : b.end);
 
-    // 3. RENDER GIAO DIỆN
+    // 4. Render HTML
     container.innerHTML = `
     <div class="bg-primary squircle p-8 text-white relative overflow-hidden shadow-2xl shadow-[#006241]/20 min-h-[220px] flex flex-col justify-between">
         <div class="relative z-10">
@@ -4969,8 +4983,8 @@ function renderDetailContentMobile(b) {
         
         ${(!isDone && !isCancelled) ? `
         <div class="relative z-10 flex items-baseline justify-between mt-4">
-            <div id="mob-live-timer" class="timer-font text-6xl font-medium tracking-tight">${countdown.timeStr}</div>
-            <div id="mob-live-badge" class="${countdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md">
+            <div id="mob-live-timer" class="timer-font text-5xl font-medium tracking-tight">${countdown.timeStr}</div>
+            <div id="mob-live-badge" class="${countdown.style} px-3 py-1 rounded-full text-[10px] font-black backdrop-blur-md transition-all">
                 ${countdown.label}
             </div>
         </div>
@@ -5046,40 +5060,39 @@ function renderDetailContentMobile(b) {
     ` : ''}
     `;
 
-    // 4. THANH ĐIỀU KHIỂN (BOTTOM BAR)
+    // 5. NÚT ĐIỀU KHIỂN (BOTTOM BAR)
     let btnHtml = '';
 
-    // A. Đang chờ: Nút GỌI MÓN (mới) + XẾP BED
     if (isWaiting && !isCancelled) {
+        // [CHỜ XẾP] Nút Gọi Món Mới + Xếp Bed
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
             <button onclick="handleMobileBedOrder('${b.id}')" 
                 class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">
                 GỌI MÓN
             </button>
-            <button onclick="renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" 
+            <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" 
                 class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">
                 XẾP BED
             </button>
         </div>`;
     } 
-    // B. Đang dùng: Nút GỌI MÓN (mới) + TRẢ BED (chuẩn logic PC)
     else if (isActive && !isCancelled) {
+        // [ĐANG DÙNG] Nút Gọi Món Mới + Trả Bed (Gọi hàm PC)
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
             <button onclick="handleMobileBedOrder('${b.id}')" 
                 class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">
                 GỌI MÓN
             </button>
-            
             <button onclick="handleBedCheckout(window.currentMobileBooking)" 
                 class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">
                 TRẢ BED
             </button>
         </div>`;
     } 
-    // C. Đã xong/hủy: Nút Đóng
     else {
+        // [ĐÃ XONG/HỦY]
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
             <button onclick="closeMobileBedDetail()" class="w-full h-16 bg-slate-200 text-slate-500 rounded-full font-bold text-[15px] uppercase">
@@ -5087,27 +5100,32 @@ function renderDetailContentMobile(b) {
             </button>
         </div>`;
     }
-
     actionContainer.innerHTML = btnHtml;
 
-    // 5. KÍCH HOẠT ĐỒNG HỒ CHẠY (Chỉ khi chưa xong)
+    // 6. KÍCH HOẠT ĐỒNG HỒ LIVE (NHẢY SỐ MỖI GIÂY)
     if (!isDone && !isCancelled) {
-        // Clear interval cũ nếu có
-        if (typeof mobileTimerInterval !== 'undefined' && mobileTimerInterval) clearInterval(mobileTimerInterval);
-        
-        // Tạo interval mới
         mobileTimerInterval = setInterval(() => {
             const currentCountdown = getCountdownStr(b.end);
+            
+            // Tìm phần tử trong DOM
             const tEl = document.getElementById('mob-live-timer');
             const bEl = document.getElementById('mob-live-badge');
             
             if (tEl && bEl) {
                 tEl.innerText = currentCountdown.timeStr;
                 bEl.innerText = currentCountdown.label;
-                bEl.className = `${currentCountdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md transition-colors`;
+                // Cập nhật class màu sắc (Đỏ nếu quá giờ)
+                bEl.className = `${currentCountdown.style} px-3 py-1 rounded-full text-[10px] font-black backdrop-blur-md transition-all`;
             }
-        }, 1000);
+        }, 1000); // Chạy mỗi 1000ms (1 giây)
     }
+}
+
+// Bổ sung hàm đóng để dọn dẹp Timer
+function closeMobileBedDetail() {
+    if (mobileTimerInterval) clearInterval(mobileTimerInterval);
+    document.getElementById('mob-bed-detail-screen').classList.add('translate-x-full');
+    window.currentMobileBooking = null;
 }
          // =========================================================
 // MOBILE REVENUE LOGIC
@@ -6358,6 +6376,44 @@ function handleMobileBedOrder(bookingId) {
         }
     }, 100);
 }
+    // --- [CORE] HÀM QUÉT VÀ HỦY ĐƠN TRỄ (DÙNG CHUNG) ---
+// Giúp Mobile tự động hủy đơn Waiting quá 50p mà không cần mở PC
+function runAutoCancelScan(list) {
+    if (!list || list.length === 0) return;
+    
+    const now = new Date();
+    const AUTO_CANCEL_MINUTES = 50; 
+    const todayStr = new Date().toLocaleDateString('en-GB'); // dd/mm/yyyy
+
+    list.forEach(booking => {
+        // Chỉ quét đơn CHỜ KHÁCH của HÔM NAY
+        if ((booking.status === 'chờ khách' || !booking.status) && 
+            (!booking.displayDate || booking.displayDate === todayStr)) {
+            
+            if (booking.start && booking.start.includes(':')) {
+                let parts = booking.start.split(':');
+                let bookingTime = new Date();
+                bookingTime.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
+
+                let diff = (now - bookingTime) / 60000; // Phút trễ
+
+                // Nếu trễ > 50p -> HỦY NGAY
+                if (diff > AUTO_CANCEL_MINUTES) {
+                    console.log(`🚫 Mobile Auto-cancel: Đơn ${booking.name} trễ ${Math.round(diff)}p`);
+                    
+                    let bookingId = booking.id || booking.key;
+                    if (bookingId) {
+                        firebase.database().ref('bedBookings/' + bookingId).update({
+                            status: 'đã hủy',
+                            cancelType: 'auto_timeout',
+                            note: 'Hủy tự động (Quá 50p)'
+                        });
+                    }
+                }
+            }
+        }
+    });
+}
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -6676,6 +6732,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
