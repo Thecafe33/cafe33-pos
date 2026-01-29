@@ -1175,10 +1175,32 @@ input, button, select, textarea { font-size: 1rem; }
                 
                 <div class="flex items-center justify-between mb-10">
                     <h3 id="mob-chart-title" class="font-bold text-xl tracking-tight text-slate-800">Biểu đồ doanh thu</h3>
-                    <div class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full">
-                        <div class="w-2 h-2 rounded-full bg-[#065F46]"></div>
-                        <span class="text-[10px] font-bold text-[#065F46] uppercase tracking-wider" id="mob-chart-label">Tuần này</span>
-                    </div>
+                    <div class="relative z-20">
+    <button onclick="toggleSmartTimeDropdown()" class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-full active:scale-95 transition-all border border-emerald-100 shadow-sm">
+        <div class="w-2 h-2 rounded-full bg-[#065F46] animate-pulse"></div>
+        <span class="text-[10px] font-bold text-[#065F46] uppercase tracking-wider min-w-[60px] text-center" id="mob-chart-label">Tuần này</span>
+        <span class="material-symbols-outlined text-[14px] text-[#065F46]">arrow_drop_down</span>
+    </button>
+
+    <div id="smart-time-dropdown" class="hidden absolute top-full right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden animate-fade-in origin-top-right">
+        <div class="p-1">
+            <button onclick="selectSmartTime('this_week')" class="w-full text-left px-3 py-2.5 hover:bg-emerald-50 rounded-lg text-[11px] font-bold text-slate-600 flex justify-between items-center group">
+                Tuần này <span class="hidden group-hover:inline text-[#006241]">✓</span>
+            </button>
+            <button onclick="selectSmartTime('last_week')" class="w-full text-left px-3 py-2.5 hover:bg-emerald-50 rounded-lg text-[11px] font-bold text-slate-600 flex justify-between items-center group">
+                Tuần trước <span class="hidden group-hover:inline text-[#006241]">✓</span>
+            </button>
+            <div class="h-[1px] bg-slate-100 my-1"></div>
+            <button onclick="selectSmartTime('this_month')" class="w-full text-left px-3 py-2.5 hover:bg-emerald-50 rounded-lg text-[11px] font-bold text-slate-600 flex justify-between items-center group">
+                Tháng này <span class="hidden group-hover:inline text-[#006241]">✓</span>
+            </button>
+            <button onclick="selectSmartTime('last_month')" class="w-full text-left px-3 py-2.5 hover:bg-emerald-50 rounded-lg text-[11px] font-bold text-slate-600 flex justify-between items-center group">
+                Tháng trước <span class="hidden group-hover:inline text-[#006241]">✓</span>
+            </button>
+        </div>
+    </div>
+    <div id="smart-time-overlay" onclick="toggleSmartTimeDropdown()" class="hidden fixed inset-0 z-[-1]"></div>
+</div>v>
                 </div>
 
                 <div class="relative h-64 w-full flex items-end justify-between gap-2 mb-8" id="mob-rev-chart-bars">
@@ -4715,6 +4737,84 @@ function openRevenueMobile() {
     // 4. Load Data
     fetchRevenueDataMobile(currentRevMode);
 }
+    // --- MODULE: SMART TIME DROPDOWN ---
+let currentRevLabelOverride = null; // Biến lưu tên nhãn tùy chỉnh (Tuần trước, Tháng trước...)
+
+function toggleSmartTimeDropdown() {
+    const dd = document.getElementById('smart-time-dropdown');
+    const ol = document.getElementById('smart-time-overlay');
+    
+    if (dd.classList.contains('hidden')) {
+        dd.classList.remove('hidden');
+        ol.classList.remove('hidden');
+    } else {
+        dd.classList.add('hidden');
+        ol.classList.add('hidden');
+    }
+}
+
+function selectSmartTime(type) {
+    toggleSmartTimeDropdown(); // Đóng menu
+    
+    const now = new Date();
+    let start, end;
+    let label = "";
+    let mode = 'custom'; // Mặc định dùng mode custom để truyền ngày cụ thể
+
+    if (type === 'this_week') {
+        switchRevTime('week'); // Dùng lại logic cũ
+        return; 
+    } 
+    else if (type === 'this_month') {
+        switchRevTime('month'); // Dùng lại logic cũ
+        return;
+    }
+    else if (type === 'last_week') {
+        // Tính Thứ 2 -> CN tuần trước
+        let day = now.getDay() || 7; 
+        let endLastWeek = new Date(now); 
+        endLastWeek.setDate(now.getDate() - day); // Chủ nhật tuần trước
+        endLastWeek.setHours(23,59,59,999);
+        
+        let startLastWeek = new Date(endLastWeek);
+        startLastWeek.setDate(endLastWeek.getDate() - 6); // Thứ 2 tuần trước
+        startLastWeek.setHours(0,0,0,0);
+        
+        start = startLastWeek.toISOString().split('T')[0];
+        end = endLastWeek.toISOString().split('T')[0];
+        label = "Tuần trước";
+    }
+    else if (type === 'last_month') {
+        // Tính ngày 1 -> Cuối tháng trước
+        start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 0); // Ngày 0 của tháng này = Cuối tháng trước
+        
+        // Format YYYY-MM-DD
+        // Lưu ý múi giờ: dùng toLocaleDateString('en-CA') hoặc tự format để tránh lệch ngày
+        let format = (d) => {
+            let y = d.getFullYear();
+            let m = String(d.getMonth()+1).padStart(2,'0');
+            let day = String(d.getDate()).padStart(2,'0');
+            return `${y}-${m}-${day}`;
+        };
+
+        start = format(start);
+        end = format(end);
+        label = "Tháng trước";
+    }
+
+    // Set biến Override để UI biết đường hiển thị tên
+    currentRevLabelOverride = label;
+    
+    // Reset style các nút Tab (để nó không sáng cái nào cả, vì đang chọn Last Week)
+    ['week', 'month', 'year'].forEach(m => {
+        document.getElementById(`tab-rev-${m}`).className = "flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all";
+    });
+
+    // Gọi hàm fetch dữ liệu
+    currentRevMode = 'custom';
+    fetchRevenueDataMobile('custom', start, end);
+}
 // =========================================================
 // MODULE: DOANH THU MỞ RỘNG (ITEMS, GROUPS, BED)
 // =========================================================
@@ -4902,6 +5002,11 @@ let customSelectedItems = null; // null = Auto Top 10, Array = Danh sách tùy c
 
 // 1. Hàm vẽ UI (Thêm nút Tùy chỉnh danh sách)
 function updateRevenueItemsUI(data) {
+    // --- [FIX] CẬP NHẬT NHÃN THỜI GIAN (ĐỂ NÓ KHÔNG BỊ CỐ ĐỊNH) ---
+    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
+    let finalLabel = currentRevLabelOverride || labelMap[currentRevMode] || 'Chi tiết';
+    const labelEl = document.getElementById('mob-chart-label');
+    if(labelEl) labelEl.innerText = finalLabel;
     const container = document.getElementById('mob-rev-chart-bars');
     container.className = "w-full flex flex-col gap-3 pb-4"; 
     
@@ -5103,9 +5208,15 @@ function updateRevenueUIMobile(stats, mode) {
     const totalChart = data.reduce((a, b) => a + b, 0);
     document.getElementById('mob-chart-total').innerText = totalChart.toLocaleString() + ' ₫';
     
-    // Label hiển thị
+   // --- [FIX] CẬP NHẬT NHÃN THỜI GIAN CHÍNH XÁC ---
     const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
-    document.getElementById('mob-chart-label').innerText = labelMap[mode] || 'Chi tiết';
+    
+    // Ưu tiên 1: Tên override (Tuần trước, Tháng trước)
+    // Ưu tiên 2: Tên theo Mode (Tuần này, Tháng này...)
+    let finalLabel = currentRevLabelOverride || labelMap[mode] || 'Chi tiết';
+    
+    const labelEl = document.getElementById('mob-chart-label');
+    if(labelEl) labelEl.innerText = finalLabel;
 }
     // --- LOGIC DATE RANGE PICKER MỚI ---
 
@@ -5185,9 +5296,10 @@ function submitDateFilter() {
     // Gọi hàm lấy dữ liệu
     fetchRevenueDataMobile('custom', start, end);
 }
-
 function switchRevTime(mode) {
     currentRevMode = mode;
+    currentRevLabelOverride = null; // [FIX] Reset tên tùy chỉnh khi bấm nút Tab thường
+
     // Update active tab style
     ['week', 'month', 'year'].forEach(m => {
         const btn = document.getElementById(`tab-rev-${m}`);
@@ -5199,6 +5311,7 @@ function switchRevTime(mode) {
     });
     fetchRevenueDataMobile(mode);
 }
+
 
 function toggleRevenueDropdown() {
     const dd = document.getElementById('mob-revenue-dropdown');
@@ -5453,6 +5566,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
