@@ -649,6 +649,19 @@ input, button, select, textarea { font-size: 1rem; }
         color: #065F46;
     }
 }
+    @media only screen and (max-width: 768px) {
+    /* Đảm bảo View History Mobile không đè mất Header */
+    #view-history-mobile {
+        top: 72px !important; /* Chiều cao ước tính của Header Mobile */
+        height: calc(100% - 72px) !important;
+        z-index: 40 !important; /* Thấp hơn Header (z-50) */
+    }
+
+    /* Đảm bảo Header Mobile luôn nổi lên trên cùng */
+    #main-container > .md\:hidden.sticky {
+        z-index: 51 !important;
+    }
+}
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
@@ -2977,8 +2990,12 @@ function switchView(v) {
     // -> LOGIC LỊCH SỬ (ĐÃ CẬP NHẬT)
     else if (v === 'history') {
         if (isMobile) {
-            // Mobile: Hiện giao diện mới
-            if(histMob) histMob.classList.remove('hidden');
+            // Mobile: Hiện view mobile nhưng KHÔNG được ẩn Header cha
+            if(histMob) {
+                histMob.classList.remove('hidden');
+                // Đảm bảo container chính vẫn hiện để Header không mất
+                document.getElementById('view-menu').classList.add('hidden'); 
+            }
         } else {
             // PC: Hiện giao diện cũ & Active nút
             document.getElementById('view-history').classList.remove('hidden');
@@ -6462,6 +6479,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
