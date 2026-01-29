@@ -672,7 +672,7 @@ input, button, select, textarea { font-size: 1rem; }
 
     <div class="flex-1 overflow-y-auto px-6 pb-6 space-y-4 no-scrollbar">
         
-        <div onclick="openRevenue(); toggleMobileMenu()" class="bg-white p-5 rounded-[2rem] flex items-center justify-between shadow-[0_10px_30px_-5px_rgba(0,0,0,0.05)] active:scale-95 transition-all cursor-pointer border border-white">
+        <div onclick="openRevenueMobile(); toggleMobileMenu()" class="bg-white p-5 rounded-[2rem] flex items-center justify-between shadow-[0_10px_30px_-5px_rgba(0,0,0,0.05)] active:scale-95 transition-all cursor-pointer border border-white">
             <div class="flex items-center gap-4">
                 <div class="w-14 h-14 bg-[#ecfdf3] flex items-center justify-center rounded-[1.25rem]">
                     <span class="material-symbols-outlined text-[#0fbd49] text-3xl" style="font-variation-settings: 'FILL' 1;">analytics</span>
@@ -1123,7 +1123,7 @@ input, button, select, textarea { font-size: 1rem; }
         </div>
         
         <div class="flex items-center gap-2">
-            <button class="flex items-center gap-1 px-4 py-2.5 rounded-full bg-slate-50 border border-slate-100 active:scale-95 transition-transform">
+           <button onclick="openMobileDateFilter()" class="flex items-center gap-1 px-4 py-2.5 rounded-full bg-slate-50 border border-slate-100 active:scale-95 transition-transform">
                 <span class="material-symbols-outlined text-[18px] text-slate-600 font-bold">filter_list</span>
                 <span class="text-xs font-bold text-slate-700">Lọc</span>
             </button>
@@ -1194,7 +1194,7 @@ input, button, select, textarea { font-size: 1rem; }
                         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Tổng cộng</span>
                         <span class="text-2xl font-black tracking-tight text-slate-900" id="mob-chart-total">0 ₫</span>
                     </div>
-                    <button class="w-12 h-12 rounded-full bg-[#10172A] flex items-center justify-center text-white shadow-xl active:scale-90 transition-transform">
+                    <button onclick="openHistory()" class="w-12 h-12 rounded-full bg-[#10172A] flex items-center justify-center text-white shadow-xl active:scale-90 transition-transform">
                         <span class="material-symbols-outlined font-bold">arrow_forward</span>
                     </button>
                 </div>
@@ -4722,21 +4722,24 @@ function openRevenueMobile() {
     fetchRevenueDataMobile(currentRevMode);
 }
 
-function fetchRevenueDataMobile(mode) {
-    // Giả lập loading nhẹ
+// 2. Cập nhật hàm fetchRevenueDataMobile để hỗ trợ Custom Date
+// (GHI ĐÈ hàm cũ ở dòng ~2965)
+function fetchRevenueDataMobile(mode, startVal, endVal) {
     document.getElementById('mob-rev-total').innerText = "...";
     
-    // Tận dụng hàm calculateStats có sẵn của PC để lấy số liệu
     db.ref('orders').once('value', snap => {
         const data = snap.val();
         let orders = [];
         if(data) orders = Object.values(data);
         
-        // Gọi hàm tính toán (Reuse logic PC)
-        const stats = calculateStats(orders, mode);
+        // Tái sử dụng logic calculateStats của PC
+        // calculateStats(orders, mode, customStart, customEnd)
+        const stats = calculateStats(orders, mode, startVal, endVal);
         
         if(stats) {
             updateRevenueUIMobile(stats, mode);
+        } else {
+             document.getElementById('mob-rev-total').innerText = "0";
         }
     });
 }
@@ -4852,6 +4855,32 @@ function selectDurationNew(hours) {
     // Highlight nút được chọn
     const activeBtn = document.getElementById(`btn-dur-${hours}`);
     if(activeBtn) activeBtn.className = "border border-green-600 bg-green-50 text-[#006241] py-2.5 rounded-xl text-sm font-bold shadow-sm transition-all";
+}
+    // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
+function openMobileDateFilter() {
+    // Sử dụng cơ chế prompt đơn giản hoặc show modal (ở đây dùng prompt cho nhanh gọn, 
+    // nếu muốn đẹp thì vẽ thêm modal sau)
+    
+    // Cách nhanh nhất để test logic: Dùng lại logic Custom của PC nhưng kích hoạt trên Mobile
+    let start = prompt("Nhập ngày bắt đầu (yyyy-mm-dd):", new Date().toISOString().split('T')[0]);
+    if(!start) return;
+    
+    let end = prompt("Nhập ngày kết thúc (yyyy-mm-dd):", start);
+    if(!end) return;
+    
+    // Gọi hàm tính toán với mode custom
+    currentRevMode = 'custom';
+    
+    // Cập nhật giao diện nút tab để user biết đang mode Custom
+    ['week', 'month', 'year'].forEach(m => {
+        document.getElementById(`tab-rev-${m}`).className = "flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all";
+    });
+    
+    // Label hiển thị
+    document.getElementById('mob-chart-label').innerText = "Tùy chọn";
+    
+    // Gọi hàm tính toán (Cần sửa hàm fetchRevenueDataMobile một chút để nhận tham số start/end)
+    fetchRevenueDataMobile('custom', start, end);
 }
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -5000,6 +5029,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
