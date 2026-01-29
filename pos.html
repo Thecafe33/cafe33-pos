@@ -5103,27 +5103,21 @@ function updateRevenueItemsUI(data) {
 // 2. Cập nhật hàm fetchRevenueDataMobile để hỗ trợ Custom Date
 // (GHI ĐÈ hàm cũ ở dòng ~2965)
 function fetchRevenueDataMobile(mode, startVal, endVal) {
-    // 1. Quản lý hiển thị các thành phần UI dựa trên chế độ xem
+    // 1. Quản lý hiển thị (Giữ nguyên)
     const summaryCards = document.getElementById('mob-revenue-summary-cards');
-    const chartTitle = document.getElementById('mob-chart-total-label'); // Label "Tổng cộng" ở dưới
-    
     if (currentRevenueView === 'items') {
-        // Chế độ Món: Ẩn 2 ô tổng thu, đổi label dưới đáy
         if(summaryCards) summaryCards.classList.add('hidden');
     } else {
-        // Chế độ Tổng quan: Hiện 2 ô tổng thu
         if(summaryCards) summaryCards.classList.remove('hidden');
     }
 
-    // 2. Reset trạng thái loading
     document.getElementById('mob-rev-total').innerText = "...";
     
-    // Nếu đang ở chế độ xem Nhóm hoặc Bed -> Thông báo chưa có
+    // Check view groups/bed (Giữ nguyên)
     if (currentRevenueView === 'groups' || currentRevenueView === 'bed') {
-        document.getElementById('mob-rev-chart-bars').innerHTML = 
-            '<div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">Tính năng đang cập nhật...</div>';
+        document.getElementById('mob-rev-chart-bars').innerHTML = '<div class="text-slate-400 text-xs mt-10 w-full text-center">Đang cập nhật...</div>';
         document.getElementById('mob-rev-total').innerText = "0";
-        if(summaryCards) summaryCards.classList.add('hidden'); // Cũng ẩn luôn cho gọn
+        if(summaryCards) summaryCards.classList.add('hidden');
         return;
     }
 
@@ -5133,24 +5127,32 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
         if(data) orders = Object.values(data);
         
         if (currentRevenueView === 'overview') {
-            // --- LOGIC CŨ: BIỂU ĐỒ CỘT ---
-            // Reset lại class CSS cho container biểu đồ (trả về dạng ngang)
+            // --- [LOGIC MỚI] XỬ LÝ LAYOUT BIỂU ĐỒ ---
             const chartBox = document.getElementById('mob-rev-chart-bars');
-            chartBox.className = "relative h-64 w-full flex items-end justify-between gap-2 mb-8";
+            
+            // Chỉ bật cuộn ngang nếu là Tháng hoặc Custom (nhiều hơn 12 ngày)
+            // Tuần (7 ngày) và Năm (12 tháng) sẽ KHÔNG cuộn
+            let isScrollMode = (mode === 'month') || (mode === 'custom' && (!startVal || !endVal || Math.abs(new Date(endVal) - new Date(startVal)) > 12 * 86400000));
+
+            if (isScrollMode) {
+                // CHẾ ĐỘ CUỘN: justify-start, overflow-x-auto
+                chartBox.className = "relative h-64 w-full flex items-end justify-start gap-3 mb-8 overflow-x-auto custom-scrollbar px-2 pb-2";
+            } else {
+                // CHẾ ĐỘ FIT MÀN HÌNH: justify-between, overflow-hidden (Cho Tuần/Năm)
+                chartBox.className = "relative h-64 w-full flex items-end justify-between gap-2 mb-8 overflow-hidden px-1";
+            }
             
             const stats = calculateStats(orders, mode, startVal, endVal);
             if(stats) updateRevenueUIMobile(stats, mode);
             
         } else if (currentRevenueView === 'items') {
-            // --- LOGIC MỚI: TOP 10 MÓN ---
             const result = calculateTopItems(orders, mode, startVal, endVal);
             updateRevenueItemsUI(result);
         }
     });
 }
-
 function updateRevenueUIMobile(stats, mode) {
-    // 1. Cập nhật Số tiền (Full số 1,700,000 đ)
+    // 1. Cập nhật Số tiền (Giữ nguyên)
     const totalRev = stats.drinkTotal + stats.snackTotal;
     document.getElementById('mob-rev-total').innerHTML = `
         <span class="text-3xl">${totalRev.toLocaleString()}</span> 
@@ -5162,17 +5164,22 @@ function updateRevenueUIMobile(stats, mode) {
         <span class="text-xs font-bold opacity-60">₫</span>
     `;
     
-    // 2. Vẽ biểu đồ (Hiện số tiền trên đỉnh cột)
+    // 2. Vẽ biểu đồ (Logic mới)
     const chartBox = document.getElementById('mob-rev-chart-bars');
     const labels = stats.labels; 
     const data = stats.chartData;
     const maxVal = Math.max(...data, 1); 
 
+    // --- XÁC ĐỊNH CHẾ ĐỘ HIỂN THỊ CỘT ---
+    // Logic phải khớp với hàm fetchRevenueDataMobile
+    // Nếu số lượng cột > 12 (tức là Tháng/Custom dài) -> Dùng cột cứng (Scroll)
+    // Nếu <= 12 (Tuần/Năm) -> Dùng flex-1 (Fit màn hình)
+    let isScrollMode = labels.length > 12;
+
     let barsHtml = '';
     labels.forEach((lbl, index) => {
         const val = data[index] || 0;
         
-        // Tính chiều cao %, tối thiểu 10% để đẹp
         let heightPct = 0;
         if (val > 0) {
             heightPct = Math.round((val / maxVal) * 100);
@@ -5181,13 +5188,22 @@ function updateRevenueUIMobile(stats, mode) {
         
         const isMax = val === maxVal && val > 0;
         
-        // Format số trên cột: 150000 -> 150k (để vừa chiều ngang mobile)
         let labelVal = "";
         if (val >= 1000000) labelVal = (val/1000000).toFixed(1) + "tr";
         else if (val > 0) labelVal = (val/1000).toFixed(0) + "k";
 
+        // --- CHỌN CLASS CSS CHO CỘT ---
+        let colClass = "";
+        if (isScrollMode) {
+            // Chế độ cuộn: Cột rộng cố định 40px, không co giãn
+            colClass = "min-w-[40px] flex-shrink-0";
+        } else {
+            // Chế độ thường: Cột tự co giãn để lấp đầy màn hình
+            colClass = "flex-1";
+        }
+
         barsHtml += `
-        <div class="flex-1 flex flex-col items-center group h-full justify-end relative">
+        <div class="${colClass} flex flex-col items-center group h-full justify-end relative">
             <div class="w-full relative flex flex-col justify-end items-center h-full">
                 
                 ${val > 0 ? `
@@ -5199,22 +5215,17 @@ function updateRevenueUIMobile(stats, mode) {
                      style="height: ${heightPct}%;">
                 </div>
             </div>
-            <span class="mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider">${lbl}</span>
+            <span class="mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate w-full text-center">${lbl}</span>
         </div>`;
     });
     chartBox.innerHTML = barsHtml;
 
-    // Tổng cộng dưới biểu đồ
+    // 3. Các phần cập nhật nhãn khác (Giữ nguyên)
     const totalChart = data.reduce((a, b) => a + b, 0);
     document.getElementById('mob-chart-total').innerText = totalChart.toLocaleString() + ' ₫';
     
-   // --- [FIX] CẬP NHẬT NHÃN THỜI GIAN CHÍNH XÁC ---
     const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
-    
-    // Ưu tiên 1: Tên override (Tuần trước, Tháng trước)
-    // Ưu tiên 2: Tên theo Mode (Tuần này, Tháng này...)
     let finalLabel = currentRevLabelOverride || labelMap[mode] || 'Chi tiết';
-    
     const labelEl = document.getElementById('mob-chart-label');
     if(labelEl) labelEl.innerText = finalLabel;
 }
@@ -5536,6 +5547,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
