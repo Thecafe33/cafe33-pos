@@ -4902,7 +4902,7 @@ let customSelectedItems = null; // null = Auto Top 10, Array = Danh sách tùy c
 
 // 1. Hàm vẽ UI (Thêm nút Tùy chỉnh danh sách)
 function updateRevenueItemsUI(data) {
-    // Update thẻ Card Tổng
+    // 1. Update thẻ Card Tổng
     document.getElementById('mob-rev-total').innerHTML = `
         <span class="text-3xl">${data.totalRev.toLocaleString()}</span> 
         <span class="text-xs font-bold opacity-60">₫</span>
@@ -4911,68 +4911,87 @@ function updateRevenueItemsUI(data) {
     const container = document.getElementById('mob-rev-chart-bars');
     container.className = "w-full flex flex-col gap-3 pb-4"; 
     
-    // Header điều khiển: Nút Tùy chỉnh + Nút Sắp xếp
+    // --- [RE-DESIGN] HEADER ĐIỀU KHIỂN (GIAO DIỆN MỚI) ---
     let sortLabel = currentItemSort === 'desc' ? "Cao ⬇" : "Thấp ⬆";
-    let filterLabel = customSelectedItems ? "Danh sách: Tùy chọn" : "Danh sách: Top 10";
-    let filterClass = customSelectedItems ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-gray-50 text-gray-600 border-gray-200";
+    
+    // Style cho nút Tùy chọn (Active/Inactive)
+    // Dùng rounded-full (viên thuốc) và shadow nhẹ
+    let filterLabel = customSelectedItems ? "Tùy chọn" : "Top 10 (Mặc định)";
+    let filterClass = customSelectedItems 
+        ? "bg-amber-50 text-amber-700 border-amber-200 ring-1 ring-amber-100" 
+        : "bg-white text-slate-600 border-slate-100 shadow-sm";
 
     let html = `
-    <div class="flex flex-col gap-2 mb-3 pb-3 border-b border-dashed border-gray-200">
-        <div class="flex justify-between items-center">
-            <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Bảng Xếp Hạng</span>
+    <div class="flex flex-col gap-3 mb-4">
+        <div class="flex justify-between items-end px-1">
+            <span class="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Xếp hạng</span>
         </div>
-        <div class="flex gap-2">
-            <button onclick="openItemSelectModal()" class="flex-1 flex items-center justify-center gap-1.5 ${filterClass} border px-3 py-2 rounded-lg active:scale-95 transition-all">
-                <span class="material-symbols-outlined text-[16px]">tune</span>
-                <span class="text-[10px] font-bold uppercase">${filterLabel}</span>
+        
+        <div class="flex gap-3">
+            <button onclick="openItemSelectModal()" class="flex-1 flex items-center justify-center gap-2 ${filterClass} border py-2.5 px-4 rounded-full active:scale-95 transition-all group">
+                <span class="material-symbols-outlined text-[18px] group-active:scale-110 transition-transform">tune</span>
+                <span class="text-[11px] font-bold uppercase tracking-wide">${filterLabel}</span>
             </button>
             
-            <button onclick="toggleItemSort()" class="w-[100px] flex items-center justify-center gap-1.5 bg-gray-50 border border-gray-200 px-3 py-2 rounded-lg active:scale-95 transition-all">
-                <span class="material-symbols-outlined text-[16px] text-gray-500">sort</span>
-                <span class="text-[10px] font-bold text-gray-600">${sortLabel}</span>
+            <button onclick="toggleItemSort()" class="flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2.5 px-5 rounded-full active:scale-95 transition-all">
+                <span class="material-symbols-outlined text-[18px]">sort</span>
+                <span class="text-[11px] font-bold">${sortLabel}</span>
             </button>
         </div>
     </div>
     `;
 
     if (data.topItems.length === 0) {
-        container.innerHTML = html + '<div class="text-center text-gray-400 py-10 text-xs">Không có dữ liệu</div>';
+        container.innerHTML = html + '<div class="flex flex-col items-center justify-center py-10 text-gray-300 gap-2"><span class="text-3xl">📭</span><span class="text-xs font-medium">Chưa có số liệu</span></div>';
         return;
     }
 
     const maxVal = Math.max(...data.topItems.map(i => i.total), 1);
 
+    html += '<div class="space-y-3">'; // Wrapper cho list
+
     html += data.topItems.map((item, index) => {
         let percent = Math.round((item.total / maxVal) * 100);
         
-        // Màu sắc bảng xếp hạng
-        let rankBg = 'bg-gray-100 text-gray-500';
+        // Màu sắc bảng xếp hạng (Giữ nguyên logic cũ nhưng chỉnh màu dịu hơn)
+        let rankBg = 'bg-slate-100 text-slate-500';
+        let rankText = 'text-slate-500';
+        
         if(currentItemSort === 'desc' && !customSelectedItems) {
-            if(index === 0) rankBg = 'bg-yellow-100 text-yellow-700';
-            else if(index === 1) rankBg = 'bg-gray-200 text-gray-700';
-            else if(index === 2) rankBg = 'bg-orange-100 text-orange-800';
+            if(index === 0) { rankBg = 'bg-yellow-100'; rankText = 'text-yellow-700'; }
+            else if(index === 1) { rankBg = 'bg-gray-100'; rankText = 'text-gray-700'; }
+            else if(index === 2) { rankBg = 'bg-orange-50'; rankText = 'text-orange-700'; }
         }
 
-        let barColor = (item.total > 0) ? 'bg-[#006241]' : 'bg-gray-300';
+        let barColor = (item.total > 0) ? 'bg-[#006241]' : 'bg-slate-200';
         
         return `
-        <div class="w-full">
-            <div class="flex justify-between items-end mb-1">
-                <div class="flex items-center gap-2 max-w-[75%]">
-                    <div class="w-5 h-5 rounded-full ${rankBg} flex items-center justify-center text-[10px] font-black shrink-0">
+        <div class="w-full group">
+            <div class="flex justify-between items-center mb-1.5">
+                <div class="flex items-center gap-3 max-w-[70%]">
+                    <div class="w-6 h-6 rounded-full ${rankBg} ${rankText} flex items-center justify-center text-[10px] font-black shrink-0 shadow-sm border border-white">
                         ${index + 1}
                     </div>
-                    <span class="font-bold text-sm text-slate-700 truncate">${item.name}</span>
-                    ${item.qty > 0 ? `<span class="text-[9px] font-bold text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">x${item.qty}</span>` : ''}
+                    
+                    <div class="flex flex-col min-w-0">
+                        <span class="font-bold text-[13px] text-slate-700 truncate leading-tight">${item.name}</span>
+                        ${item.qty > 0 ? `<span class="text-[9px] font-bold text-slate-400">Đã bán: ${item.qty}</span>` : ''}
+                    </div>
                 </div>
-                <span class="font-black text-sm text-[#006241]">${item.total.toLocaleString()}</span>
+                
+                <span class="font-black text-[13px] text-[#006241] whitespace-nowrap">${item.total.toLocaleString()}</span>
             </div>
-            <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div class="h-full ${barColor} rounded-full transition-all duration-1000" style="width: ${percent}%"></div>
+            
+            <div class="w-full h-2 bg-slate-50 rounded-full overflow-hidden">
+                <div class="h-full ${barColor} rounded-full transition-all duration-1000 ease-out relative" style="width: ${percent}%">
+                    <div class="absolute inset-0 bg-white/20"></div>
+                </div>
             </div>
         </div>
         `;
     }).join('');
+    
+    html += '</div>';
 
     container.innerHTML = html;
 }
@@ -5420,6 +5439,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
