@@ -5103,9 +5103,11 @@ function updateRevenueItemsUI(data) {
 // 2. Cập nhật hàm fetchRevenueDataMobile để hỗ trợ Custom Date
 // (GHI ĐÈ hàm cũ ở dòng ~2965)
 function fetchRevenueDataMobile(mode, startVal, endVal) {
-    // 1. Quản lý hiển thị (Giữ nguyên)
+    // 1. Quản lý hiển thị UI (Ẩn 2 ô Card Tổng khi xem chi tiết Món/Nhóm)
     const summaryCards = document.getElementById('mob-revenue-summary-cards');
-    if (currentRevenueView === 'items') {
+    
+    // [CẬP NHẬT] Ẩn card nếu là 'items' HOẶC 'groups'
+    if (currentRevenueView === 'items' || currentRevenueView === 'groups') {
         if(summaryCards) summaryCards.classList.add('hidden');
     } else {
         if(summaryCards) summaryCards.classList.remove('hidden');
@@ -5113,9 +5115,10 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
 
     document.getElementById('mob-rev-total').innerText = "...";
     
-    // Check view groups/bed (Giữ nguyên)
-    if (currentRevenueView === 'groups' || currentRevenueView === 'bed') {
-        document.getElementById('mob-rev-chart-bars').innerHTML = '<div class="text-slate-400 text-xs mt-10 w-full text-center">Đang cập nhật...</div>';
+    // Check view bed (Giữ nguyên)
+    if (currentRevenueView === 'bed') {
+        document.getElementById('mob-rev-chart-bars').innerHTML = 
+            '<div class="w-full h-full flex items-center justify-center text-slate-400 text-xs">Tính năng đang cập nhật...</div>';
         document.getElementById('mob-rev-total').innerText = "0";
         if(summaryCards) summaryCards.classList.add('hidden');
         return;
@@ -5127,18 +5130,13 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
         if(data) orders = Object.values(data);
         
         if (currentRevenueView === 'overview') {
-            // --- [LOGIC MỚI] XỬ LÝ LAYOUT BIỂU ĐỒ ---
+            // --- LOGIC TỔNG QUAN (Giữ nguyên) ---
             const chartBox = document.getElementById('mob-rev-chart-bars');
-            
-            // Chỉ bật cuộn ngang nếu là Tháng hoặc Custom (nhiều hơn 12 ngày)
-            // Tuần (7 ngày) và Năm (12 tháng) sẽ KHÔNG cuộn
             let isScrollMode = (mode === 'month') || (mode === 'custom' && (!startVal || !endVal || Math.abs(new Date(endVal) - new Date(startVal)) > 12 * 86400000));
 
             if (isScrollMode) {
-                // CHẾ ĐỘ CUỘN: justify-start, overflow-x-auto
                 chartBox.className = "relative h-64 w-full flex items-end justify-start gap-3 mb-8 overflow-x-auto custom-scrollbar px-2 pb-2";
             } else {
-                // CHẾ ĐỘ FIT MÀN HÌNH: justify-between, overflow-hidden (Cho Tuần/Năm)
                 chartBox.className = "relative h-64 w-full flex items-end justify-between gap-2 mb-8 overflow-hidden px-1";
             }
             
@@ -5146,10 +5144,169 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
             if(stats) updateRevenueUIMobile(stats, mode);
             
         } else if (currentRevenueView === 'items') {
+            // --- LOGIC MÓN (Giữ nguyên) ---
             const result = calculateTopItems(orders, mode, startVal, endVal);
             updateRevenueItemsUI(result);
+            
+        } else if (currentRevenueView === 'groups') {
+            // --- [MỚI] LOGIC NHÓM ---
+            const result = calculateGroupRevenue(orders, mode, startVal, endVal);
+            updateRevenueGroupsUI(result);
         }
     });
+}
+function calculateGroupRevenue(orders, mode, customStart, customEnd) {
+    // A. Lọc thời gian (Copy logic chuẩn)
+    var now = new Date();
+    var startTime, endTime;
+    
+    if (mode === 'week') {
+        var day = now.getDay() || 7; 
+        startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
+        endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999);
+    } else if (mode === 'month') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), 1);
+        endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (mode === 'year') {
+        startTime = new Date(now.getFullYear(), 0, 1);
+        endTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else { 
+        if(!customStart || !customEnd) return { groups: [], totalRev: 0 };
+        startTime = new Date(customStart); startTime.setHours(0,0,0,0);
+        endTime = new Date(customEnd); endTime.setHours(23,59,59,999);
+    }
+
+    // B. Tổng hợp dữ liệu theo NHÓM
+    let groupMap = {}; 
+    let totalRevenue = 0; 
+
+    orders.forEach(o => {
+        var d = new Date(o.createdAt || Date.now());
+        if (d >= startTime && d <= endTime) {
+            totalRevenue += Number(o.total || 0);
+
+            // Hàm phụ để xử lý từng món
+            const processItem = (name, qty, price) => {
+                // 1. Tìm món trong Menu gốc để lấy Type
+                // (So sánh chữ thường để chính xác hơn)
+                const menuItem = menu.find(m => m.name.toLowerCase() === name.toLowerCase());
+                
+                // 2. Xác định nhóm (Nếu không tìm thấy hoặc món đã bị xóa khỏi menu -> Cho vào "Khác")
+                let groupName = menuItem ? menuItem.type : "Khác";
+                
+                // Viết hoa chữ cái đầu cho đẹp
+                groupName = groupName.charAt(0).toUpperCase() + groupName.slice(1);
+
+                if (!groupMap[groupName]) groupMap[groupName] = { qty: 0, total: 0 };
+                groupMap[groupName].qty += qty;
+                groupMap[groupName].total += (price * qty);
+            };
+
+            if (o.itemsArray && Array.isArray(o.itemsArray)) {
+                o.itemsArray.forEach(item => {
+                    processItem(item.name, item.qty || 1, item.price || 0);
+                });
+            } else if (o.items) {
+                let parts = o.items.split(',');
+                parts.forEach(p => {
+                    let cleanP = p.trim(); 
+                    let xIndex = cleanP.lastIndexOf('x');
+                    if(xIndex > -1) {
+                        let namePart = cleanP.substring(0, xIndex).trim();
+                        let parenIndex = namePart.indexOf('(');
+                        if(parenIndex > -1) namePart = namePart.substring(0, parenIndex).trim();
+                        let qty = parseInt(cleanP.substring(xIndex+1)) || 1;
+                        
+                        // Giá: Vì string không lưu giá lúc bán, ta lấy tạm giá hiện tại trong menu
+                        // (Đây là hạn chế của dữ liệu cũ, nhưng chấp nhận được)
+                        const mInfo = menu.find(m => m.name.toLowerCase() === namePart.toLowerCase());
+                        let estimatedPrice = mInfo ? (mInfo.priceM || mInfo.priceL || 0) : 0;
+                        
+                        processItem(namePart, qty, estimatedPrice);
+                    }
+                });
+            }
+        }
+    });
+
+    // C. Chuyển Map thành Array và Sắp xếp (Cao -> Thấp)
+    let sortedGroups = Object.keys(groupMap).map(key => {
+        return { name: key, ...groupMap[key] };
+    }).sort((a, b) => b.total - a.total);
+
+    return { groups: sortedGroups, totalRev: totalRevenue };
+}
+function updateRevenueGroupsUI(data) {
+    const container = document.getElementById('mob-rev-chart-bars');
+    container.className = "w-full flex flex-col gap-3 pb-4"; 
+    
+    // Cập nhật tổng tiền dưới đáy
+    document.getElementById('mob-chart-total').innerText = data.totalRev.toLocaleString() + ' ₫';
+
+    // Header đơn giản (Không cần nút Sort phức tạp vì nhóm ít)
+    let html = `
+    <div class="flex justify-between items-center mb-3 pb-2 border-b border-dashed border-gray-200">
+        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phân loại doanh thu</span>
+        <span class="text-[10px] font-bold text-gray-400">Cao ➝ Thấp</span>
+    </div>
+    `;
+
+    if (data.groups.length === 0) {
+        container.innerHTML = html + '<div class="text-center text-gray-300 py-10 text-xs">Chưa có dữ liệu</div>';
+        return;
+    }
+
+    const maxVal = Math.max(...data.groups.map(i => i.total), 1);
+
+    html += '<div class="space-y-4">'; 
+
+    html += data.groups.map((group, index) => {
+        let percent = Math.round((group.total / maxVal) * 100);
+        
+        // Icon đại diện cho nhóm (Giả lập)
+        let icon = "category"; // Mặc định
+        if(group.name.toLowerCase().includes('cà phê')) icon = "coffee";
+        else if(group.name.toLowerCase().includes('trà')) icon = "local_cafe";
+        else if(group.name.toLowerCase().includes('ăn vặt')) icon = "cookie";
+        else if(group.name.toLowerCase().includes('sinh tố')) icon = "blender";
+        
+        // Màu sắc Top 1
+        let isTop1 = index === 0;
+        let barColor = isTop1 ? 'bg-amber-500' : 'bg-[#006241]';
+        let iconBg = isTop1 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500';
+
+        return `
+        <div class="w-full group">
+            <div class="flex justify-between items-center mb-1.5">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shadow-sm border border-white">
+                        <span class="material-symbols-outlined text-[16px]">${icon}</span>
+                    </div>
+                    
+                    <div class="flex flex-col">
+                        <span class="font-black text-[13px] text-slate-800 leading-tight">${group.name}</span>
+                        <span class="text-[9px] font-bold text-slate-400">Đã bán: ${group.qty}</span>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col items-end">
+                    <span class="font-black text-[13px] text-[#006241]">${group.total.toLocaleString()}</span>
+                    <span class="text-[9px] font-bold text-slate-400">${Math.round((group.total/data.totalRev)*100)}%</span>
+                </div>
+            </div>
+            
+            <div class="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                <div class="h-full ${barColor} rounded-full transition-all duration-1000 ease-out relative" style="width: ${percent}%">
+                    <div class="absolute inset-0 bg-white/20"></div>
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+    
+    html += '</div>';
+
+    container.innerHTML = html;
 }
 function updateRevenueUIMobile(stats, mode) {
     // 1. Cập nhật Số tiền (Giữ nguyên)
@@ -5547,6 +5704,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
