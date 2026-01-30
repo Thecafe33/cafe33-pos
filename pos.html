@@ -4534,64 +4534,91 @@ function backMobileStep() {
     }
 }
 // --- HÀM LƯU ĐƠN HÀNG LÊN FIREBASE (TÁCH RIÊNG CHO CHẮC ĂN) ---
+// --- [FIXED] HÀM LƯU ĐƠN HÀNG (KHÔI PHỤC LOGIC CHỌN BED & TRẢ BED) ---
 function saveOrderToFirebase(method) {
-    // 1. Kiểm tra giỏ hàng lần cuối
+    // 1. Kiểm tra giỏ hàng
     if (!cart || cart.length === 0) return alert("Giỏ hàng đang trống!");
 
     const pVal = document.getElementById('cash-paid').value;
     const paid = (method === 'Chuyển khoản') ? currentTotal : (Number(pVal) || currentTotal);
     
-    // 2. Chuẩn bị dữ liệu (Giống cấu trúc Bot cần)
+    // --- LƯU TRẠNG THÁI TRƯỚC KHI GỬI (QUAN TRỌNG) ---
+    // Phải lưu vào biến cục bộ vì bên trong callback, pendingBedOrder có thể bị null
+    const currentBooking = pendingBedOrder; 
+    const isCheckout = isCheckoutFlow;
+    const currentBedId = (currentBooking && currentBooking.bedId) ? currentBooking.bedId : (activeOrderingBedId || "");
+
+    // 2. Chuẩn bị dữ liệu
     const orderData = {
-        id: Date.now(), // ID đơn hàng
+        id: Date.now(),
         createdAt: firebase.database.ServerValue.TIMESTAMP,
         sdt: document.getElementById('kh-sdt').value || "Khách vãng lai",
-        
-        // Gom món ăn thành chuỗi đẹp để Bot ghi vào Sheet
         items: cart.map(i => `${i.name} (${i.size}) x${i.qty}`).join(', '),
-        
-        // Dữ liệu chi tiết (nếu sau này cần thống kê sâu)
         itemsArray: cart,
-        
         total: currentTotal,
         paid: paid,
         change: Math.max(0, paid - currentTotal),
         method: method,
-        points: Math.floor(currentTotal / 1000), // 1000đ = 1 điểm
-        
-        // Thông tin Bed (Nếu có)
-        bedId: (pendingBedOrder && pendingBedOrder.bedId) ? pendingBedOrder.bedId : (activeOrderingBedId || ""),
-        customerName: (pendingBedOrder && pendingBedOrder.name) ? pendingBedOrder.name : "Khách lẻ"
+        points: Math.floor(currentTotal / 1000),
+        bedId: currentBedId,
+        customerName: (currentBooking && currentBooking.name) ? currentBooking.name : "Khách lẻ"
     };
 
     console.log("🚀 Đang đẩy đơn lên Firebase...", orderData);
 
-    // 3. Gửi lên Firebase (Nhánh 'orders')
-    // Khi gửi thành công -> Bot Backend sẽ tự bắt lấy và ghi vào Sheet
+    // 3. Gửi lên Firebase
     db.ref('orders').push(orderData, (error) => {
         if (error) {
             alert("❌ Lỗi lưu đơn: " + error.message);
         } else {
             console.log("✅ Đã lưu đơn thành công!");
             
-            // 4. Dọn dẹp sau khi lưu
+            // Dọn dẹp giỏ hàng
             cart = [];
             renderCart();
             document.getElementById('kh-sdt').value = "";
-            
-            // Reset các biến Bed tạm
-            pendingBedOrder = null;
-            activeOrderingBedId = null;
-
-            // Thông báo & Reset giao diện
             if(document.getElementById('qr-modal')) document.getElementById('qr-modal').classList.add('hidden');
-            switchView('menu');
+
+            // --- PHÂN LUỒNG XỬ LÝ SAU THANH TOÁN ---
+
+            // TRƯỜNG HỢP 1: TRẢ BED (CHECKOUT)
+            if (isCheckout && currentBooking) {
+                let bookingId = currentBooking.id || currentBooking.key;
+                let realTime = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+                
+                db.ref('bedBookings/' + bookingId).update({
+                    status: 'đã xong',
+                    realEndTime: realTime
+                });
+                
+                // Reset và về trang quản lý Bed
+                isCheckoutFlow = false;
+                pendingBedOrder = null;
+                activeOrderingBedId = null;
+                
+                openBedManager(); // Quay lại màn hình Bed để thấy kết quả
+                setTimeout(() => showAppModal("Hoàn tất", "Đã thanh toán và TRẢ BED thành công!", "🏁"), 300);
+            }
             
-            // Show popup đẹp (nếu có hàm này)
-            if(typeof showAppModal === 'function') {
-                showAppModal("Thành công", "Đơn hàng đã được lưu & đồng bộ!", "✅");
-            } else {
-                alert("Đơn hàng đã được lưu thành công!");
+            // TRƯỜNG HỢP 2: KHÁCH MỚI (WAITING) -> CẦN CHỌN BED
+            else if (currentBooking && (currentBooking.bedId === "WAITING" || !currentBooking.bedId)) {
+                // Không reset pendingBedOrder, giữ lại để hàm chọn bed (finalizeBedCheckIn) dùng
+                // Không switchView('menu') mà mở popup ngay
+                
+                renderBedSelection(); // Vẽ lại các ô bed
+                document.getElementById('bed-select-modal').classList.remove('hidden');
+                
+                // (Trên Mobile, modal này sẽ hiện đè lên giao diện thanh toán, vẫn ok)
+            }
+            
+            // TRƯỜNG HỢP 3: GỌI MÓN THÊM / MANG VỀ
+            else {
+                // Reset hết
+                pendingBedOrder = null;
+                activeOrderingBedId = null;
+                
+                switchView('menu');
+                setTimeout(() => showAppModal("Thành công", "Đơn hàng đã được lưu!", "✅"), 300);
             }
         }
     });
@@ -6762,6 +6789,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
