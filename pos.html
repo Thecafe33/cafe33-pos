@@ -712,6 +712,19 @@ input, button, select, textarea { font-size: 1rem; }
 /* Tạo thanh cuộn ẩn cho đẹp */
 .hide-scroll::-webkit-scrollbar { display: none; }
 .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    @media only screen and (max-width: 768px) {
+    /* Nâng thông báo lên trên Sidebar (10002) nhưng vẫn dưới QR Modal (100000) */
+    #app-modal {
+        z-index: 100005 !important; 
+    }
+    
+    /* Đảm bảo lớp nền mờ của thông báo cũng phải phủ lên Sidebar */
+    #app-modal.modal-active {
+        display: flex !important;
+        background: rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(4px) !important;
+    }
+}
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
@@ -6851,33 +6864,38 @@ function runAutoCancelScan(list) {
 async function syncDataFromSheet() {
     const syncBtnIcon = document.getElementById('sync-icon');
     
-    // 1. Hiệu ứng xoay icon và thông báo bắt đầu
+    // 1. Hiệu ứng xoay icon và hiện thông báo (Lúc này modal đã nổi lên trên sidebar)
     if(syncBtnIcon) syncBtnIcon.classList.add('animate-spin');
+    
     if(typeof showAppModal === 'function') {
-        showAppModal("Hệ thống", "Đang đồng bộ Menu và Khách hàng từ Sheet...", "⏳");
+        showAppModal("Hệ thống", "Đang đồng bộ Menu, Khách hàng và Quà tặng từ Sheet...", "⏳");
     }
 
     try {
-        // 2. Gọi đồng thời cả 2 link Functions của bạn
-        const responses = await Promise.all([
-            fetch('https://us-central1-the-cafe-33.cloudfunctions.net/syncMenu'),
-            fetch('https://us-central1-the-cafe-33.cloudfunctions.net/syncCustomers')
-        ]);
+        // 2. Danh sách 3 link Functions của bạn
+        const urls = [
+            'https://us-central1-the-cafe-33.cloudfunctions.net/syncMenu',
+            'https://us-central1-the-cafe-33.cloudfunctions.net/syncCustomers',
+            'https://us-central1-the-cafe-33.cloudfunctions.net/syncRewards'
+        ];
 
-        // 3. Kiểm tra kết quả
+        // 3. Gọi đồng thời cả 3 link
+        const responses = await Promise.all(urls.map(url => fetch(url)));
+
+        // 4. Kiểm tra nếu tất cả đều thành công (ok)
         if(responses.every(r => r.ok)) {
-            showAppModal("Thành công", "Đã cập nhật dữ liệu mới nhất từ Cloud!", "✅");
+            showAppModal("Thành công", "Tất cả dữ liệu (Menu, Khách, Quà) đã được cập nhật mới nhất!", "✅");
         } else {
-            throw new Error("Server trả về lỗi");
+            throw new Error("Một hoặc nhiều dịch vụ gặp lỗi");
         }
 
     } catch (error) {
         console.error("Lỗi đồng bộ:", error);
-        showAppModal("Lỗi", "Không thể cập nhật. Vui lòng kiểm tra lại Cloud Functions!", "❌");
+        showAppModal("Thất bại", "Không thể cập nhật dữ liệu. Vui lòng kiểm tra Cloud Functions!", "❌");
     } finally {
-        // 4. Dừng xoay icon và đóng sidebar
+        // 5. Kết thúc: Dừng xoay icon
         if(syncBtnIcon) syncBtnIcon.classList.remove('animate-spin');
-        if(typeof toggleMobileMenu === 'function') toggleMobileMenu();
+        // Không tự động đóng sidebar để bạn có thể đọc xong thông báo rồi mới đóng tay
     }
 }
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
@@ -7364,5 +7382,6 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
