@@ -50,7 +50,19 @@ input, button, select, textarea { font-size: 1rem; }
 .bed-box { aspect-ratio: 1; border-radius: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: all 0.3s; position: relative; }
 .bed-free { background-color: #f0fdf4; border: 4px solid #f0fdf4; color: #006241; }
 .bed-busy { background-color: #1a1a1a; border: 4px solid #006241; color: white; }
-.bed-selected { border-color: #ef4444; transform: scale(0.95); 
+.bed-selected { border-color: #ef4444; transform: scale(0.95); }
+
+/* === LUXURY THEME === */
+.luxury-theme .sb-green, .luxury-theme .bg-\[\#006241\] { background-color: #000000 !important; }
+.luxury-theme .tab-active { background-color: #000000 !important; color: #D4AF37 !important; border: 1px solid #D4AF37 !important; }
+.luxury-theme .text-\[\#006241\], .luxury-theme h2.text-\[\#006241\], .luxury-theme .font-black.text-\[\#006241\] { color: #D4AF37 !important; }
+.luxury-theme #sidebar-pay-btn, .luxury-theme #btn-done { background-color: #000000 !important; color: #D4AF37 !important; border: 1px solid #D4AF37 !important; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+.luxury-theme #sidebar-cart { border-left-color: #000000 !important; }
+.luxury-theme #cash-paid { color: #D4AF37 !important; }
+.luxury-theme #menu-grid > div { background-color: #1a1a1a !important; border: 1px solid #D4AF37 !important; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important; }
+.luxury-theme #menu-grid > div p { color: #D4AF37 !important; }
+.luxury-theme #size-modal .bg-gray-50 { background-color: #1a1a1a !important; border: 1px solid #D4AF37 !important; }
+.luxury-theme #size-modal h3, .luxury-theme #size-modal span { color: #D4AF37 !important; }
 
 /* Animation */
 .sheet-open { transform: translateY(0) !important; }
@@ -700,22 +712,6 @@ input, button, select, textarea { font-size: 1rem; }
 /* Tạo thanh cuộn ẩn cho đẹp */
 .hide-scroll::-webkit-scrollbar { display: none; }
 .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-    /* --- BUTTON STYLE CHO THANH TOÁN BED --- */
-.btn-pay-bed {
-    background-color: #000000 !important; 
-    color: #FFD700 !important; /* Vàng kim */
-    border: 1px solid #FFD700 !important;
-    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3) !important;
-}
-               /* --- [EMERGENCY FIX] ẨN TUYỆT ĐỐI SIDEBAR PC TRÊN MOBILE --- */
-@media only screen and (max-width: 768px) {
-    #sidebar-cart {
-        display: none !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-        z-index: -9999 !important;
-    }
-}
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
@@ -2072,85 +2068,45 @@ function addToCart(name, size, price) {
 
 /* --- ĐÃ SỬA: renderCart (Tự động Ẩn/Hiện thanh Bar trên Mobile) --- */
 /* --- ĐÃ SỬA: Hàm renderCart (Fix lỗi Crash do thiếu ID) --- */
-// --- [FIXED] RENDER CART (CÓ LOGIC ĐỔI MÀU NÚT BED) ---
-// --- [FIXED] RENDER CART (CẬP NHẬT TỔNG TIỀN MÀN HÌNH THANH TOÁN MOBILE) ---
-// --- [FIXED SAFE] RENDER CART (CẬP NHẬT TỔNG TIỀN MOBILE & AN TOÀN) ---
 function renderCart() {
-    try {
-        const list = document.getElementById('cart-list');
-        if (!list) return;
+    const list = document.getElementById('cart-list');
+    if (!list) return;
 
-        currentTotal = 0;
+    currentTotal = 0;
 
-        // 1. Render List Món (Giữ nguyên logic cũ)
-        list.innerHTML = cart.map((i, idx) => {
-            currentTotal += i.price * i.qty;
-            return `<div class="bg-gray-50 p-2.5 rounded-xl flex justify-between items-center shadow-sm border border-white text-xs mb-1">
-                <div class="flex-1 pr-2 text-left"><p class="font-black text-[#006241] truncate capitalize-first">${i.name} (${i.size})</p></div>
-                <div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-gray-100">
-                    <button onclick="updateQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center font-black text-gray-300 text-lg ${isPaymentMode ? 'hidden': ''}">-</button>
-                    <span class="font-black text-[#006241] text-[11px] w-5 text-center">${isPaymentMode?'x': ''}${i.qty}</span>
-                    <button onclick="updateQty(${idx}, 1)" class="w-6 h-6 flex items-center justify-center font-black text-[#006241] text-lg ${isPaymentMode ? 'hidden' : ''}">+</button>
-                </div>
-            </div>`;
-        }).join('');
+    // 1. Render cho Sidebar Desktop (Bản L - Giữ nguyên không đụng)
+    list.innerHTML = cart.map((i, idx) => {
+        currentTotal += i.price * i.qty;
+        return `<div class="bg-gray-50 p-2.5 rounded-xl flex justify-between items-center shadow-sm border border-white text-xs mb-1">
+            <div class="flex-1 pr-2 text-left"><p class="font-black text-[#006241] truncate capitalize-first">${i.name} (${i.size})</p></div>
+            <div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-gray-100">
+                <button onclick="updateQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center font-black text-gray-300 text-lg ${isPaymentMode ? 'hidden': ''}">-</button>
+                <span class="font-black text-[#006241] text-[11px] w-5 text-center">${isPaymentMode?'x': ''}${i.qty}</span>
+                <button onclick="updateQty(${idx}, 1)" class="w-6 h-6 flex items-center justify-center font-black text-[#006241] text-lg ${isPaymentMode ? 'hidden' : ''}">+</button>
+            </div>
+        </div>`;
+    }).join('');
 
-        // 2. Cập nhật Tổng tiền Sidebar PC & Bottom Bar Mobile
-        const pcTotal = document.getElementById('total-price');
-        if(pcTotal) pcTotal.innerText = currentTotal.toLocaleString() + 'đ';
-        
-        const mobBarTotal = document.getElementById('mob-bar-total');
-        if(mobBarTotal) mobBarTotal.innerText = currentTotal.toLocaleString() + 'đ';
-
-        // 3. [FIX] Cập nhật Tổng tiền Màn hình Thanh toán Mobile
-        const payDisplay1 = document.getElementById('pay-total-display-1');
-        if (payDisplay1) payDisplay1.innerText = currentTotal.toLocaleString();
-
-        const payDisplay2 = document.getElementById('pay-total-display-2');
-        if (payDisplay2) payDisplay2.innerText = currentTotal.toLocaleString();
-
-        // 4. Logic Đổi Nút Thanh Toán Bed (Kiểm tra biến an toàn)
-        // Kiểm tra biến toàn cục có tồn tại không trước khi dùng
-        let pOrder = (typeof pendingBedOrder !== 'undefined') ? pendingBedOrder : null;
-        let aBedId = (typeof activeOrderingBedId !== 'undefined') ? activeOrderingBedId : null;
-        const isBedOrder = (pOrder || aBedId);
-
-        const payBtn = document.getElementById('sidebar-pay-btn');
-        const mobPayBtn = document.querySelector('#mobile-bottom-bar button'); 
-
-        const normalText = "Thanh toán";
-        const bedText = "THANH TOÁN BED";
-        const bedClassPC = "w-full py-4 btn-pay-bed font-black rounded-xl uppercase shadow-xl active:scale-95 transition-all tracking-widest";
-        const normalClassPC = "w-full py-4 sb-green text-white font-black rounded-xl uppercase shadow-xl active:scale-95 transition-all";
-        
-        // PC Button
-        if (payBtn) {
-            if (isBedOrder) {
-                payBtn.innerText = bedText;
-                payBtn.className = bedClassPC;
-            } else {
-                payBtn.innerText = normalText;
-                payBtn.className = normalClassPC;
-            }
-        }
-
-        // Mobile Button
-        if (mobPayBtn) {
-            const spanText = mobPayBtn.querySelector('span'); 
-            if (isBedOrder) {
-                if(spanText) spanText.innerText = bedText;
-                mobPayBtn.className = "h-full px-10 btn-pay-bed rounded-[2.5rem] font-bold uppercase text-xs shadow-lg active:scale-95 transition-all flex items-center gap-2";
-            } else {
-                if(spanText) spanText.innerText = normalText;
-                mobPayBtn.className = "h-full px-10 bg-[#006241] text-white rounded-[2.5rem] font-bold uppercase text-xs shadow-lg active:scale-95 transition-all flex items-center gap-2 hover:bg-[#004f32]";
-            }
-        }
-
-        updateSuggestions();
-    } catch (e) {
-        console.error("Lỗi renderCart:", e);
+    // 2. Cập nhật số tiền hiển thị
+    document.getElementById('total-price').innerText = currentTotal.toLocaleString() + 'đ';
+    // === [CẬP NHẬT CHO BOTTOM BAR MỚI] ===
+    var mobTotal = document.getElementById('mob-bar-total');
+    if (mobTotal) {
+        mobTotal.innerText = currentTotal.toLocaleString() + 'đ';
     }
+    const topTotal = document.getElementById('top-total-mobile');
+    if(topTotal) topTotal.innerText = currentTotal.toLocaleString() + 'đ';
+
+    // 3. LOGIC MOBILE (Bản M): Điều khiển Bottom Bar
+    const isMobile = window.innerWidth <= 768;
+    const sidebarCart = document.getElementById('sidebar-cart');
+    
+    // Tìm thẻ view-menu (Giờ đã có ID nhờ Bước 1)
+    const viewMenuEl = document.getElementById('view-menu');
+
+    updateSuggestions();
 }
+
 function updateQty(idx, d) { 
     if(isPaymentMode) return; 
     cart[idx].qty += d; 
@@ -3156,23 +3112,10 @@ function switchView(v) {
     }
 
     // --- 7. SIDEBAR & CATEGORY BAR ---
-   // --- 7. SIDEBAR & CATEGORY BAR (ĐÃ FIX LỖI ĐÈ GIAO DIỆN) ---
     var sidebarCart = document.getElementById('sidebar-cart');
-    
     if (sidebarCart) {
-        if (window.innerWidth <= 768) {
-            // === MOBILE: LUÔN ẨN SIDEBAR PC ===
-            sidebarCart.classList.add('hidden'); 
-            sidebarCart.style.display = 'none'; // Thêm dòng này cho chắc chắn
-        } else {
-            // === PC: CHỈ HIỆN Ở MENU & PAYMENT ===
-            sidebarCart.style.display = ''; // Reset style inline nếu có
-            if (v === 'menu' || v === 'payment') {
-                sidebarCart.classList.remove('hidden');
-            } else {
-                sidebarCart.classList.add('hidden');
-            }
-        }
+        if (isMobile) sidebarCart.classList.toggle('hidden', v !== 'menu'); 
+        else sidebarCart.classList.toggle('hidden', v !== 'menu' && v !== 'payment');
     }
 
     var catBar = document.getElementById('category-bar');
@@ -3185,17 +3128,6 @@ function switchView(v) {
         if (mobStep1) mobStep1.classList.remove('hidden');
         if (mobStep2) mobStep2.classList.add('hidden');
         
-        // --- [FIX QUAN TRỌNG] TỰ ĐIỀN SĐT KHÁCH BED ---
-        if (pendingBedOrder && pendingBedOrder.phone) {
-            // Điền cho Mobile
-            var mobInput = document.getElementById('pay-sdt-mobile');
-            if(mobInput) mobInput.value = pendingBedOrder.phone;
-            
-            // Điền cho PC (Nếu cần, thường PC dùng chung kh-sdt)
-            // Lưu ý: kh-sdt đã được điền ở bước showBedDetail rồi
-        }
-        // ---------------------------------------------
-
         if (typeof syncMobileInputs === 'function') syncMobileInputs();
         if (typeof setMethod === 'function') setMethod('Tiền mặt');
     }
@@ -3870,54 +3802,40 @@ function setupActionButtons(bookingId, data, hasBed, btnOrder, btnCheckout, btnC
     }
 }
     // --- [FIXED] GỌI MÓN MOBILE (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
-// --- [FIXED] GỌI MÓN MOBILE (BẢN FULL KHÔNG CẮT BỚT) ---
 function handleMobileBedOrder(bookingId) {
-    // 1. Tìm thông tin đơn đặt trong biến toàn cục
     const booking = globalAllBookings.find(b => b.id === bookingId);
-    
     if (!booking) return console.error("Không tìm thấy booking ID:", bookingId);
 
-    // 2. Cập nhật biến trạng thái Bed
     activeOrderingBedId = booking.bedId || "WAITING"; 
     pendingBedOrder = booking; 
 
-    // 3. TỰ ĐỘNG ĐIỀN SỐ ĐIỆN THOẠI
+    // 1. Điền SĐT
     var sdtInput = document.getElementById('kh-sdt');
     if (sdtInput && booking.phone) {
         sdtInput.value = booking.phone;
-        
-        // Kích hoạt hàm kiểm tra khách hàng
         if (typeof checkSdtLive === 'function') {
             checkSdtLive(); 
         }
     }
 
-    // >>> [THÊM MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ THÊM MÓN BED <<<
-    // Chỉ chèn thêm đoạn này, không xóa code cũ
-    if (typeof autoAddBedItems === 'function') {
-        autoAddBedItems(booking);
-    }
-    // ---------------------------------------------------
+    // >>> 2. [MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ ADD VÀO CART <<<
+    autoAddBedItems(booking);
+    // ------------------------------------------------
 
-    // 4. Chuyển sang giao diện Menu
     switchView('menu');
 
-    // 5. (GIỮ NGUYÊN CODE CŨ) Hiển thị thanh thông báo nhỏ
+    // 3. Hiển thị thông báo (Giữ nguyên)
     setTimeout(function() {
         var cartInfo = document.getElementById('cart-bed-info');
         var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between');
-        
-        // Nếu chưa có thanh thông báo thì tạo mới
         if (!cartInfo && headerContainer) {
             cartInfo = document.createElement('div');
             cartInfo.id = 'cart-bed-info';
             headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling);
         }
-        
         if (cartInfo) {
             var guestName = booking.name || "Khách hàng";
             cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1 animate-pulse";
-            
             if (booking.bedId && booking.bedId != "WAITING") {
                 cartInfo.innerText = `🟢 ĐANG GỌI: BED 0${booking.bedId} - ${guestName}`;
                 cartInfo.style.color = "#006241";
@@ -3930,42 +3848,46 @@ function handleMobileBedOrder(bookingId) {
 }
 // --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
 // --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
-// --- [FIXED PC] GỌI MÓN TỪ CHI TIẾT BED ---
 function showBedDetail(bedId) { 
     var booking = null; 
     if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId);
     if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex]; 
     
-    if (!booking) return alert("Vui lòng chọn khách hàng trước!");
+    if (!booking) { 
+        alert("Vui lòng chọn khách hàng trong danh sách trước!");
+        return; 
+    } 
     
-    // 1. Set biến toàn cục
     activeOrderingBedId = bedId; 
     pendingBedOrder = booking; 
 
-    // 2. Điền SĐT vào ô tìm kiếm & Kích hoạt tìm tên khách
+    // 1. Kiểm tra nợ cũ (Giữ nguyên logic cũ)
+    if (booking.phone) {
+        var cleanPhone = normalizePhone(booking.phone);
+        db.ref('customers/' + cleanPhone).once('value', snap => {
+            var cust = snap.val();
+            if (cust && cust.pendingFee > 0) {
+                alert(`⚠️ Khách này có khoản nợ cũ: ${cust.pendingFee.toLocaleString()}đ\nLý do: ${cust.pendingFeeReason}\n\nHệ thống sẽ tự động thêm vào bill.`);
+                addToCart("Phí Vệ Sinh (Nợ cũ)", "Phạt", cust.pendingFee);
+                db.ref('customers/' + cleanPhone).update({ pendingFee: 0, pendingFeeReason: null });
+            }
+        });
+    }
+
+    // 2. Điền SĐT (Giữ nguyên)
     var sdtInput = document.getElementById('kh-sdt');
     if (sdtInput && booking.phone) {
         sdtInput.value = booking.phone;
-        // Gọi hàm checkSdtLive để hiện tên khách ngay lập tức
         if (typeof checkSdtLive === 'function') checkSdtLive();
     }
 
-    // 3. Tự động tính giờ và thêm món (QUAN TRỌNG)
-    if (typeof autoAddBedItems === 'function') {
-        autoAddBedItems(booking);
-    } else {
-        console.error("Thiếu hàm autoAddBedItems!");
-    }
+    // >>> 3. [MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ ADD VÀO CART <<<
+    autoAddBedItems(booking);
+    // ------------------------------------------------
 
-    // 4. Chuyển View
     switchView('menu'); 
     
-    // 5. Hiển thị thông báo nhỏ
-    updateCartInfo(booking);
-}
-
-// Hàm phụ hiển thị thông báo nhỏ trên giỏ hàng (Tách ra cho gọn)
-function updateCartInfo(booking) {
+    // (Đoạn tạo thanh thông báo nhỏ - Giữ nguyên)
     setTimeout(function() { 
         var cartInfo = document.getElementById('cart-bed-info'); 
         var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between'); 
@@ -3976,7 +3898,7 @@ function updateCartInfo(booking) {
         } 
         if (cartInfo) { 
             var guestName = booking.name || "Khách hàng"; 
-            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1 animate-pulse"; 
+            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1"; 
             if (booking.bedId && booking.bedId != 0) { 
                 cartInfo.innerText = `🟢 BED 0${booking.bedId} - ${guestName}`; 
                 cartInfo.style.color = "#006241"; 
@@ -6921,43 +6843,7 @@ function runAutoCancelScan(list) {
         }
     });
 }
-// --- HÀM TỰ ĐỘNG TÍNH GIỜ (Logic 4h + h5) ---
-function autoAddBedItems(booking) {
-    if (!booking || !booking.start || !booking.end) return;
 
-    // Chặn duplicate
-    const hasBedItem = cart.some(i => i.name.toLowerCase().includes('bed'));
-    if (hasBedItem) return;
-
-    let sParts = booking.start.split(':');
-    let eParts = booking.end.split(':');
-    
-    let startMin = parseInt(sParts[0]) * 60 + parseInt(sParts[1]);
-    let endMin = parseInt(eParts[0]) * 60 + parseInt(eParts[1]);
-
-    if (endMin <= startMin) return;
-
-    let diffMins = endMin - startMin;
-    let totalHours = Math.ceil(diffMins / 60);
-
-    console.log(`🤖 Auto-add Bed: ${totalHours}h`);
-
-    for (let h = 1; h <= totalHours; h++) {
-        if (h <= 4) autoAddMenuItemToCart("1h bed");
-        else autoAddMenuItemToCart("1h bed từ h5");
-    }
-    
-    // Cập nhật lại UI giỏ hàng sau khi thêm
-    renderCart(); 
-}
-
-function autoAddMenuItemToCart(itemName) {
-    const item = menu.find(m => m.name.toLowerCase() === itemName.toLowerCase());
-    if (item) {
-        let price = item.priceM > 0 ? item.priceM : item.priceL;
-        addToCart(item.name, 'M', price); 
-    }
-}
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -7322,39 +7208,123 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
         </div>
     </div>
 </div>
+    <script>
+// --- [MOBILE GESTURE FIX] XỬ LÝ VUỐT BACK TRÊN ĐIỆN THOẠI ---
+
+// 1. Hàm thêm lịch sử giả (Gọi khi mở Modal/View mới)
+function pushHistoryState(name) {
+    // Chỉ push nếu trạng thái hiện tại chưa phải là nó (để tránh push chồng chéo)
+    if (history.state && history.state.view === name) return;
+    history.pushState({ view: name }, null, "");
+}
+
+// 2. Can thiệp vào các hàm mở giao diện hiện tại
+// Chúng ta sẽ "ghi đè" nhẹ các hàm gốc để chèn logic history vào
+
+// A. Khi chuyển View (Menu, Payment, History...)
+const originalSwitchView = switchView;
+switchView = function(v) {
+    originalSwitchView(v); // Chạy logic gốc
+    if (v !== 'menu') {
+        pushHistoryState(v); // Nếu không phải trang chủ, thêm history
+    }
+};
+
+// B. Khi mở Modal Đặt Bed Mới
+const originalOpenBookingModal = openBookingModal;
+openBookingModal = function() {
+    originalOpenBookingModal();
+    pushHistoryState('booking_modal');
+};
+
+// C. Khi mở Chi tiết Bed (Mobile)
+const originalShowMobileBedDetail = showMobileBedDetail;
+showMobileBedDetail = function(id) {
+    originalShowMobileBedDetail(id);
+    pushHistoryState('bed_detail');
+};
+
+// D. Khi mở Smart Checkout (Popup Trả Bed)
+// (Lưu ý: Nếu bạn chưa định nghĩa hàm openSmartCheckout thì bỏ qua, 
+// nhưng thường là hàm handleBedCheckout sẽ mở popup này)
+const originalHandleBedCheckout = handleBedCheckout;
+handleBedCheckout = function(booking) {
+    originalHandleBedCheckout(booking);
+    // Kiểm tra xem popup có hiện không thì mới push
+    setTimeout(() => {
+        if(!document.getElementById('modal-smart-checkout').classList.contains('hidden')) {
+            pushHistoryState('smart_checkout');
+        }
+    }, 50);
+};
+
+// 3. Lắng nghe sự kiện "Vuốt Back" (popstate)
+window.addEventListener('popstate', function(event) {
+    // Logic: Kiểm tra cái gì đang mở thì đóng cái đó theo thứ tự ưu tiên
+    // (Z-index cao nhất đóng trước)
+
+    // UTILS: Các hàm đóng/ẩn UI
+    const closeBooking = () => document.getElementById('modal-add-booking').classList.add('hidden');
+    const closeSmart = () => {
+        const m = document.getElementById('modal-smart-checkout');
+        m.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => m.classList.add('hidden'), 200);
+    };
+    
+    // --- KIỂM TRA TỪNG LỚP GIAO DIỆN ---
+
+    // 1. Modal Smart Checkout
+    const smartModal = document.getElementById('modal-smart-checkout');
+    if (smartModal && !smartModal.classList.contains('hidden')) {
+        closeSmart();
+        return; 
+    }
+
+    // 2. Modal Đặt Bed Mới
+    const bookingModal = document.getElementById('modal-add-booking');
+    if (bookingModal && !bookingModal.classList.contains('hidden')) {
+        closeBookingModal(); // Gọi hàm đóng gốc của nó
+        return;
+    }
+
+    // 3. Chi tiết Bed Mobile (Slide từ phải sang)
+    const bedDetail = document.getElementById('mob-bed-detail-screen');
+    if (bedDetail && !bedDetail.classList.contains('translate-x-full')) {
+        closeMobileBedDetail();
+        return;
+    }
+
+    // 4. Modal Chọn Bed (Màu xanh)
+    const bedSelect = document.getElementById('bed-select-modal');
+    if (bedSelect && !bedSelect.classList.contains('hidden')) {
+        bedSelect.classList.add('hidden');
+        return;
+    }
+
+    // 5. Các View Chính (Payment, History, Bed, Revenue)
+    // Nếu đang ở View khác Menu -> Về Menu
+    const viewMenu = document.getElementById('view-menu');
+    if (viewMenu && viewMenu.classList.contains('hidden')) {
+        // Reset về menu
+        // Lưu ý: Gọi hàm gốc để tránh push ngược lại history (gây vòng lặp)
+        originalSwitchView('menu'); 
+        
+        // Reset lại active tab button (nếu có)
+        document.querySelectorAll('button[id^="btn-nav-"]').forEach(b => {
+            b.classList.remove('tab-active', 'sb-green', 'text-white');
+            b.classList.add('bg-gray-100', 'text-gray-400');
+        });
+        return;
+    }
+
+    // Nếu không còn gì để đóng -> Cho phép thoát app (Hành vi mặc định)
+});
+
+// 4. Khởi tạo trạng thái ban đầu (Tránh lỗi khi mới vào đã vuốt back)
+window.addEventListener('load', function() {
+    history.replaceState({ view: 'menu' }, null, "");
+});
+
+</script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
