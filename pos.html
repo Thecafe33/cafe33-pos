@@ -789,10 +789,10 @@ input, button, select, textarea { font-size: 1rem; }
     </div>
 
     <div class="p-6 pb-10 flex flex-col gap-2 shrink-0 bg-[#F2F2F7]">
-        <div class="flex items-center gap-4 bg-gray-200/50 px-5 py-4 rounded-[1.5rem] active:bg-gray-200 transition-colors cursor-pointer group">
-            <span class="material-symbols-outlined text-gray-500">settings</span>
-            <p class="text-gray-600 text-base font-bold flex-1">Cài đặt</p>
-        </div>
+        <div onclick="syncDataFromSheet()" class="flex items-center gap-4 bg-gray-200/50 px-5 py-4 rounded-[1.5rem] active:bg-gray-200 transition-colors cursor-pointer group">
+    <span id="sync-icon" class="material-symbols-outlined text-gray-500">sync</span>
+    <p class="text-gray-600 text-base font-bold flex-1">Cập nhật dữ liệu</p>
+</div>
         <div class="flex items-center gap-4 px-5 py-4 rounded-[1.5rem] active:bg-red-50 transition-colors cursor-pointer group text-gray-400 hover:text-red-500">
             <span class="material-symbols-outlined transition-colors">logout</span>
             <p class="text-base font-bold flex-1 transition-colors">Đăng xuất</p>
@@ -6848,7 +6848,38 @@ function runAutoCancelScan(list) {
         }
     });
 }
+async function syncDataFromSheet() {
+    const syncBtnIcon = document.getElementById('sync-icon');
+    
+    // 1. Hiệu ứng xoay icon và thông báo bắt đầu
+    if(syncBtnIcon) syncBtnIcon.classList.add('animate-spin');
+    if(typeof showAppModal === 'function') {
+        showAppModal("Hệ thống", "Đang đồng bộ Menu và Khách hàng từ Sheet...", "⏳");
+    }
 
+    try {
+        // 2. Gọi đồng thời cả 2 link Functions của bạn
+        const responses = await Promise.all([
+            fetch('https://us-central1-the-cafe-33.cloudfunctions.net/syncMenu'),
+            fetch('https://us-central1-the-cafe-33.cloudfunctions.net/syncCustomers')
+        ]);
+
+        // 3. Kiểm tra kết quả
+        if(responses.every(r => r.ok)) {
+            showAppModal("Thành công", "Đã cập nhật dữ liệu mới nhất từ Cloud!", "✅");
+        } else {
+            throw new Error("Server trả về lỗi");
+        }
+
+    } catch (error) {
+        console.error("Lỗi đồng bộ:", error);
+        showAppModal("Lỗi", "Không thể cập nhật. Vui lòng kiểm tra lại Cloud Functions!", "❌");
+    } finally {
+        // 4. Dừng xoay icon và đóng sidebar
+        if(syncBtnIcon) syncBtnIcon.classList.remove('animate-spin');
+        if(typeof toggleMobileMenu === 'function') toggleMobileMenu();
+    }
+}
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -7333,4 +7364,5 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
