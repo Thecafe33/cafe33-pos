@@ -707,6 +707,15 @@ input, button, select, textarea { font-size: 1rem; }
     border: 1px solid #FFD700 !important;
     box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3) !important;
 }
+               /* --- [EMERGENCY FIX] ẨN TUYỆT ĐỐI SIDEBAR PC TRÊN MOBILE --- */
+@media only screen and (max-width: 768px) {
+    #sidebar-cart {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        z-index: -9999 !important;
+    }
+}
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
@@ -3147,10 +3156,23 @@ function switchView(v) {
     }
 
     // --- 7. SIDEBAR & CATEGORY BAR ---
+   // --- 7. SIDEBAR & CATEGORY BAR (ĐÃ FIX LỖI ĐÈ GIAO DIỆN) ---
     var sidebarCart = document.getElementById('sidebar-cart');
+    
     if (sidebarCart) {
-        if (isMobile) sidebarCart.classList.toggle('hidden', v !== 'menu'); 
-        else sidebarCart.classList.toggle('hidden', v !== 'menu' && v !== 'payment');
+        if (window.innerWidth <= 768) {
+            // === MOBILE: LUÔN ẨN SIDEBAR PC ===
+            sidebarCart.classList.add('hidden'); 
+            sidebarCart.style.display = 'none'; // Thêm dòng này cho chắc chắn
+        } else {
+            // === PC: CHỈ HIỆN Ở MENU & PAYMENT ===
+            sidebarCart.style.display = ''; // Reset style inline nếu có
+            if (v === 'menu' || v === 'payment') {
+                sidebarCart.classList.remove('hidden');
+            } else {
+                sidebarCart.classList.add('hidden');
+            }
+        }
     }
 
     var catBar = document.getElementById('category-bar');
@@ -7302,6 +7324,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
