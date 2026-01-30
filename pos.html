@@ -3545,7 +3545,53 @@ function setupActionButtons(bookingId, data, hasBed, btnOrder, btnCheckout, btnC
         }
     }
 }
+    // --- [FIXED] GỌI MÓN MOBILE (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
+function handleMobileBedOrder(bookingId) {
+    const booking = globalAllBookings.find(b => b.id === bookingId);
+    if (!booking) return console.error("Không tìm thấy booking ID:", bookingId);
+
+    activeOrderingBedId = booking.bedId || "WAITING"; 
+    pendingBedOrder = booking; 
+
+    // 1. Điền SĐT
+    var sdtInput = document.getElementById('kh-sdt');
+    if (sdtInput && booking.phone) {
+        sdtInput.value = booking.phone;
+        if (typeof checkSdtLive === 'function') {
+            checkSdtLive(); 
+        }
+    }
+
+    // >>> 2. [MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ ADD VÀO CART <<<
+    autoAddBedItems(booking);
+    // ------------------------------------------------
+
+    switchView('menu');
+
+    // 3. Hiển thị thông báo (Giữ nguyên)
+    setTimeout(function() {
+        var cartInfo = document.getElementById('cart-bed-info');
+        var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between');
+        if (!cartInfo && headerContainer) {
+            cartInfo = document.createElement('div');
+            cartInfo.id = 'cart-bed-info';
+            headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling);
+        }
+        if (cartInfo) {
+            var guestName = booking.name || "Khách hàng";
+            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1 animate-pulse";
+            if (booking.bedId && booking.bedId != "WAITING") {
+                cartInfo.innerText = `🟢 ĐANG GỌI: BED 0${booking.bedId} - ${guestName}`;
+                cartInfo.style.color = "#006241";
+            } else {
+                cartInfo.innerText = `🟠 ĐANG GỌI: KHÁCH CHỜ - ${guestName}`;
+                cartInfo.style.color = "#d97706";
+            }
+        }
+    }, 100);
+}
 // --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
+// --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
 function showBedDetail(bedId) { 
     var booking = null; 
     if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId);
@@ -3558,38 +3604,34 @@ function showBedDetail(bedId) {
     
     activeOrderingBedId = bedId; 
     pendingBedOrder = booking; 
+
+    // 1. Kiểm tra nợ cũ (Giữ nguyên logic cũ)
     if (booking.phone) {
         var cleanPhone = normalizePhone(booking.phone);
-        // Lấy thông tin khách từ Firebase (hoặc biến customerMap có sẵn)
         db.ref('customers/' + cleanPhone).once('value', snap => {
             var cust = snap.val();
             if (cust && cust.pendingFee > 0) {
-                // >> PHÁT HIỆN CÓ NỢ
                 alert(`⚠️ Khách này có khoản nợ cũ: ${cust.pendingFee.toLocaleString()}đ\nLý do: ${cust.pendingFeeReason}\n\nHệ thống sẽ tự động thêm vào bill.`);
-                
-                // Thêm vào giỏ hàng
                 addToCart("Phí Vệ Sinh (Nợ cũ)", "Phạt", cust.pendingFee);
-                
-                // Xóa nợ trên Firebase ngay (để không bị cộng dồn lần sau nữa)
-                db.ref('customers/' + cleanPhone).update({
-                    pendingFee: 0,
-                    pendingFeeReason: null
-                });
+                db.ref('customers/' + cleanPhone).update({ pendingFee: 0, pendingFeeReason: null });
             }
         });
     }
-    // --- ĐOẠN MỚI THÊM: TỰ ĐIỀN SĐT KHÁCH VÀO GIỎ HÀNG ---
+
+    // 2. Điền SĐT (Giữ nguyên)
     var sdtInput = document.getElementById('kh-sdt');
     if (sdtInput && booking.phone) {
         sdtInput.value = booking.phone;
-        // Gọi hàm kiểm tra để nó hiện tên khách lên (nếu có trong data)
         if (typeof checkSdtLive === 'function') checkSdtLive();
     }
-    // ----------------------------------------------------
+
+    // >>> 3. [MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ ADD VÀO CART <<<
+    autoAddBedItems(booking);
+    // ------------------------------------------------
 
     switchView('menu'); 
     
-    // (Đoạn dưới giữ nguyên để hiện cái thanh thông báo nhỏ)
+    // (Đoạn tạo thanh thông báo nhỏ - Giữ nguyên)
     setTimeout(function() { 
         var cartInfo = document.getElementById('cart-bed-info'); 
         var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between'); 
@@ -6789,6 +6831,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
