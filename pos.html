@@ -691,6 +691,27 @@ input, button, select, textarea { font-size: 1rem; }
 .timer-font { font-variant-numeric: tabular-nums; letter-spacing: -0.05em; }
 .text-primary { color: #006241; }
 .bg-primary { background-color: #006241; }
+
+
+    
+    /* --- CSS CHO GIAO DIỆN PC NEW (SPATIAL DESIGN) --- */
+.spatial-glass {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 20px 40px -10px rgba(0, 68, 50, 0.08);
+}
+.glass-card-inner {
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+}
+.text-emerald-deep { color: #065F46; }
+.bg-emerald-deep { background-color: #065F46; }
+/* Tạo thanh cuộn ẩn cho đẹp */
+.hide-scroll::-webkit-scrollbar { display: none; }
+.hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
@@ -3333,6 +3354,7 @@ function closeIOSModal() {
 // --- HÀM SELECT BED ITEM (BẢN CHUẨN: COMPACT UI + ĐỦ TÍNH NĂNG) ---
 // --- HÀM CHỌN BED ITEM (ĐÃ NÂNG CẤP: QUẢN LÝ PHẠT VỆ SINH) ---
 // --- [PC FIX] HÀM CHỌN BED VÀ HIỂN THỊ CHI TIẾT (ĐÃ FIX ĐỒNG HỒ) ---
+// --- [PC REDESIGN] HÀM CHỌN BED VÀ HIỂN THỊ CHI TIẾT (GIAO DIỆN SPATIAL) ---
 function selectBedItem(index) {
     selectedBedIndex = index;
     renderLeftColumnList(); 
@@ -3343,7 +3365,12 @@ function selectBedItem(index) {
     
     // 1. Ẩn màn hình chờ, hiện panel chi tiết
     if(empty) empty.classList.add('hidden');
-    if(panel) { panel.classList.remove('hidden'); panel.classList.add('flex'); }
+    if(panel) { 
+        panel.classList.remove('hidden'); 
+        panel.classList.add('flex'); 
+        // Thêm class style mới cho panel cha
+        panel.className = "hidden flex-col h-full bg-[#F2F4F7] relative overflow-hidden rounded-[2.5rem]";
+    }
 
     // 2. Xác định trạng thái
     var isDone = (data.status && data.status.includes('đã xong'));
@@ -3356,90 +3383,124 @@ function selectBedItem(index) {
     var hasPenalty = data.hasPenalty === true;
     var penaltyAmt = data.penaltyAmount || 0;
 
-    // 3. Render HTML
+    // --- RENDER HTML THEO THIẾT KẾ MỚI ---
     panel.innerHTML = `
-    <div class="bg-white border-b border-gray-100 p-4 sticky top-0 z-10 shadow-sm">
-        <div class="flex justify-between items-center">
-            <div>
-                <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Đang chọn</p>
-                <h1 class="text-3xl font-black text-[#1e3932] leading-none" id="detail-bed-name">${hasBed ? `BED 0${data.bedId}` : "CHỜ XẾP"}</h1>
-            </div>
-            <div id="detail-status-badge" class="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider">
-                ${isDone ? "ĐÃ XONG" : (isCancelled ? "ĐÃ HỦY" : (isActive ? "ĐANG DÙNG" : "CHỜ KHÁCH"))}
-            </div>
-        </div>
-    </div>
-
-    <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 bg-[#F9FAFB]">
+    <div class="spatial-glass w-full h-full flex flex-col relative rounded-[2.5rem] overflow-hidden">
         
-        <div id="detail-timer-box" class="hidden text-center py-5 bg-white rounded-[20px] shadow-sm border border-gray-200 relative overflow-hidden group mb-2">
-            <div class="absolute inset-0 bg-green-50/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            <span class="relative z-10 text-[10px] text-gray-400 uppercase font-bold tracking-widest bg-white px-3 py-1 rounded-full border border-gray-100">Thời gian còn lại</span>
-            <div id="detail-countdown" class="relative z-10 text-5xl font-black text-[#006241] font-mono tracking-tighter mt-2 drop-shadow-sm">--:--</div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-            <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
-                <p class="text-[9px] font-bold text-gray-400 uppercase">Người đặt</p>
-                <p class="font-bold text-[#1e3932] text-sm truncate">${data.name || "Khách lẻ"}</p>
-                <p class="font-mono text-[10px] text-gray-500 font-bold">${data.phone || "--"}</p>
+        <div class="px-10 pt-10 pb-4 shrink-0">
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4 block">CHI TIẾT ĐẶT LỊCH</span>
+            <div class="flex items-start justify-between">
+                <div>
+                    <h1 class="text-5xl font-black tracking-tighter text-[#1e293b] leading-tight mb-2" id="detail-cust-name">${data.name || "Khách lẻ"}</h1>
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl font-black text-[#065F46]" id="detail-bed-name">${hasBed ? `BED 0${data.bedId}` : "CHỜ XẾP"}</span>
+                        
+                        <div id="detail-timer-box" class="hidden ml-4 px-3 py-1 bg-red-50 text-red-600 rounded-lg flex items-center gap-2 animate-pulse">
+                            <span class="material-symbols-outlined text-sm">timer</span>
+                            <span id="detail-countdown" class="font-black font-mono text-lg tracking-tight">--:--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="detail-status-badge" class="px-6 py-3 rounded-2xl border transition-colors">
+                    <span class="font-black text-sm tracking-widest uppercase">WAITING</span>
+                </div>
             </div>
-            <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
-                <p class="text-[9px] font-bold text-gray-400 uppercase">Đi cùng</p>
-                <p class="font-bold text-[#1e3932] text-sm truncate">${data.compName || "---"}</p>
-                <p class="font-mono text-[10px] text-gray-500 font-bold">${data.compPhone || "--"}</p>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-10 pb-32 hide-scroll space-y-8">
+            
+            <div class="grid grid-cols-2 gap-6">
+                <div class="p-6 glass-card-inner rounded-[2rem] flex flex-col justify-center">
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">THÔNG TIN LIÊN HỆ</p>
+                    <h4 class="text-2xl font-black text-slate-800 mb-1" id="detail-cust-phone">${data.phone || "--"}</h4>
+                    <div class="flex items-center gap-1 text-emerald-600">
+                        <span class="material-symbols-outlined text-sm">verified</span>
+                        <span class="text-xs font-bold">Khách hàng</span>
+                    </div>
+                </div>
+
+                <div class="p-6 glass-card-inner rounded-[2rem] flex flex-col justify-center">
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">ĐI CÙNG</p>
+                    <h4 class="text-2xl font-black text-slate-800 mb-1" id="detail-comp-name">${data.compName || "---"}</h4>
+                    <p class="text-sm font-bold text-gray-500" id="detail-comp-phone">${data.compPhone || "--"}</p>
+                </div>
+            </div>
+
+            <div class="p-8 bg-white/60 border border-white/40 rounded-[2.5rem] flex items-center justify-around shadow-sm">
+                <div class="text-center">
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">BẮT ĐẦU</p>
+                    <span class="text-5xl font-black text-slate-800 tracking-tighter" id="detail-start">${data.start}</span>
+                </div>
+                <div class="text-gray-300">
+                    <span class="material-symbols-outlined text-5xl font-light">arrow_forward</span>
+                </div>
+                <div class="text-center">
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">KẾT THÚC</p>
+                    <span class="text-5xl font-black text-slate-800 tracking-tighter" id="detail-end">${data.end}</span>
+                </div>
+            </div>
+
+            <div id="row-checkout-time" class="hidden text-center">
+                <span class="text-xs font-bold text-gray-400 uppercase">Thực tế check-out: </span>
+                <span class="font-black text-slate-800 text-lg" id="detail-real-end">--:--</span>
+            </div>
+
+            <div id="done-session-info" class="hidden space-y-4">
+                </div>
+
+            <div id="wrapper-btn-cancel" class="hidden pt-4">
+                <button id="btn-action-cancel" class="w-full py-4 rounded-2xl border-2 border-dashed border-red-200 text-red-400 font-black uppercase tracking-[0.2em] text-[10px] hover:bg-red-50 transition-all">
+                    HỦY LỊCH NÀY
+                </button>
             </div>
         </div>
 
-        <div class="bg-white p-3 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center text-xs">
-            <div><p class="text-[9px] text-gray-400 font-bold uppercase">Bắt đầu</p><p class="font-black text-[#1e3932] text-lg">${data.start}</p></div>
-            <div class="text-gray-300">➜</div>
-            <div class="text-right"><p class="text-[9px] text-gray-400 font-bold uppercase">Kết thúc</p><p class="font-black text-[#1e3932] text-lg">${data.end}</p></div>
-        </div>
-        
-        <div id="row-checkout-time" class="hidden bg-gray-100 rounded-xl p-3 flex justify-between items-center">
-            <span class="text-[10px] font-bold text-gray-500 uppercase">Check-out lúc:</span>
-            <span class="font-black text-red-600 text-sm">${isCancelled ? (data.note || "Đã hủy") : (data.realEndTime || "--:--")}</span>
+        <div id="detail-action-buttons" class="absolute bottom-6 left-6 right-6 z-20">
+            <div class="bg-white/90 backdrop-blur-xl p-3 rounded-[2rem] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] border border-white flex items-center gap-3">
+                <button id="btn-action-order" class="flex-1 h-14 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-[1.5rem] font-black text-sm uppercase flex items-center justify-center gap-2 transition-all active:scale-95 shadow-inner">
+                    <span class="material-symbols-outlined">restaurant</span>
+                    Gọi Món
+                </button>
+                <button id="btn-action-checkout" class="flex-[1.5] h-14 bg-[#065F46] hover:bg-[#044e39] text-white rounded-[1.5rem] font-black text-sm uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20 transition-all active:scale-95">
+                    <span class="material-symbols-outlined">meeting_room</span>
+                    Xếp Bed Ngay
+                </button>
+            </div>
         </div>
 
-        <div id="done-session-info" class="hidden"></div>
-    </div>
-
-    <div id="detail-action-buttons" class="p-4 bg-white border-t border-gray-100 mt-auto">
-        <div class="grid grid-cols-2 gap-3">
-            <button id="btn-action-order" class="py-3 rounded-xl bg-amber-50 text-amber-700 font-bold border border-amber-100 shadow-sm active:scale-95 transition-all flex justify-center items-center gap-1.5">
-                <span>☕</span> <span class="uppercase text-[10px] tracking-wider">Gọi Món</span>
-            </button>
-            <button id="btn-action-checkout" class="py-3 rounded-xl bg-[#006241] text-white font-bold shadow-md shadow-green-900/10 active:scale-95 transition-all flex justify-center items-center gap-1.5">
-                <span>🛏️</span> <span class="uppercase text-[10px] tracking-wider">Xếp Bed</span>
-            </button>
-        </div>
-        <div id="wrapper-btn-cancel" class="mt-2 hidden">
-            <button id="btn-action-cancel" class="w-full py-2.5 rounded-xl text-red-400 font-bold bg-white border border-dashed border-gray-300 hover:bg-red-50 hover:border-red-200 transition-all text-[10px] uppercase tracking-widest">Hủy Lịch Này</button>
-        </div>
     </div>
     `;
 
-    // 4. Update Badge màu sắc
+    // 4. Update Badge màu sắc (Style mới)
     var badge = document.getElementById('detail-status-badge');
-    if (isDone) badge.className = "px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-[10px] font-bold uppercase"; 
-    else if (isCancelled) badge.className = "px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-[10px] font-bold uppercase"; 
-    else if (isActive) badge.className = "px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-[10px] font-bold uppercase animate-pulse border border-green-200"; 
-    else badge.className = "px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-bold uppercase border border-amber-200"; 
+    var badgeContent = badge.querySelector('span');
+    
+    if (isDone) {
+        badge.className = "px-6 py-3 rounded-2xl border border-gray-200 bg-gray-100 text-gray-500";
+        badgeContent.innerText = "ĐÃ XONG";
+    } else if (isCancelled) {
+        badge.className = "px-6 py-3 rounded-2xl border border-red-200 bg-red-50 text-red-500";
+        badgeContent.innerText = "ĐÃ HỦY";
+    } else if (isActive) {
+        badge.className = "px-6 py-3 rounded-2xl border border-emerald-200 bg-emerald-50 text-[#065F46] shadow-sm";
+        badgeContent.innerText = "ACTIVE";
+    } else {
+        badge.className = "px-6 py-3 rounded-2xl border border-amber-200 bg-amber-50 text-amber-600 shadow-sm";
+        badgeContent.innerText = "CHỜ KHÁCH";
+    }
 
-    // >>> [FIX] LOGIC ĐỒNG HỒ PC <<<
+    // --- LOGIC ĐỒNG HỒ PC (GIỮ NGUYÊN) ---
     var timerBox = document.getElementById('detail-timer-box');
     if (isActive) {
-        // Nếu đang hoạt động -> Hiện đồng hồ và bắt đầu đếm
         if(timerBox) timerBox.classList.remove('hidden');
         startPanelCountdown(data.end);
     } else {
-        // Nếu đã xong/hủy/chờ -> Ẩn đồng hồ
         if(timerBox) timerBox.classList.add('hidden');
         stopPanelCountdown();
     }
-    // -----------------------------
 
-    // 5. Logic ẩn hiện nút và thông tin thanh toán
+    // 5. Logic ẩn hiện nút và thông tin thanh toán (Giữ nguyên logic cũ, chỉ đổi HTML render)
     var rowCheckout = document.getElementById('row-checkout-time');
     var actionBtns = document.getElementById('detail-action-buttons');
     var wrapperCancel = document.getElementById('wrapper-btn-cancel');
@@ -3449,54 +3510,61 @@ function selectBedItem(index) {
         if(actionBtns) actionBtns.classList.add('hidden');
         if(wrapperCancel) wrapperCancel.classList.add('hidden');
 
-        // Hiện tổng tiền PC
+        // Hiện tổng tiền PC (Style mới)
         if (isDone && !isCancelled && data.phone) {
             calculateSessionSpend(data.phone, data.start, data.realEndTime).then(total => {
                 var infoDiv = document.getElementById('done-session-info');
                 if (infoDiv) {
-                    // Logic hiển thị phí vệ sinh trên PC
-                    var penaltyHTML = `
-                    <div class="mt-4 bg-white rounded-[20px] p-3 border border-red-100 shadow-sm flex items-center justify-between cursor-pointer hover:bg-red-50 transition-colors" onclick="openCleaningModal('${data.phone}', '${bookingId}')">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-red-100 text-red-500 flex items-center justify-center shadow-sm">
-                                <span class="text-xl">🧹</span>
-                            </div>
-                            <div>
-                                <h3 class="text-xs font-black text-gray-900 uppercase">Phí Vệ Sinh</h3>
-                                <p class="text-[9px] text-gray-500 font-medium">Thêm phí dọn dẹp</p>
-                            </div>
+                    
+                    // A. Card Tổng tiền
+                    var totalHTML = `
+                    <div class="bg-gradient-to-br from-[#065F46] to-[#044e39] rounded-[2rem] p-6 text-white shadow-lg relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-4 opacity-20"><span class="material-symbols-outlined text-6xl">payments</span></div>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-80 mb-1">TỔNG CHI TIÊU</p>
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-4xl font-black tracking-tight">${total.toLocaleString()}</span>
+                            <span class="text-sm font-bold opacity-80">VNĐ</span>
                         </div>
-                        <div class="text-gray-300 text-xl">➜</div>
                     </div>`;
 
+                    // B. Card Phí vệ sinh (Warning Style)
+                    var penaltyHTML = '';
                     if (hasPenalty) {
                         penaltyHTML = `
-                        <div class="mt-4 bg-red-50 rounded-[20px] p-3 border border-red-200 flex flex-col gap-2">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-full bg-red-100 text-red-500 flex items-center justify-center text-lg">⚠️</div>
+                        <div class="bg-red-50 rounded-[2rem] p-6 border border-red-100 flex flex-col gap-4 relative overflow-hidden">
+                            <div class="absolute -right-4 -top-4 w-20 h-20 bg-red-200 rounded-full opacity-30"></div>
+                            <div class="flex items-center gap-4 relative z-10">
+                                <div class="w-12 h-12 bg-red-100 text-red-500 rounded-2xl flex items-center justify-center shadow-sm">
+                                    <span class="material-symbols-outlined text-2xl">warning</span>
+                                </div>
                                 <div>
-                                    <p class="text-[9px] font-bold text-red-400 uppercase tracking-wider">Đã tính phí nợ sau</p>
-                                    <p class="text-lg font-black text-red-600 leading-none">${penaltyAmt.toLocaleString()}đ</p>
+                                    <p class="text-[10px] font-black text-red-400 uppercase tracking-widest">ĐÃ PHẠT VỆ SINH</p>
+                                    <p class="text-2xl font-black text-red-600">${penaltyAmt.toLocaleString()}đ</p>
                                 </div>
                             </div>
-                            <div class="flex gap-2 mt-1">
-                                <button onclick="openCleaningModal('${data.phone}', '${bookingId}')" class="flex-1 py-2 bg-white border border-red-100 text-red-500 font-bold text-[9px] rounded-lg uppercase shadow-sm hover:bg-red-50">Sửa</button>
-                                <button onclick="deletePenalty('${data.phone}', '${bookingId}')" class="flex-1 py-2 bg-red-500 text-white font-bold text-[9px] rounded-lg uppercase shadow-sm hover:bg-red-600">Xóa</button>
+                            <div class="flex gap-3 relative z-10">
+                                <button onclick="openCleaningModal('${data.phone}', '${bookingId}')" class="flex-1 py-3 bg-white border border-red-200 text-red-500 rounded-xl font-bold text-xs uppercase shadow-sm hover:bg-red-50 transition-all">Sửa Mức Phạt</button>
+                                <button onclick="deletePenalty('${data.phone}', '${bookingId}')" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-xs uppercase shadow-lg shadow-red-200 hover:bg-red-600 transition-all">Xóa Phạt</button>
                             </div>
+                        </div>`;
+                    } else {
+                        // Nút thêm phí vệ sinh (Giao diện thẻ Clean)
+                        penaltyHTML = `
+                        <div onclick="openCleaningModal('${data.phone}', '${bookingId}')" class="group bg-white rounded-[2rem] p-5 border-2 border-dashed border-gray-200 hover:border-red-200 cursor-pointer transition-all flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-gray-100 group-hover:bg-red-100 text-gray-400 group-hover:text-red-500 rounded-2xl flex items-center justify-center transition-colors">
+                                    <span class="material-symbols-outlined">cleaning_services</span>
+                                </div>
+                                <div>
+                                    <h4 class="font-black text-gray-600 group-hover:text-red-500 uppercase text-sm transition-colors">Thêm phí vệ sinh</h4>
+                                    <p class="text-xs text-gray-400">Nếu khách làm bẩn nệm/sàn</p>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-gray-300 group-hover:text-red-400">add_circle</span>
                         </div>`;
                     }
 
-                    infoDiv.innerHTML = `
-                    <div class="bg-white border border-[#006241]/30 rounded-[20px] p-4 shadow-sm relative overflow-hidden mt-3">
-                        <div class="absolute -right-5 -bottom-5 w-20 h-20 bg-[#006241]/10 rounded-full blur-xl pointer-events-none"></div>
-                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng chi session</p>
-                        <div class="flex items-baseline gap-1">
-                            <p class="text-3xl font-black text-[#1e3932] tracking-tight">${total.toLocaleString()}</p>
-                            <span class="text-sm font-bold text-[#006241]">vnđ</span>
-                        </div>
-                    </div>
-                    ${penaltyHTML}
-                    `;
+                    infoDiv.innerHTML = totalHTML + penaltyHTML;
                     infoDiv.classList.remove('hidden');
                 }
             });
@@ -6831,6 +6899,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
