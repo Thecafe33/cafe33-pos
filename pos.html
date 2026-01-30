@@ -3317,7 +3317,92 @@ function renderLeftColumnList() {
         </div>`;
     }).join('');
 }
-function renderRightColumnMap() { var container = document.getElementById('vertical-map-container'); if(!container) return; var html = ''; for (var i = 1; i <= 4; i++) { var booking = currentBedList.find(b => b.bedId == i && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); var boxStyle = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "bg-green-500 border-green-600 text-white shadow-md ring-2 ring-green-100 hover:scale-105 cursor-pointer" : "bg-amber-50 border-amber-300 text-amber-500 hover:scale-105 cursor-pointer") : "bg-gray-50 border-gray-200 text-gray-300"; var label = booking ? ((booking.status.includes('đang dùng') || booking.status.includes('active')) ? "ACTIVE" : "ĐẶT") : "TRỐNG"; var actionAttr = booking ? `onclick="selectBedFromMap(${i})"` : ""; html += `<div ${actionAttr} class="flex-1 rounded-xl border-2 border-dashed ${boxStyle} flex flex-col items-center justify-center transition-all min-h-[50px] mb-2 relative group"><span class="text-lg font-black">0${i}</span><span class="text-[8px] font-bold tracking-wider">${label}</span>${booking ? `<div class="absolute inset-0 flex items-center justify-center bg-black/10 opacity-0 group-hover:opacity-100 rounded-xl transition-opacity"><span class="text-[10px] font-bold text-white">Xem</span></div>` : ''}</div>`; } container.innerHTML = html; }
+ // --- [PC FIX LIVE MAP] GIAO DIỆN GRID + HIỂN THỊ TÊN ---
+function renderRightColumnMap() {
+    var container = document.getElementById('vertical-map-container');
+    if(!container) return;
+
+    // 1. NÂNG CẤP CONTAINER (Tự động style lại khung cha cho đẹp)
+    var parent = container.parentElement;
+    if (parent && !parent.classList.contains('spatial-glass')) {
+        // Áp dụng style kính mờ, bo cong lớn, đổ bóng mềm
+        parent.className = "flex-1 spatial-glass rounded-[2.5rem] p-6 flex flex-col overflow-hidden relative shadow-sm border border-white/60";
+        
+        // Sửa tiêu đề cho sang trọng hơn
+        var title = parent.querySelector('h3');
+        if(title) {
+            title.className = "text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-6 text-center";
+            title.innerText = "LIVE STATUS";
+        }
+    }
+
+    // 2. CẤU HÌNH GRID 2 CỘT (Giải quyết lỗi mất ô Bed 4)
+    container.className = "flex-1 grid grid-cols-2 gap-4 overflow-y-auto hide-scroll content-start";
+
+    var html = '';
+    
+    // Render 4 ô Bed (Grid 2x2)
+    for (var i = 1; i <= 4; i++) {
+        // Tìm đơn đang Active của Bed này
+        var booking = currentBedList.find(b => 
+            b.bedId == i && 
+            b.status && 
+            (b.status.includes('active') || b.status.includes('đang dùng'))
+        );
+
+        // --- CẤU HÌNH MẶC ĐỊNH (TRỐNG) ---
+        var contentHTML = `<span class="text-4xl font-black text-gray-200 group-hover:text-gray-300 transition-colors">0${i}</span>`;
+        var subText = "TRỐNG";
+        // Style: Nền trắng mờ, viền nét đứt
+        var boxClass = "bg-white/40 border-2 border-dashed border-gray-200 hover:border-gray-300 hover:bg-white/60";
+        var statusDot = "";
+
+        // --- CẤU HÌNH KHI CÓ KHÁCH (ACTIVE) ---
+        if (booking) {
+            // Style: Xanh Deep Emerald, bóng đổ, không viền
+            boxClass = "bg-[#065F46] text-white shadow-xl shadow-emerald-900/20 border border-emerald-600/50 relative overflow-hidden";
+            subText = ""; // Active thì không cần chữ Active nữa vì màu đã nói lên tất cả
+            
+            // XỬ LÝ TÊN: Lấy 2 từ cuối
+            var shortName = "KHÁCH";
+            if (booking.name) {
+                let parts = booking.name.trim().split(' ');
+                // Lấy tối đa 2 từ cuối
+                shortName = parts.slice(Math.max(parts.length - 2, 0)).join(' ');
+            }
+            
+            // HTML hiển thị số Bed nhỏ + Tên to
+            contentHTML = `
+                <div class="flex flex-col items-center justify-center h-full z-10 w-full px-1">
+                    <span class="text-xs font-bold opacity-50 mb-1">BED 0${i}</span>
+                    <span class="text-sm font-black text-center uppercase leading-tight break-words line-clamp-2 w-full">
+                        ${shortName}
+                    </span>
+                </div>
+            `;
+            
+            // Chấm xanh nhấp nháy (Góc trên phải)
+            statusDot = `
+                <div class="absolute top-3 right-3 flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500 border-2 border-[#065F46]"></span>
+                </div>`;
+        }
+
+        // --- RENDER ITEM ---
+        html += `
+        <div onclick="selectBedFromMap(${i})" 
+             class="${boxClass} aspect-square rounded-[2rem] flex flex-col items-center justify-center cursor-pointer transition-all duration-300 active:scale-95 group relative">
+            
+            ${statusDot}
+            ${contentHTML}
+            
+            ${!booking ? `<span class="text-[9px] font-black uppercase tracking-widest mt-2 text-gray-400 group-hover:text-gray-500">${subText}</span>` : ''}
+        </div>`;
+    }
+    
+    container.innerHTML = html;
+}   
 function selectBedFromMap(bedId) { var index = currentBedList.findIndex(b => b.bedId == bedId && b.status && !b.status.includes('đã xong') && !b.status.includes('đã hủy')); if (index !== -1) { (index); var listItem = document.getElementById('col-left-list').children[index]; if(listItem) listItem.scrollIntoView({behavior: 'smooth', block: 'center'}); } }
 // --- HÀM GỌI POPUP STYLE IPHONE ---
 let onConfirmAction = null; // Biến lưu hành động sẽ làm khi bấm OK
@@ -6957,6 +7042,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
