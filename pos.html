@@ -4965,8 +4965,11 @@ function getCountdownStr(endTimeStr) {
 }
 
 // --- HÀM RENDER CHÍNH ---
+    // --- [FINAL FIX] HÀM RENDER CHI TIẾT BED MOBILE ---
+// Fix lỗi: Đồng hồ chỉ chạy khi trạng thái là ACTIVE (Đang dùng)
+
 function renderDetailContentMobile(b) {
-    // 1. Dọn dẹp timer cũ
+    // 1. Dọn dẹp timer cũ (Bắt buộc)
     if (mobileTimerInterval) clearInterval(mobileTimerInterval);
     
     window.currentMobileBooking = b;
@@ -4974,10 +4977,12 @@ function renderDetailContentMobile(b) {
     const container = document.getElementById('mob-bed-detail-content');
     const actionContainer = document.getElementById('mob-detail-actions');
     
+    // --- ĐỊNH NGHĨA TRẠNG THÁI ---
     const isWaiting = !b.bedId || b.bedId == "WAITING";
     const statusText = isWaiting ? "CHỜ XẾP" : `BED 0${b.bedId}`;
     const isDone = b.status === 'đã xong';
     const isCancelled = b.status === 'đã hủy';
+    // Logic Active chuẩn: Có status active HOẶC đang dùng
     const isActive = (b.status === 'active' || (b.status && b.status.includes('active')) || (b.status && b.status.includes('đang dùng')));
 
     // 2. Tính tiền thực tế (Async)
@@ -4986,8 +4991,9 @@ function renderDetailContentMobile(b) {
         if(el) el.innerText = total.toLocaleString() + 'đ';
     });
 
-    // 3. Lấy giá trị đồng hồ khởi tạo
-    const countdown = getCountdownStr(isDone ? b.realEndTime : b.end);
+    // 3. Chuẩn bị dữ liệu hiển thị đồng hồ
+    // Chỉ tính toán đếm ngược nếu đang Active
+    const countdown = isActive ? getCountdownStr(b.end) : { timeStr: b.start, label: "DỰ KIẾN", style: "bg-white/20" };
 
     // 4. Render HTML
     container.innerHTML = `
@@ -4998,14 +5004,21 @@ function renderDetailContentMobile(b) {
             ${isCancelled ? '<span class="inline-block mt-2 bg-red-500 px-3 py-1 rounded-full text-[10px] font-bold">ĐÃ HỦY</span>' : ''}
         </div>
         
-        ${(!isDone && !isCancelled) ? `
-        <div class="relative z-10 flex items-baseline justify-between mt-4">
-            <div id="mob-live-timer" class="timer-font text-5xl font-medium tracking-tight">${countdown.timeStr}</div>
-            <div id="mob-live-badge" class="${countdown.style} px-3 py-1 rounded-full text-[10px] font-black backdrop-blur-md transition-all">
-                ${countdown.label}
+        ${isActive ? `
+            <div class="relative z-10 flex items-baseline justify-between mt-4">
+                <div id="mob-live-timer" class="timer-font text-6xl font-medium tracking-tight">${countdown.timeStr}</div>
+                <div id="mob-live-badge" class="${countdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md transition-all">
+                    ${countdown.label}
+                </div>
             </div>
-        </div>
-        ` : ''}
+        ` : (isWaiting ? `
+            <div class="relative z-10 flex items-baseline justify-between mt-4 opacity-80">
+                <div class="timer-font text-5xl font-medium tracking-tight">${b.start}</div>
+                <div class="bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold backdrop-blur-md">
+                    CHỜ CHECK-IN
+                </div>
+            </div>
+        ` : '')}
 
         <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
         <div class="absolute right-4 bottom-4 w-32 h-32 bg-black/10 rounded-full"></div>
@@ -5081,7 +5094,7 @@ function renderDetailContentMobile(b) {
     let btnHtml = '';
 
     if (isWaiting && !isCancelled) {
-        // [CHỜ XẾP] Nút Gọi Món Mới + Xếp Bed
+        // [CHỜ XẾP]
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
             <button onclick="handleMobileBedOrder('${b.id}')" 
@@ -5095,7 +5108,7 @@ function renderDetailContentMobile(b) {
         </div>`;
     } 
     else if (isActive && !isCancelled) {
-        // [ĐANG DÙNG] Nút Gọi Món Mới + Trả Bed (Gọi hàm PC)
+        // [ĐANG DÙNG]
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
             <button onclick="handleMobileBedOrder('${b.id}')" 
@@ -5119,24 +5132,24 @@ function renderDetailContentMobile(b) {
     }
     actionContainer.innerHTML = btnHtml;
 
-    // 6. KÍCH HOẠT ĐỒNG HỒ LIVE (NHẢY SỐ MỖI GIÂY)
-    if (!isDone && !isCancelled) {
+    // 6. KÍCH HOẠT ĐỒNG HỒ LIVE (CHỈ KHI ACTIVE)
+    // --- [FIX] QUAN TRỌNG: Chỉ chạy setInterval khi isActive = true ---
+    if (isActive) {
         mobileTimerInterval = setInterval(() => {
             const currentCountdown = getCountdownStr(b.end);
             
-            // Tìm phần tử trong DOM
             const tEl = document.getElementById('mob-live-timer');
             const bEl = document.getElementById('mob-live-badge');
             
             if (tEl && bEl) {
                 tEl.innerText = currentCountdown.timeStr;
                 bEl.innerText = currentCountdown.label;
-                // Cập nhật class màu sắc (Đỏ nếu quá giờ)
-                bEl.className = `${currentCountdown.style} px-3 py-1 rounded-full text-[10px] font-black backdrop-blur-md transition-all`;
+                bEl.className = `${currentCountdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md transition-colors`;
             }
-        }, 1000); // Chạy mỗi 1000ms (1 giây)
+        }, 1000);
     }
 }
+
 
 // Bổ sung hàm đóng để dọn dẹp Timer
 function closeMobileBedDetail() {
@@ -6749,6 +6762,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
