@@ -2072,9 +2072,9 @@ function renderCart() {
     const list = document.getElementById('cart-list');
     if (!list) return;
 
-    currentTotal = 0;
+    currentTotal = 0; // Đảm bảo dùng biến toàn cục duy nhất
 
-    // 1. Render cho Sidebar Desktop (Bản L - Giữ nguyên không đụng)
+    // 1. Render cho Sidebar Desktop
     list.innerHTML = cart.map((i, idx) => {
         currentTotal += i.price * i.qty;
         return `<div class="bg-gray-50 p-2.5 rounded-xl flex justify-between items-center shadow-sm border border-white text-xs mb-1">
@@ -2087,24 +2087,25 @@ function renderCart() {
         </div>`;
     }).join('');
 
-    // 2. Cập nhật số tiền hiển thị
-    document.getElementById('total-price').innerText = currentTotal.toLocaleString() + 'đ';
-    // === [CẬP NHẬT CHO BOTTOM BAR MỚI] ===
-    var mobTotal = document.getElementById('mob-bar-total');
-    if (mobTotal) {
-        mobTotal.innerText = currentTotal.toLocaleString() + 'đ';
-    }
-    const topTotal = document.getElementById('top-total-mobile');
-    if(topTotal) topTotal.innerText = currentTotal.toLocaleString() + 'đ';
-
-    // 3. LOGIC MOBILE (Bản M): Điều khiển Bottom Bar
-    const isMobile = window.innerWidth <= 768;
-    const sidebarCart = document.getElementById('sidebar-cart');
+    // --- PHẦN FIX CHO MOBILE ---
+    const formattedTotal = currentTotal.toLocaleString() + 'đ';
     
-    // Tìm thẻ view-menu (Giờ đã có ID nhờ Bước 1)
-    const viewMenuEl = document.getElementById('view-menu');
+    // Cập nhật cho PC (Sidebar)
+    if(document.getElementById('total-price')) 
+        document.getElementById('total-price').innerText = formattedTotal;
 
-    updateSuggestions();
+    // Cập nhật cho Bottom Bar Mobile (Viên thuốc nổi)
+    if(document.getElementById('mob-bar-total')) 
+        document.getElementById('mob-bar-total').innerText = formattedTotal;
+
+    // Cập nhật cho các màn hình trong Payment Mobile Step 1 & 2
+    if(document.getElementById('pay-total-display-1')) 
+        document.getElementById('pay-total-display-1').innerText = formattedTotal;
+    
+    if(document.getElementById('pay-total-display-2')) 
+        document.getElementById('pay-total-display-2').innerText = formattedTotal;
+
+    updateSuggestions(); // Cập nhật các nút gợi ý tiền (50k, 100k...)
 }
 
 function updateQty(idx, d) { 
@@ -3122,15 +3123,19 @@ function switchView(v) {
     if (catBar) catBar.classList.toggle('hidden', v !== 'menu');
     
     // Reset inputs payment nếu vào trang payment
-    if (v === 'payment') {
-        var mobStep1 = document.getElementById('mob-step-1');
-        var mobStep2 = document.getElementById('mob-step-2');
-        if (mobStep1) mobStep1.classList.remove('hidden');
-        if (mobStep2) mobStep2.classList.add('hidden');
-        
-        if (typeof syncMobileInputs === 'function') syncMobileInputs();
-        if (typeof setMethod === 'function') setMethod('Tiền mặt');
-    }
+    // Tìm trong hàm switchView(v), đoạn xử lý logic cuối cùng
+if (v === 'payment') {
+    // Đảm bảo số liệu luôn mới nhất khi mở màn hình thanh toán
+    if (typeof renderCart === 'function') renderCart(); 
+    
+    var mobStep1 = document.getElementById('mob-step-1');
+    var mobStep2 = document.getElementById('mob-step-2');
+    if (mobStep1) mobStep1.classList.remove('hidden');
+    if (mobStep2) mobStep2.classList.add('hidden');
+    
+    if (typeof syncMobileInputs === 'function') syncMobileInputs();
+    if (typeof setMethod === 'function') setMethod('Tiền mặt');
+}
 }
 // Bed Functions
 // --- HÀM OPEN BED MANAGER (ĐÃ SỬA LỖI NGÀY GIỜ) ---
@@ -7328,3 +7333,4 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
