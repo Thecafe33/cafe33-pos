@@ -2064,6 +2064,7 @@ function addToCart(name, size, price) {
 /* --- ĐÃ SỬA: renderCart (Tự động Ẩn/Hiện thanh Bar trên Mobile) --- */
 /* --- ĐÃ SỬA: Hàm renderCart (Fix lỗi Crash do thiếu ID) --- */
 // --- [FIXED] RENDER CART (CÓ LOGIC ĐỔI MÀU NÚT BED) ---
+// --- [FIXED] RENDER CART (CẬP NHẬT TỔNG TIỀN MÀN HÌNH THANH TOÁN MOBILE) ---
 function renderCart() {
     const list = document.getElementById('cart-list');
     if (!list) return;
@@ -2083,25 +2084,32 @@ function renderCart() {
         </div>`;
     }).join('');
 
-    // 2. Cập nhật Tổng tiền
+    // 2. Cập nhật Tổng tiền (Sidebar PC & Mobile Bottom Bar)
     document.getElementById('total-price').innerText = currentTotal.toLocaleString() + 'đ';
     var mobTotal = document.getElementById('mob-bar-total');
     if (mobTotal) mobTotal.innerText = currentTotal.toLocaleString() + 'đ';
 
-    // 3. --- [FIX] LOGIC ĐỔI NÚT THANH TOÁN ---
-    const payBtn = document.getElementById('sidebar-pay-btn');
-    const mobPayBtn = document.querySelector('#mobile-bottom-bar button'); // Nút trên mobile bar
+    // >>> [FIX] CẬP NHẬT TỔNG TIỀN Ở MÀN HÌNH THANH TOÁN MOBILE <<<
+    // Cập nhật cho Bước 1 (Tổng quan)
+    var payTotal1 = document.getElementById('pay-total-display-1');
+    if (payTotal1) payTotal1.innerText = currentTotal.toLocaleString(); 
 
-    // Kiểm tra xem có đang Order cho Bed không (Có biến pendingBedOrder hoặc activeOrderingBedId)
+    // Cập nhật cho Bước 2 (Xác nhận tiền mặt)
+    var payTotal2 = document.getElementById('pay-total-display-2');
+    if (payTotal2) payTotal2.innerText = currentTotal.toLocaleString(); 
+    // -------------------------------------------------------------
+
+    // 3. Logic Đổi Nút Thanh Toán Bed (Giữ nguyên)
+    const payBtn = document.getElementById('sidebar-pay-btn');
+    const mobPayBtn = document.querySelector('#mobile-bottom-bar button'); 
+
     const isBedOrder = (pendingBedOrder || activeOrderingBedId);
 
-    // Cấu hình Style
     const normalText = "Thanh toán";
     const bedText = "THANH TOÁN BED";
     const normalClassPC = "w-full py-4 sb-green text-white font-black rounded-xl uppercase shadow-xl active:scale-95 transition-all";
     const bedClassPC = "w-full py-4 btn-pay-bed font-black rounded-xl uppercase shadow-xl active:scale-95 transition-all tracking-widest";
     
-    // Áp dụng cho PC Sidebar
     if (payBtn) {
         if (isBedOrder) {
             payBtn.innerText = bedText;
@@ -2112,9 +2120,7 @@ function renderCart() {
         }
     }
 
-    // Áp dụng cho Mobile Bottom Bar
     if (mobPayBtn) {
-        // Tìm span chứa chữ bên trong nút mobile
         const spanText = mobPayBtn.querySelector('span'); 
         if (isBedOrder) {
             if(spanText) spanText.innerText = bedText;
@@ -2127,7 +2133,6 @@ function renderCart() {
 
     updateSuggestions();
 }
-
 function updateQty(idx, d) { 
     if(isPaymentMode) return; 
     cart[idx].qty += d; 
@@ -7406,6 +7411,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
