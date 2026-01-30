@@ -50,19 +50,7 @@ input, button, select, textarea { font-size: 1rem; }
 .bed-box { aspect-ratio: 1; border-radius: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 900; text-transform: uppercase; cursor: pointer; transition: all 0.3s; position: relative; }
 .bed-free { background-color: #f0fdf4; border: 4px solid #f0fdf4; color: #006241; }
 .bed-busy { background-color: #1a1a1a; border: 4px solid #006241; color: white; }
-.bed-selected { border-color: #ef4444; transform: scale(0.95); }
-
-/* === LUXURY THEME === */
-.luxury-theme .sb-green, .luxury-theme .bg-\[\#006241\] { background-color: #000000 !important; }
-.luxury-theme .tab-active { background-color: #000000 !important; color: #D4AF37 !important; border: 1px solid #D4AF37 !important; }
-.luxury-theme .text-\[\#006241\], .luxury-theme h2.text-\[\#006241\], .luxury-theme .font-black.text-\[\#006241\] { color: #D4AF37 !important; }
-.luxury-theme #sidebar-pay-btn, .luxury-theme #btn-done { background-color: #000000 !important; color: #D4AF37 !important; border: 1px solid #D4AF37 !important; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
-.luxury-theme #sidebar-cart { border-left-color: #000000 !important; }
-.luxury-theme #cash-paid { color: #D4AF37 !important; }
-.luxury-theme #menu-grid > div { background-color: #1a1a1a !important; border: 1px solid #D4AF37 !important; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important; }
-.luxury-theme #menu-grid > div p { color: #D4AF37 !important; }
-.luxury-theme #size-modal .bg-gray-50 { background-color: #1a1a1a !important; border: 1px solid #D4AF37 !important; }
-.luxury-theme #size-modal h3, .luxury-theme #size-modal span { color: #D4AF37 !important; }
+.bed-selected { border-color: #ef4444; transform: scale(0.95); 
 
 /* Animation */
 .sheet-open { transform: translateY(0) !important; }
@@ -712,6 +700,13 @@ input, button, select, textarea { font-size: 1rem; }
 /* Tạo thanh cuộn ẩn cho đẹp */
 .hide-scroll::-webkit-scrollbar { display: none; }
 .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    /* --- BUTTON STYLE CHO THANH TOÁN BED --- */
+.btn-pay-bed {
+    background-color: #000000 !important; 
+    color: #FFD700 !important; /* Vàng kim */
+    border: 1px solid #FFD700 !important;
+    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3) !important;
+}
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
@@ -2068,13 +2063,14 @@ function addToCart(name, size, price) {
 
 /* --- ĐÃ SỬA: renderCart (Tự động Ẩn/Hiện thanh Bar trên Mobile) --- */
 /* --- ĐÃ SỬA: Hàm renderCart (Fix lỗi Crash do thiếu ID) --- */
+// --- [FIXED] RENDER CART (CÓ LOGIC ĐỔI MÀU NÚT BED) ---
 function renderCart() {
     const list = document.getElementById('cart-list');
     if (!list) return;
 
     currentTotal = 0;
 
-    // 1. Render cho Sidebar Desktop (Bản L - Giữ nguyên không đụng)
+    // 1. Render List Món
     list.innerHTML = cart.map((i, idx) => {
         currentTotal += i.price * i.qty;
         return `<div class="bg-gray-50 p-2.5 rounded-xl flex justify-between items-center shadow-sm border border-white text-xs mb-1">
@@ -2087,22 +2083,47 @@ function renderCart() {
         </div>`;
     }).join('');
 
-    // 2. Cập nhật số tiền hiển thị
+    // 2. Cập nhật Tổng tiền
     document.getElementById('total-price').innerText = currentTotal.toLocaleString() + 'đ';
-    // === [CẬP NHẬT CHO BOTTOM BAR MỚI] ===
     var mobTotal = document.getElementById('mob-bar-total');
-    if (mobTotal) {
-        mobTotal.innerText = currentTotal.toLocaleString() + 'đ';
-    }
-    const topTotal = document.getElementById('top-total-mobile');
-    if(topTotal) topTotal.innerText = currentTotal.toLocaleString() + 'đ';
+    if (mobTotal) mobTotal.innerText = currentTotal.toLocaleString() + 'đ';
 
-    // 3. LOGIC MOBILE (Bản M): Điều khiển Bottom Bar
-    const isMobile = window.innerWidth <= 768;
-    const sidebarCart = document.getElementById('sidebar-cart');
+    // 3. --- [FIX] LOGIC ĐỔI NÚT THANH TOÁN ---
+    const payBtn = document.getElementById('sidebar-pay-btn');
+    const mobPayBtn = document.querySelector('#mobile-bottom-bar button'); // Nút trên mobile bar
+
+    // Kiểm tra xem có đang Order cho Bed không (Có biến pendingBedOrder hoặc activeOrderingBedId)
+    const isBedOrder = (pendingBedOrder || activeOrderingBedId);
+
+    // Cấu hình Style
+    const normalText = "Thanh toán";
+    const bedText = "THANH TOÁN BED";
+    const normalClassPC = "w-full py-4 sb-green text-white font-black rounded-xl uppercase shadow-xl active:scale-95 transition-all";
+    const bedClassPC = "w-full py-4 btn-pay-bed font-black rounded-xl uppercase shadow-xl active:scale-95 transition-all tracking-widest";
     
-    // Tìm thẻ view-menu (Giờ đã có ID nhờ Bước 1)
-    const viewMenuEl = document.getElementById('view-menu');
+    // Áp dụng cho PC Sidebar
+    if (payBtn) {
+        if (isBedOrder) {
+            payBtn.innerText = bedText;
+            payBtn.className = bedClassPC;
+        } else {
+            payBtn.innerText = normalText;
+            payBtn.className = normalClassPC;
+        }
+    }
+
+    // Áp dụng cho Mobile Bottom Bar
+    if (mobPayBtn) {
+        // Tìm span chứa chữ bên trong nút mobile
+        const spanText = mobPayBtn.querySelector('span'); 
+        if (isBedOrder) {
+            if(spanText) spanText.innerText = bedText;
+            mobPayBtn.className = "h-full px-10 btn-pay-bed rounded-[2.5rem] font-bold uppercase text-xs shadow-lg active:scale-95 transition-all flex items-center gap-2";
+        } else {
+            if(spanText) spanText.innerText = normalText;
+            mobPayBtn.className = "h-full px-10 bg-[#006241] text-white rounded-[2.5rem] font-bold uppercase text-xs shadow-lg active:scale-95 transition-all flex items-center gap-2 hover:bg-[#004f32]";
+        }
+    }
 
     updateSuggestions();
 }
@@ -3128,6 +3149,17 @@ function switchView(v) {
         if (mobStep1) mobStep1.classList.remove('hidden');
         if (mobStep2) mobStep2.classList.add('hidden');
         
+        // --- [FIX QUAN TRỌNG] TỰ ĐIỀN SĐT KHÁCH BED ---
+        if (pendingBedOrder && pendingBedOrder.phone) {
+            // Điền cho Mobile
+            var mobInput = document.getElementById('pay-sdt-mobile');
+            if(mobInput) mobInput.value = pendingBedOrder.phone;
+            
+            // Điền cho PC (Nếu cần, thường PC dùng chung kh-sdt)
+            // Lưu ý: kh-sdt đã được điền ở bước showBedDetail rồi
+        }
+        // ---------------------------------------------
+
         if (typeof syncMobileInputs === 'function') syncMobileInputs();
         if (typeof setMethod === 'function') setMethod('Tiền mặt');
     }
@@ -3802,40 +3834,54 @@ function setupActionButtons(bookingId, data, hasBed, btnOrder, btnCheckout, btnC
     }
 }
     // --- [FIXED] GỌI MÓN MOBILE (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
+// --- [FIXED] GỌI MÓN MOBILE (BẢN FULL KHÔNG CẮT BỚT) ---
 function handleMobileBedOrder(bookingId) {
+    // 1. Tìm thông tin đơn đặt trong biến toàn cục
     const booking = globalAllBookings.find(b => b.id === bookingId);
+    
     if (!booking) return console.error("Không tìm thấy booking ID:", bookingId);
 
+    // 2. Cập nhật biến trạng thái Bed
     activeOrderingBedId = booking.bedId || "WAITING"; 
     pendingBedOrder = booking; 
 
-    // 1. Điền SĐT
+    // 3. TỰ ĐỘNG ĐIỀN SỐ ĐIỆN THOẠI
     var sdtInput = document.getElementById('kh-sdt');
     if (sdtInput && booking.phone) {
         sdtInput.value = booking.phone;
+        
+        // Kích hoạt hàm kiểm tra khách hàng
         if (typeof checkSdtLive === 'function') {
             checkSdtLive(); 
         }
     }
 
-    // >>> 2. [MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ ADD VÀO CART <<<
-    autoAddBedItems(booking);
-    // ------------------------------------------------
+    // >>> [THÊM MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ THÊM MÓN BED <<<
+    // Chỉ chèn thêm đoạn này, không xóa code cũ
+    if (typeof autoAddBedItems === 'function') {
+        autoAddBedItems(booking);
+    }
+    // ---------------------------------------------------
 
+    // 4. Chuyển sang giao diện Menu
     switchView('menu');
 
-    // 3. Hiển thị thông báo (Giữ nguyên)
+    // 5. (GIỮ NGUYÊN CODE CŨ) Hiển thị thanh thông báo nhỏ
     setTimeout(function() {
         var cartInfo = document.getElementById('cart-bed-info');
         var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between');
+        
+        // Nếu chưa có thanh thông báo thì tạo mới
         if (!cartInfo && headerContainer) {
             cartInfo = document.createElement('div');
             cartInfo.id = 'cart-bed-info';
             headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling);
         }
+        
         if (cartInfo) {
             var guestName = booking.name || "Khách hàng";
             cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1 animate-pulse";
+            
             if (booking.bedId && booking.bedId != "WAITING") {
                 cartInfo.innerText = `🟢 ĐANG GỌI: BED 0${booking.bedId} - ${guestName}`;
                 cartInfo.style.color = "#006241";
@@ -3848,46 +3894,42 @@ function handleMobileBedOrder(bookingId) {
 }
 // --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
 // --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
+// --- [FIXED PC] GỌI MÓN TỪ CHI TIẾT BED ---
 function showBedDetail(bedId) { 
     var booking = null; 
     if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId);
     if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex]; 
     
-    if (!booking) { 
-        alert("Vui lòng chọn khách hàng trong danh sách trước!");
-        return; 
-    } 
+    if (!booking) return alert("Vui lòng chọn khách hàng trước!");
     
+    // 1. Set biến toàn cục
     activeOrderingBedId = bedId; 
     pendingBedOrder = booking; 
 
-    // 1. Kiểm tra nợ cũ (Giữ nguyên logic cũ)
-    if (booking.phone) {
-        var cleanPhone = normalizePhone(booking.phone);
-        db.ref('customers/' + cleanPhone).once('value', snap => {
-            var cust = snap.val();
-            if (cust && cust.pendingFee > 0) {
-                alert(`⚠️ Khách này có khoản nợ cũ: ${cust.pendingFee.toLocaleString()}đ\nLý do: ${cust.pendingFeeReason}\n\nHệ thống sẽ tự động thêm vào bill.`);
-                addToCart("Phí Vệ Sinh (Nợ cũ)", "Phạt", cust.pendingFee);
-                db.ref('customers/' + cleanPhone).update({ pendingFee: 0, pendingFeeReason: null });
-            }
-        });
-    }
-
-    // 2. Điền SĐT (Giữ nguyên)
+    // 2. Điền SĐT vào ô tìm kiếm & Kích hoạt tìm tên khách
     var sdtInput = document.getElementById('kh-sdt');
     if (sdtInput && booking.phone) {
         sdtInput.value = booking.phone;
+        // Gọi hàm checkSdtLive để hiện tên khách ngay lập tức
         if (typeof checkSdtLive === 'function') checkSdtLive();
     }
 
-    // >>> 3. [MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ ADD VÀO CART <<<
-    autoAddBedItems(booking);
-    // ------------------------------------------------
+    // 3. Tự động tính giờ và thêm món (QUAN TRỌNG)
+    if (typeof autoAddBedItems === 'function') {
+        autoAddBedItems(booking);
+    } else {
+        console.error("Thiếu hàm autoAddBedItems!");
+    }
 
+    // 4. Chuyển View
     switchView('menu'); 
     
-    // (Đoạn tạo thanh thông báo nhỏ - Giữ nguyên)
+    // 5. Hiển thị thông báo nhỏ
+    updateCartInfo(booking);
+}
+
+// Hàm phụ hiển thị thông báo nhỏ trên giỏ hàng (Tách ra cho gọn)
+function updateCartInfo(booking) {
     setTimeout(function() { 
         var cartInfo = document.getElementById('cart-bed-info'); 
         var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between'); 
@@ -3898,7 +3940,7 @@ function showBedDetail(bedId) {
         } 
         if (cartInfo) { 
             var guestName = booking.name || "Khách hàng"; 
-            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1"; 
+            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1 animate-pulse"; 
             if (booking.bedId && booking.bedId != 0) { 
                 cartInfo.innerText = `🟢 BED 0${booking.bedId} - ${guestName}`; 
                 cartInfo.style.color = "#006241"; 
@@ -6843,7 +6885,43 @@ function runAutoCancelScan(list) {
         }
     });
 }
+// --- HÀM TỰ ĐỘNG TÍNH GIỜ (Logic 4h + h5) ---
+function autoAddBedItems(booking) {
+    if (!booking || !booking.start || !booking.end) return;
 
+    // Chặn duplicate
+    const hasBedItem = cart.some(i => i.name.toLowerCase().includes('bed'));
+    if (hasBedItem) return;
+
+    let sParts = booking.start.split(':');
+    let eParts = booking.end.split(':');
+    
+    let startMin = parseInt(sParts[0]) * 60 + parseInt(sParts[1]);
+    let endMin = parseInt(eParts[0]) * 60 + parseInt(eParts[1]);
+
+    if (endMin <= startMin) return;
+
+    let diffMins = endMin - startMin;
+    let totalHours = Math.ceil(diffMins / 60);
+
+    console.log(`🤖 Auto-add Bed: ${totalHours}h`);
+
+    for (let h = 1; h <= totalHours; h++) {
+        if (h <= 4) autoAddMenuItemToCart("1h bed");
+        else autoAddMenuItemToCart("1h bed từ h5");
+    }
+    
+    // Cập nhật lại UI giỏ hàng sau khi thêm
+    renderCart(); 
+}
+
+function autoAddMenuItemToCart(itemName) {
+    const item = menu.find(m => m.name.toLowerCase() === itemName.toLowerCase());
+    if (item) {
+        let price = item.priceM > 0 ? item.priceM : item.priceL;
+        addToCart(item.name, 'M', price); 
+    }
+}
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -7328,6 +7406,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
