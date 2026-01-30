@@ -3361,6 +3361,11 @@ function closeIOSModal() {
 // 1. Hiển thị Tổng chi tiêu tạm tính cho Bed đang hoạt động (Active)
 // 2. Fix lỗi Tên khách quá dài (Tự xuống dòng, cắt bớt)
 // 3. Fix lỗi Giờ Checkout và Lý do hủy
+// --- [PC FIX LAYOUT] HÀM CHỌN BED (BẢN TỐI ƯU DIỆN TÍCH) ---
+// Thay đổi:
+// 1. Bỏ dòng "CHI TIẾT ĐẶT LỊCH"
+// 2. Thu nhỏ ô Giờ Bắt đầu/Kết thúc (Text nhỏ lại, padding giảm)
+// 3. Đẩy tên khách lên cao hơn (Giảm padding top)
 
 function selectBedItem(index) {
     selectedBedIndex = index;
@@ -3370,7 +3375,7 @@ function selectBedItem(index) {
     var panel = document.getElementById('detail-content-panel');
     var empty = document.getElementById('detail-empty-state');
     
-    // 1. Hiện panel chi tiết
+    // 1. Hiện panel (Đã fix lỗi hidden)
     if(empty) empty.classList.add('hidden');
     if(panel) { 
         panel.classList.remove('hidden'); 
@@ -3388,7 +3393,7 @@ function selectBedItem(index) {
     var hasPenalty = data.hasPenalty === true;
     var penaltyAmt = data.penaltyAmount || 0;
 
-    // --- LOGIC HIỂN THỊ SUB-TITLE (Dưới tên khách) ---
+    // --- LOGIC SUB-TITLE ---
     let subTitleHTML = "";
     if (isCancelled) {
         let reason = "ĐÃ HỦY";
@@ -3402,15 +3407,14 @@ function selectBedItem(index) {
         subTitleHTML = `<span class="text-2xl font-black text-[#065F46]" id="detail-bed-name">${hasBed ? `BED 0${data.bedId}` : "CHỜ XẾP"}</span>`;
     }
 
-    // --- RENDER HTML ---
+    // --- RENDER HTML (ĐÃ TỐI ƯU DIỆN TÍCH) ---
     panel.innerHTML = `
     <div class="spatial-glass w-full h-full flex flex-col relative rounded-[2.5rem] overflow-hidden">
         
-        <div class="px-10 pt-10 pb-4 shrink-0">
-            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 mb-4 block">CHI TIẾT ĐẶT LỊCH</span>
+        <div class="px-8 pt-6 pb-2 shrink-0">
             <div class="flex items-start justify-between">
                 <div class="flex-1 pr-4">
-                    <h1 class="text-3xl md:text-4xl font-black tracking-tighter text-[#1e293b] leading-tight mb-2 line-clamp-2 overflow-hidden text-ellipsis" style="max-height: 5rem;">
+                    <h1 class="text-3xl md:text-4xl font-black tracking-tighter text-[#1e293b] leading-tight mb-1 line-clamp-2 overflow-hidden text-ellipsis" style="max-height: 5rem;">
                         ${data.name || "Khách lẻ"}
                     </h1>
                     
@@ -3423,54 +3427,54 @@ function selectBedItem(index) {
                     </div>
                 </div>
 
-                <div id="detail-status-badge" class="px-6 py-3 rounded-2xl border transition-colors shrink-0">
+                <div id="detail-status-badge" class="px-5 py-2 rounded-2xl border transition-colors shrink-0">
                     <span class="font-black text-sm tracking-widest uppercase">WAITING</span>
                 </div>
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-10 pb-32 hide-scroll space-y-8">
+        <div class="flex-1 overflow-y-auto px-8 pb-32 hide-scroll space-y-4">
             
-            <div class="grid grid-cols-2 gap-6">
-                <div class="p-6 glass-card-inner rounded-[2rem] flex flex-col justify-center">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">THÔNG TIN LIÊN HỆ</p>
-                    <h4 class="text-2xl font-black text-slate-800 mb-1 truncate">${data.phone || "--"}</h4>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="p-4 glass-card-inner rounded-[1.5rem] flex flex-col justify-center">
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">LIÊN HỆ</p>
+                    <h4 class="text-xl font-black text-slate-800 truncate">${data.phone || "--"}</h4>
                     <div class="flex items-center gap-1 text-emerald-600">
-                        <span class="material-symbols-outlined text-sm">verified</span>
-                        <span class="text-xs font-bold">Khách hàng</span>
+                        <span class="material-symbols-outlined text-xs">verified</span>
+                        <span class="text-[10px] font-bold">Khách hàng</span>
                     </div>
                 </div>
 
-                <div class="p-6 glass-card-inner rounded-[2rem] flex flex-col justify-center">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">ĐI CÙNG</p>
-                    <h4 class="text-2xl font-black text-slate-800 mb-1 truncate">${data.compName || "---"}</h4>
-                    <p class="text-sm font-bold text-gray-500">${data.compPhone || "--"}</p>
+                <div class="p-4 glass-card-inner rounded-[1.5rem] flex flex-col justify-center">
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">ĐI CÙNG</p>
+                    <h4 class="text-xl font-black text-slate-800 truncate">${data.compName || "---"}</h4>
+                    <p class="text-xs font-bold text-gray-500">${data.compPhone || "--"}</p>
                 </div>
             </div>
 
-            <div class="p-8 bg-white/60 border border-white/40 rounded-[2.5rem] flex items-center justify-around shadow-sm">
+            <div class="p-4 bg-white/60 border border-white/40 rounded-[2rem] flex items-center justify-around shadow-sm">
                 <div class="text-center">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">BẮT ĐẦU</p>
-                    <span class="text-5xl font-black text-slate-800 tracking-tighter">${data.start}</span>
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">BẮT ĐẦU</p>
+                    <span class="text-3xl font-black text-slate-800 tracking-tighter">${data.start}</span>
                 </div>
                 <div class="text-gray-300">
-                    <span class="material-symbols-outlined text-5xl font-light">arrow_forward</span>
+                    <span class="material-symbols-outlined text-3xl font-light">arrow_forward</span>
                 </div>
                 <div class="text-center">
-                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">KẾT THÚC</p>
-                    <span class="text-5xl font-black text-slate-800 tracking-tighter">${data.end}</span>
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">KẾT THÚC</p>
+                    <span class="text-3xl font-black text-slate-800 tracking-tighter">${data.end}</span>
                 </div>
             </div>
 
-            <div id="row-checkout-time" class="hidden text-center bg-gray-100/50 rounded-2xl p-3 border border-gray-200/50">
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Thực tế check-out lúc</span>
-                <div class="font-black text-slate-800 text-3xl tracking-tight mt-1" id="detail-real-end">--:--</div>
+            <div id="row-checkout-time" class="hidden text-center bg-gray-100/50 rounded-2xl p-2 border border-gray-200/50">
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Thực tế check-out lúc</span>
+                <div class="font-black text-slate-800 text-2xl tracking-tight" id="detail-real-end">--:--</div>
             </div>
 
-            <div id="done-session-info" class="hidden space-y-4"></div>
+            <div id="done-session-info" class="hidden space-y-3"></div>
 
-            <div id="wrapper-btn-cancel" class="hidden pt-4">
-                <button id="btn-action-cancel" class="w-full py-4 rounded-2xl border-2 border-dashed border-red-200 text-red-400 font-black uppercase tracking-[0.2em] text-[10px] hover:bg-red-50 transition-all">
+            <div id="wrapper-btn-cancel" class="hidden pt-2">
+                <button id="btn-action-cancel" class="w-full py-3 rounded-2xl border-2 border-dashed border-red-200 text-red-400 font-black uppercase tracking-[0.2em] text-[10px] hover:bg-red-50 transition-all">
                     HỦY LỊCH NÀY
                 </button>
             </div>
@@ -3497,16 +3501,16 @@ function selectBedItem(index) {
     var badgeContent = badge.querySelector('span');
     
     if (isDone) {
-        badge.className = "px-6 py-3 rounded-2xl border border-gray-200 bg-gray-100 text-gray-500";
+        badge.className = "px-5 py-2 rounded-2xl border border-gray-200 bg-gray-100 text-gray-500";
         badgeContent.innerText = "ĐÃ XONG";
     } else if (isCancelled) {
-        badge.className = "px-6 py-3 rounded-2xl border border-red-200 bg-red-50 text-red-500";
+        badge.className = "px-5 py-2 rounded-2xl border border-red-200 bg-red-50 text-red-500";
         badgeContent.innerText = "ĐÃ HỦY";
     } else if (isActive) {
-        badge.className = "px-6 py-3 rounded-2xl border border-emerald-200 bg-emerald-50 text-[#065F46] shadow-sm";
+        badge.className = "px-5 py-2 rounded-2xl border border-emerald-200 bg-emerald-50 text-[#065F46] shadow-sm";
         badgeContent.innerText = "ACTIVE";
     } else {
-        badge.className = "px-6 py-3 rounded-2xl border border-amber-200 bg-amber-50 text-amber-600 shadow-sm";
+        badge.className = "px-5 py-2 rounded-2xl border border-amber-200 bg-amber-50 text-amber-600 shadow-sm";
         badgeContent.innerText = "CHỜ KHÁCH";
     }
 
@@ -3520,24 +3524,21 @@ function selectBedItem(index) {
         stopPanelCountdown();
     }
 
-    // 5. LOGIC HIỂN THỊ NÚT VÀ TIỀN
+    // 5. Logic hiển thị nút/tiền
     var rowCheckout = document.getElementById('row-checkout-time');
     var actionBtns = document.getElementById('detail-action-buttons');
     var wrapperCancel = document.getElementById('wrapper-btn-cancel');
 
     if (isDone || isCancelled) {
-        // --- TRẠNG THÁI: XONG / HỦY ---
         if(rowCheckout) {
             rowCheckout.classList.remove('hidden');
-            // Hiển thị giờ checkout hoặc lý do hủy
-            document.getElementById('detail-real-end').innerText = isCancelled ? (data.note || "Đã hủy") : (data.realEndTime || "--:--");
+            let timeText = isCancelled ? (data.note || "Đã hủy") : (data.realEndTime || "--:--");
+            document.getElementById('detail-real-end').innerText = timeText;
         }
         if(actionBtns) actionBtns.classList.add('hidden');
         if(wrapperCancel) wrapperCancel.classList.add('hidden');
 
-        // Hiển thị tổng tiền (Nếu đã xong)
         if (isDone && !isCancelled) {
-            // Ưu tiên lấy tiền đã lưu trong DB (để không phải tính lại)
             let savedTotal = data.totalSpend ? Number(data.totalSpend) : null;
             if (savedTotal !== null) {
                 renderDoneSessionInfo(savedTotal, hasPenalty, penaltyAmt, data.phone, bookingId);
@@ -3548,32 +3549,29 @@ function selectBedItem(index) {
             }
         }
     } else {
-        // --- TRẠNG THÁI: ĐANG DÙNG / CHỜ ---
         var oldInfo = document.getElementById('done-session-info');
-        // Không ẩn luôn, mà sẽ tái sử dụng để hiện tiền tạm tính
-        
+        if(oldInfo) oldInfo.classList.add('hidden');
         if(rowCheckout) rowCheckout.classList.add('hidden');
         if(actionBtns) actionBtns.classList.remove('hidden');
         if(isActive) { if(wrapperCancel) wrapperCancel.classList.add('hidden'); }
         else { if(wrapperCancel) wrapperCancel.classList.remove('hidden'); }
         
-        // >>> [MỚI] TÍNH VÀ HIỂN THỊ TIỀN CHO BED ĐANG HOẠT ĐỘNG <<<
+        // Tính tiền tạm tính cho Active
         if (data.phone) {
              calculateSessionSpend(data.phone, data.start, data.end).then(total => {
                 var infoDiv = document.getElementById('done-session-info');
                 if (infoDiv) {
-                    // Render Card tiền tạm tính (Style nhẹ hơn chút)
                     infoDiv.innerHTML = `
-                    <div class="bg-white border border-emerald-100 rounded-[2rem] p-6 shadow-sm relative overflow-hidden">
+                    <div class="bg-white border border-emerald-100 rounded-[2rem] p-4 shadow-sm relative overflow-hidden">
                         <div class="flex justify-between items-center">
                             <div>
-                                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-1">CHI TIÊU TẠM TÍNH</p>
+                                <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-1">CHI TIÊU TẠM TÍNH</p>
                                 <div class="flex items-baseline gap-1">
-                                    <span class="text-4xl font-black tracking-tight text-[#065F46]">${total.toLocaleString()}</span>
-                                    <span class="text-sm font-bold opacity-60 text-[#065F46]">VNĐ</span>
+                                    <span class="text-3xl font-black tracking-tight text-[#065F46]">${total.toLocaleString()}</span>
+                                    <span class="text-xs font-bold opacity-60 text-[#065F46]">VNĐ</span>
                                 </div>
                             </div>
-                            <div class="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center text-[#065F46]">
+                            <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-[#065F46]">
                                 <span class="material-symbols-outlined">payments</span>
                             </div>
                         </div>
@@ -6959,6 +6957,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
