@@ -6843,6 +6843,122 @@ function runAutoCancelScan(list) {
         }
     });
 }
+    <script>
+// --- [MOBILE GESTURE FIX] XỬ LÝ VUỐT BACK TRÊN ĐIỆN THOẠI ---
+
+// 1. Hàm thêm lịch sử giả (Gọi khi mở Modal/View mới)
+function pushHistoryState(name) {
+    // Chỉ push nếu trạng thái hiện tại chưa phải là nó (để tránh push chồng chéo)
+    if (history.state && history.state.view === name) return;
+    history.pushState({ view: name }, null, "");
+}
+
+// 2. Can thiệp vào các hàm mở giao diện hiện tại
+// Chúng ta sẽ "ghi đè" nhẹ các hàm gốc để chèn logic history vào
+
+// A. Khi chuyển View (Menu, Payment, History...)
+const originalSwitchView = switchView;
+switchView = function(v) {
+    originalSwitchView(v); // Chạy logic gốc
+    if (v !== 'menu') {
+        pushHistoryState(v); // Nếu không phải trang chủ, thêm history
+    }
+};
+
+// B. Khi mở Modal Đặt Bed Mới
+const originalOpenBookingModal = openBookingModal;
+openBookingModal = function() {
+    originalOpenBookingModal();
+    pushHistoryState('booking_modal');
+};
+
+// C. Khi mở Chi tiết Bed (Mobile)
+const originalShowMobileBedDetail = showMobileBedDetail;
+showMobileBedDetail = function(id) {
+    originalShowMobileBedDetail(id);
+    pushHistoryState('bed_detail');
+};
+
+// D. Khi mở Smart Checkout (Popup Trả Bed)
+// (Lưu ý: Nếu bạn chưa định nghĩa hàm openSmartCheckout thì bỏ qua, 
+// nhưng thường là hàm handleBedCheckout sẽ mở popup này)
+const originalHandleBedCheckout = handleBedCheckout;
+handleBedCheckout = function(booking) {
+    originalHandleBedCheckout(booking);
+    // Kiểm tra xem popup có hiện không thì mới push
+    setTimeout(() => {
+        if(!document.getElementById('modal-smart-checkout').classList.contains('hidden')) {
+            pushHistoryState('smart_checkout');
+        }
+    }, 50);
+};
+
+// 3. Lắng nghe sự kiện "Vuốt Back" (popstate)
+window.addEventListener('popstate', function(event) {
+    // Logic: Kiểm tra cái gì đang mở thì đóng cái đó theo thứ tự ưu tiên
+    // (Z-index cao nhất đóng trước)
+
+    // UTILS: Các hàm đóng/ẩn UI
+    const closeBooking = () => document.getElementById('modal-add-booking').classList.add('hidden');
+    const closeSmart = () => {
+        const m = document.getElementById('modal-smart-checkout');
+        m.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => m.classList.add('hidden'), 200);
+    };
+    
+    // --- KIỂM TRA TỪNG LỚP GIAO DIỆN ---
+
+    // 1. Modal Smart Checkout
+    const smartModal = document.getElementById('modal-smart-checkout');
+    if (smartModal && !smartModal.classList.contains('hidden')) {
+        closeSmart();
+        return; 
+    }
+
+    // 2. Modal Đặt Bed Mới
+    const bookingModal = document.getElementById('modal-add-booking');
+    if (bookingModal && !bookingModal.classList.contains('hidden')) {
+        closeBookingModal(); // Gọi hàm đóng gốc của nó
+        return;
+    }
+
+    // 3. Chi tiết Bed Mobile (Slide từ phải sang)
+    const bedDetail = document.getElementById('mob-bed-detail-screen');
+    if (bedDetail && !bedDetail.classList.contains('translate-x-full')) {
+        closeMobileBedDetail();
+        return;
+    }
+
+    // 4. Modal Chọn Bed (Màu xanh)
+    const bedSelect = document.getElementById('bed-select-modal');
+    if (bedSelect && !bedSelect.classList.contains('hidden')) {
+        bedSelect.classList.add('hidden');
+        return;
+    }
+
+    // 5. Các View Chính (Payment, History, Bed, Revenue)
+    // Nếu đang ở View khác Menu -> Về Menu
+    const viewMenu = document.getElementById('view-menu');
+    if (viewMenu && viewMenu.classList.contains('hidden')) {
+        // Reset về menu
+        // Lưu ý: Gọi hàm gốc để tránh push ngược lại history (gây vòng lặp)
+        originalSwitchView('menu'); 
+        
+        // Reset lại active tab button (nếu có)
+        document.querySelectorAll('button[id^="btn-nav-"]').forEach(b => {
+            b.classList.remove('tab-active', 'sb-green', 'text-white');
+            b.classList.add('bg-gray-100', 'text-gray-400');
+        });
+        return;
+    }
+
+    // Nếu không còn gì để đóng -> Cho phép thoát app (Hành vi mặc định)
+});
+
+// 4. Khởi tạo trạng thái ban đầu (Tránh lỗi khi mới vào đã vuốt back)
+window.addEventListener('load', function() {
+    history.replaceState({ view: 'menu' }, null, "");
+});
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -7209,6 +7325,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 </body>
 </html>
+
 
 
 
