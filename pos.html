@@ -4171,56 +4171,132 @@ function submitCancelBooking(type) {
 // XỬ LÝ TRẢ BED & TÍNH PHÍ LỐ GIỜ (THÔNG MINH)
 // =========================================================
 // --- [FIX] XỬ LÝ TRẢ BED & LƯU DOANH THU ---
+// --- BIẾN TẠM LƯU DỮ LIỆU CHECKOUT ---
+let tempCheckoutData = null;
+
+// --- [REPLACE] HÀM CHECKOUT MỚI (MỞ POPUP SMART) ---
 function handleBedCheckout(booking) {
     if (!booking) return;
-
+    
+    // 1. Tính toán dữ liệu
     const now = new Date();
-    // 1. Tính toán giờ check-out thực tế
-    let realEndTimeStr = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-
-    // 2. Tính toán tiền lố giờ (Logic cũ giữ nguyên)
     let endParts = booking.end.split(':');
     let endTime = new Date();
     endTime.setHours(parseInt(endParts[0]), parseInt(endParts[1]), 0);
+    
+    // Tính phút lố
     let diffMinutes = Math.floor((now - endTime) / 60000);
+    
+    // Tính số giờ đã trả trước đó (để biết phạt từ giờ thứ mấy)
+    let startParts = booking.start.split(':');
+    let startTime = new Date();
+    startTime.setHours(parseInt(startParts[0]), parseInt(startParts[1]), 0);
+    let bookedMinutes = (endTime - startTime) / 60000;
+    let paidHours = Math.ceil(bookedMinutes / 60);
 
-    if (diffMinutes <= 5) {
-        showIOSConfirm(`Xác nhận trả Bed 0${booking.bedId}?`, () => {
-            // [FIX QUAN TRỌNG] Tính tiền trước khi lưu
-            calculateAndSaveCheckout(booking, realEndTimeStr);
-        });
+    // Lưu vào biến tạm để các nút con sử dụng
+    tempCheckoutData = {
+        booking: booking,
+        diffMinutes: diffMinutes,
+        paidHours: paidHours,
+        extraHoursQty: (diffMinutes > 5) ? Math.ceil(diffMinutes / 60) : 0
+    };
+
+    // 2. Điền thông tin vào Popup
+    document.getElementById('sco-bed-name').innerText = `BED 0${booking.bedId}`;
+    document.getElementById('sco-customer').innerText = booking.name || "Khách lẻ";
+    
+    const otEl = document.getElementById('sco-overtime');
+    const feeEl = document.getElementById('sco-fee');
+
+    if (diffMinutes > 5) {
+        otEl.innerText = `${diffMinutes} phút`;
+        otEl.className = "text-2xl font-black text-red-500";
+        feeEl.innerText = `+ ${tempCheckoutData.extraHoursQty} giờ`;
     } else {
-        // Logic lố giờ (Giữ nguyên)
-        let extraHoursQty = Math.ceil(diffMinutes / 60);
-        let startParts = booking.start.split(':');
-        let startTime = new Date();
-        startTime.setHours(parseInt(startParts[0]), parseInt(startParts[1]), 0);
-        let bookedMinutes = (endTime - startTime) / 60000;
-        let paidHours = Math.ceil(bookedMinutes / 60);
-
-        let msg = `⚠️ KHÁCH QUÁ GIỜ: ${diffMinutes} PHÚT\n\nHệ thống sẽ tự động cộng thêm ${extraHoursQty} giờ vào Bill.\n(Bấm Đồng ý để chuyển sang Menu)`;
-
-        showIOSConfirm(msg, () => {
-            for (let i = 1; i <= extraHoursQty; i++) {
-                let currentHourIndex = paidHours + i;
-                if (currentHourIndex <= 4) autoAddMenuItemToCart("1h bed"); 
-                else autoAddMenuItemToCart("1h bed từ h5");
-            }
-            activeOrderingBedId = booking.bedId;
-            pendingBedOrder = booking; 
-            isCheckoutFlow = true; 
-            
-            var sdtInput = document.getElementById('kh-sdt');
-            if (sdtInput && booking.phone) {
-                sdtInput.value = booking.phone;
-                if (typeof checkSdtLive === 'function') checkSdtLive();
-            }
-            switchView('menu');
-            setTimeout(() => { showAppModal("Đã tính phí lố giờ", `Đã thêm ${extraHoursQty}h vào hóa đơn.`, "💰"); }, 300);
-        });
+        otEl.innerText = "Đúng giờ";
+        otEl.className = "text-2xl font-black text-green-500";
+        feeEl.innerText = "0 giờ";
     }
+
+    // 3. Hiển thị Popup (Animation)
+    const modal = document.getElementById('modal-smart-checkout');
+    modal.classList.remove('hidden');
+    setTimeout(() => {
+        modal.classList.remove('opacity-0', 'scale-95');
+        modal.classList.add('opacity-100', 'scale-100');
+    }, 10);
 }
 
+// --- CÁC HÀM XỬ LÝ LỰA CHỌN ---
+
+// 1. TÍNH PHÍ TỰ ĐỘNG (Logic cũ)
+function confirmCheckoutAuto() {
+    if(!tempCheckoutData) return;
+    const { booking, extraHoursQty, paidHours } = tempCheckoutData;
+
+    closeSmartCheckout(); // Đóng popup
+
+    // Nếu có lố giờ -> Chạy vòng lặp thêm món
+    if (extraHoursQty > 0) {
+        for (let i = 1; i <= extraHoursQty; i++) {
+            let currentHourIndex = paidHours + i;
+            if (currentHourIndex <= 4) autoAddMenuItemToCart("1h bed"); 
+            else autoAddMenuItemToCart("1h bed từ h5");
+        }
+        showAppModal("Đã cộng tiền", `Hệ thống đã tự động thêm ${extraHoursQty}h vào hóa đơn.`, "🤖");
+    }
+
+    // Chuyển sang thanh toán
+    proceedToCheckoutFlow(booking);
+}
+
+// 2. TỰ CHỌN PHÍ (Chỉ chuyển màn hình, không cộng gì cả)
+function confirmCheckoutManual() {
+    if(!tempCheckoutData) return;
+    closeSmartCheckout();
+    
+    // Chỉ chuyển trang, nhân viên tự bấm món phạt nếu muốn
+    proceedToCheckoutFlow(tempCheckoutData.booking);
+}
+
+// 3. KHÔNG TÍNH PHÍ (Checkout ngay lập tức)
+function confirmCheckoutFree() {
+    if(!tempCheckoutData) return;
+    const { booking } = tempCheckoutData;
+    
+    closeSmartCheckout();
+
+    // Gọi thẳng hàm đóng Bed và tính tiền Session (Bỏ qua bước vào Menu thanh toán)
+    // Lưu ý: Hàm này sẽ tính tổng tiền các món ĐÃ GỌI trước đó, không cộng thêm giờ lố
+    let realTimeStr = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    calculateAndSaveCheckout(booking, realTimeStr);
+}
+
+// --- HÀM PHỤ TRỢ CHUNG ---
+function closeSmartCheckout() {
+    const modal = document.getElementById('modal-smart-checkout');
+    modal.classList.remove('opacity-100', 'scale-100');
+    modal.classList.add('opacity-0', 'scale-95');
+    setTimeout(() => modal.classList.add('hidden'), 300);
+}
+
+function proceedToCheckoutFlow(booking) {
+    // Set biến toàn cục để hệ thống biết đang trong luồng trả Bed
+    activeOrderingBedId = booking.bedId;
+    pendingBedOrder = booking; 
+    isCheckoutFlow = true; 
+    
+    // Điền SĐT vào giỏ
+    var sdtInput = document.getElementById('kh-sdt');
+    if (sdtInput && booking.phone) {
+        sdtInput.value = booking.phone;
+        if (typeof checkSdtLive === 'function') checkSdtLive();
+    }
+    
+    // Chuyển view
+    switchView('menu');
+}
 // [HÀM MỚI] Tính tổng tiền và Lưu vào Firebase
 function calculateAndSaveCheckout(booking, realTimeStr) {
     let btnCheckout = document.getElementById('btn-action-checkout');
@@ -7039,8 +7115,57 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 
     </div>
 </div>
+    <div id="modal-smart-checkout" class="hidden fixed inset-0 z-[100000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 transition-all duration-300 opacity-0 scale-95" style="transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);">
+    
+    <div class="bg-white w-full max-w-[420px] rounded-[2.5rem] shadow-2xl overflow-hidden relative border border-white/50">
+        
+        <div class="bg-gradient-to-br from-[#065F46] to-[#044e39] p-8 text-center relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+            <div class="relative z-10">
+                <p class="text-[10px] font-black text-emerald-200 uppercase tracking-[0.3em] mb-2">XÁC NHẬN TRẢ BED</p>
+                <h2 id="sco-bed-name" class="text-4xl font-black text-white tracking-tighter mb-1">BED 01</h2>
+                <p id="sco-customer" class="text-emerald-100 font-bold text-sm">Khách hàng: Nguyễn Văn A</p>
+            </div>
+        </div>
+
+        <div class="p-6 bg-[#F2F4F7]">
+            
+            <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border border-slate-100 mb-6 flex items-center justify-between">
+                <div>
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">THỜI GIAN LỐ</p>
+                    <p id="sco-overtime" class="text-2xl font-black text-red-500">0 phút</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">DỰ KIẾN PHẠT</p>
+                    <p id="sco-fee" class="text-xl font-black text-slate-800">0 giờ</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="confirmCheckoutAuto()" class="w-full py-4 bg-[#065F46] text-white rounded-2xl font-black text-sm uppercase shadow-lg shadow-emerald-900/20 active:scale-95 transition-all flex items-center justify-center gap-3 group hover:bg-[#044e39]">
+                    <span class="material-symbols-outlined group-hover:animate-bounce">auto_fix_high</span>
+                    Tính phí tự động
+                </button>
+
+                <button onclick="confirmCheckoutManual()" class="w-full py-4 bg-white text-amber-600 border border-amber-100 rounded-2xl font-black text-sm uppercase shadow-sm active:scale-95 transition-all flex items-center justify-center gap-3 hover:bg-amber-50">
+                    <span class="material-symbols-outlined">touch_app</span>
+                    Tự chọn phí
+                </button>
+
+                <button onclick="confirmCheckoutFree()" class="w-full py-4 bg-gray-100 text-gray-500 rounded-2xl font-bold text-xs uppercase hover:bg-gray-200 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    Không tính thêm (Xí xóa)
+                </button>
+            </div>
+
+            <button onclick="closeSmartCheckout()" class="w-full mt-4 text-center text-xs font-bold text-gray-400 hover:text-gray-600 py-2">
+                Quay lại
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
 
 
 
