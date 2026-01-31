@@ -4660,14 +4660,14 @@ function listenForPayment(code, amount) {
 
     // 2. Lắng nghe trực tiếp vào nhánh payment_events/[Mã_CF]
     // Cách này giúp POS không phải quét toàn bộ danh sách, tiết kiệm pin và nhanh hơn
-    paymentListener = db.ref('payment_events/CF' + code).on('value', (snap) => {
+    paymentListener = db.ref('payment_events/' + code).on('value', (snap) => {
         const data = snap.val();
         
         // Nếu tìm thấy dữ liệu và số tiền khớp hoặc dư
-        if (data && Number(data.amount) >= amount) {
-            console.log("✅ Đã nhận tiền:", code);
-            // --- CHÈN DÒNG NÀY VÀO ĐÂY ---
-            speakSuccess(data.amount); 
+       if (data && data.status === "success" && Number(data.amount) >= amount) {
+        console.log("Đã nhận " + data.amount);
+        
+        speakSuccess(data.amount);
             // -----------------------------
 
             // Cập nhật giao diện thông báo
@@ -7382,6 +7382,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
