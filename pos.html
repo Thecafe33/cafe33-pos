@@ -3372,20 +3372,26 @@ const sortedPCList = [...currentBedList].map((item, idx) => ({...item, originalI
             wrapperClass += "bg-white border-gray-100 text-gray-600 hover:bg-gray-50 hover:shadow-md hover:border-gray-200";
         }
 
-        // Dấu chấm trạng thái
+        // Dấu chấm trạng thái (Giữ nguyên của bà vì đã đúng)
         var statusDot = "";
         if (isCancelled) statusDot = "bg-red-500";
         else if (isDone) statusDot = "bg-gray-400";
         else if (isActive) statusDot = "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]";
         else statusDot = "bg-amber-400";
 
-        // Hiển thị giờ
+        // --- SỬA ĐOẠN HIỂN THỊ GIỜ ---
         var timeDisplay = `${b.start} - ${b.end}`;
-        if (isDone && b.realEndTime) timeDisplay = `Check-out: ${b.realEndTime}`;
-        else if (isCancelled) timeDisplay = statusTextUI;
+        if (isCancelled) {
+            // Nếu hủy thì hiện lý do hủy thay vì giờ
+            timeDisplay = (b.cancelType === 'auto_timeout') ? "QUÁ GIỜ (HỦY)" : "ĐÃ HỦY LỊCH";
+        } else if (isDone && b.realEndTime) {
+            timeDisplay = `Check-out: ${b.realEndTime}`;
+        }
 
-        var bedLabel = (b.bedId && b.bedId != "WAITING") ? `BED 0${b.bedId}` : "CHỜ XẾP";
-
+        // --- SỬA ĐOẠN NHÃN BED (CÁI NÀY QUAN TRỌNG NHẤT) ---
+        // Ưu tiên kiểm tra isCancelled trước để không bị nhảy vào chữ "CHỜ XẾP"
+        var bedLabel = isCancelled ? "HỦY ĐƠN" : ((b.bedId && b.bedId != "WAITING") ? `BED 0${b.bedId}` : "CHỜ XẾP");
+        
         return `
         <div onclick="selectBedItem(${b.originalIndex})" class="${wrapperClass}">
             <div class="flex justify-between items-center mb-1.5">
@@ -7459,6 +7465,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
