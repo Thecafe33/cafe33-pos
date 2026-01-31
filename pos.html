@@ -4651,50 +4651,50 @@ function deletePenalty(phone, bookingId) {
 // --- HÀM LẮNG NGHE TIỀN VỀ TỪ PAYOS (CHÈN MỚI) ---
 // --- HÀM LẮNG NGHE TIỀN VỀ THEO MÃ ĐƠN HÀNG (VIẾT LẠI) ---
 function listenForPayment(code, amount) {
-    // 1. Dọn dẹp các lệnh lắng nghe cũ nếu có
     if (paymentListener) {
-        db.ref('payment_events/' + currentOrderCode).off();
+        db.ref('payment_events').off(); // Xóa bộ lắng nghe cũ
     }
 
-    console.log("🔍 Đang đợi thanh toán cho mã:", code);
+    console.log("🔍 Đang truy tìm mã đơn:", code);
 
-    // 2. Lắng nghe trực tiếp vào nhánh payment_events/[Mã_CF]
-    // Cách này giúp POS không phải quét toàn bộ danh sách, tiết kiệm pin và nhanh hơn
-    paymentListener = db.ref('payment_events/' + code).on('value', (snap) => {
-        const data = snap.val();
-        
-        // Nếu tìm thấy dữ liệu và số tiền khớp hoặc dư
-       if (data && data.status === "success" && Number(data.amount) >= amount) {
-        console.log("Đã nhận " + data.amount);
-        
-        speakSuccess(data.amount);
-            // -----------------------------
+    // Lắng nghe trên toàn bộ nhánh payment_events, lấy 3 thằng mới nhất
+    paymentListener = db.ref('payment_events').limitToLast(3).on('value', (snap) => {
+        const events = snap.val();
+        if (!events) return;
 
-            // Cập nhật giao diện thông báo
-            const statusEl = document.getElementById('qr-status');
-            if(statusEl) {
-                statusEl.innerHTML = `
-                    <div class="flex flex-col items-center animate-bounce">
-                        <span class="text-green-500 text-3xl">✅</span>
-                        <span class="text-green-600 font-black text-sm uppercase">Đã nhận đủ tiền</span>
-                    </div>`;
-            }
-
-            // Đợi 1.5 giây để nhân viên kịp thấy dấu tích xanh rồi tự động đóng
-            setTimeout(() => {
-                document.getElementById('qr-modal')?.classList.add('hidden');
+        // Duyệt qua 3 giao dịch gần nhất
+        Object.keys(events).forEach(key => {
+            const data = events[key];
+            
+            // So khớp: Mã đơn (key hoặc paymentKey) và Số tiền và Trạng thái
+            if (key === code && data.status === "success" && Number(data.amount) >= amount) {
+                console.log("🎯 Đã tìm thấy giao dịch khớp hoàn toàn!");
                 
-                // Gọi hàm thanh toán mặc định của bà để lưu đơn vào Sheet/Firebase Orders
-                if (typeof completeOrder === "function") {
-                    completeOrder(); 
-                }
-            }, 1500);
-
-            // Tắt lắng nghe sau khi đã xong việc
-            db.ref('payment_events/' + code).off();
-            paymentListener = null;
-        }
+                // Thực hiện chốt đơn
+                handlePaymentSuccess(data.amount);
+            }
+        });
     });
+}
+    // Hàm xử lý khi xác nhận thành công
+function handlePaymentSuccess(receivedAmount) {
+    // Ngắt kết nối để không chạy lại lần 2
+    db.ref('payment_events').off();
+    paymentListener = null;
+
+    if (typeof speakSuccess === "function") speakSuccess(receivedAmount); 
+
+    const statusEl = document.getElementById('qr-status');
+    if(statusEl) {
+        statusEl.innerHTML = `<div class="text-green-600 font-black animate-bounce">✅ ĐÃ NHẬN TIỀN!</div>`;
+    }
+
+    setTimeout(() => {
+        document.getElementById('qr-modal')?.classList.add('hidden');
+        if (typeof saveOrderToFirebase === "function") {
+            saveOrderToFirebase('Chuyển khoản');
+        }
+    }, 1500);
 }
 // --- HÀM HIỂN THỊ QR VÀ ĐỢI TIỀN (CHÈN MỚI) ---
 // --- HÀM TẠO QR DÀNH RIÊNG CHO GITHUB / WEB NGOÀI ---
@@ -4747,7 +4747,7 @@ function showPaymentQR() {
             statusEl.innerHTML = '<b class="text-amber-500 animate-pulse">Đang chờ thanh toán...</b>';
             
             // Bắt đầu lắng nghe Firebase Realtime Database
-            listenForPayment(result.orderCodeFull, currentTotal);
+            listenForPayment(currentOrderCode, currentTotal);
         } else {
             alert("Lỗi từ PayOS: " + result.message);
             modal.classList.add('hidden');
@@ -7382,6 +7382,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
