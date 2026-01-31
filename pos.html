@@ -725,6 +725,11 @@ input, button, select, textarea { font-size: 1rem; }
         backdrop-filter: blur(4px) !important;
     }
 }
+    /* Tìm chỗ nào có #view-bed hoặc thêm mới vào <style> */
+#view-bed {
+    height: calc(100vh - 80px) !important; /* Ép toàn bộ khung cao bằng màn hình trừ header */
+    overflow: hidden; /* Không cho cả trang bị cuộn, chỉ cuộn bên trong các cột */
+}
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
@@ -1050,7 +1055,7 @@ input, button, select, textarea { font-size: 1rem; }
         </div>
 
         <div id="col-left-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
-            </div>
+        </div>
 
     </div>
             <div class="w-[50%] flex flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden relative">
@@ -3325,12 +3330,13 @@ function renderLeftColumnList() {
     }
 const sortedPCList = [...currentBedList].map((item, idx) => ({...item, originalIndex: idx}))
 .sort((a, b) => {
+    .sort((a, b) => {
     const getP = (i) => {
         const s = String(i.status || "").toLowerCase();
         if (s.includes('active') || s.includes('đang dùng')) return 1;
         if (!i.bedId || i.bedId == "WAITING" || s.includes('chờ khách')) return 2;
         if (s.includes('đã xong')) return 3;
-        return 4;
+        return 4; // Lịch hủy xuống cuối cùng
     };
     return getP(a) - getP(b);
 });
@@ -3382,7 +3388,7 @@ const sortedPCList = [...currentBedList].map((item, idx) => ({...item, originalI
         var bedLabel = (b.bedId && b.bedId != "WAITING") ? `BED 0${b.bedId}` : "CHỜ XẾP";
 
         return `
-        <div onclick="selectBedItem(${index})" class="${wrapperClass}">
+        <div onclick="selectBedItem(${b.originalIndex})" class="${wrapperClass}">
             <div class="flex justify-between items-center mb-1.5">
                 <span class="font-black text-[10px] opacity-70 uppercase tracking-widest">${bedLabel}</span>
                 <div class="w-2.5 h-2.5 rounded-full ${statusDot}"></div>
@@ -7454,6 +7460,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
