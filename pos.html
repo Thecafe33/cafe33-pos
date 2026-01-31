@@ -4650,44 +4650,52 @@ function deletePenalty(phone, bookingId) {
 }
 // --- HÀM LẮNG NGHE TIỀN VỀ TỪ PAYOS (CHÈN MỚI) ---
 // --- HÀM LẮNG NGHE TIỀN VỀ THEO MÃ ĐƠN HÀNG (VIẾT LẠI) ---
-// 2. Lắng nghe trực tiếp vào nhánh payment_events/[Mã_CF]
-paymentListener = db.ref('payment_events/' + code).on('value', (snap) => {
-    const data = snap.val();
-    
-    // THÊM ĐIỀU KIỆN data.status === 'success'
-    if (data && data.status === 'success' && Number(data.amount) >= amount) {
-        console.log("✅ Xác nhận tiền sạch & đủ:", code);
-        
-        speakSuccess(data.amount); 
-
-        // Hiển thị giao diện thành công...
-        const statusEl = document.getElementById('qr-status');
-        if(statusEl) {
-            statusEl.innerHTML = `
-                <div class="flex flex-col items-center animate-bounce">
-                    <span class="text-green-500 text-3xl">✅</span>
-                    <span class="text-green-600 font-black text-sm uppercase">Thanh toán thành công</span>
-                </div>`;
-        }
-
-        setTimeout(() => {
-            document.getElementById('qr-modal')?.classList.add('hidden');
-            if (typeof completeOrder === "function") {
-                completeOrder(); 
-            }
-        }, 1500);
-
-        db.ref('payment_events/' + code).off();
-        paymentListener = null;
-    } else if (data && data.status === 'pending_verify') {
-        // Thông báo cho nhân viên biết là có giao dịch nhưng cần kiểm tra lại
-        console.warn("⚠️ Giao dịch đang chờ xác thực chữ ký...");
-        const statusEl = document.getElementById('qr-status');
-        if(statusEl) {
-            statusEl.innerText = "Đang xác thực giao dịch...";
-        }
+function listenForPayment(code, amount) {
+    // 1. Dọn dẹp các lệnh lắng nghe cũ nếu có
+    if (paymentListener) {
+        db.ref('payment_events/' + currentOrderCode).off();
     }
-});
+
+    console.log("🔍 Đang đợi thanh toán cho mã:", code);
+
+    // 2. Lắng nghe trực tiếp vào nhánh payment_events/[Mã_CF]
+    // Cách này giúp POS không phải quét toàn bộ danh sách, tiết kiệm pin và nhanh hơn
+    paymentListener = db.ref('payment_events/' + code).on('value', (snap) => {
+        const data = snap.val();
+        
+        // Nếu tìm thấy dữ liệu và số tiền khớp hoặc dư
+        if (data && Number(data.amount) >= amount) {
+            console.log("✅ Đã nhận tiền:", code);
+            // --- CHÈN DÒNG NÀY VÀO ĐÂY ---
+            speakSuccess(data.amount); 
+            // -----------------------------
+
+            // Cập nhật giao diện thông báo
+            const statusEl = document.getElementById('qr-status');
+            if(statusEl) {
+                statusEl.innerHTML = `
+                    <div class="flex flex-col items-center animate-bounce">
+                        <span class="text-green-500 text-3xl">✅</span>
+                        <span class="text-green-600 font-black text-sm uppercase">Đã nhận đủ tiền</span>
+                    </div>`;
+            }
+
+            // Đợi 1.5 giây để nhân viên kịp thấy dấu tích xanh rồi tự động đóng
+            setTimeout(() => {
+                document.getElementById('qr-modal')?.classList.add('hidden');
+                
+                // Gọi hàm thanh toán mặc định của bà để lưu đơn vào Sheet/Firebase Orders
+                if (typeof completeOrder === "function") {
+                    completeOrder(); 
+                }
+            }, 1500);
+
+            // Tắt lắng nghe sau khi đã xong việc
+            db.ref('payment_events/' + code).off();
+            paymentListener = null;
+        }
+    });
+}
 // --- HÀM HIỂN THỊ QR VÀ ĐỢI TIỀN (CHÈN MỚI) ---
 // --- HÀM TẠO QR DÀNH RIÊNG CHO GITHUB / WEB NGOÀI ---
 // --- HÀM TẠO QR (BẢN FIX LỖI ẢNH BỊ GÃY) ---
@@ -7374,7 +7382,5 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
-
-
 
 
