@@ -3329,13 +3329,19 @@ function renderLeftColumnList() {
         return;
     }
 const sortedPCList = [...currentBedList].map((item, idx) => ({...item, originalIndex: idx}))
-    .sort((a, b) => {
+   .sort((a, b) => {
     const getP = (i) => {
         const s = String(i.status || "").toLowerCase();
-        if (s.includes('active') || s.includes('đang dùng')) return 1;
-        if (!i.bedId || i.bedId == "WAITING" || s.includes('chờ khách')) return 2;
-        if (s.includes('đã xong')) return 3;
-        return 4; // Lịch hủy xuống cuối cùng
+        const isCancelled = s.includes('đã hủy');
+        const isDone = s.includes('đã xong');
+        const isActive = s.includes('active') || s.includes('đang dùng');
+        const isWaiting = (!i.bedId || i.bedId == "WAITING") && !isCancelled && !isDone;
+
+        if (isCancelled) return 4;   // Lịch hủy: Hạng 4 (Cuối cùng)
+        if (isActive) return 1;      // Đang dùng: Hạng 1 (Đầu tiên)
+        if (isWaiting) return 2;     // Chờ xếp: Hạng 2
+        if (isDone) return 3;        // Đã xong: Hạng 3
+        return 5;
     };
     return getP(a) - getP(b);
 });
@@ -7465,6 +7471,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
