@@ -3866,8 +3866,10 @@ function handleMobileBedOrder(bookingId) {
 }
 // --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
 // --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
+// --- [FIXED] NÚT GỌI MÓN PC: TỰ NHẢY VIEW & HIỆN THÔNG BÁO GIỎ HÀNG ---
 function showBedDetail(bedId) { 
     var booking = null; 
+    // Tìm booking dựa trên bedId hoặc index đang chọn
     if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId);
     if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex]; 
     
@@ -3879,7 +3881,7 @@ function showBedDetail(bedId) {
     activeOrderingBedId = bedId; 
     pendingBedOrder = booking; 
 
-    // 1. Kiểm tra nợ cũ (Giữ nguyên logic cũ)
+    // 1. Kiểm tra nợ cũ của khách
     if (booking.phone) {
         var cleanPhone = normalizePhone(booking.phone);
         db.ref('customers/' + cleanPhone).once('value', snap => {
@@ -3892,40 +3894,50 @@ function showBedDetail(bedId) {
         });
     }
 
-    // 2. Điền SĐT (Giữ nguyên)
+    // 2. Điền SĐT vào ô nhập liệu
     var sdtInput = document.getElementById('kh-sdt');
     if (sdtInput && booking.phone) {
         sdtInput.value = booking.phone;
         if (typeof checkSdtLive === 'function') checkSdtLive();
     }
 
-    // >>> 3. [MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ ADD VÀO CART <<<
-    autoAddBedItems(booking);
-    // ------------------------------------------------
+    // 3. Tự động thêm các món tiền giờ nếu có logic
+    if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
 
+    // >>> BƯỚC QUAN TRỌNG: CHUYỂN VIEW VÀ ÉP HIỆN SIDEBAR <<<
     switchView('menu'); 
     
-    // (Đoạn tạo thanh thông báo nhỏ - Giữ nguyên)
-    setTimeout(function() { 
-        var cartInfo = document.getElementById('cart-bed-info'); 
-        var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between'); 
-        if (!cartInfo && headerContainer) { 
-            cartInfo = document.createElement('div'); 
-            cartInfo.id = 'cart-bed-info'; 
-            headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling); 
+    // Đảm bảo Sidebar Cart không bị ẩn trên PC
+    const sidebar = document.getElementById('sidebar-cart');
+    if (sidebar) sidebar.classList.remove('hidden');
+
+    // 4. HIỂN THỊ BANNER TRẠNG THÁI TRÊN GIỎ HÀNG
+    var cartInfo = document.getElementById('cart-bed-info'); 
+    var sidebarContainer = document.getElementById('sidebar-cart');
+    
+    // Nếu chưa có thẻ thông báo thì tạo mới chèn vào đầu Sidebar
+    if (!cartInfo && sidebarContainer) { 
+        cartInfo = document.createElement('div'); 
+        cartInfo.id = 'cart-bed-info'; 
+        // Chèn vào trên cùng của sidebar để nhân viên dễ thấy
+        sidebarContainer.insertBefore(cartInfo, sidebarContainer.firstChild); 
+    } 
+    
+    if (cartInfo) { 
+        var guestName = booking.name || "Khách hàng"; 
+        // Style cho Banner thông báo
+        cartInfo.className = "p-3 mb-3 rounded-2xl text-center font-black uppercase text-[10px] tracking-widest animate-pulse border-2"; 
+        
+        if (booking.bedId && booking.bedId != 0 && booking.bedId != "WAITING") { 
+            cartInfo.innerText = `🟢 ĐANG ORDER: BED 0${booking.bedId} - ${guestName}`; 
+            cartInfo.classList.add('bg-green-50', 'text-[#006241]', 'border-[#006241]/20');
+            cartInfo.classList.remove('bg-amber-50', 'text-[#d97706]', 'border-[#d97706]/20');
+        } else { 
+            cartInfo.innerText = `🟠 ĐANG ORDER: KHÁCH CHỜ - ${guestName}`; 
+            cartInfo.classList.add('bg-amber-50', 'text-[#d97706]', 'border-[#d97706]/20');
+            cartInfo.classList.remove('bg-green-50', 'text-[#006241]', 'border-[#006241]/20');
         } 
-        if (cartInfo) { 
-            var guestName = booking.name || "Khách hàng"; 
-            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1"; 
-            if (booking.bedId && booking.bedId != 0) { 
-                cartInfo.innerText = `🟢 BED 0${booking.bedId} - ${guestName}`; 
-                cartInfo.style.color = "#006241"; 
-            } else { 
-                cartInfo.innerText = `🟠 KHÁCH CHỜ - ${guestName}`; 
-                cartInfo.style.color = "#d97706"; 
-            } 
-        } 
-    }, 50);
+    } 
 }
     //--- SỬA LỖI: XẾP BED BỊ RA ĐƠN MỚI UNDEFINED ---
 function finalizeBedCheckIn(bedId) {
@@ -7428,6 +7440,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
