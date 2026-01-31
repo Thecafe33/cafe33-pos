@@ -1041,14 +1041,18 @@ input, button, select, textarea { font-size: 1rem; }
 </div>
 
         <div id="view-bed" class="hidden h-full flex gap-3 bg-[#F2F2F7] p-3 rounded-[24px]">
-            <div class="w-[30%] flex flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden">
-                <div class="px-4 py-3 border-b border-gray-50 bg-white sticky top-0 z-10 flex justify-between items-center">
-                    <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Danh sách</span>
-                    <input type="date" id="date-picker-btn" onchange="changeBedDate(this.value)" 
-       class="text-[10px] font-bold text-[#006241] bg-green-50 px-2 py-1 rounded-md border-none outline-none cursor-pointer hover:bg-green-100 transition-colors">
-                </div>
-                <div id="col-left-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar"></div>
+            <div class="w-[30%] h-full flex flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden">
+        
+        <div class="px-4 py-3 border-b border-gray-50 bg-white sticky top-0 z-10 flex justify-between items-center">
+            <span class="text-xs font-bold text-gray-400 uppercase tracking-widest">Danh sách</span>
+            <input type="date" id="date-picker-btn" onchange="changeBedDate(this.value)" 
+                   class="text-[10px] font-bold text-[#006241] bg-green-50 px-2 py-1 rounded-md border-none outline-none">
+        </div>
+
+        <div id="col-left-list" class="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
             </div>
+
+    </div>
             <div class="w-[50%] flex flex-col bg-white rounded-[20px] shadow-sm border border-gray-100 overflow-hidden relative">
                 <div id="detail-empty-state" class="absolute inset-0 flex flex-col items-center justify-center text-gray-300">
                     <p class="font-medium text-xs">Chọn lịch để xem</p>
@@ -3319,8 +3323,18 @@ function renderLeftColumnList() {
         container.innerHTML = '<div class="text-center text-gray-300 text-[10px] py-10 font-bold uppercase tracking-widest">Không có lịch</div>';
         return;
     }
-
-    container.innerHTML = currentBedList.map(function(b, index) {
+const sortedPCList = [...currentBedList].map((item, idx) => ({...item, originalIndex: idx}))
+.sort((a, b) => {
+    const getP = (i) => {
+        const s = String(i.status || "").toLowerCase();
+        if (s.includes('active') || s.includes('đang dùng')) return 1;
+        if (!i.bedId || i.bedId == "WAITING" || s.includes('chờ khách')) return 2;
+        if (s.includes('đã xong')) return 3;
+        return 4;
+    };
+    return getP(a) - getP(b);
+});
+    container.innerHTML = sortedPCList.map(function(b, index) {
         var isDone = (b.status && b.status.includes('đã xong'));
         var isCancelled = (b.status && b.status.includes('đã hủy'));
         var isActive = (b.status && (b.status.includes('active') || b.status.includes('đang dùng')));
@@ -7440,6 +7454,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
