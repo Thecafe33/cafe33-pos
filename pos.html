@@ -5265,6 +5265,7 @@ function changeBedDateMobile(dateVal) {
 }
 
 // 3. Render List (Giữ nguyên)
+// --- [FIXED] HÀM RENDER DANH SÁCH BED MOBILE (MÀU SẮC & SẮP XẾP) ---
 function renderMobileBedList(list) {
     const container = document.getElementById('mob-bed-list-container');
     if(!container) return;
@@ -5274,37 +5275,82 @@ function renderMobileBedList(list) {
         return;
     }
 
-    container.innerHTML = list.map(b => {
-        const isWaiting = !b.bedId || b.bedId == "WAITING";
-        const isActive = b.status === 'active' || (b.status && b.status.includes('active'));
-        const isDone = b.status === 'đã xong';
+    // --- BƯỚC 1: LOGIC SẮP XẾP (Ưu tiên vận hành) ---
+    // Thứ tự: Đang dùng (1) > Chờ xếp (2) > Đã xong (3) > Đã hủy (4)
+    const sortedList = [...list].sort((a, b) => {
+        const getPriority = (item) => {
+            const status = String(item.status || "").toLowerCase();
+            const isWaiting = !item.bedId || item.bedId == "WAITING";
+            
+            if (status.includes('đã hủy')) return 4;
+            if (status.includes('đã xong')) return 3;
+            if (status.includes('active') || status.includes('đang dùng')) return 1;
+            if (isWaiting || status.includes('chờ khách')) return 2;
+            return 5;
+        };
+        return getPriority(a) - getPriority(b);
+    });
+
+    // --- BƯỚC 2: RENDER VỚI BẢNG MÀU MỚI ---
+    container.innerHTML = sortedList.map(b => {
+        const status = String(b.status || "").toLowerCase();
+        const isCancelled = status.includes('đã hủy');
+        const isDone = status.includes('đã xong');
+        const isActive = status.includes('active') || status.includes('đang dùng');
+        const isWaiting = (!b.bedId || b.bedId == "WAITING") && !isCancelled && !isDone;
         
-        let cardBg = "bg-white", titleColor = "text-slate-900";
-        let statusText = isWaiting ? "CHỜ XẾP" : `BED 0${b.bedId}`;
-        let statusColor = isWaiting ? "text-amber-600" : "text-slate-500";
-        let dotColor = isWaiting ? "bg-amber-500" : (isActive ? "bg-green-500 animate-pulse" : "bg-slate-300");
-        
-        if (isWaiting) {
-            cardBg = "bg-[#064E3B]"; titleColor = "text-white"; statusText = "CHỜ XẾP";
-            statusColor = "text-emerald-200/80"; dotColor = "bg-red-500 border-2 border-[#064E3B]";
+        let cardBg = "bg-white", 
+            titleColor = "text-slate-900", 
+            subColor = "text-slate-500",
+            dotColor = "bg-slate-300",
+            statusLabel = b.bedId && b.bedId != "WAITING" ? `BED 0${b.bedId}` : "CHỜ XẾP";
+
+        // 1. Lịch Hủy: Nền đỏ nhạt
+        if (isCancelled) {
+            cardBg = "bg-red-50 border-red-100";
+            titleColor = "text-red-900";
+            subColor = "text-red-400";
+            dotColor = "bg-red-500";
+            statusLabel = "ĐÃ HỦY";
+        }
+        // 2. Lịch Đang Dùng: Nền xanh lá
+        else if (isActive) {
+            cardBg = "bg-[#E6F4F1] border-[#bce3db]"; // Xanh Starbucks nhạt
+            titleColor = "text-[#006241]";
+            subColor = "text-[#006241]/70";
+            dotColor = "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]";
+        }
+        // 3. Lịch Chờ Xếp: Nền vàng nhạt
+        else if (isWaiting) {
+            cardBg = "bg-amber-50 border-amber-100";
+            titleColor = "text-amber-900";
+            subColor = "text-amber-600/70";
+            dotColor = "bg-amber-500";
+            statusLabel = "CHỜ XẾP";
+        }
+        // 4. Lịch Đã Xong (Mặc định): Nền trắng
+        else if (isDone) {
+            cardBg = "bg-white border-slate-100";
+            titleColor = "text-slate-400";
+            subColor = "text-slate-300";
+            dotColor = "bg-slate-200";
         }
 
         return `
-        <div onclick="showMobileBedDetail('${b.id}')" class="${cardBg} squircle p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] active:scale-[0.98] transition-transform border border-slate-100/50 relative overflow-hidden">
+        <div onclick="showMobileBedDetail('${b.id}')" 
+             class="${cardBg} squircle p-5 shadow-sm active:scale-[0.98] transition-all border relative overflow-hidden mb-3">
             <div class="flex justify-between items-start mb-1.5 relative z-10">
-                <span class="text-[11px] font-bold tracking-widest uppercase ${statusColor}">${statusText}</span>
+                <span class="text-[10px] font-black tracking-[0.15em] uppercase ${subColor}">${statusLabel}</span>
                 <div class="w-2.5 h-2.5 rounded-full ${dotColor}"></div>
             </div>
-            <h3 class="text-xl font-bold mb-3 ${titleColor} relative z-10">${b.name}</h3>
-            <div class="flex items-center gap-2 text-sm ${isWaiting ? 'text-white/70' : 'text-slate-500'} relative z-10">
-                <span class="material-symbols-outlined text-base">schedule</span>
-                <span class="font-medium">Check-out: ${isDone ? (b.realEndTime || b.end) : b.end}</span>
+            <h3 class="text-xl font-black mb-2 ${titleColor} relative z-10 tracking-tight leading-none">${b.name}</h3>
+            <div class="flex items-center gap-2 text-xs ${subColor} relative z-10 font-bold">
+                <span class="material-symbols-outlined text-[14px]">schedule</span>
+                <span>${isDone ? "Check-out lúc: " + (b.realEndTime || b.end) : b.start + " - " + b.end}</span>
             </div>
-            ${isWaiting ? '<div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full z-0"></div>' : ''}
         </div>`;
     }).join('');
 }
-
 // 4. Show Detail (Đã update nút Back & Logic ẩn 3 chấm)
 function showMobileBedDetail(bookingId) {
     const booking = globalAllBookings.find(b => b.id === bookingId);
@@ -7382,6 +7428,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
