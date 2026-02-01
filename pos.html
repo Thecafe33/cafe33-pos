@@ -988,8 +988,10 @@ input, button, select, textarea { font-size: 1rem; }
                     
                     <div class="flex-1 min-w-0 flex flex-col justify-center">
                         <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Khách hàng / Tích điểm</label>
-                        <input type="tel" id="pay-sdt-mobile" oninput="syncMobileInputs()" placeholder="Nhập SĐT..." 
-                               class="w-full bg-transparent border-none text-slate-900 text-3xl font-black p-0 outline-none placeholder:text-gray-300 placeholder:font-bold h-auto leading-none focus:ring-0">
+                       <input type="tel" id="pay-sdt-mobile" oninput="syncMobileInputs()" placeholder="Nhập SĐT..." 
+           class="w-full bg-transparent border-none text-slate-900 text-3xl font-black p-0 outline-none placeholder:text-gray-300 placeholder:font-bold h-auto leading-none focus:ring-0">
+    
+    <div id="suggest-mobile" class="hidden absolute top-full left-0 w-full bg-white border border-gray-100 rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto custom-scrollbar mt-2"></div>
                     </div>
                 </div>
                 <div id="pay-cust-name-mobile" class="h-0 overflow-hidden transition-all duration-300"></div>
@@ -1346,8 +1348,13 @@ input, button, select, textarea { font-size: 1rem; }
     </div>
 
     <div id="cart-top-section" class="block md:block">
-        <input type="tel" id="kh-sdt" oninput="checkSdtLive()" placeholder="SĐT khách..." class="w-full p-3 bg-gray-50 rounded-xl mb-3 outline-none border-2 border-gray-50 text-center font-bold text-base focus:border-[#006241]">
-        <p id="sdt-status" class="text-[8px] font-black uppercase mb-3 text-center"></p>
+       <div class="relative w-full">
+    <input type="tel" id="kh-sdt" oninput="checkSdtLive()" placeholder="SĐT khách..." 
+           class="w-full p-3 bg-gray-50 rounded-xl mb-1 outline-none border-2 border-gray-50 text-center font-bold text-base focus:border-[#006241]">
+    
+    <div id="suggest-pc" class="hidden absolute top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar mt-1"></div>
+</div>
+<p id="sdt-status" class="text-[8px] font-black uppercase mb-3 text-center"></p>
     </div>
 
     <div id="cart-list" class="flex-1 overflow-y-auto space-y-1.5 mb-3 pr-1 text-left custom-scrollbar transition-all"></div>
@@ -4330,7 +4337,7 @@ function checkSdtLive() {
     const sdtInput = document.getElementById('kh-sdt');
     const sdt = sdtInput.value.toString().trim(); // Xóa khoảng trắng thừa cho chắc
     const status = document.getElementById('sdt-status');
-
+renderCustomerSuggestions(sdt, 'pc');
     // 2. Reset nếu xóa trắng hoặc chưa đủ số
     if (sdt.length < 3) { // Để 3 hoặc 10 tùy bạn, thường reset sớm cho đẹp
         status.innerText = "";
@@ -5072,6 +5079,7 @@ function toggleCartExpand() {
 function syncMobileInputs() {
     // 1. Đồng bộ SĐT
     var sdtMob = document.getElementById('pay-sdt-mobile').value;
+    renderCustomerSuggestions(sdtMob, 'mobile');
     var sdtMain = document.getElementById('kh-sdt');
     if (sdtMain) {
         sdtMain.value = sdtMob;
@@ -7212,6 +7220,89 @@ function resetOrderingMode() {
 
     console.log("Đã thoát chế độ Order Bed - Trở về khách vãng lai");
 }
+  // =========================================================
+// LOGIC GỢI Ý KHÁCH HÀNG (AUTOCOMPLETE)
+// =========================================================
+
+function renderCustomerSuggestions(inputVal, type) {
+    // 1. Xác định container
+    var containerId = (type === 'pc') ? 'suggest-pc' : 'suggest-mobile';
+    var container = document.getElementById(containerId);
+    if (!container) return;
+
+    // 2. Làm sạch input
+    var keyword = inputVal.replace(/[^0-9]/g, '');
+
+    // Nếu nhập ít hơn 3 số thì ẩn đi cho đỡ rối
+    if (keyword.length < 3) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+    }
+
+    // 3. Tìm kiếm trong CustomerMap
+    // Chuyển map thành mảng để lọc (Giới hạn 5 kết quả đầu tiên để không bị lag)
+    var matches = Object.keys(customerMap).filter(phone => phone.includes(keyword)).slice(0, 5);
+
+    if (matches.length === 0) {
+        container.classList.add('hidden');
+        return;
+    }
+
+    // 4. Vẽ HTML
+    var html = matches.map(phone => {
+        var cust = customerMap[phone];
+        var name = cust.name || "Khách lẻ";
+        // Highlight số điện thoại trùng khớp (cho đẹp)
+        var phoneDisplay = phone.replace(keyword, `<span class="text-[#006241] font-black">${keyword}</span>`);
+
+        return `
+        <div onclick="selectSuggestion('${phone}', '${type}')" 
+             class="p-3 border-b border-gray-100 hover:bg-green-50 cursor-pointer flex justify-between items-center group transition-colors">
+            <div class="flex flex-col text-left">
+                <span class="text-sm font-bold text-gray-800 group-hover:text-[#006241]">${name}</span>
+                <span class="text-xs text-gray-400 font-mono tracking-wider">${phoneDisplay}</span>
+            </div>
+            <span class="material-symbols-outlined text-gray-300 text-sm group-hover:text-[#006241]">north_west</span>
+        </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
+    container.classList.remove('hidden');
+}
+
+// Hàm chọn khách từ danh sách gợi ý
+function selectSuggestion(phone, type) {
+    // 1. Điền vào ô input tương ứng
+    if (type === 'pc') {
+        var input = document.getElementById('kh-sdt');
+        if(input) {
+            input.value = phone;
+            checkSdtLive(); // Kích hoạt kiểm tra ngay
+        }
+        document.getElementById('suggest-pc').classList.add('hidden');
+    } else {
+        var input = document.getElementById('pay-sdt-mobile');
+        if(input) {
+            input.value = phone;
+            syncMobileInputs(); // Kích hoạt đồng bộ ngay
+        }
+        document.getElementById('suggest-mobile').classList.add('hidden');
+    }
+}
+
+// Ẩn gợi ý khi click ra ngoài (UX)
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#kh-sdt') && !e.target.closest('#suggest-pc')) {
+        var pc = document.getElementById('suggest-pc');
+        if(pc) pc.classList.add('hidden');
+    }
+    if (!e.target.closest('#pay-sdt-mobile') && !e.target.closest('#suggest-mobile')) {
+        var mb = document.getElementById('suggest-mobile');
+        if(mb) mb.classList.add('hidden');
+    }
+});  
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -7696,6 +7787,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
