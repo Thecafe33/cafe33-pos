@@ -1573,15 +1573,24 @@ input, button, select, textarea { font-size: 1rem; }
                 </div>
                 
                 <div id="mode-endtime-box" class="hidden animate-fade-in">
-                    <div class="relative group">
-                        <input type="time" id="manual-end-time"
-                            class="w-full h-20 bg-white border-2 border-gray-200 rounded-[24px] text-3xl font-black text-[#006241] text-center focus:border-[#006241] outline-none shadow-sm flex items-center justify-center px-4">
-                        <span class="absolute top-1/2 left-6 -translate-y-1/2 text-gray-400 pointer-events-none">
-                            <span class="material-symbols-outlined">schedule</span>
-                        </span>
-                         <p class="text-center text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-widest" id="calculated-time-hint">Hệ thống sẽ tự tính tiền</p>
-                    </div>
-                </div>
+    <div class="flex items-center gap-3">
+        <div class="relative flex-1 group">
+            <input type="tel" id="custom-hour" maxlength="2" placeholder="--" oninput="formatTimeInput(this); calculateDurationFromTime()"
+                class="w-full h-20 bg-white border-2 border-gray-200 rounded-[24px] text-4xl font-black text-[#006241] text-center focus:border-[#006241] outline-none shadow-sm transition-all placeholder:text-gray-200">
+            <span class="absolute top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-400 uppercase tracking-widest pointer-events-none">Giờ</span>
+        </div>
+
+        <span class="text-4xl font-black text-gray-300 pb-2">:</span>
+
+        <div class="relative flex-1 group">
+            <input type="tel" id="custom-minute" maxlength="2" placeholder="--" oninput="formatTimeInput(this); calculateDurationFromTime()"
+                class="w-full h-20 bg-white border-2 border-gray-200 rounded-[24px] text-4xl font-black text-[#006241] text-center focus:border-[#006241] outline-none shadow-sm transition-all placeholder:text-gray-200">
+            <span class="absolute top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold text-gray-400 uppercase tracking-widest pointer-events-none">Phút</span>
+        </div>
+    </div>
+    
+    <p class="text-center text-[10px] font-bold text-gray-400 mt-3 uppercase tracking-widest" id="calculated-time-hint">Hệ thống sẽ tự tính tiền</p>
+</div>
 
                 <input type="hidden" id="final_duration_minutes" value="60">
             </div>
@@ -1608,7 +1617,18 @@ function findCustomerByPhone(phone){
     if(!key) return null;
     return customerMap[key] || null;
 }
+// --- HÀM FORMAT Ô NHẬP GIỜ/PHÚT ---
+function formatTimeInput(input) {
+    // Chỉ cho nhập số
+    input.value = input.value.replace(/[^0-9]/g, '');
+    
+    // Giới hạn giá trị hợp lý
+    var val = parseInt(input.value);
+    if (isNaN(val)) return;
 
+    if (input.id === 'custom-hour' && val > 23) input.value = '23';
+    if (input.id === 'custom-minute' && val > 59) input.value = '59';
+}
 
 // =========================================================
 // 1. CẤU HÌNH & KẾT NỐI FIREBASE
@@ -4272,11 +4292,15 @@ function submitNewBooking() {
     if (boxDur && !boxDur.classList.contains('hidden')) {
         durationMinutes = (typeof selectedDurationHours !== 'undefined' ? selectedDurationHours : 1) * 60;
     } else {
-        var timeStr = document.getElementById('manual-end-time').value;
-        if (!timeStr) return alert("Vui lòng chọn giờ về!");
-        var parts = timeStr.split(':');
+        // [FIX MỚI] Logic nhập tay giờ về
+        var hh = document.getElementById('custom-hour').value;
+        var mm = document.getElementById('custom-minute').value;
+        
+        if (!hh || !mm) return alert("Vui lòng nhập đầy đủ giờ và phút về!");
+        
         var end = new Date(); 
-        end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
+        end.setHours(parseInt(hh), parseInt(mm), 0);
+        
         if (end <= now) return alert("Giờ về phải lớn hơn giờ hiện tại!");
         durationMinutes = Math.floor((end - now) / 60000);
     }
@@ -4363,8 +4387,30 @@ function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); 
 function startPanelCountdown(endTimeStr) { stopPanelCountdown(); var clockEl = document.getElementById('detail-countdown'); if(!clockEl) return; var timeParts = endTimeStr.split(':'); if(timeParts.length < 2) return; var endDate = new Date(); endDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0); bedCountdownInterval = setInterval(function() { var diff = endDate - new Date(); var isOver = diff < 0; diff = Math.abs(diff); var h = Math.floor(diff / 3600000); var m = Math.floor((diff % 3600000) / 60000); var s = Math.floor((diff % 60000) / 1000); var fmt = v => v < 10 ? "0"+v : v; clockEl.innerText = (isOver ? '-' : '') + fmt(h) + ":" + fmt(m) + ":" + fmt(s); clockEl.className = isOver ? "text-3xl font-black text-red-500 font-mono tracking-tighter" : "text-3xl font-black text-[#006241] font-mono tracking-tighter"; }, 1000); }
 function stopPanelCountdown() { if (bedCountdownInterval) clearInterval(bedCountdownInterval); }
 function switchTimeMode(mode) { var btnDur = document.getElementById('tab-duration'); var btnFix = document.getElementById('tab-fixed'); var divDur = document.getElementById('mode-duration'); var divFix = document.getElementById('mode-fixed'); if (mode === 'duration') { btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#006241]"; btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divDur.classList.remove('hidden'); divFix.classList.add('hidden'); document.getElementById('final_duration_minutes').value = 60; } else { btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#006241]"; btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divFix.classList.remove('hidden'); divDur.classList.add('hidden'); var now = new Date(); now.setMinutes(now.getMinutes() + 90); var hh = ("0" + now.getHours()).slice(-2); var mm = ("0" + now.getMinutes()).slice(-2); document.getElementById('custom_end_time').value = `${hh}:${mm}`; calculateDurationFromTime(); } }
-function calculateDurationFromTime() { var timeStr = document.getElementById('custom_end_time').value; if (!timeStr) return; var now = new Date(); var parts = timeStr.split(':'); var end = new Date(); end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0); var diffMins = Math.floor((end - now) / 60000); if (diffMins <= 0) { document.getElementById('calculated-time-hint').innerText = "⚠️ Giờ về phải sau giờ hiện tại"; document.getElementById('final_duration_minutes').value = 0; } else { document.getElementById('calculated-time-hint').innerText = `Tổng cộng: ${Math.floor(diffMins/60)}h ${diffMins%60}p`; document.getElementById('final_duration_minutes').value = diffMins; } }
-// ================= CUSTOMER LOOKUP =================
+function calculateDurationFromTime() { 
+    // [FIX MỚI] Lấy dữ liệu từ 2 ô input
+    var h = document.getElementById('custom-hour').value;
+    var m = document.getElementById('custom-minute').value;
+    
+    if (!h || !m) return; 
+    
+    var now = new Date(); 
+    var end = new Date(); 
+    end.setHours(parseInt(h), parseInt(m), 0); 
+    
+    var diffMins = Math.floor((end - now) / 60000); 
+    
+    if (diffMins <= 0) { 
+        document.getElementById('calculated-time-hint').innerText = "⚠️ Giờ về phải sau giờ hiện tại"; 
+        document.getElementById('calculated-time-hint').className = "text-center text-[10px] font-bold text-red-500 mt-3 uppercase tracking-widest";
+        document.getElementById('final_duration_minutes').value = 0; 
+    } else { 
+        document.getElementById('calculated-time-hint').innerText = `Tổng cộng: ${Math.floor(diffMins/60)}h ${diffMins%60}p`; 
+        document.getElementById('calculated-time-hint').className = "text-center text-[10px] font-bold text-gray-400 mt-3 uppercase tracking-widest";
+        document.getElementById('final_duration_minutes').value = diffMins; 
+    } 
+}
+    // ================= CUSTOMER LOOKUP =================
 
 function normalizePhone(p){
     return String(p || "").replace(/[^0-9]/g, "");
@@ -4425,16 +4471,19 @@ function toggleTimeMode(mode) {
         if(boxDur) boxDur.classList.add('hidden');
         
         // Auto set giờ gợi ý (Hiện tại + 90p)
-        var now = new Date();
-        now.setMinutes(now.getMinutes() + 90);
-        var hh = ("0" + now.getHours()).slice(-2);
-        var mm = ("0" + now.getMinutes()).slice(-2);
-        var timeInput = document.getElementById('custom_end_time') || document.getElementById('manual-end-time');
-        if(timeInput) {
-            timeInput.value = `${hh}:${mm}`;
-            if(typeof calculateDurationFromTime === 'function') calculateDurationFromTime();
+       var now = new Date(); 
+        now.setMinutes(now.getMinutes() + 90); 
+        var hh = ("0" + now.getHours()).slice(-2); 
+        var mm = ("0" + now.getMinutes()).slice(-2); 
+        
+        var elH = document.getElementById('custom-hour');
+        var elM = document.getElementById('custom-minute');
+        if(elH && elM) {
+            elH.value = hh;
+            elM.value = mm;
+            calculateDurationFromTime(); // Tính toán luôn
         }
-    }
+    } 
 }
 
 
@@ -7797,6 +7846,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
