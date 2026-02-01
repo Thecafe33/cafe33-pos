@@ -1502,15 +1502,18 @@ input, button, select, textarea { font-size: 1rem; }
                 
                 <div class="space-y-4">
                     <div class="relative w-full">
-                        <input type="tel" id="new_cust_phone" placeholder=" " oninput="autoFillCustomer()"
-                            class="peer w-full h-[64px] pt-6 pb-2 px-5 bg-[#F2F4F7] rounded-[20px] text-xl font-black text-[#1e3932] outline-none border-2 border-transparent focus:border-[#006241] focus:bg-white transition-all placeholder-transparent shadow-sm">
-                        <label class="absolute left-5 top-4 text-[10px] text-[#006241] font-bold uppercase tracking-wider transition-all 
-                                    peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:font-medium peer-placeholder-shown:normal-case 
-                                    peer-focus:top-4 peer-focus:-translate-y-0 peer-focus:text-[10px] peer-focus:text-[#006241] peer-focus:font-bold peer-focus:uppercase pointer-events-none">
-                            Số điện thoại
-                        </label>
-                        <span class="material-symbols-outlined absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">dialpad</span>
-                    </div>
+                        <input type="tel" id="new_cust_phone" placeholder=" " oninput="handleBookingInput()"
+        class="peer w-full h-[64px] pt-6 pb-2 px-5 bg-[#F2F4F7] rounded-[20px] text-xl font-black text-[#1e3932] outline-none border-2 border-transparent focus:border-[#006241] focus:bg-white transition-all placeholder-transparent shadow-sm">
+    
+    <label class="absolute left-5 top-4 text-[10px] text-[#006241] font-bold uppercase tracking-wider transition-all 
+                peer-placeholder-shown:top-1/2 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:text-base peer-placeholder-shown:text-gray-400 peer-placeholder-shown:font-medium peer-placeholder-shown:normal-case 
+                peer-focus:top-4 peer-focus:-translate-y-0 peer-focus:text-[10px] peer-focus:text-[#006241] peer-focus:font-bold peer-focus:uppercase pointer-events-none">
+        Số điện thoại
+    </label>
+    <span class="material-symbols-outlined absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">dialpad</span>
+
+    <div id="suggest-booking" class="hidden absolute top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto custom-scrollbar mt-1"></div>
+                            </div>
 
                     <div class="relative w-full">
                         <input type="text" id="new_cust_name" placeholder=" " value="Khách vãng lai"
@@ -7224,24 +7227,36 @@ function resetOrderingMode() {
 // LOGIC GỢI Ý KHÁCH HÀNG (AUTOCOMPLETE)
 // =========================================================
 
+// =========================================================
+// LOGIC GỢI Ý KHÁCH HÀNG (AUTOCOMPLETE) - BẢN NÂNG CẤP
+// =========================================================
+
+// 1. Hàm xử lý Input cho Booking (Vừa AutoFill vừa Gợi ý)
+function handleBookingInput() {
+    autoFillCustomer(); // Logic điền tên cũ
+    var val = document.getElementById('new_cust_phone').value;
+    renderCustomerSuggestions(val, 'booking'); // Logic gợi ý mới
+}
+
+// 2. Hàm Vẽ danh sách gợi ý (Updated)
 function renderCustomerSuggestions(inputVal, type) {
-    // 1. Xác định container
-    var containerId = (type === 'pc') ? 'suggest-pc' : 'suggest-mobile';
+    // Xác định container dựa trên type
+    var containerId = '';
+    if (type === 'pc') containerId = 'suggest-pc';
+    else if (type === 'mobile') containerId = 'suggest-mobile';
+    else if (type === 'booking') containerId = 'suggest-booking'; // <--- Thêm dòng này
+
     var container = document.getElementById(containerId);
     if (!container) return;
 
-    // 2. Làm sạch input
     var keyword = inputVal.replace(/[^0-9]/g, '');
 
-    // Nếu nhập ít hơn 3 số thì ẩn đi cho đỡ rối
     if (keyword.length < 3) {
         container.classList.add('hidden');
         container.innerHTML = '';
         return;
     }
 
-    // 3. Tìm kiếm trong CustomerMap
-    // Chuyển map thành mảng để lọc (Giới hạn 5 kết quả đầu tiên để không bị lag)
     var matches = Object.keys(customerMap).filter(phone => phone.includes(keyword)).slice(0, 5);
 
     if (matches.length === 0) {
@@ -7249,11 +7264,9 @@ function renderCustomerSuggestions(inputVal, type) {
         return;
     }
 
-    // 4. Vẽ HTML
     var html = matches.map(phone => {
         var cust = customerMap[phone];
         var name = cust.name || "Khách lẻ";
-        // Highlight số điện thoại trùng khớp (cho đẹp)
         var phoneDisplay = phone.replace(keyword, `<span class="text-[#006241] font-black">${keyword}</span>`);
 
         return `
@@ -7272,37 +7285,43 @@ function renderCustomerSuggestions(inputVal, type) {
     container.classList.remove('hidden');
 }
 
-// Hàm chọn khách từ danh sách gợi ý
+// 3. Hàm Chọn khách (Updated)
 function selectSuggestion(phone, type) {
-    // 1. Điền vào ô input tương ứng
     if (type === 'pc') {
         var input = document.getElementById('kh-sdt');
-        if(input) {
-            input.value = phone;
-            checkSdtLive(); // Kích hoạt kiểm tra ngay
-        }
+        if(input) { input.value = phone; checkSdtLive(); }
         document.getElementById('suggest-pc').classList.add('hidden');
-    } else {
+    } 
+    else if (type === 'mobile') {
         var input = document.getElementById('pay-sdt-mobile');
-        if(input) {
-            input.value = phone;
-            syncMobileInputs(); // Kích hoạt đồng bộ ngay
-        }
+        if(input) { input.value = phone; syncMobileInputs(); }
         document.getElementById('suggest-mobile').classList.add('hidden');
+    }
+    else if (type === 'booking') { // <--- Thêm logic cho Booking
+        var input = document.getElementById('new_cust_phone');
+        if(input) { 
+            input.value = phone; 
+            autoFillCustomer(); // Tự điền tên và người đi cùng
+        }
+        document.getElementById('suggest-booking').classList.add('hidden');
     }
 }
 
-// Ẩn gợi ý khi click ra ngoài (UX)
+// 4. Ẩn khi click ra ngoài (Updated)
 document.addEventListener('click', function(e) {
+    // PC
     if (!e.target.closest('#kh-sdt') && !e.target.closest('#suggest-pc')) {
-        var pc = document.getElementById('suggest-pc');
-        if(pc) pc.classList.add('hidden');
+        document.getElementById('suggest-pc')?.classList.add('hidden');
     }
+    // Mobile
     if (!e.target.closest('#pay-sdt-mobile') && !e.target.closest('#suggest-mobile')) {
-        var mb = document.getElementById('suggest-mobile');
-        if(mb) mb.classList.add('hidden');
+        document.getElementById('suggest-mobile')?.classList.add('hidden');
     }
-});  
+    // Booking Modal (Mới)
+    if (!e.target.closest('#new_cust_phone') && !e.target.closest('#suggest-booking')) {
+        document.getElementById('suggest-booking')?.classList.add('hidden');
+    }
+});
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -7787,6 +7806,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
