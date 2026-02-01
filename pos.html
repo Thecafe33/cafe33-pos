@@ -851,21 +851,7 @@ input, button, select, textarea { font-size: 1rem; }
 <div class="hidden md:flex px-8 py-6 border-b border-gray-50 bg-white z-10 shrink-0 items-center gap-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]" id="header-bar-pc">
     
     <h2 class="brand-font text-4xl text-[#006241] whitespace-nowrap cursor-pointer hover:opacity-80 transition-all tracking-tighter" onclick="switchView('menu')">The cafe 33</h2>
-    <div id="bed-dynamic-island" class="hidden flex-1 max-w-xl bg-[#1e3932] rounded-3xl py-2 px-6 items-center gap-4 animate-slide-up border border-white/10 shadow-lg">
-        <div class="flex items-center justify-center w-10 h-10 bg-white/10 rounded-full shrink-0">
-            <span class="material-symbols-outlined text-white text-xl">bedtime</span>
-        </div>
-        <div class="flex-1 min-w-0">
-            <p id="island-cust-name" class="text-white font-black text-sm uppercase truncate">Tên khách hàng</p>
-            <p id="island-time-range" class="text-emerald-300/80 text-[10px] font-bold tracking-widest">00:00 - 00:00</p>
-        </div>
-        <div class="bg-emerald-500 px-4 py-1 rounded-2xl shrink-0">
-            <span id="island-duration" class="text-white font-black text-xs uppercase tracking-tighter">0 Tiếng</span>
-        </div>
-        <button onclick="resetOrderingMode()" class="text-white/40 hover:text-white transition-colors shrink-0">
-            <span class="material-symbols-outlined text-xl">close</span>
-        </button>
-    </div>
+  
     <div class="flex items-center gap-3">
         <button id="btn-nav-revenue" onclick="openRevenue()" class="bg-gray-100 text-gray-400 px-6 py-3 rounded-2xl text-[11px] font-black uppercase hover:bg-gray-200 active:scale-95 transition-all tracking-widest">
             Doanh thu
@@ -877,7 +863,21 @@ input, button, select, textarea { font-size: 1rem; }
             Quản lý Bed
         </button>
     </div>
-
+  <div id="bed-dynamic-island" class="hidden flex-1 max-w-md bg-[#1e3932] rounded-full py-1.5 px-5 items-center gap-3 animate-slide-up border border-white/10 shadow-lg ml-4">
+        <div class="flex items-center justify-center w-8 h-8 bg-white/10 rounded-full shrink-0">
+            <span class="material-symbols-outlined text-white text-lg">bedtime</span>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p id="island-cust-name" class="text-white font-black text-[11px] uppercase truncate">Tên khách</p>
+            <p id="island-time-range" class="text-emerald-300/80 text-[9px] font-bold tracking-widest">00:00 - 00:00</p>
+        </div>
+        <div class="bg-emerald-500 px-3 py-0.5 rounded-full shrink-0">
+            <span id="island-duration" class="text-white font-black text-[9px] uppercase">0 Tiếng</span>
+        </div>
+        <button onclick="resetOrderingMode()" class="text-white/40 hover:text-white transition-colors shrink-0 ml-1">
+            <span class="material-symbols-outlined text-lg">close</span>
+        </button>
+    </div>
 </div>
    <div id="view-menu" class="flex-1 flex flex-col overflow-hidden relative bg-[#F2F2F7]">
 
@@ -7035,11 +7035,31 @@ function getDurationLabel(start, end) {
 
 // --- HÀM RESET CHẾ ĐỘ ORDER (KHI BẤM NÚT X TRÊN ĐẢO) ---
 function resetOrderingMode() {
+    // 1. Reset các biến trạng thái
     pendingBedOrder = null;
     activeOrderingBedId = null;
-    document.getElementById('bed-dynamic-island').classList.add('hidden');
+    isCheckoutFlow = false;
+
+    // 2. Ẩn Đảo động
+    const island = document.getElementById('bed-dynamic-island');
+    if (island) island.classList.add('hidden');
+    
+    // 3. Xóa Banner giỏ hàng
     const cartInfo = document.getElementById('cart-bed-info');
     if (cartInfo) cartInfo.remove();
+
+    // 4. Xóa SĐT tại ô nhập liệu và reset trạng thái SĐT
+    const sdtInput = document.getElementById('kh-sdt');
+    if (sdtInput) {
+        sdtInput.value = "";
+        // Nếu bà có hàm checkSdtLive thì gọi để nó xóa thông tin khách cũ trên giỏ hàng
+        if (typeof checkSdtLive === 'function') checkSdtLive(); 
+    }
+    
+    const sdtStatus = document.getElementById('sdt-status');
+    if (sdtStatus) sdtStatus.innerText = "";
+
+    console.log("Đã thoát chế độ Order Bed - Trở về khách vãng lai");
 }
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
@@ -7525,6 +7545,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
