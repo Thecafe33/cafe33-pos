@@ -413,6 +413,7 @@ function login() {
 
 // --- [FIX] SHOW DASHBOARD (TỰ ĐIỀN THÔNG TIN NGƯỜI ĐI CÙNG) ---
 // --- [FIX] SHOW DASHBOARD (LẤY DATA GIỐNG POS & TỰ ĐIỀN VÀO ĐẶT BED) ---
+// --- [FIX FINAL] SHOW DASHBOARD (ÉP BUỘC HIỂN THỊ DỮ LIỆU) ---
 function showDashboard(phone) {
     curPhone = phone;
     document.getElementById('login-screen').classList.add('hidden');
@@ -428,7 +429,7 @@ function showDashboard(phone) {
             document.getElementById('user-name-display').innerText = userData.name || "Khách hàng";
             document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
             
-            // Xếp hạng (Rank)
+            // Xếp hạng
             let p = userData.points || 0;
             let r = "Thành viên";
             if (p >= 55000) r = "Thành viên 'siu thân'";
@@ -437,32 +438,28 @@ function showDashboard(phone) {
             document.getElementById('user-rank').innerText = r;
 
             // ============================================================
-            // 🔄 ĐỒNG BỘ DỮ LIỆU NGƯỜI ĐI CÙNG (LOGIC GIỐNG POS)
+            // 🔄 ĐỒNG BỘ DỮ LIỆU (CƠ CHẾ GHI ĐÈ)
             // ============================================================
             
-            // POS dùng key: 'companionName' và 'companionPhone'
-            // Code này sẽ ưu tiên lấy đúng key đó
+            // Lấy dữ liệu (Ưu tiên key của POS trước)
             var cName = userData.companionName || userData.compName || "";
             var cPhone = userData.companionPhone || userData.compPhone || "";
+            var uName = userData.name || "";
 
-            // A. Điền vào Tab HỒ SƠ (Để khách xem/sửa)
-            if(document.getElementById('edit-name')) document.getElementById('edit-name').value = userData.name || "";
+            // A. ĐIỀN VÀO TAB HỒ SƠ (Tab User)
+            // Ghi đè trực tiếp, không cần kiểm tra gì cả
+            if(document.getElementById('edit-name')) document.getElementById('edit-name').value = uName;
             if(document.getElementById('edit-sdt')) document.getElementById('edit-sdt').value = phone;
             if(document.getElementById('edit-cname')) document.getElementById('edit-cname').value = cName;
             if(document.getElementById('edit-cphone')) document.getElementById('edit-cphone').value = cPhone;
 
-            // B. Điền vào Tab ĐẶT BED (QUAN TRỌNG NHẤT)
-            // Tự động điền luôn để khách không phải gõ lại
+            // B. ĐIỀN VÀO TAB ĐẶT BED (Tab Bed)
+            // Ghi đè trực tiếp để đảm bảo luôn hiển thị
             var bookCName = document.getElementById('book-cname');
             var bookCPhone = document.getElementById('book-cphone');
 
-            if (bookCName) {
-                // Chỉ điền nếu ô đang trống (để không đè khi khách đang sửa tay)
-                if (bookCName.value === "") bookCName.value = cName;
-            }
-            if (bookCPhone) {
-                if (bookCPhone.value === "") bookCPhone.value = cPhone;
-            }
+            if (bookCName) bookCName.value = cName;
+            if (bookCPhone) bookCPhone.value = cPhone;
         }
     });
     
@@ -1132,6 +1129,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
