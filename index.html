@@ -412,22 +412,23 @@ function login() {
 }
 
 // --- [FIX] SHOW DASHBOARD (TỰ ĐIỀN THÔNG TIN NGƯỜI ĐI CÙNG) ---
+// --- [FIX] SHOW DASHBOARD (LẤY DATA GIỐNG POS & TỰ ĐIỀN VÀO ĐẶT BED) ---
 function showDashboard(phone) {
     curPhone = phone;
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
     document.getElementById('nav-bar').classList.remove('hidden');
 
-    // Lắng nghe dữ liệu User theo thời gian thực
+    // Lắng nghe dữ liệu khách hàng (Realtime)
     db.ref('customers/' + phone).on('value', snap => {
         userData = snap.val();
         
         if(userData) {
-            // 1. Hiển thị thông tin cơ bản trên thẻ
+            // 1. Hiển thị thông tin chung
             document.getElementById('user-name-display').innerText = userData.name || "Khách hàng";
             document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
             
-            // Xếp hạng
+            // Xếp hạng (Rank)
             let p = userData.points || 0;
             let r = "Thành viên";
             if (p >= 55000) r = "Thành viên 'siu thân'";
@@ -435,37 +436,32 @@ function showDashboard(phone) {
             else if (p >= 10000) r = "Thành viên Bạc";
             document.getElementById('user-rank').innerText = r;
 
-            // ========================================================
-            // [QUAN TRỌNG] TỰ ĐỘNG ĐIỀN THÔNG TIN NGƯỜI ĐI CÙNG
-            // ========================================================
+            // ============================================================
+            // 🔄 ĐỒNG BỘ DỮ LIỆU NGƯỜI ĐI CÙNG (LOGIC GIỐNG POS)
+            // ============================================================
             
-            // Lấy thông tin từ Database (Ưu tiên các tên biến mới)
-            // compName/compPhone: Dữ liệu mới
-            // companionName: Dữ liệu cũ (nếu có)
-            var savedCompName = userData.compName || userData.companionName || "";
-            var savedCompPhone = userData.compPhone || userData.companionPhone || "";
+            // POS dùng key: 'companionName' và 'companionPhone'
+            // Code này sẽ ưu tiên lấy đúng key đó
+            var cName = userData.companionName || userData.compName || "";
+            var cPhone = userData.companionPhone || userData.compPhone || "";
 
-            // A. Điền vào Tab "Hồ sơ" (Để khách sửa nếu muốn)
-            var editName = document.getElementById('edit-name');
-            var editSdt = document.getElementById('edit-sdt');
-            var editCName = document.getElementById('edit-cname');
-            var editCPhone = document.getElementById('edit-cphone');
+            // A. Điền vào Tab HỒ SƠ (Để khách xem/sửa)
+            if(document.getElementById('edit-name')) document.getElementById('edit-name').value = userData.name || "";
+            if(document.getElementById('edit-sdt')) document.getElementById('edit-sdt').value = phone;
+            if(document.getElementById('edit-cname')) document.getElementById('edit-cname').value = cName;
+            if(document.getElementById('edit-cphone')) document.getElementById('edit-cphone').value = cPhone;
 
-            if(editName) editName.value = userData.name || "";
-            if(editSdt) editSdt.value = phone;
-            if(editCName) editCName.value = savedCompName;
-            if(editCPhone) editCPhone.value = savedCompPhone;
-
-            // B. Điền vào Tab "Đặt Bed" (Tự động điền luôn cho tiện)
-            // Chỉ điền nếu ô đang trống (để tránh khách đang gõ mà bị sửa lại)
+            // B. Điền vào Tab ĐẶT BED (QUAN TRỌNG NHẤT)
+            // Tự động điền luôn để khách không phải gõ lại
             var bookCName = document.getElementById('book-cname');
             var bookCPhone = document.getElementById('book-cphone');
 
-            if(bookCName && bookCName.value === "") {
-                bookCName.value = savedCompName;
+            if (bookCName) {
+                // Chỉ điền nếu ô đang trống (để không đè khi khách đang sửa tay)
+                if (bookCName.value === "") bookCName.value = cName;
             }
-            if(bookCPhone && bookCPhone.value === "") {
-                bookCPhone.value = savedCompPhone;
+            if (bookCPhone) {
+                if (bookCPhone.value === "") bookCPhone.value = cPhone;
             }
         }
     });
@@ -1136,6 +1132,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
