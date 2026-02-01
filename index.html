@@ -254,7 +254,35 @@
       </div>
     </div>
   </div>
+<div id="reschedule-modal" class="fixed inset-0 bg-black/60 z-[90] hidden flex items-center justify-center p-6 backdrop-blur-sm transition-opacity duration-300">
+    <div class="bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl relative animate-bounce-in p-7 text-left">
+        <button onclick="document.getElementById('reschedule-modal').classList.add('hidden')" class="absolute top-4 right-4 w-10 h-10 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-gray-200 transition">✕</button>
+        
+        <h3 class="text-2xl font-black text-[#006241] mb-1 brand-font">Đổi lịch đặt</h3>
+        <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-6">Chọn thời gian mới của bạn</p>
 
+        <div class="space-y-4">
+            <div>
+                <label class="text-[10px] font-bold text-gray-400 uppercase ml-2 tracking-widest">Ngày</label>
+                <input type="date" id="re-date" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 shadow-inner text-center font-bold text-[#1e3932]">
+            </div>
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Bắt đầu</label>
+                    <input type="time" id="re-start" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 shadow-inner text-center font-bold text-[#1e3932]">
+                </div>
+                <div class="flex-1">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase ml-2">Kết thúc</label>
+                    <input type="time" id="re-end" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 shadow-inner text-center font-bold text-[#1e3932]">
+                </div>
+            </div>
+        </div>
+
+        <button onclick="submitReschedule()" class="w-full py-4 mt-8 rounded-2xl bg-[#006241] text-white font-bold text-sm uppercase tracking-widest shadow-lg shadow-green-900/20 active:scale-[0.98] transition-transform">
+            Xác nhận đổi
+        </button>
+    </div>
+</div>
 <script>
 // =============================================================
 // 1. CẤU HÌNH (DÁN TỪ FILE POS VÀO ĐÂY)
@@ -780,7 +808,7 @@ function openHistory() {
                         <p class="text-sm text-gray-500 font-bold mt-1">Đến: ${h.end} • <span class="text-[#006241]">${bedText}</span></p>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="alert('Vui lòng liên hệ nhân viên để đổi giờ!')" class="flex-1 py-3 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs border border-blue-100">✏️ Đổi giờ</button>
+                       <button onclick="openRescheduleModal('${h.key}')" class="flex-1 py-3 rounded-xl bg-blue-50 text-blue-600 font-bold text-xs border border-blue-100 hover:bg-blue-100 active:scale-95 transition-all">Đổi giờ</button>
                         <button onclick="cancelBooking('${h.key}')" class="flex-1 py-3 rounded-xl bg-red-50 text-red-600 font-bold text-xs border border-red-100 ${allowCancel}">🗑️ Hủy</button>
                     </div>
                 </div>`;
@@ -924,6 +952,105 @@ function toggleViolationDetail() {
     const box = document.getElementById('violation-detail-box');
     box.classList.toggle('hidden');
 }
+  // =========================================================
+// LOGIC ĐỔI GIỜ (RESCHEDULE)
+// =========================================================
+let editingBookingKey = null; // Biến lưu xem đang sửa đơn nào
+
+// 1. MỞ MODAL VÀ ĐIỀN DỮ LIỆU CŨ
+function openRescheduleModal(key) {
+    // Tìm thông tin đơn trong cache
+    const booking = _historyCache.find(b => b.key === key);
+    if (!booking) return alert("Không tìm thấy dữ liệu!");
+
+    editingBookingKey = key; // Lưu key lại để lát update
+
+    // Chuyển đổi ngày từ dd/mm/yyyy (Firebase) sang yyyy-MM-dd (Input Date)
+    const p = booking.date.split('/');
+    const isoDate = `${p[2]}-${p[1]}-${p[0]}`;
+
+    // Điền vào ô input
+    document.getElementById('re-date').value = isoDate;
+    document.getElementById('re-start').value = booking.start;
+    document.getElementById('re-end').value = booking.end;
+
+    // Giới hạn ngày (không cho chọn quá khứ)
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('re-date').setAttribute('min', today);
+
+    // Hiện Modal
+    document.getElementById('history-modal').classList.add('z-[80]'); // Hạ z-index lịch sử xuống tí
+    document.getElementById('reschedule-modal').classList.remove('hidden');
+}
+
+// 2. XỬ LÝ KHI BẤM "XÁC NHẬN ĐỔI"
+function submitReschedule() {
+    if (!editingBookingKey) return;
+
+    // A. Lấy dữ liệu mới
+    const dateVal = document.getElementById('re-date').value;
+    const start = document.getElementById('re-start').value;
+    const end = document.getElementById('re-end').value;
+
+    // B. Validate cơ bản (Giống hệt lúc đặt mới)
+    if(!dateVal || !start || !end) return alert("Vui lòng nhập đủ ngày giờ!");
+    if(start >= end) return alert("Giờ kết thúc phải sau giờ bắt đầu!");
+    if(start < "08:00" || end > "20:50") return alert("Quán hoạt động 08:00 - 20:50");
+    
+    const sMin = parseInt(start.split(':')[0])*60 + parseInt(start.split(':')[1]);
+    const eMin = parseInt(end.split(':')[0])*60 + parseInt(end.split(':')[1]);
+    if(eMin - sMin < 30) return alert("Tối thiểu 30 phút!");
+
+    // C. Kiểm tra trùng lịch (Collision Check)
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    
+    // Convert ngày sang format dd/mm/yyyy để so sánh với Database
+    const p = dateVal.split('-');
+    const dateStr = `${p[2]}/${p[1]}/${p[0]}`;
+
+    db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value', snap => {
+        let overlapCount = 0;
+        
+        snap.forEach(c => {
+            const v = c.val();
+            // Bỏ qua đơn đã hủy, đã xong VÀ CHÍNH ĐƠN ĐANG SỬA (Quan trọng!)
+            if(c.key !== editingBookingKey && v.status !== 'đã hủy' && v.status !== 'đã xong') {
+                const bs = parseInt(v.start.split(':')[0])*60 + parseInt(v.start.split(':')[1]);
+                const be = parseInt(v.end.split(':')[0])*60 + parseInt(v.end.split(':')[1]);
+                
+                // Logic trùng giờ
+                if(Math.max(sMin, bs) < Math.min(eMin, be)) {
+                    overlapCount++;
+                }
+            }
+        });
+
+        // Giả sử quán có 4 Bed (Sửa số 4 nếu quán Tiên sinh nhiều bed hơn)
+        if (overlapCount < 4) {
+            // D. OK -> Cập nhật Firebase
+            db.ref('bedBookings/' + editingBookingKey).update({
+                date: dateStr,
+                start: start,
+                end: end,
+                status: 'chờ xếp bed', // Reset về chờ xếp để nhân viên xếp lại bed
+                bedId: ""              // Xóa bed cũ vì giờ mới có thể bed đó bận
+            }, (error) => {
+                document.getElementById('loading-overlay').classList.add('hidden');
+                document.getElementById('reschedule-modal').classList.add('hidden');
+                
+                if(error) alert("Lỗi: " + error.message);
+                else {
+                    showAppModal("Thành công", "Đã đổi lịch thành công!<br>Vui lòng chờ nhân viên xếp lại Bed.", "✅");
+                    openHistory(); // Load lại danh sách
+                }
+            });
+        } else {
+            // E. Hết chỗ
+            document.getElementById('loading-overlay').classList.add('hidden');
+            alert(`Giờ này quán đã full (${overlapCount} khách đặt). Vui lòng chọn giờ khác!`);
+        }
+    });
+}
   // --- HÀM ĐĂNG XUẤT ---
 window.handleLogout = function() {
     // 1. Hỏi xác nhận cho chắc
@@ -993,6 +1120,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
