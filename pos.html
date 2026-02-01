@@ -3987,23 +3987,29 @@ function handleMobileBedOrder(bookingId) {
  function showBedDetail(bedId, forceBooking) { 
     var booking = null; 
     
-    // ƯU TIÊN 1: Nếu có dữ liệu truyền thẳng vào -> Dùng luôn (Khỏi tìm kiếm lằng nhằng)
+    // 1. Nếu có dữ liệu truyền thẳng -> Dùng luôn
     if (forceBooking) {
         booking = forceBooking;
     } 
-    // ƯU TIÊN 2: Tìm theo ID (Dành cho Map click)
+    // 2. Nếu phải tự tìm -> Ưu tiên tìm thằng đang ACTIVE
     else if (bedId && bedId != 0) {
-        booking = currentBedList.find(b => b.bedId == bedId);
+        // Tìm thằng đang dùng Bed này
+        booking = currentBedList.find(b => 
+            b.bedId == bedId && 
+            b.status && 
+            (b.status.includes('active') || b.status.includes('đang dùng'))
+        );
+        
+        // Nếu không có ai active, mới tìm bừa (fallback)
+        if (!booking) {
+            booking = currentBedList.find(b => b.bedId == bedId);
+        }
     }
-    // ƯU TIÊN 3: Lấy theo Index đang chọn
     else if (!booking && selectedBedIndex > -1) {
         booking = currentBedList[selectedBedIndex]; 
     }
     
-    if (!booking) { 
-        alert("Không tìm thấy dữ liệu khách hàng!");
-        return; 
-    }
+    if (!booking) return alert("Không tìm thấy dữ liệu khách hàng!");
     
     activeOrderingBedId = bedId; 
     pendingBedOrder = booking; 
@@ -7690,6 +7696,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
