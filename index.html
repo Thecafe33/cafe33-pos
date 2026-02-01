@@ -414,18 +414,19 @@ function login() {
 // --- [FIX] SHOW DASHBOARD (TỰ ĐIỀN THÔNG TIN NGƯỜI ĐI CÙNG) ---
 // --- [FIX] SHOW DASHBOARD (LẤY DATA GIỐNG POS & TỰ ĐIỀN VÀO ĐẶT BED) ---
 // --- [FIX FINAL] SHOW DASHBOARD (ÉP BUỘC HIỂN THỊ DỮ LIỆU) ---
+// --- [FIX FINAL] SHOW DASHBOARD (DÙNG ĐÚNG KEY CỦA FIREBASE) ---
 function showDashboard(phone) {
     curPhone = phone;
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
     document.getElementById('nav-bar').classList.remove('hidden');
 
-    // Lắng nghe dữ liệu khách hàng (Realtime)
+    // Lắng nghe dữ liệu
     db.ref('customers/' + phone).on('value', snap => {
         userData = snap.val();
         
         if(userData) {
-            // 1. Hiển thị thông tin chung
+            // 1. Hiển thị thông tin cơ bản
             document.getElementById('user-name-display').innerText = userData.name || "Khách hàng";
             document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
             
@@ -437,24 +438,22 @@ function showDashboard(phone) {
             else if (p >= 10000) r = "Thành viên Bạc";
             document.getElementById('user-rank').innerText = r;
 
-            // ============================================================
-            // 🔄 ĐỒNG BỘ DỮ LIỆU (CƠ CHẾ GHI ĐÈ)
-            // ============================================================
+            // ==========================================================
+            // 🎯 LẤY ĐÚNG KEY TỪ FIREBASE (lastCompName)
+            // ==========================================================
             
-            // Lấy dữ liệu (Ưu tiên key của POS trước)
-            var cName = userData.companionName || userData.compName || "";
-            var cPhone = userData.companionPhone || userData.compPhone || "";
+            // Key chuẩn Tiên sinh cung cấp:
+            var cName = userData.lastCompName || "";
+            var cPhone = userData.lastCompPhone || "";
             var uName = userData.name || "";
 
-            // A. ĐIỀN VÀO TAB HỒ SƠ (Tab User)
-            // Ghi đè trực tiếp, không cần kiểm tra gì cả
+            // 2. Autofill vào Tab HỒ SƠ
             if(document.getElementById('edit-name')) document.getElementById('edit-name').value = uName;
             if(document.getElementById('edit-sdt')) document.getElementById('edit-sdt').value = phone;
             if(document.getElementById('edit-cname')) document.getElementById('edit-cname').value = cName;
             if(document.getElementById('edit-cphone')) document.getElementById('edit-cphone').value = cPhone;
 
-            // B. ĐIỀN VÀO TAB ĐẶT BED (Tab Bed)
-            // Ghi đè trực tiếp để đảm bảo luôn hiển thị
+            // 3. Autofill vào Tab ĐẶT BED (Ghi đè luôn)
             var bookCName = document.getElementById('book-cname');
             var bookCPhone = document.getElementById('book-cphone');
 
@@ -463,10 +462,8 @@ function showDashboard(phone) {
         }
     });
     
-    // Tải danh sách quà
     loadRewards();
 }
-
 // --- 4. CẬP NHẬT HỒ SƠ ---
 // --- HÀM CẬP NHẬT THÔNG TIN (ĐÃ FIX LỖI TREO MÀN HÌNH) ---
 // --- 4. CẬP NHẬT HỒ SƠ (ĐÃ FIX ĐÚNG ID VÀ CHỐNG TREO) ---
@@ -628,6 +625,12 @@ function handleBooking() {
             });
 
             if(overlapCount < 4) {
+              if (cName) {
+                    db.ref('customers/' + curPhone).update({
+                        lastCompName: cName,  // <--- SỬA THÀNH KEY NÀY
+                        lastCompPhone: cPhone // <--- SỬA THÀNH KEY NÀY
+                    });
+                }
                 // --- BƯỚC 3: CÒN CHỖ -> GHI VÀO FIREBASE ---
                 db.ref('bedBookings').push({
                     phone: curPhone, name: userData.name,
@@ -1129,6 +1132,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
