@@ -3196,16 +3196,45 @@ function switchView(v) {
     
     // Reset inputs payment nếu vào trang payment
     // Tìm trong hàm switchView(v), đoạn xử lý logic cuối cùng
+// --- [FIX] PHÂN LUỒNG PC/MOBILE TRONG SWITCHVIEW ---
 if (v === 'payment') {
-    // Đảm bảo số liệu luôn mới nhất khi mở màn hình thanh toán
+    // 1. Luôn cập nhật giỏ hàng mới nhất
     if (typeof renderCart === 'function') renderCart(); 
     
-    var mobStep1 = document.getElementById('mob-step-1');
-    var mobStep2 = document.getElementById('mob-step-2');
-    if (mobStep1) mobStep1.classList.remove('hidden');
-    if (mobStep2) mobStep2.classList.add('hidden');
+    // 2. KIỂM TRA THIẾT BỊ ĐỂ XỬ LÝ RIÊNG
+    if (window.innerWidth <= 768) {
+        // === LOGIC MOBILE ===
+        // Khi vào màn hình thanh toán Mobile, ta lấy dữ liệu từ "bộ nhớ chung" (kh-sdt) 
+        // để điền sẵn vào ô nhập Mobile (pay-sdt-mobile) cho tiện.
+        
+        var pcInput = document.getElementById('kh-sdt');
+        var mobInput = document.getElementById('pay-sdt-mobile');
+        
+        if (pcInput && mobInput) {
+            mobInput.value = pcInput.value; // COPY: PC -> MOBILE
+            
+            // Gọi hàm hiển thị tên khách (nếu có) trên giao diện Mobile
+            var cleanSdt = normalizePhone(pcInput.value);
+            var custNameEl = document.getElementById('pay-cust-name-mobile');
+            if (custNameEl && customerMap[cleanSdt]) {
+                 custNameEl.innerHTML = `<div class="mt-3 bg-green-50 p-2 rounded-xl text-center"><span class="text-xs font-black text-green-700">★ ${customerMap[cleanSdt].name}</span></div>`;
+                 custNameEl.style.height = "auto";
+            }
+        }
+
+        // Reset về bước 1 của Mobile
+        var mobStep1 = document.getElementById('mob-step-1');
+        var mobStep2 = document.getElementById('mob-step-2');
+        if (mobStep1) mobStep1.classList.remove('hidden');
+        if (mobStep2) mobStep2.classList.add('hidden');
+    } 
+    else {
+        // === LOGIC PC ===
+        // TUYỆT ĐỐI KHÔNG GỌI HÀM ĐỒNG BỘ NÀO Ở ĐÂY!
+        // Để yên cho ô kh-sdt giữ nguyên giá trị mà nhân viên vừa nhập/chọn.
+    }
     
-    if (typeof syncMobileInputs === 'function') syncMobileInputs();
+    // Reset phương thức về Tiền mặt mặc định
     if (typeof setMethod === 'function') setMethod('Tiền mặt');
 }
 }
@@ -4036,50 +4065,125 @@ function showBedDetail(bedId) {
 }
     //--- SỬA LỖI: XẾP BED BỊ RA ĐƠN MỚI UNDEFINED ---
 // --- [FIX] RESET CHẾ ĐỘ ORDER BED SAU KHI GÁN Ô XONG ---
+// --- [FIX LOGIC] XẾP BED: XỬ LÝ SỚM/TRỄ THEO TIỀN ---
+// --- [FINAL CORE] HÀM XẾP BED & TÍNH GIỜ THÔNG MINH ---
+// Hàm này chạy ngay sau khi bấm chọn ô Bed (Bước cuối của Order hoặc Xếp Bed)
 function finalizeBedCheckIn(bedId) {
-    if (!pendingBedOrder) return alert("Chưa chọn khách hàng!");
+    // 1. Kiểm tra dữ liệu đầu vào
+    if (!pendingBedOrder) return alert("Lỗi: Không tìm thấy thông tin khách hàng!");
     
     var bookingId = pendingBedOrder.id || pendingBedOrder.key; 
-    if (!bookingId) return alert("Lỗi dữ liệu: Không tìm thấy mã đơn hàng.");
+    if (!bookingId) return alert("Lỗi dữ liệu: Không tìm thấy mã đơn hàng trên hệ thống.");
 
+    // Kiểm tra xem Bed này có đang bận không (Tránh trùng)
     const isBusy = currentBedList.find(b => 
         (b.status && (b.status.includes('active') || b.status.includes('đang dùng'))) 
         && b.bedId == bedId
     );
-    if (isBusy) return alert("Bed " + bedId + " đang có khách rồi!");
+    if (isBusy) return alert("Bed 0" + bedId + " đang có khách rồi! Vui lòng chọn Bed khác.");
 
+    // ============================================================
+    // 🧠 LOGIC TÍNH TOÁN THỜI GIAN THÔNG MINH
+    // ============================================================
+    var now = new Date(); // Thời điểm thực tế bấm chọn Bed (Check-in)
+    
+    // A. Lấy khung giờ khách ĐÃ ĐẶT trong vé (Booked Time)
+    // Giả định format là "HH:mm" (VD: 13:00, 15:30)
+    var partsStart = pendingBedOrder.start.split(':');
+    var bookStart = new Date();
+    bookStart.setHours(parseInt(partsStart[0]), parseInt(partsStart[1]), 0);
+
+    var partsEnd = pendingBedOrder.end.split(':');
+    var bookEnd = new Date();
+    bookEnd.setHours(parseInt(partsEnd[0]), parseInt(partsEnd[1]), 0);
+
+    // B. Biến kết quả (Sẽ được tính toán lại bên dưới)
+    var finalStartStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}); // Giờ vào luôn là hiện tại
+    var finalEndStr = pendingBedOrder.end; // Mặc định giữ nguyên giờ ra
+
+    // C. SO SÁNH & XỬ LÝ
+    if (now > bookStart) {
+        // ---------------------------------------------------------
+        // TRƯỜNG HỢP 1: KHÁCH ĐẾN TRỄ (Lỗi do khách)
+        // ---------------------------------------------------------
+        // Logic: Giờ vào là hiện tại, Giờ ra GIỮ NGUYÊN (Không cộng bù).
+        console.log(`Khách đến trễ. Đặt: ${pendingBedOrder.start}, Vào: ${finalStartStr} -> Giữ nguyên giờ ra.`);
+    } 
+    else {
+        // ---------------------------------------------------------
+        // TRƯỜNG HỢP 2: KHÁCH ĐẾN SỚM (Check Block tiền)
+        // ---------------------------------------------------------
+        
+        // 1. Tính số phút đến sớm
+        var diffMinutes = (bookStart - now) / 60000; 
+        
+        // 2. Tính thời lượng gốc khách đặt (phút)
+        var originalDurationMins = (bookEnd - bookStart) / 60000; 
+        
+        // 3. Tính số Block tiền GỐC (1 tiếng = 60p, làm tròn lên)
+        // Ví dụ: Đặt 1h30p (90p) -> Làm tròn thành 2 tiếng tiền
+        var originalBlocks = Math.ceil(originalDurationMins / 60); 
+        
+        // 4. Tính tổng thời gian MỚI nếu cho vào sớm (Gốc + Sớm)
+        // Ví dụ: 90p gốc + 20p sớm = 110p
+        var newTotalMins = originalDurationMins + diffMinutes;     
+        
+        // 5. Tính số Block tiền MỚI
+        // Ví dụ: 110p -> Vẫn là 2 tiếng tiền
+        var newBlocks = Math.ceil(newTotalMins / 60);              
+
+        console.log(`Đến sớm ${Math.round(diffMinutes)}p. Block cũ: ${originalBlocks}h, Block mới: ${newBlocks}h`);
+
+        if (newBlocks > originalBlocks) {
+            // [A] VƯỢT QUÁ BLOCK TIỀN -> PHẢI TRỪ GIỜ
+            // Ví dụ: Đặt 2h (120p). Sớm 10p -> 130p -> Thành 3 tiếng -> Lỗ.
+            // Giải pháp: Giờ ra mới = Giờ ra cũ - Phút đến sớm
+            var newEndDate = new Date(bookEnd.getTime() - (diffMinutes * 60000));
+            finalEndStr = newEndDate.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+            console.log("-> Vượt block tiền -> Trừ giờ kết thúc để không lỗ.");
+        } else {
+            // [B] VẪN TRONG BLOCK TIỀN -> TẶNG LUÔN
+            // Ví dụ: Đặt 1h30p (90p). Sớm 20p -> 110p -> Vẫn tính là 2 tiếng -> OK tặng.
+            // Giữ nguyên giờ ra cũ
+            console.log("-> Vẫn trong block tiền -> Tặng khách số phút này.");
+        }
+    }
+
+    // ============================================================
+    // CẬP NHẬT FIREBASE & HOÀN TẤT
+    // ============================================================
     document.getElementById('bed-select-modal').classList.add('hidden');
     document.getElementById('loading-overlay').style.display = 'flex';
 
     db.ref('bedBookings/' + bookingId).update({
-        status: 'active',
-        bedId: bedId,
-        checkInTime: new Date().toLocaleTimeString('en-GB')
+        status: 'active',           // Chuyển trạng thái sang Đang dùng
+        bedId: bedId,               // Gán số Bed
+        checkInTime: finalStartStr, // Lưu giờ vào thực tế (để đối chiếu sau này)
+        start: finalStartStr,       // Cập nhật Start hiển thị (cho nhân viên biết khách vào lúc nào)
+        end: finalEndStr            // Cập nhật End (để đồng hồ đếm ngược chạy đúng logic tiền)
     }, (err) => {
         document.getElementById('loading-overlay').style.display = 'none';
         
         if (!err) {
-            // >>> CHÈN DÒNG NÀY VÀO ĐÂY <<<
+            // Reset toàn bộ quy trình Order để đón khách mới
             resetOrderingMode();
-            // >>> BƯỚC QUAN TRỌNG: RESET SẠCH TRẠNG THÁI ORDER BED <<<
-            pendingBedOrder = null;       // Xóa thông tin lịch đang chọn
-            activeOrderingBedId = null;   // Tắt ID Bed đang gọi món
-            isCheckoutFlow = false;       // Tắt chế độ trả Bed
             
-            // Xóa Banner thông báo trên giỏ hàng (nếu có)
+            // Xóa các biến tạm
+            pendingBedOrder = null;
+            activeOrderingBedId = null;
+            isCheckoutFlow = false;
+            
+            // Xóa thông tin trên giao diện POS
             var cartInfo = document.getElementById('cart-bed-info');
             if (cartInfo) cartInfo.remove();
-
-            // Tự động xóa SĐT cũ trong giỏ để sẵn sàng cho khách tiếp theo
             var sdtInput = document.getElementById('kh-sdt');
-            if (sdtInput) {
-                sdtInput.value = "";
-                if (document.getElementById('sdt-status')) 
-                    document.getElementById('sdt-status').innerText = "";
-            }
+            if (sdtInput) sdtInput.value = "";
 
-            openBedManager(); // Tải lại danh sách
-            showAppModal("Thành công", "Đã xếp khách vào BED 0" + bedId, "✅");
+            // Refresh lại danh sách
+            openBedManager(); 
+            
+            // Thông báo kết quả
+            showAppModal("Thành công", `Đã xếp Bed 0${bedId}.<br>Khách phải trả Bed lúc: <b>${finalEndStr}</b>`, "✅");
         } else {
             alert("Lỗi Firebase: " + err.message);
         }
@@ -5508,6 +5612,7 @@ function closeMobileBedDetail() {
 var mobileTimerInterval = null;
 
 // Hàm tiện ích: Tính giờ đếm ngược
+// --- [MOBILE FIX FINAL] TÍNH GIỜ ĐƠN GIẢN (KHÔNG QUA ĐÊM) ---
 function getCountdownStr(endTimeStr) {
     if (!endTimeStr || endTimeStr === "--:--") return { timeStr: "--:--", label: "...", style: "bg-gray-400" };
     
@@ -5516,26 +5621,22 @@ function getCountdownStr(endTimeStr) {
     const end = new Date();
     end.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
 
-    // Xử lý qua đêm
-    if (end < now && (now.getHours() - end.getHours()) > 12) {
-        end.setDate(end.getDate() + 1);
-    }
+    // (ĐÃ XÓA LOGIC QUA ĐÊM Ở ĐÂY)
     
     let diff = end - now;
     let label = "CÒN LẠI";
-    let style = "bg-white/20 text-white"; // Màu mặc định
+    let style = "bg-white/20 text-white"; 
     
     if (diff < 0) {
         diff = Math.abs(diff);
         label = "QUÁ GIỜ";
-        style = "bg-red-500 text-white animate-pulse border border-white/30"; // Màu đỏ cảnh báo
+        style = "bg-red-500 text-white animate-pulse border border-white/30"; 
     }
 
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
-    const s = Math.floor((diff % 60000) / 1000); // Thêm giây cho sinh động
+    const s = Math.floor((diff % 60000) / 1000); 
     
-    // Format HH:MM:SS
     const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     
     return { timeStr, label, style };
@@ -7573,6 +7674,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
