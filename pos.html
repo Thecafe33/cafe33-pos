@@ -1268,7 +1268,7 @@ input, button, select, textarea { font-size: 1rem; }
         <div id="mob-revenue-summary-cards" class="grid grid-cols-2 gap-4 px-4 mb-6">
     
     <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
-        <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Tổng thu</p>
+        <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Tổng nước</p>
         <div id="mob-rev-total" class="text-[#065F46] font-black tracking-tighter leading-none flex flex-col items-center">
             0 <span class="text-[10px] opacity-60">₫</span>
         </div>
@@ -6436,34 +6436,32 @@ function updateRevenueGroupsUI(data) {
     container.innerHTML = html;
 }
 function updateRevenueUIMobile(stats, mode) {
-    // 1. Cập nhật Số tiền (Giữ nguyên)
-    const totalRev = stats.drinkTotal + stats.snackTotal;
+    // 1. Cập nhật Số tiền (LOGIC MỚI: TÁCH BẠCH)
+    
+    // [SỬA Ở ĐÂY] Ô bên trái: Chỉ hiện tiền NƯỚC (Drink Total)
+    // (Vì Tổng toàn bộ đã hiển thị ở dưới đáy biểu đồ rồi)
     document.getElementById('mob-rev-total').innerHTML = `
-        <span class="text-3xl">${totalRev.toLocaleString()}</span> 
+        <span class="text-3xl">${stats.drinkTotal.toLocaleString()}</span> 
         <span class="text-xs font-bold opacity-60">₫</span>
     `;
     
+    // Ô bên phải: Tiền ĂN VẶT (Giữ nguyên)
     document.getElementById('mob-rev-snack').innerHTML = `
         <span class="text-3xl">${stats.snackTotal.toLocaleString()}</span>
         <span class="text-xs font-bold opacity-60">₫</span>
     `;
     
-    // 2. Vẽ biểu đồ (Logic mới)
+    // 2. Vẽ biểu đồ (Giữ nguyên logic vẽ cột)
     const chartBox = document.getElementById('mob-rev-chart-bars');
     const labels = stats.labels; 
     const data = stats.chartData;
     const maxVal = Math.max(...data, 1); 
 
-    // --- XÁC ĐỊNH CHẾ ĐỘ HIỂN THỊ CỘT ---
-    // Logic phải khớp với hàm fetchRevenueDataMobile
-    // Nếu số lượng cột > 12 (tức là Tháng/Custom dài) -> Dùng cột cứng (Scroll)
-    // Nếu <= 12 (Tuần/Năm) -> Dùng flex-1 (Fit màn hình)
     let isScrollMode = labels.length > 12;
 
     let barsHtml = '';
     labels.forEach((lbl, index) => {
         const val = data[index] || 0;
-        
         let heightPct = 0;
         if (val > 0) {
             heightPct = Math.round((val / maxVal) * 100);
@@ -6471,30 +6469,19 @@ function updateRevenueUIMobile(stats, mode) {
         }
         
         const isMax = val === maxVal && val > 0;
-        
         let labelVal = "";
         if (val >= 1000000) labelVal = (val/1000000).toFixed(1) + "tr";
         else if (val > 0) labelVal = (val/1000).toFixed(0) + "k";
 
-        // --- CHỌN CLASS CSS CHO CỘT ---
-        let colClass = "";
-        if (isScrollMode) {
-            // Chế độ cuộn: Cột rộng cố định 40px, không co giãn
-            colClass = "min-w-[40px] flex-shrink-0";
-        } else {
-            // Chế độ thường: Cột tự co giãn để lấp đầy màn hình
-            colClass = "flex-1";
-        }
+        let colClass = isScrollMode ? "min-w-[40px] flex-shrink-0" : "flex-1";
 
         barsHtml += `
         <div class="${colClass} flex flex-col items-center group h-full justify-end relative">
             <div class="w-full relative flex flex-col justify-end items-center h-full">
-                
                 ${val > 0 ? `
                 <div class="mb-1 text-[9px] font-black text-slate-500 bg-white/90 backdrop-blur px-1.5 py-0.5 rounded-md shadow-sm border border-slate-100 z-10 whitespace-nowrap">
                     ${labelVal}
                 </div>` : ''}
-
                 <div class="w-3 sm:w-5 rounded-t-lg transition-all duration-1000 ease-out ${isMax ? 'bg-[#006241]' : 'bg-[#006241]/40'}" 
                      style="height: ${heightPct}%;">
                 </div>
@@ -6504,9 +6491,9 @@ function updateRevenueUIMobile(stats, mode) {
     });
     chartBox.innerHTML = barsHtml;
 
-    // 3. Các phần cập nhật nhãn khác (Giữ nguyên)
-    const totalChart = data.reduce((a, b) => a + b, 0);
-    document.getElementById('mob-chart-total').innerText = totalChart.toLocaleString() + ' ₫';
+    // 3. Cập nhật TỔNG CỘNG ở dưới đáy biểu đồ
+    const totalRev = stats.drinkTotal + stats.snackTotal;
+    document.getElementById('mob-chart-total').innerText = totalRev.toLocaleString() + ' ₫';
     
     const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
     let finalLabel = currentRevLabelOverride || labelMap[mode] || 'Chi tiết';
@@ -7588,6 +7575,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
