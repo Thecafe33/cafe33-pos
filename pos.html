@@ -2929,35 +2929,51 @@ function calculateStats(orders, mode, customStart, customEnd) {
         if (dateKey === todayStr) stats.today += amount;
         if (dateKey === yestStr) stats.yesterday += amount;
 
-        if (d >= startTime && d <= endTime) {
-            var itemsStr = String(o.items || "").toLowerCase();
-           var isSnack = itemsStr.indexOf('ăn vặt') > -1;
+        // --- ĐOẠN CODE MỚI: TRA CỨU MENU (CHUẨN 100%) ---
+if (d >= startTime && d <= endTime) {
+    var itemsStr = String(o.items || "").toLowerCase();
+    var isSnack = false;
 
-            if(isSnack) stats.snackTotal += amount; 
-            else stats.drinkTotal += amount;
-            
-            if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
-            stats.dailyList[dateKey].drink += amount;
+    // 1. Lấy danh sách các món là 'ăn vặt' trong Menu
+    // (Lọc ra những món mà type là 'ăn vặt' hoặc 'đồ ăn')
+    var snackMenu = menu.filter(function(m) {
+        var t = String(m.type || "").toLowerCase();
+        return t.includes('ăn vặt') || t.includes('đồ ăn') || t.includes('snack');
+    });
 
-            // Cộng dồn vào biểu đồ
-            var idx = -1;
-            if (groupType === 'month') {
-                idx = d.getMonth();
-            } else if (mode === 'month') {
-                idx = d.getDate() - 1;
-            } else if (mode === 'week') {
-                idx = (d.getDay() + 6) % 7;
-            } else if (mode === 'custom' && labels.length <= 31) {
-                // Logic đơn giản cho custom ngắn ngày
-                var timeDiff = d.getTime() - startTime.getTime();
-                var dayDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
-                idx = dayDiff;
-            }
-
-            if (idx >= 0 && idx < chartData.length) {
-                chartData[idx] += amount;
-            }
+    // 2. Soi xem đơn hàng này có chứa món nào trong danh sách trên không
+    for (var k = 0; k < snackMenu.length; k++) {
+        if (itemsStr.indexOf(snackMenu[k].name.toLowerCase()) > -1) {
+            isSnack = true;
+            break; // Tìm thấy 1 món là đủ kết luận
         }
+    }
+
+    // 3. Cộng tiền
+    if(isSnack) stats.snackTotal += amount; 
+    else stats.drinkTotal += amount;
+    
+    // --- (Giữ nguyên phần phía dưới không đổi) ---
+    if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
+    stats.dailyList[dateKey].drink += amount;
+
+    var idx = -1;
+    if (groupType === 'month') {
+        idx = d.getMonth();
+    } else if (mode === 'month') {
+        idx = d.getDate() - 1;
+    } else if (mode === 'week') {
+        idx = (d.getDay() + 6) % 7;
+    } else if (mode === 'custom' && labels.length <= 31) {
+        var timeDiff = d.getTime() - startTime.getTime();
+        var dayDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+        idx = dayDiff;
+    }
+
+    if (idx >= 0 && idx < chartData.length) {
+        chartData[idx] += amount;
+    }
+}
     });
     return stats;
 }
@@ -7564,6 +7580,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
