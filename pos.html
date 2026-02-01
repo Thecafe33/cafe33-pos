@@ -3971,49 +3971,49 @@ function showBedDetail(bedId) {
     } 
 }
     //--- SỬA LỖI: XẾP BED BỊ RA ĐƠN MỚI UNDEFINED ---
+// --- [FIX] RESET CHẾ ĐỘ ORDER BED SAU KHI GÁN Ô XONG ---
 function finalizeBedCheckIn(bedId) {
-    // 1. Kiểm tra an toàn
     if (!pendingBedOrder) return alert("Chưa chọn khách hàng!");
     
-    // QUAN TRỌNG: Kiểm tra xem có ID đơn hàng không?
-    // Code hiển thị dùng .id, nên ở đây phải dùng .id
     var bookingId = pendingBedOrder.id || pendingBedOrder.key; 
-    
-    if (!bookingId) {
-        console.error("Lỗi: Không tìm thấy ID đơn hàng", pendingBedOrder);
-        return alert("Lỗi dữ liệu: Không tìm thấy mã đơn hàng. Vui lòng F5 và thử lại.");
-    }
+    if (!bookingId) return alert("Lỗi dữ liệu: Không tìm thấy mã đơn hàng.");
 
-    // 2. Kiểm tra xem Bed đó có đang bận không
-    // (Lọc trong danh sách hiện tại để xem Bed X đã có ai Active chưa)
     const isBusy = currentBedList.find(b => 
         (b.status && (b.status.includes('active') || b.status.includes('đang dùng'))) 
         && b.bedId == bedId
     );
-
     if (isBusy) return alert("Bed " + bedId + " đang có khách rồi!");
 
-    // 3. Xử lý cập nhật
     document.getElementById('bed-select-modal').classList.add('hidden');
     document.getElementById('loading-overlay').style.display = 'flex';
 
-    // 4. GHI ĐÈ VÀO ĐÚNG ID CŨ (Update)
-    // Tuyệt đối không dùng .push() ở đây
     db.ref('bedBookings/' + bookingId).update({
-        status: 'active',   // Chuyển trạng thái sang Active
-        bedId: bedId,       // Gán số Bed
-        checkInTime: new Date().toLocaleTimeString('en-GB') // Lưu giờ vào thực tế
+        status: 'active',
+        bedId: bedId,
+        checkInTime: new Date().toLocaleTimeString('en-GB')
     }, (err) => {
         document.getElementById('loading-overlay').style.display = 'none';
         
         if (!err) {
-            // Reset biến tạm
-            pendingBedOrder = null;
-            isPaymentMode = false;
+            // >>> BƯỚC QUAN TRỌNG: RESET SẠCH TRẠNG THÁI ORDER BED <<<
+            pendingBedOrder = null;       // Xóa thông tin lịch đang chọn
+            activeOrderingBedId = null;   // Tắt ID Bed đang gọi món
+            isCheckoutFlow = false;       // Tắt chế độ trả Bed
             
-            // Tải lại danh sách để thấy kết quả
-            // Lúc này ông Nguyen Van A sẽ nhảy từ "Chờ xếp" sang "Bed X"
-            openBedManager(); 
+            // Xóa Banner thông báo trên giỏ hàng (nếu có)
+            var cartInfo = document.getElementById('cart-bed-info');
+            if (cartInfo) cartInfo.remove();
+
+            // Tự động xóa SĐT cũ trong giỏ để sẵn sàng cho khách tiếp theo
+            var sdtInput = document.getElementById('kh-sdt');
+            if (sdtInput) {
+                sdtInput.value = "";
+                if (document.getElementById('sdt-status')) 
+                    document.getElementById('sdt-status').innerText = "";
+            }
+
+            openBedManager(); // Tải lại danh sách
+            showAppModal("Thành công", "Đã xếp khách vào BED 0" + bedId, "✅");
         } else {
             alert("Lỗi Firebase: " + err.message);
         }
@@ -7471,6 +7471,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
