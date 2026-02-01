@@ -730,6 +730,12 @@ input, button, select, textarea { font-size: 1rem; }
     height: calc(100vh - 80px) !important; /* Ép toàn bộ khung cao bằng màn hình trừ header */
     overflow: hidden; /* Không cho cả trang bị cuộn, chỉ cuộn bên trong các cột */
 }
+    #bed-dynamic-island {
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#bed-dynamic-island:not(.hidden) {
+    display: flex !important;
+}
 </style>
 </head>
 <body class="flex p-3 gap-3 text-left">
@@ -845,7 +851,21 @@ input, button, select, textarea { font-size: 1rem; }
 <div class="hidden md:flex px-8 py-6 border-b border-gray-50 bg-white z-10 shrink-0 items-center gap-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]" id="header-bar-pc">
     
     <h2 class="brand-font text-4xl text-[#006241] whitespace-nowrap cursor-pointer hover:opacity-80 transition-all tracking-tighter" onclick="switchView('menu')">The cafe 33</h2>
-    
+    <div id="bed-dynamic-island" class="hidden flex-1 max-w-xl bg-[#1e3932] rounded-3xl py-2 px-6 items-center gap-4 animate-slide-up border border-white/10 shadow-lg">
+        <div class="flex items-center justify-center w-10 h-10 bg-white/10 rounded-full shrink-0">
+            <span class="material-symbols-outlined text-white text-xl">bedtime</span>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p id="island-cust-name" class="text-white font-black text-sm uppercase truncate">Tên khách hàng</p>
+            <p id="island-time-range" class="text-emerald-300/80 text-[10px] font-bold tracking-widest">00:00 - 00:00</p>
+        </div>
+        <div class="bg-emerald-500 px-4 py-1 rounded-2xl shrink-0">
+            <span id="island-duration" class="text-white font-black text-xs uppercase tracking-tighter">0 Tiếng</span>
+        </div>
+        <button onclick="resetOrderingMode()" class="text-white/40 hover:text-white transition-colors shrink-0">
+            <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+    </div>
     <div class="flex items-center gap-3">
         <button id="btn-nav-revenue" onclick="openRevenue()" class="bg-gray-100 text-gray-400 px-6 py-3 rounded-2xl text-[11px] font-black uppercase hover:bg-gray-200 active:scale-95 transition-all tracking-widest">
             Doanh thu
@@ -3969,6 +3989,14 @@ function showBedDetail(bedId) {
             cartInfo.classList.remove('bg-green-50', 'text-[#006241]', 'border-[#006241]/20');
         } 
     } 
+    // THÊM ĐOẠN NÀY VÀO CUỐI:
+    const island = document.getElementById('bed-dynamic-island');
+    if (island && booking) {
+        document.getElementById('island-cust-name').innerText = booking.name || "Khách lẻ";
+        document.getElementById('island-time-range').innerText = `${booking.start} - ${booking.end}`;
+        document.getElementById('island-duration').innerText = getDurationLabel(booking.start, booking.end);
+        island.classList.remove('hidden');
+    }
 }
     //--- SỬA LỖI: XẾP BED BỊ RA ĐƠN MỚI UNDEFINED ---
 // --- [FIX] RESET CHẾ ĐỘ ORDER BED SAU KHI GÁN Ô XONG ---
@@ -3995,6 +4023,8 @@ function finalizeBedCheckIn(bedId) {
         document.getElementById('loading-overlay').style.display = 'none';
         
         if (!err) {
+            // >>> CHÈN DÒNG NÀY VÀO ĐÂY <<<
+            resetOrderingMode();
             // >>> BƯỚC QUAN TRỌNG: RESET SẠCH TRẠNG THÁI ORDER BED <<<
             pendingBedOrder = null;       // Xóa thông tin lịch đang chọn
             activeOrderingBedId = null;   // Tắt ID Bed đang gọi món
@@ -6987,6 +7017,30 @@ async function syncDataFromSheet() {
         // Không tự động đóng sidebar để bạn có thể đọc xong thông báo rồi mới đóng tay
     }
 }
+    // --- HÀM TÍNH THỜI LƯỢNG (Ví dụ: 14:00 - 15:30 => 1.5h) ---
+function getDurationLabel(start, end) {
+    if (!start || !end) return "0 Tiếng";
+    const s = start.split(':');
+    const e = end.split(':');
+    const startMins = parseInt(s[0]) * 60 + parseInt(s[1]);
+    let endMins = parseInt(e[0]) * 60 + parseInt(e[1]);
+    
+    if (endMins < startMins) endMins += 24 * 60; // Xử lý qua đêm
+    
+    const diff = endMins - startMins;
+    const hours = diff / 60;
+    
+    return hours % 1 === 0 ? hours + " TIẾNG" : hours.toFixed(1) + " TIẾNG";
+}
+
+// --- HÀM RESET CHẾ ĐỘ ORDER (KHI BẤM NÚT X TRÊN ĐẢO) ---
+function resetOrderingMode() {
+    pendingBedOrder = null;
+    activeOrderingBedId = null;
+    document.getElementById('bed-dynamic-island').classList.add('hidden');
+    const cartInfo = document.getElementById('cart-bed-info');
+    if (cartInfo) cartInfo.remove();
+}
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -7471,6 +7525,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
