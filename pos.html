@@ -3984,15 +3984,26 @@ function handleMobileBedOrder(bookingId) {
 // --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
 // --- [FIXED] NÚT GỌI MÓN PC: TỰ NHẢY VIEW & HIỆN THÔNG BÁO GIỎ HÀNG ---
 // --- [FIX] SHOW BED DETAIL (RESET SẠCH SẼ TRƯỚC KHI ĐIỀN) ---
-function showBedDetail(bedId) { 
+ function showBedDetail(bedId, forceBooking) { 
     var booking = null; 
-    if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId);
-    if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex]; 
+    
+    // ƯU TIÊN 1: Nếu có dữ liệu truyền thẳng vào -> Dùng luôn (Khỏi tìm kiếm lằng nhằng)
+    if (forceBooking) {
+        booking = forceBooking;
+    } 
+    // ƯU TIÊN 2: Tìm theo ID (Dành cho Map click)
+    else if (bedId && bedId != 0) {
+        booking = currentBedList.find(b => b.bedId == bedId);
+    }
+    // ƯU TIÊN 3: Lấy theo Index đang chọn
+    else if (!booking && selectedBedIndex > -1) {
+        booking = currentBedList[selectedBedIndex]; 
+    }
     
     if (!booking) { 
-        alert("Vui lòng chọn khách hàng trong danh sách trước!");
+        alert("Không tìm thấy dữ liệu khách hàng!");
         return; 
-    } 
+    }
     
     activeOrderingBedId = bedId; 
     pendingBedOrder = booking; 
@@ -7679,6 +7690,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
