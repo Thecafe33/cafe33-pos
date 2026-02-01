@@ -5014,16 +5014,22 @@ function saveOrderToFirebase(method) {
     const paid = (method === 'Chuyển khoản') ? currentTotal : (Number(pVal) || currentTotal);
     
     // --- LƯU TRẠNG THÁI TRƯỚC KHI GỬI (QUAN TRỌNG) ---
-    // Phải lưu vào biến cục bộ vì bên trong callback, pendingBedOrder có thể bị null
     const currentBooking = pendingBedOrder; 
     const isCheckout = isCheckoutFlow;
     const currentBedId = (currentBooking && currentBooking.bedId) ? currentBooking.bedId : (activeOrderingBedId || "");
+
+    // >>> BƯỚC FIX: ĐỒNG BỘ TÊN "KHÁCH VÃNG LAI" VÀ ƯU TIÊN THÔNG TIN LỊCH BED <<<
+    const sdtInput = document.getElementById('kh-sdt').value;
+    // Nếu có lịch đặt thì lấy SĐT từ lịch, không thì lấy từ ô nhập, cuối cùng mới là "Khách vãng lai"
+    const finalSdt = (currentBooking && currentBooking.phone) ? currentBooking.phone : (sdtInput || "Khách vãng lai");
+    // Nếu có lịch đặt thì lấy tên từ lịch, không thì mặc định là "Khách vãng lai"
+    const finalCustName = (currentBooking && currentBooking.name) ? currentBooking.name : "Khách vãng lai";
 
     // 2. Chuẩn bị dữ liệu
     const orderData = {
         id: Date.now(),
         createdAt: firebase.database.ServerValue.TIMESTAMP,
-        sdt: document.getElementById('kh-sdt').value || "Khách vãng lai",
+        sdt: finalSdt, // Đã fix thành Khách vãng lai
         items: cart.map(i => `${i.name} (${i.size}) x${i.qty}`).join(', '),
         itemsArray: cart,
         total: currentTotal,
@@ -5032,7 +5038,7 @@ function saveOrderToFirebase(method) {
         method: method,
         points: Math.floor(currentTotal / 1000),
         bedId: currentBedId,
-        customerName: (currentBooking && currentBooking.name) ? currentBooking.name : "Khách lẻ"
+        customerName: finalCustName // Đã fix thành Khách vãng lai và ưu tiên tên từ lịch Bed
     };
 
     console.log("🚀 Đang đẩy đơn lên Firebase...", orderData);
@@ -5067,29 +5073,28 @@ function saveOrderToFirebase(method) {
                 pendingBedOrder = null;
                 activeOrderingBedId = null;
                 
-                openBedManager(); // Quay lại màn hình Bed để thấy kết quả
-                setTimeout(() => showAppModal("Hoàn tất", "Đã thanh toán và TRẢ BED thành công!", "🏁"), 300);
+                openBedManager(); 
+                setTimeout(() => { 
+                    if(typeof showAppModal === 'function') showAppModal("Hoàn tất", "Đã thanh toán và TRẢ BED thành công!", "🏁"); 
+                }, 300);
             }
             
             // TRƯỜNG HỢP 2: KHÁCH MỚI (WAITING) -> CẦN CHỌN BED
             else if (currentBooking && (currentBooking.bedId === "WAITING" || !currentBooking.bedId)) {
-                // Không reset pendingBedOrder, giữ lại để hàm chọn bed (finalizeBedCheckIn) dùng
-                // Không switchView('menu') mà mở popup ngay
-                
-                renderBedSelection(); // Vẽ lại các ô bed
+                renderBedSelection(); 
                 document.getElementById('bed-select-modal').classList.remove('hidden');
-                
-                // (Trên Mobile, modal này sẽ hiện đè lên giao diện thanh toán, vẫn ok)
             }
             
             // TRƯỜNG HỢP 3: GỌI MÓN THÊM / MANG VỀ
             else {
-                // Reset hết
+                // Reset hết để không bị dính vào đơn sau
                 pendingBedOrder = null;
                 activeOrderingBedId = null;
                 
                 switchView('menu');
-                setTimeout(() => showAppModal("Thành công", "Đơn hàng đã được lưu!", "✅"), 300);
+                setTimeout(() => { 
+                    if(typeof showAppModal === 'function') showAppModal("Thành công", "Đơn hàng đã được lưu!", "✅"); 
+                }, 300);
             }
         }
     });
@@ -7553,6 +7558,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
