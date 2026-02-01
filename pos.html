@@ -2930,44 +2930,75 @@ function calculateStats(orders, mode, customStart, customEnd) {
         if (dateKey === yestStr) stats.yesterday += amount;
 
         // --- ĐOẠN CODE MỚI: TRA CỨU MENU (CHUẨN 100%) ---
+// --- ĐOẠN CODE TRA CỨU DANH MỤC (CHUẨN KHÔNG CẦN CHỈNH) ---
 if (d >= startTime && d <= endTime) {
-    var itemsStr = String(o.items || "").toLowerCase();
-    var isSnack = false;
+    
+    // Tách chuỗi items ra thành từng món lẻ (Ví dụ: "Cafe x2, Khô gà x1")
+    var itemStrings = String(o.items || "").split(',');
+    
+    // Duyệt qua từng món trong đơn này
+    itemStrings.forEach(function(str) {
+        str = str.trim();
+        if(!str) return;
 
-    // 1. Lấy danh sách các món là 'ăn vặt' trong Menu
-    // (Lọc ra những món mà type là 'ăn vặt' hoặc 'đồ ăn')
-    var snackMenu = menu.filter(function(m) {
-        var t = String(m.type || "").toLowerCase();
-        return t.includes('ăn vặt') || t.includes('đồ ăn') || t.includes('snack');
+        // 1. Tách lấy Tên và Số lượng
+        // Format thường thấy: "Tên món (Size) xSL"
+        var xIndex = str.lastIndexOf('x');
+        var qty = 1;
+        var nameFull = str;
+
+        if (xIndex > -1) {
+            qty = parseInt(str.substring(xIndex + 1)) || 1;
+            nameFull = str.substring(0, xIndex).trim();
+        }
+
+        // 2. Lấy tên gốc (Bỏ phần Size nếu có để tra Menu cho chuẩn)
+        // Ví dụ: "Cafe sữa (M)" -> Lấy "Cafe sữa"
+        var nameOnly = nameFull;
+        if (nameFull.includes('(')) {
+            nameOnly = nameFull.split('(')[0].trim();
+        }
+
+        // 3. TRA CỨU TRONG MENU (Đây là bước quan trọng nhất!)
+        var menuItem = menu.find(m => m.name.toLowerCase() === nameOnly.toLowerCase());
+
+        // Nếu tìm thấy món này trong Menu
+        if (menuItem) {
+            // Lấy giá tiền để cộng doanh thu
+            // (Ưu tiên giá M hoặc L tùy món, nhân với số lượng khách mua)
+            var price = menuItem.priceM > 0 ? menuItem.priceM : menuItem.priceL;
+            var subTotal = price * qty;
+
+            // Kiểm tra xem món này thuộc nhóm nào trong Menu
+            var type = String(menuItem.type || "").toLowerCase();
+
+            // Nếu danh mục có chữ "ăn vặt" -> Cộng vào Ăn vặt
+            if (type.includes('ăn vặt')) {
+                stats.snackTotal += subTotal;
+            } else {
+                // Còn lại cộng vào Đồ uống
+                stats.drinkTotal += subTotal;
+            }
+        } else {
+            // Trường hợp món này đã bị xóa khỏi Menu hoặc không tìm thấy
+            // Tiên sinh có thể chọn mặc định cho vào Đồ uống cho đỡ sai số
+            // (Hoặc bỏ qua không tính)
+        }
     });
 
-    // 2. Soi xem đơn hàng này có chứa món nào trong danh sách trên không
-    for (var k = 0; k < snackMenu.length; k++) {
-        if (itemsStr.indexOf(snackMenu[k].name.toLowerCase()) > -1) {
-            isSnack = true;
-            break; // Tìm thấy 1 món là đủ kết luận
-        }
-    }
-
-    // 3. Cộng tiền
-    if(isSnack) stats.snackTotal += amount; 
-    else stats.drinkTotal += amount;
-    
-    // --- (Giữ nguyên phần phía dưới không đổi) ---
+    // --- (Phần phía dưới giữ nguyên để vẽ biểu đồ) ---
     if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
+    // Lưu ý: dailyList.drink ở đây đang dùng chung để hiển thị tổng ngày
+    // Nên ta cộng tổng bill (amount) vào đây cho khớp với biểu đồ tổng
     stats.dailyList[dateKey].drink += amount;
 
     var idx = -1;
-    if (groupType === 'month') {
-        idx = d.getMonth();
-    } else if (mode === 'month') {
-        idx = d.getDate() - 1;
-    } else if (mode === 'week') {
-        idx = (d.getDay() + 6) % 7;
-    } else if (mode === 'custom' && labels.length <= 31) {
+    if (groupType === 'month') idx = d.getMonth();
+    else if (mode === 'month') idx = d.getDate() - 1;
+    else if (mode === 'week') idx = (d.getDay() + 6) % 7;
+    else if (mode === 'custom' && labels.length <= 31) {
         var timeDiff = d.getTime() - startTime.getTime();
-        var dayDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
-        idx = dayDiff;
+        idx = Math.floor(timeDiff / (1000 * 3600 * 24));
     }
 
     if (idx >= 0 && idx < chartData.length) {
@@ -7580,6 +7611,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
