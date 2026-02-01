@@ -3983,9 +3983,9 @@ function handleMobileBedOrder(bookingId) {
 // --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
 // --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
 // --- [FIXED] NÚT GỌI MÓN PC: TỰ NHẢY VIEW & HIỆN THÔNG BÁO GIỎ HÀNG ---
+// --- [FIX] SHOW BED DETAIL (RESET SẠCH SẼ TRƯỚC KHI ĐIỀN) ---
 function showBedDetail(bedId) { 
     var booking = null; 
-    // Tìm booking dựa trên bedId hoặc index đang chọn
     if (bedId && bedId != 0) booking = currentBedList.find(b => b.bedId == bedId);
     if (!booking && selectedBedIndex > -1) booking = currentBedList[selectedBedIndex]; 
     
@@ -3997,7 +3997,7 @@ function showBedDetail(bedId) {
     activeOrderingBedId = bedId; 
     pendingBedOrder = booking; 
 
-    // 1. Kiểm tra nợ cũ của khách
+    // 1. Kiểm tra nợ cũ (Giữ nguyên)
     if (booking.phone) {
         var cleanPhone = normalizePhone(booking.phone);
         db.ref('customers/' + cleanPhone).once('value', snap => {
@@ -4010,38 +4010,42 @@ function showBedDetail(bedId) {
         });
     }
 
-    // 2. Điền SĐT vào ô nhập liệu
+    // 2. [FIX QUAN TRỌNG] XỬ LÝ ĐIỀN SĐT VÀO GIỎ
     var sdtInput = document.getElementById('kh-sdt');
-    if (sdtInput && booking.phone) {
-        sdtInput.value = booking.phone;
-        if (typeof checkSdtLive === 'function') checkSdtLive();
+    var statusLabel = document.getElementById('sdt-status');
+
+    if (sdtInput) {
+        // BƯỚC 1: XÓA TRẮNG TRƯỚC (Dọn bàn)
+        sdtInput.value = ""; 
+        if (statusLabel) statusLabel.innerText = ""; // Xóa tên khách cũ
+
+        // BƯỚC 2: Mới điền số mới (nếu có)
+        if (booking.phone) {
+            sdtInput.value = booking.phone;
+            if (typeof checkSdtLive === 'function') checkSdtLive();
+        }
     }
 
-    // 3. Tự động thêm các món tiền giờ nếu có logic
+    // 3. Tự động thêm món tiền giờ (Giữ nguyên)
     if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
 
-    // >>> BƯỚC QUAN TRỌNG: CHUYỂN VIEW VÀ ÉP HIỆN SIDEBAR <<<
+    // 4. Chuyển View
     switchView('menu'); 
-    
-    // Đảm bảo Sidebar Cart không bị ẩn trên PC
     const sidebar = document.getElementById('sidebar-cart');
     if (sidebar) sidebar.classList.remove('hidden');
 
-    // 4. HIỂN THỊ BANNER TRẠNG THÁI TRÊN GIỎ HÀNG
+    // 5. Hiển thị Banner trạng thái (Giữ nguyên)
     var cartInfo = document.getElementById('cart-bed-info'); 
     var sidebarContainer = document.getElementById('sidebar-cart');
     
-    // Nếu chưa có thẻ thông báo thì tạo mới chèn vào đầu Sidebar
     if (!cartInfo && sidebarContainer) { 
         cartInfo = document.createElement('div'); 
         cartInfo.id = 'cart-bed-info'; 
-        // Chèn vào trên cùng của sidebar để nhân viên dễ thấy
         sidebarContainer.insertBefore(cartInfo, sidebarContainer.firstChild); 
     } 
     
     if (cartInfo) { 
         var guestName = booking.name || "Khách hàng"; 
-        // Style cho Banner thông báo
         cartInfo.className = "p-3 mb-3 rounded-2xl text-center font-black uppercase text-[10px] tracking-widest animate-pulse border-2"; 
         
         if (booking.bedId && booking.bedId != 0 && booking.bedId != "WAITING") { 
@@ -4054,7 +4058,8 @@ function showBedDetail(bedId) {
             cartInfo.classList.remove('bg-green-50', 'text-[#006241]', 'border-[#006241]/20');
         } 
     } 
-    // THÊM ĐOẠN NÀY VÀO CUỐI:
+
+    // 6. Hiện đảo động (Giữ nguyên)
     const island = document.getElementById('bed-dynamic-island');
     if (island && booking) {
         document.getElementById('island-cust-name').innerText = booking.name || "Khách lẻ";
@@ -7020,47 +7025,47 @@ function filterHistoryMobile(keyword) {
     renderHistoryMobile(filtered);
 }
     // --- [MỚI] HÀM XỬ LÝ GỌI MÓN TỪ MOBILE (TỰ ĐIỀN SĐT) ---
+// --- [FIX] MOBILE ORDER (RESET SẠCH SẼ) ---
 function handleMobileBedOrder(bookingId) {
-    // 1. Tìm thông tin đơn đặt trong biến toàn cục
     const booking = globalAllBookings.find(b => b.id === bookingId);
-    
     if (!booking) return console.error("Không tìm thấy booking ID:", bookingId);
 
-    // 2. Cập nhật biến trạng thái Bed
-    // Nếu Bed đang chờ (WAITING) thì chưa có bedId, ta dùng activeOrderingBedId để hệ thống biết đang xử lý đơn nào
     activeOrderingBedId = booking.bedId || "WAITING"; 
     pendingBedOrder = booking; 
 
-    // 3. TỰ ĐỘNG ĐIỀN SỐ ĐIỆN THOẠI
+    // [FIX QUAN TRỌNG] XỬ LÝ SĐT
     var sdtInput = document.getElementById('kh-sdt');
-    if (sdtInput && booking.phone) {
-        sdtInput.value = booking.phone;
-        
-        // Kích hoạt hàm kiểm tra khách hàng (để hiện tên và điểm tích lũy)
-        if (typeof checkSdtLive === 'function') {
-            checkSdtLive(); 
+    var statusLabel = document.getElementById('sdt-status');
+
+    if (sdtInput) {
+        // BƯỚC 1: XÓA TRẮNG CŨ
+        sdtInput.value = "";
+        if (statusLabel) statusLabel.innerText = "";
+
+        // BƯỚC 2: ĐIỀN MỚI
+        if (booking.phone) {
+            sdtInput.value = booking.phone;
+            if (typeof checkSdtLive === 'function') checkSdtLive(); 
         }
     }
 
-    // 4. Chuyển sang giao diện Menu
+    // Tự động thêm món tiền giờ (nếu có logic này)
+    if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
+
     switchView('menu');
 
-    // 5. (Tùy chọn) Hiển thị thanh thông báo nhỏ trên giỏ hàng để biết đang order cho ai
+    // Hiển thị Banner thông báo (Giữ nguyên)
     setTimeout(function() {
         var cartInfo = document.getElementById('cart-bed-info');
         var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between');
-        
-        // Nếu chưa có thanh thông báo thì tạo mới (Logic lấy từ PC sang)
         if (!cartInfo && headerContainer) {
             cartInfo = document.createElement('div');
             cartInfo.id = 'cart-bed-info';
             headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling);
         }
-        
         if (cartInfo) {
             var guestName = booking.name || "Khách hàng";
             cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1 animate-pulse";
-            
             if (booking.bedId && booking.bedId != "WAITING") {
                 cartInfo.innerText = `🟢 ĐANG GỌI: BED 0${booking.bedId} - ${guestName}`;
                 cartInfo.style.color = "#006241";
@@ -7674,6 +7679,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
