@@ -2859,6 +2859,7 @@ function openRevenue(mode) {
     });
 }
 // --- HÀM TÍNH TOÁN (PHIÊN BẢN FIX LỖI CRASH) ---
+// --- HÀM TÍNH TOÁN THỐNG KÊ (BẢN FINAL - ĐỒNG BỘ DỮ LIỆU) ---
 function calculateStats(orders, mode, customStart, customEnd) {
     var now = new Date();
     var startTime, endTime;
@@ -2866,7 +2867,7 @@ function calculateStats(orders, mode, customStart, customEnd) {
     var chartData = [];
     var groupType = 'day'; 
 
-    // 1. THIẾT LẬP THỜI GIAN
+    // 1. THIẾT LẬP THỜI GIAN (Giữ nguyên logic cũ)
     if (mode === 'week') {
         var day = now.getDay() || 7; 
         startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0);
@@ -2877,13 +2878,8 @@ function calculateStats(orders, mode, customStart, customEnd) {
     else if (mode === 'month') {
         startTime = new Date(now.getFullYear(), now.getMonth(), 1);
         endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-        
-        // Tạo nhãn ngày 1 -> 31 bằng vòng lặp thủ công (An toàn hơn Array.from)
         var daysInMonth = endTime.getDate();
-        for (var i = 1; i <= daysInMonth; i++) {
-            labels.push(i.toString());
-            chartData.push(0);
-        }
+        for (var i = 1; i <= daysInMonth; i++) { labels.push(i.toString()); chartData.push(0); }
     } 
     else if (mode === 'year') {
         startTime = new Date(now.getFullYear(), 0, 1);
@@ -2896,10 +2892,8 @@ function calculateStats(orders, mode, customStart, customEnd) {
         if (!customStart || !customEnd) return null;
         startTime = new Date(customStart); startTime.setHours(0,0,0,0);
         endTime = new Date(customEnd); endTime.setHours(23,59,59,999);
-        
         var diffTime = Math.abs(endTime - startTime);
         var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-        
         if (diffDays > 31) {
             groupType = 'month';
             labels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12']; 
@@ -2929,86 +2923,69 @@ function calculateStats(orders, mode, customStart, customEnd) {
         if (dateKey === todayStr) stats.today += amount;
         if (dateKey === yestStr) stats.yesterday += amount;
 
-        // --- ĐOẠN CODE MỚI: TRA CỨU MENU (CHUẨN 100%) ---
-// --- ĐOẠN CODE TRA CỨU DANH MỤC (CHUẨN KHÔNG CẦN CHỈNH) ---
-if (d >= startTime && d <= endTime) {
-    
-    // Tách chuỗi items ra thành từng món lẻ (Ví dụ: "Cafe x2, Khô gà x1")
-    var itemStrings = String(o.items || "").split(',');
-    
-    // Duyệt qua từng món trong đơn này
-    itemStrings.forEach(function(str) {
-        str = str.trim();
-        if(!str) return;
+        if (d >= startTime && d <= endTime) {
+            
+            // === LOGIC TÁCH TIỀN MỚI (Dùng itemsArray chuẩn hơn) ===
+            
+            // Hàm xử lý từng món lẻ
+            const processSingleItem = (name, qty, itemPrice) => {
+                // Tra cứu Menu để lấy Type
+                const menuItem = menu.find(m => m.name.toLowerCase() === name.toLowerCase());
+                
+                // Xác định giá (Ưu tiên giá lưu trong đơn, nếu không có thì lấy giá menu hiện tại)
+                const finalPrice = (itemPrice > 0) ? itemPrice : (menuItem ? (menuItem.priceM || menuItem.priceL) : 0);
+                const subTotal = finalPrice * qty;
 
-        // 1. Tách lấy Tên và Số lượng
-        // Format thường thấy: "Tên món (Size) xSL"
-        var xIndex = str.lastIndexOf('x');
-        var qty = 1;
-        var nameFull = str;
+                const type = menuItem ? String(menuItem.type || "").toLowerCase() : "";
 
-        if (xIndex > -1) {
-            qty = parseInt(str.substring(xIndex + 1)) || 1;
-            nameFull = str.substring(0, xIndex).trim();
-        }
+                if (type.includes('ăn vặt') || type.includes('đồ ăn') || type.includes('snack')) {
+                    stats.snackTotal += subTotal;
+                } else {
+                    stats.drinkTotal += subTotal;
+                }
+            };
 
-        // 2. Lấy tên gốc (Bỏ phần Size nếu có để tra Menu cho chuẩn)
-        // Ví dụ: "Cafe sữa (M)" -> Lấy "Cafe sữa"
-        var nameOnly = nameFull;
-        if (nameFull.includes('(')) {
-            nameOnly = nameFull.split('(')[0].trim();
-        }
-
-        // 3. TRA CỨU TRONG MENU (Đây là bước quan trọng nhất!)
-        var menuItem = menu.find(m => m.name.toLowerCase() === nameOnly.toLowerCase());
-
-        // Nếu tìm thấy món này trong Menu
-        if (menuItem) {
-            // Lấy giá tiền để cộng doanh thu
-            // (Ưu tiên giá M hoặc L tùy món, nhân với số lượng khách mua)
-            var price = menuItem.priceM > 0 ? menuItem.priceM : menuItem.priceL;
-            var subTotal = price * qty;
-
-            // Kiểm tra xem món này thuộc nhóm nào trong Menu
-            var type = String(menuItem.type || "").toLowerCase();
-
-            // Nếu danh mục có chữ "ăn vặt" -> Cộng vào Ăn vặt
-            if (type.includes('ăn vặt')) {
-                stats.snackTotal += subTotal;
-            } else {
-                // Còn lại cộng vào Đồ uống
-                stats.drinkTotal += subTotal;
+            // Ưu tiên 1: Dùng itemsArray (Dữ liệu chuẩn dạng Object)
+            if (o.itemsArray && Array.isArray(o.itemsArray)) {
+                o.itemsArray.forEach(i => {
+                    processSingleItem(i.name, i.qty || 1, i.price || 0);
+                });
+            } 
+            // Ưu tiên 2: Nếu không có Array, mới phải phân tích chuỗi (Fallback)
+            else if (o.items) {
+                var itemStrings = String(o.items).split(',');
+                itemStrings.forEach(str => {
+                    str = str.trim();
+                    var xIndex = str.lastIndexOf('x');
+                    if (xIndex > -1) {
+                        var qty = parseInt(str.substring(xIndex + 1)) || 1;
+                        var nameFull = str.substring(0, xIndex).trim();
+                        var nameOnly = nameFull.split('(')[0].trim(); // Bỏ phần (Size)
+                        processSingleItem(nameOnly, qty, 0); // Giá 0 để nó tự tra menu
+                    }
+                });
             }
-        } else {
-            // Trường hợp món này đã bị xóa khỏi Menu hoặc không tìm thấy
-            // Tiên sinh có thể chọn mặc định cho vào Đồ uống cho đỡ sai số
-            // (Hoặc bỏ qua không tính)
+
+            // --- CỘNG DỒN BIỂU ĐỒ (Chart) ---
+            if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
+            stats.dailyList[dateKey].drink += amount;
+
+            var idx = -1;
+            if (groupType === 'month') idx = d.getMonth();
+            else if (mode === 'month') idx = d.getDate() - 1;
+            else if (mode === 'week') idx = (d.getDay() + 6) % 7;
+            else if (mode === 'custom' && labels.length <= 31) {
+                var timeDiff = d.getTime() - startTime.getTime();
+                idx = Math.floor(timeDiff / (1000 * 3600 * 24));
+            }
+
+            if (idx >= 0 && idx < chartData.length) {
+                chartData[idx] += amount;
+            }
         }
-    });
-
-    // --- (Phần phía dưới giữ nguyên để vẽ biểu đồ) ---
-    if (!stats.dailyList[dateKey]) stats.dailyList[dateKey] = { drink: 0 };
-    // Lưu ý: dailyList.drink ở đây đang dùng chung để hiển thị tổng ngày
-    // Nên ta cộng tổng bill (amount) vào đây cho khớp với biểu đồ tổng
-    stats.dailyList[dateKey].drink += amount;
-
-    var idx = -1;
-    if (groupType === 'month') idx = d.getMonth();
-    else if (mode === 'month') idx = d.getDate() - 1;
-    else if (mode === 'week') idx = (d.getDay() + 6) % 7;
-    else if (mode === 'custom' && labels.length <= 31) {
-        var timeDiff = d.getTime() - startTime.getTime();
-        idx = Math.floor(timeDiff / (1000 * 3600 * 24));
-    }
-
-    if (idx >= 0 && idx < chartData.length) {
-        chartData[idx] += amount;
-    }
-}
     });
     return stats;
 }
-
 function renderDailyRevenueList(list) { 
     let html = '<div class="mb-4 text-left"><h3 class="brand-font text-[#006241] text-[10px] uppercase tracking-widest mb-2 ml-1 text-left">Doanh thu</h3><div class="space-y-1.5 text-left">'; 
     Object.keys(list).sort((a,b) => { const da = a.split('/').reverse().join(''); const db = b.split('/').reverse().join(''); return db.localeCompare(da); }).forEach(date => { 
@@ -7611,6 +7588,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
