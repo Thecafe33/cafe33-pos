@@ -411,50 +411,66 @@ function login() {
     });
 }
 
+// --- [FIX] SHOW DASHBOARD (TỰ ĐIỀN THÔNG TIN NGƯỜI ĐI CÙNG) ---
 function showDashboard(phone) {
     curPhone = phone;
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
     document.getElementById('nav-bar').classList.remove('hidden');
 
-    // Lắng nghe User Realtime
-    // ... (bên trong hàm showDashboard)
-        db.ref('customers/' + phone).on('value', snap => {
-            userData = snap.val();
-            if(userData) {
-                document.getElementById('user-name-display').innerText = userData.name;
-                document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
-                
-                // --- SỬA ĐOẠN NÀY ĐỂ TỰ ĐIỀN THÔNG TIN NGƯỜI ĐI CÙNG ---
-                // Ưu tiên lấy compName, nếu không có thì lấy companionName (dữ liệu từ Sheet)
-                var cName = userData.compName || userData.companionName || "";
-                var cPhone = userData.compPhone || userData.companionPhone || "";
+    // Lắng nghe dữ liệu User theo thời gian thực
+    db.ref('customers/' + phone).on('value', snap => {
+        userData = snap.val();
+        
+        if(userData) {
+            // 1. Hiển thị thông tin cơ bản trên thẻ
+            document.getElementById('user-name-display').innerText = userData.name || "Khách hàng";
+            document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
+            
+            // Xếp hạng
+            let p = userData.points || 0;
+            let r = "Thành viên";
+            if (p >= 55000) r = "Thành viên 'siu thân'";
+            else if (p >= 33000) r = "Thành viên 'thân iu'";
+            else if (p >= 10000) r = "Thành viên Bạc";
+            document.getElementById('user-rank').innerText = r;
 
-                // 1. Điền vào Tab Hồ sơ (Tab Bạn)
-                document.getElementById('edit-name').value = userData.name || "";
-                document.getElementById('edit-sdt').value = phone;
-                document.getElementById('edit-cname').value = cName;
-                document.getElementById('edit-cphone').value = cPhone;
-                
-                // 2. Điền vào Tab Đặt Bed
-                var bookCname = document.getElementById('book-cname');
-                if(bookCname) bookCname.value = cName;
-                
-                var bookCphone = document.getElementById('book-cphone');
-                if(bookCphone) bookCphone.value = cPhone;
-                // -------------------------------------------------------
-                
-                // Xếp hạng
-                let p = userData.points || 0;
-                let r = "Thành viên";
-                if (p >= 55000) r = "Thành viên 'siu thân'";
-                else if (p >= 33000) r = "Thành viên 'thân iu'";
-                else if (p >= 10000) r = "Thành viên Bạc";
-                document.getElementById('user-rank').innerText = r;
+            // ========================================================
+            // [QUAN TRỌNG] TỰ ĐỘNG ĐIỀN THÔNG TIN NGƯỜI ĐI CÙNG
+            // ========================================================
+            
+            // Lấy thông tin từ Database (Ưu tiên các tên biến mới)
+            // compName/compPhone: Dữ liệu mới
+            // companionName: Dữ liệu cũ (nếu có)
+            var savedCompName = userData.compName || userData.companionName || "";
+            var savedCompPhone = userData.compPhone || userData.companionPhone || "";
+
+            // A. Điền vào Tab "Hồ sơ" (Để khách sửa nếu muốn)
+            var editName = document.getElementById('edit-name');
+            var editSdt = document.getElementById('edit-sdt');
+            var editCName = document.getElementById('edit-cname');
+            var editCPhone = document.getElementById('edit-cphone');
+
+            if(editName) editName.value = userData.name || "";
+            if(editSdt) editSdt.value = phone;
+            if(editCName) editCName.value = savedCompName;
+            if(editCPhone) editCPhone.value = savedCompPhone;
+
+            // B. Điền vào Tab "Đặt Bed" (Tự động điền luôn cho tiện)
+            // Chỉ điền nếu ô đang trống (để tránh khách đang gõ mà bị sửa lại)
+            var bookCName = document.getElementById('book-cname');
+            var bookCPhone = document.getElementById('book-cphone');
+
+            if(bookCName && bookCName.value === "") {
+                bookCName.value = savedCompName;
             }
-        });
-        // ...
+            if(bookCPhone && bookCPhone.value === "") {
+                bookCPhone.value = savedCompPhone;
+            }
+        }
+    });
     
+    // Tải danh sách quà
     loadRewards();
 }
 
@@ -1120,6 +1136,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
