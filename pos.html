@@ -1181,7 +1181,11 @@ input, button, select, textarea { font-size: 1rem; }
             </div>
             <div class="w-[20%] flex flex-col gap-3">
                 <button onclick="openBookingModal()" class="w-full bg-[#006241] hover:bg-[#004f32] text-white py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1"><span class="text-xs uppercase tracking-wider">Đặt Mới</span></button>
-                <div class="flex-1 bg-white rounded-[20px] shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden"><h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3><div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div></div>
+                <div class="flex-1 bg-white rounded-[20px] shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden"><h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3><div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div>
+                    <button id="btn-store-status" onclick="handleStoreStatusClick()" class="w-full py-4 rounded-[20px] font-black text-xs uppercase shadow-md active:scale-95 transition-all mt-3 bg-white text-gray-400 border border-gray-100">
+    Đang Hoạt Động
+</button>
+                </div>
             </div>
         </div>
     <div id="view-bed-mobile" class="hidden h-full flex flex-col relative">
@@ -1606,7 +1610,40 @@ input, button, select, textarea { font-size: 1rem; }
 </div>
     
 </div>
+<div id="modal-store-off" class="hidden fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+    <div class="bg-white w-full max-w-[360px] rounded-[32px] p-6 shadow-2xl border border-white/50 relative overflow-hidden">
+        
+        <div class="absolute top-0 left-0 w-full h-2 bg-red-500"></div>
+        <h3 class="text-xl font-black text-slate-800 uppercase text-center mb-6 tracking-tight mt-2">Tạm Ngưng Nhận Khách</h3>
 
+        <div class="space-y-3 mb-6">
+            <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl cursor-pointer border border-transparent hover:border-red-200 transition-all">
+                <input type="radio" name="off_reason" value="Cúp điện" class="w-5 h-5 accent-red-500" checked onchange="toggleOtherReason(false)">
+                <span class="font-bold text-slate-700">⚡ Cúp điện</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl cursor-pointer border border-transparent hover:border-red-200 transition-all">
+                <input type="radio" name="off_reason" value="Quán có việc đột xuất" class="w-5 h-5 accent-red-500" onchange="toggleOtherReason(false)">
+                <span class="font-bold text-slate-700">🏃 Có việc đột xuất</span>
+            </label>
+            <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl cursor-pointer border border-transparent hover:border-red-200 transition-all">
+                <input type="radio" name="off_reason" value="other" class="w-5 h-5 accent-red-500" onchange="toggleOtherReason(true)">
+                <span class="font-bold text-slate-700">📝 Lý do khác</span>
+            </label>
+            
+            <input type="text" id="off-reason-other" placeholder="Nhập lý do..." class="hidden w-full p-3 rounded-xl border border-gray-200 text-sm font-bold outline-none focus:border-red-500">
+        </div>
+
+        <div class="mb-8">
+            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Dự kiến mở lại lúc</p>
+            <input type="datetime-local" id="off-until-time" class="w-full p-3 bg-gray-50 rounded-xl font-black text-slate-700 outline-none border border-gray-200">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="document.getElementById('modal-store-off').classList.add('hidden')" class="py-3 rounded-xl bg-gray-100 text-gray-500 font-bold text-xs uppercase">Hủy</button>
+            <button onclick="submitStoreOff()" class="py-3 rounded-xl bg-red-500 text-white font-bold text-xs uppercase shadow-lg shadow-red-200 active:scale-95 transition-all">Xác Nhận Off</button>
+        </div>
+    </div>
+</div>
 <script>    
 function normalizePhone(p){
     return String(p || "").replace(/[^0-9]/g, "");
@@ -7367,6 +7404,103 @@ document.addEventListener('click', function(e) {
         document.getElementById('suggest-booking')?.classList.add('hidden');
     }
 });
+    // =========================================================
+// LOGIC TẠM NGƯNG QUÁN (STORE OFF)
+// =========================================================
+let currentStoreStatus = { isOff: false };
+
+// 1. Lắng nghe trạng thái từ Firebase (Realtime)
+db.ref('store_status').on('value', snap => {
+    currentStoreStatus = snap.val() || { isOff: false };
+    updateStoreStatusUI();
+});
+
+function updateStoreStatusUI() {
+    const btn = document.getElementById('btn-store-status');
+    if (!btn) return;
+
+    // Kiểm tra xem đã hết giờ Off chưa
+    if (currentStoreStatus.isOff) {
+        const now = new Date();
+        const until = new Date(currentStoreStatus.offUntil);
+        
+        if (now > until) {
+            // Hết giờ -> Tự động mở lại
+            resumeStore();
+            return;
+        }
+
+        // Đang OFF -> Hiện nút Đỏ
+        btn.className = "w-full py-4 rounded-[20px] font-black text-xs uppercase shadow-lg shadow-red-200 active:scale-95 transition-all mt-3 bg-red-500 text-white animate-pulse";
+        btn.innerHTML = `⛔ TẠM NGƯNG<br><span class="text-[9px] opacity-80">${currentStoreStatus.reason}</span>`;
+    } else {
+        // Đang ON -> Hiện nút Trắng (hoặc Xanh)
+        btn.className = "w-full py-4 rounded-[20px] font-black text-xs uppercase shadow-sm active:scale-95 transition-all mt-3 bg-white text-green-600 border-2 border-green-50 hover:bg-green-50";
+        btn.innerHTML = `🟢 ĐANG NHẬN KHÁCH`;
+    }
+}
+
+// 2. Xử lý khi bấm nút
+function handleStoreStatusClick() {
+    if (currentStoreStatus.isOff) {
+        // Đang tắt -> Hỏi mở lại
+        if (confirm("Mở lại quán ngay lập tức?")) {
+            resumeStore();
+        }
+    } else {
+        // Đang mở -> Hiện modal tắt
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 60); // Mặc định off 1 tiếng
+        
+        // Format datetime-local (YYYY-MM-DDTHH:mm)
+        const tzOffset = now.getTimezoneOffset() * 60000;
+        const localISOTime = (new Date(now - tzOffset)).toISOString().slice(0, 16);
+        
+        document.getElementById('off-until-time').value = localISOTime;
+        document.getElementById('modal-store-off').classList.remove('hidden');
+    }
+}
+
+function toggleOtherReason(show) {
+    const input = document.getElementById('off-reason-other');
+    if (show) input.classList.remove('hidden');
+    else input.classList.add('hidden');
+}
+
+// 3. Gửi lệnh Tắt lên Firebase
+function submitStoreOff() {
+    const radios = document.getElementsByName('off_reason');
+    let reason = "";
+    for (let r of radios) if (r.checked) reason = r.value;
+    
+    if (reason === 'other') {
+        reason = document.getElementById('off-reason-other').value.trim();
+    }
+    
+    if (!reason) return alert("Vui lòng nhập lý do!");
+    
+    const untilVal = document.getElementById('off-until-time').value;
+    if (!untilVal) return alert("Vui lòng chọn thời gian mở lại!");
+
+    document.getElementById('loading-overlay').style.display = 'flex';
+    document.getElementById('modal-store-off').classList.add('hidden');
+
+    db.ref('store_status').set({
+        isOff: true,
+        reason: reason,
+        offUntil: new Date(untilVal).toISOString(),
+        updatedAt: new Date().toISOString()
+    }, (err) => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        if (err) alert("Lỗi: " + err.message);
+        else showAppModal("Đã Tạm Ngưng", "App khách hàng sẽ chặn đặt lịch cho đến khi mở lại.", "🛑");
+    });
+}
+
+// 4. Mở lại quán
+function resumeStore() {
+    db.ref('store_status').set({ isOff: false });
+}
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -7851,6 +7985,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
