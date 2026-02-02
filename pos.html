@@ -5736,12 +5736,6 @@ function renderDetailContentMobile(b) {
     // Logic Active chuẩn: Có status active HOẶC đang dùng
     const isActive = (b.status === 'active' || (b.status && b.status.includes('active')) || (b.status && b.status.includes('đang dùng')));
 
-    // 2. Tính tiền thực tế (Async)
-    calculateSessionSpend(b.phone, b.start, (isDone ? b.realEndTime : b.end)).then(total => {
-        const el = document.getElementById('mob-detail-total-display');
-        if(el) el.innerText = total.toLocaleString() + 'đ';
-    });
-
     // 3. Chuẩn bị dữ liệu hiển thị đồng hồ
     // Chỉ tính toán đếm ngược nếu đang Active
     const countdown = isActive ? getCountdownStr(b.end) : { timeStr: b.start, label: "DỰ KIẾN", style: "bg-white/20" };
@@ -5882,7 +5876,18 @@ function renderDetailContentMobile(b) {
         </div>`;
     }
     actionContainer.innerHTML = btnHtml;
-
+// 5. [QUAN TRỌNG] TÍNH TIỀN SAU KHI HTML ĐÃ CÓ (FIX LỖI 0đ)
+    if(b.phone) {
+        calculateSessionSpend(b.phone, b.start, (isDone ? b.realEndTime : b.end)).then(total => {
+            const el = document.getElementById('mob-detail-total-display');
+            if(el) {
+                el.innerText = total.toLocaleString() + 'đ';
+                // Thêm hiệu ứng nháy nhẹ để biết đã load xong
+                el.classList.add('animate-pulse');
+                setTimeout(() => el.classList.remove('animate-pulse'), 500);
+            }
+        });
+    }
     // 6. KÍCH HOẠT ĐỒNG HỒ LIVE (CHỈ KHI ACTIVE)
     // --- [FIX] QUAN TRỌNG: Chỉ chạy setInterval khi isActive = true ---
     if (isActive) {
@@ -7846,6 +7851,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
