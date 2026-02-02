@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>The Cafe 33 - Membership</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --brand-green: #006241;
+            --brand-dark: #003825;
+            --gold: #D4AF37;
+        }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #F8F9FA;
+            overflow: hidden; /* Chặn cuộn để app giống Native App */
+        }
+        
+        /* Hiệu ứng nền trôi */
+        .blob-cont {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+            background: #f0fdf4;
+        }
+        .blob {
+            position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.6;
+            animation: float 10s infinite alternate cubic-bezier(0.45, 0.05, 0.55, 0.95);
+        }
+        .blob-1 { top: -10%; left: -10%; width: 300px; height: 300px; background: #86efac; animation-duration: 8s; }
+        .blob-2 { bottom: -10%; right: -10%; width: 350px; height: 350px; background: #059669; opacity: 0.3; animation-duration: 12s; }
+        .blob-3 { top: 40%; left: 40%; width: 200px; height: 200px; background: #fcd34d; opacity: 0.4; animation-duration: 15s; }
+
+        @keyframes float { from { transform: translate(0, 0); } to { transform: translate(30px, 50px); } }
+
+        /* Glass Card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 20px 50px -10px rgba(0, 98, 65, 0.15);
+        }
+
+        /* Input xịn xò */
+        .floating-input {
+            width: 100%; padding: 20px 16px 8px;
+            background: rgba(255,255,255,0.5);
+            border: 1px solid transparent;
+            border-bottom: 2px solid #e5e7eb;
+            font-size: 18px; font-weight: 700; color: var(--brand-dark);
+            outline: none; transition: all 0.3s;
+            border-radius: 12px 12px 0 0;
+        }
+        .floating-input:focus {
+            background: white;
+            border-bottom-color: var(--brand-green);
+        }
+        .floating-label {
+            position: absolute; left: 16px; top: 18px;
+            font-size: 14px; font-weight: 500; color: #9ca3af;
+            pointer-events: none; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .floating-input:focus ~ .floating-label,
+        .floating-input:not(:placeholder-shown) ~ .floating-label {
+            top: 6px; font-size: 10px; color: var(--brand-green); font-weight: 800;
+        }
+
+        /* Nút bấm WOW */
+        .btn-wow {
+            background: linear-gradient(135deg, #006241 0%, #003825 100%);
+            position: relative; overflow: hidden;
+            transition: all 0.3s;
+        }
+        .btn-wow::after {
+            content: ''; position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
+        }
+        .btn-wow:active { transform: scale(0.95); }
+        
+        /* Thẻ thành viên ảo (Ẩn mặc định) */
+        .member-card {
+            background: linear-gradient(135deg, #1f2937 0%, #000000 100%);
+            border-radius: 24px; padding: 24px; color: white;
+            position: relative; overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            transform: rotateX(90deg); opacity: 0; /* Trạng thái ẩn */
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+        .member-card.show { transform: rotateX(0deg); opacity: 1; }
+        
+        .card-shimmer {
+            position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(to right, transparent 0%, rgba(212, 175, 55, 0.1) 50%, transparent 100%);
+            transform: rotate(30deg);
+            animation: shimmer 6s infinite linear;
+        }
+        @keyframes shimmer { 0% { transform: translateX(-50%) rotate(30deg); } 100% { transform: translateX(50%) rotate(30deg); } }
+
+    </style>
+</head>
+<body class="flex flex-col h-screen justify-center items-center p-6">
+
+    <div class="blob-cont">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div id="register-form" class="w-full max-w-sm glass-card rounded-[40px] p-8 relative z-10 transition-all duration-500">
+        
+        <div class="text-center mb-10">
+            <p class="text-[10px] font-black tracking-[0.3em] text-[#006241] uppercase mb-2">Membership</p>
+            <h1 class="text-5xl font-black text-[#1e293b] tracking-tighter" style="font-family: 'Playfair Display', serif;">The Cafe 33</h1>
+        </div>
+
+        <div class="space-y-6">
+            <div class="relative group">
+                <input type="tel" id="phone" class="floating-input" placeholder=" " inputmode="numeric">
+                <label class="floating-label">Số điện thoại</label>
+            </div>
+
+            <div class="relative group">
+                <input type="text" id="fullname" class="floating-input capitalize" placeholder=" ">
+                <label class="floating-label">Tên của bạn</label>
+            </div>
+        </div>
+
+        <button onclick="processRegister()" class="btn-wow w-full mt-10 py-5 rounded-[24px] text-white font-black text-sm uppercase tracking-widest shadow-2xl shadow-emerald-900/30">
+            Kích hoạt thẻ ngay
+        </button>
+
+        <p class="mt-6 text-center text-[10px] text-gray-400 font-bold opacity-60">
+            Powered by The Cafe 33 Technology
+        </p>
+    </div>
+
+    <div id="success-view" class="hidden w-full max-w-sm relative z-20 perspective-1000">
+        
+        <div class="text-center mb-6 animate-fade-in-up">
+            <h2 class="text-2xl font-black text-[#006241]">Chào mừng!</h2>
+            <p class="text-sm text-gray-500 font-medium">Thẻ thành viên của bạn đã sẵn sàng</p>
+        </div>
+
+        <div id="virtual-card" class="member-card aspect-[1.58/1] flex flex-col justify-between">
+            <div class="card-shimmer"></div>
+            
+            <div class="flex justify-between items-start relative z-10">
+                <span class="text-[10px] font-bold tracking-[0.2em] opacity-70">MEMBER CARD</span>
+                <span class="text-xl">☕</span>
+            </div>
+
+            <div class="relative z-10 text-center">
+                <h3 id="card-name" class="text-3xl font-black text-[#D4AF37] uppercase tracking-wide drop-shadow-md" style="font-family: 'Playfair Display', serif;">Tên Khách</h3>
+                <p class="text-[10px] opacity-60 mt-1 uppercase tracking-widest">Thành viên mới</p>
+            </div>
+
+            <div class="flex justify-between items-end relative z-10">
+                <div>
+                    <p class="text-[8px] opacity-50 uppercase tracking-wider mb-0.5">ID Number</p>
+                    <p id="card-phone" class="font-mono text-lg font-bold tracking-widest">000 000 0000</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[8px] opacity-50 uppercase tracking-wider mb-0.5">Points</p>
+                    <p class="text-xl font-black text-[#D4AF37]">0</p>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="location.reload()" class="mt-8 w-full py-4 bg-white/50 backdrop-blur text-[#006241] font-bold rounded-2xl text-xs uppercase hover:bg-white transition-all">
+            Đăng ký thêm người khác
+        </button>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. CONFIG FIREBASE (Điền đúng cái của POS vào đây)
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+            authDomain: "the-cafe-33.firebaseapp.com",
+            databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "the-cafe-33",
+            storageBucket: "the-cafe-33.appspot.com",
+            messagingSenderId: "YOUR_ID", // Điền nốt nếu có
+            appId: "YOUR_APP_ID"          // Điền nốt nếu có
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        function normalizePhone(p) { return String(p).replace(/[^0-9]/g, ""); }
+
+        // ==========================================
+        // 2. LOGIC XỬ LÝ "WOW"
+        // ==========================================
+        function processRegister() {
+            const btn = document.querySelector('.btn-wow');
+            const phoneVal = document.getElementById('phone').value;
+            const nameVal = document.getElementById('fullname').value;
+            const cleanPhone = normalizePhone(phoneVal);
+
+            // Validate
+            if (cleanPhone.length < 9) return alert("SĐT chưa đúng định dạng ạ!");
+            if (nameVal.trim().length < 2) return alert("Tên ngắn quá ạ!");
+
+            // Hiệu ứng Loading trên nút
+            const originalText = btn.innerText;
+            btn.innerText = "Đang khởi tạo...";
+            btn.style.opacity = "0.7";
+
+            // Check Firebase
+            db.ref('customers/' + cleanPhone).once('value', snap => {
+                if (snap.exists()) {
+                    // Đã có -> Báo lỗi nhẹ nhàng
+                    btn.innerText = "Đã là thành viên rồi!";
+                    btn.style.background = "#ef4444"; // Đổi màu đỏ
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.style.background = ""; // Reset
+                        btn.style.opacity = "1";
+                    }, 2000);
+                } else {
+                    // Tạo mới
+                    const newMember = {
+                        name: nameVal.trim(),
+                        phone: cleanPhone,
+                        points: 0,
+                        joinDate: new Date().toISOString(),
+                        source: 'qr_wow'
+                    };
+
+                    db.ref('customers/' + cleanPhone).set(newMember, err => {
+                        if (!err) {
+                            showSuccessEffect(nameVal, cleanPhone);
+                        } else {
+                            alert("Lỗi: " + err.message);
+                            btn.innerText = originalText;
+                            btn.style.opacity = "1";
+                        }
+                    });
+                }
+            });
+        }
+
+        function showSuccessEffect(name, phone) {
+            // 1. Ẩn form cũ
+            const form = document.getElementById('register-form');
+            form.style.transform = "scale(0.8) translateY(-20px)";
+            form.style.opacity = "0";
+            
+            setTimeout(() => {
+                form.classList.add('hidden');
+                
+                // 2. Hiện thẻ thành viên
+                const successView = document.getElementById('success-view');
+                successView.classList.remove('hidden');
+                
+                // Điền thông tin lên thẻ
+                document.getElementById('card-name').innerText = name;
+                // Format SĐT đẹp (090 123 4567)
+                const p = phone;
+                document.getElementById('card-phone').innerText = `${p.slice(0,3)} ${p.slice(3,6)} ${p.slice(6)}`;
+
+                // Kích hoạt animation lật thẻ
+                setTimeout(() => {
+                    document.getElementById('virtual-card').classList.add('show');
+                    fireConfetti(); // Bắn pháo hoa
+                }, 100);
+
+            }, 400);
+        }
+
+        function fireConfetti() {
+            var duration = 3 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+
+                if (timeLeft <= 0) {
+                    return clearInterval(interval);
+                }
+
+                var particleCount = 50 * (timeLeft / duration);
+                // Bắn từ 2 bên màn hình
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random()*0.1 + 0.1, y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: Math.random()*0.1 + 0.8, y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+    </script>
+</body>
+</html>
