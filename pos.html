@@ -6316,49 +6316,6 @@ function calculateGroupRevenue(orders, mode, customStart, customEnd) {
     return { groups: sorted, totalRev: totalRevenue };
 }
 
-function updateRevenueGroupsUI(data) {
-// >>> CHÈN ĐOẠN NÀY VÀO ĐÂY <<<
-    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
-    let finalLabel = currentRevLabelOverride || labelMap[currentRevMode] || 'Chi tiết';
-    const labelEl = document.getElementById('mob-chart-label');
-    if(labelEl) labelEl.innerText = finalLabel;
-    // >>> KẾT THÚC ĐOẠN CHÈN <<<
-    const container = document.getElementById('mob-rev-chart-bars');
-    container.className = "w-full flex flex-col gap-3 pb-4"; 
-    document.getElementById('mob-chart-total').innerText = data.totalRev.toLocaleString() + ' ₫';
-
-    let html = `<div class="flex justify-between items-center mb-3 pb-2 border-b border-dashed border-gray-200"><span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Phân loại doanh thu</span><span class="text-[10px] font-bold text-gray-400">Cao ➝ Thấp</span></div>`;
-    
-    if (data.groups.length === 0) {
-        container.innerHTML = html + '<div class="text-center text-gray-300 py-10 text-xs">Chưa có dữ liệu</div>'; return;
-    }
-    const maxVal = Math.max(...data.groups.map(i => i.total), 1);
-    html += '<div class="space-y-4">';
-    html += data.groups.map((group, index) => {
-        let percent = Math.round((group.total / maxVal) * 100);
-        let icon = "category";
-        if(group.name.toLowerCase().includes('cà phê')) icon = "coffee";
-        else if(group.name.toLowerCase().includes('trà')) icon = "local_cafe";
-        else if(group.name.toLowerCase().includes('ăn vặt')) icon = "cookie";
-        let isTop1 = index === 0;
-        let barColor = isTop1 ? 'bg-amber-500' : 'bg-[#006241]';
-        let iconBg = isTop1 ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500';
-
-        return `
-        <div class="w-full group">
-            <div class="flex justify-between items-center mb-1.5">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shadow-sm border border-white"><span class="material-symbols-outlined text-[16px]">${icon}</span></div>
-                    <div class="flex flex-col"><span class="font-black text-[13px] text-slate-800 leading-tight">${group.name}</span><span class="text-[9px] font-bold text-slate-400">Đã bán: ${group.qty}</span></div>
-                </div>
-                <div class="flex flex-col items-end"><span class="font-black text-[13px] text-[#006241]">${group.total.toLocaleString()}</span><span class="text-[9px] font-bold text-slate-400">${Math.round((group.total/data.totalRev)*100)}%</span></div>
-            </div>
-            <div class="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full ${barColor} rounded-full transition-all duration-1000 ease-out relative" style="width: ${percent}%"><div class="absolute inset-0 bg-white/20"></div></div></div>
-        </div>`;
-    }).join('');
-    html += '</div>';
-    container.innerHTML = html;
-}
 function toggleItemSort() {
     currentItemSort = (currentItemSort === 'desc') ? 'asc' : 'desc';
     fetchRevenueDataMobile(currentRevMode);
@@ -6577,6 +6534,14 @@ function calculateGroupRevenue(orders, mode, customStart, customEnd) {
     return { groups: sortedGroups, totalRev: totalRevenue };
 }
 function updateRevenueGroupsUI(data) {
+    // --- [FIX START] CẬP NHẬT LABEL THỜI GIAN ---
+    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
+    // Lấy tên từ biến Override (nếu có chọn từ menu) hoặc lấy theo mode mặc định
+    let finalLabel = currentRevLabelOverride || labelMap[currentRevMode] || 'Chi tiết';
+    
+    const labelEl = document.getElementById('mob-chart-label');
+    if(labelEl) labelEl.innerText = finalLabel;
+    // --- [FIX END] ---
     const container = document.getElementById('mob-rev-chart-bars');
     container.className = "w-full flex flex-col gap-3 pb-4"; 
     
@@ -7990,4 +7955,5 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
