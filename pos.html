@@ -876,7 +876,7 @@ input, button, select, textarea { font-size: 1rem; }
         </div>
 </div>
    <div id="view-menu" class="flex-1 flex flex-col overflow-hidden relative bg-[#F2F2F7]">
-    
+
     <div id="category-bar" class="hidden md:flex px-6 py-2 border-b border-gray-50 bg-gray-50/30 gap-2 overflow-x-auto shrink-0">
         <div id="tabs-container" class="flex gap-2"></div>
     </div>
@@ -1643,24 +1643,6 @@ input, button, select, textarea { font-size: 1rem; }
             <button onclick="submitStoreOff()" class="py-3 rounded-xl bg-red-500 text-white font-bold text-xs uppercase shadow-lg shadow-red-200 active:scale-95 transition-all">Xác Nhận Off</button>
         </div>
     </div>
-</div>
-    <div id="mob-bed-order-banner" class="hidden fixed top-0 left-0 right-0 z-[100000] bg-[#E6F4F1] border-b border-[#bce3db] px-5 py-3 flex items-center justify-between shadow-xl animate-slide-down">
-    <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full bg-white text-[#006241] flex items-center justify-center font-bold text-xl shadow-sm border border-[#bce3db] animate-pulse shrink-0">
-            🛏️
-        </div>
-        <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
-                <span id="mob-banner-bed" class="text-[10px] font-black bg-[#006241] text-white px-1.5 py-0.5 rounded-md whitespace-nowrap">BED --</span>
-                <span class="text-[10px] font-bold text-[#006241] uppercase tracking-wider truncate">Đang gọi món</span>
-            </div>
-            <h3 id="mob-banner-cust" class="text-sm font-bold text-slate-700 leading-tight mt-0.5 truncate">Tên khách</h3>
-            <p id="mob-banner-time" class="text-[10px] font-mono font-bold text-slate-500 truncate">--:--</p>
-        </div>
-    </div>
-    <button onclick="resetOrderingMode()" class="w-9 h-9 rounded-full bg-white text-red-400 flex items-center justify-center shadow-sm border border-red-100 active:scale-90 transition-transform shrink-0 ml-2">
-        <span class="material-symbols-outlined text-lg">close</span>
-    </button>
 </div>
 <script>    
 function normalizePhone(p){
@@ -4012,72 +3994,49 @@ function setupActionButtons(bookingId, data, hasBed, btnOrder, btnCheckout, btnC
     }
 }
     // --- [FIXED] GỌI MÓN MOBILE (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
-// --- [FIX FINAL] GỌI MÓN MOBILE (HIỆN BANNER THÔNG BÁO) ---
 function handleMobileBedOrder(bookingId) {
     const booking = globalAllBookings.find(b => b.id === bookingId);
     if (!booking) return console.error("Không tìm thấy booking ID:", bookingId);
 
-    // 1. Set biến toàn cục
     activeOrderingBedId = booking.bedId || "WAITING"; 
     pendingBedOrder = booking; 
 
-    // 2. Điền SĐT vào bộ nhớ tạm (để sync sang màn thanh toán)
+    // 1. Điền SĐT
     var sdtInput = document.getElementById('kh-sdt');
-    if (sdtInput) {
-        sdtInput.value = ""; // Reset trước
-        if (booking.phone) {
-            sdtInput.value = booking.phone;
-            if (typeof checkSdtLive === 'function') checkSdtLive(); 
+    if (sdtInput && booking.phone) {
+        sdtInput.value = booking.phone;
+        if (typeof checkSdtLive === 'function') {
+            checkSdtLive(); 
         }
     }
 
-    // 3. Tự động tính tiền giờ (nếu có)
-    if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
+    // >>> 2. [MỚI] TỰ ĐỘNG TÍNH GIỜ VÀ ADD VÀO CART <<<
+    autoAddBedItems(booking);
+    // ------------------------------------------------
 
-    // 4. Chuyển sang màn hình Menu
     switchView('menu');
 
-   // 5. TẠO BANNER MỚI (GẮN TRỰC TIẾP VÀO BODY ĐỂ KHÔNG BỊ CHE)
-    // ============================================================
-    
-    // A. Xóa banner cũ (nếu đang tồn tại để tránh trùng lặp)
-    const existing = document.getElementById('js-fixed-banner');
-    if (existing) existing.remove();
-
-    // B. Chuẩn bị thông tin
-    const bedLabel = (booking.bedId && booking.bedId != "WAITING") ? `BED 0${booking.bedId}` : "CHỜ XẾP";
-    const custName = booking.name || "Khách lẻ";
-    const timeInfo = `${booking.start} - ${booking.end}`;
-
-    // C. Tạo HTML cho Banner (Style cứng để đè mọi thứ)
-    const bannerHTML = `
-    <div id="js-fixed-banner" style="position: fixed; top: 0; left: 0; right: 0; z-index: 999999; background: #E6F4F1; border-bottom: 1px solid #bce3db; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 20px rgba(0,0,0,0.15); animation: slideDown 0.3s ease-out;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 42px; height: 42px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #bce3db; color: #006241; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                🛏️
-            </div>
-            <div style="display: flex; flex-direction: column;">
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <span style="background: #006241; color: white; font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 6px;">${bedLabel}</span>
-                    <span style="color: #006241; font-size: 10px; font-weight: 800; text-transform: uppercase;">ĐANG GỌI MÓN</span>
-                </div>
-                <div style="font-weight: 800; color: #334155; font-size: 14px; margin-top: 2px; line-height: 1.2;">
-                    ${custName}
-                </div>
-                <div style="font-size: 10px; font-weight: 700; color: #64748b; font-family: monospace;">
-                    ${timeInfo}
-                </div>
-            </div>
-        </div>
-        <button onclick="resetOrderingMode()" style="width: 36px; height: 36px; background: white; border-radius: 50%; border: 1px solid #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-            ✕
-        </button>
-    </div>
-    `;
-
-    // D. Chèn vào cuối trang (Body)
-    document.body.insertAdjacentHTML('beforeend', bannerHTML);
-
+    // 3. Hiển thị thông báo (Giữ nguyên)
+    setTimeout(function() {
+        var cartInfo = document.getElementById('cart-bed-info');
+        var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between');
+        if (!cartInfo && headerContainer) {
+            cartInfo = document.createElement('div');
+            cartInfo.id = 'cart-bed-info';
+            headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling);
+        }
+        if (cartInfo) {
+            var guestName = booking.name || "Khách hàng";
+            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1 animate-pulse";
+            if (booking.bedId && booking.bedId != "WAITING") {
+                cartInfo.innerText = `🟢 ĐANG GỌI: BED 0${booking.bedId} - ${guestName}`;
+                cartInfo.style.color = "#006241";
+            } else {
+                cartInfo.innerText = `🟠 ĐANG GỌI: KHÁCH CHỜ - ${guestName}`;
+                cartInfo.style.color = "#d97706";
+            }
+        }
+    }, 100);
 }
 // --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
 // --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
@@ -7334,9 +7293,10 @@ function resetOrderingMode() {
     const island = document.getElementById('bed-dynamic-island');
     if (island) island.classList.add('hidden');
     
-   // 2. Xóa Banner nổi (MỚI)
-    const fixedBanner = document.getElementById('js-fixed-banner');
-    if (fixedBanner) fixedBanner.remove();
+    // 3. Xóa Banner giỏ hàng
+    const cartInfo = document.getElementById('cart-bed-info');
+    if (cartInfo) cartInfo.remove();
+
     // 4. Xóa SĐT tại ô nhập liệu và reset trạng thái SĐT
     const sdtInput = document.getElementById('kh-sdt');
     if (sdtInput) {
@@ -7348,7 +7308,7 @@ function resetOrderingMode() {
     const sdtStatus = document.getElementById('sdt-status');
     if (sdtStatus) sdtStatus.innerText = "";
 
-    console.log("Đã thoát chế độ Order Bed");
+    console.log("Đã thoát chế độ Order Bed - Trở về khách vãng lai");
 }
   // =========================================================
 // LOGIC GỢI Ý KHÁCH HÀNG (AUTOCOMPLETE)
@@ -8030,12 +7990,6 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
-
-
-
-
-
-
 
 
 
