@@ -1,380 +1,341 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>The Cafe 33 - Membership</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,400,1,0" rel="stylesheet" />
+
     <script>
       tailwind.config = {
         theme: {
           extend: {
-            fontFamily: { sans: ['Inter', 'sans-serif'] },
+            fontFamily: { sans: ['Inter', 'sans-serif'], serif: ['Playfair Display', 'serif'] },
             colors: {
-              starbucks: {
+              brand: {
                 900: '#1e3932', 800: '#116149', 700: '#006241',
                 600: '#00704A', 500: '#00704A', 400: '#4aa582',
                 300: '#D4E9E2', 100: '#F1F8F6', 50: '#f9fbfb'
-              },
+              }
             },
             animation: {
               'float': 'float 10s ease-in-out infinite',
               'blob': 'blob 20s infinite',
+              'fade-in': 'fadeIn 0.6s ease-out forwards',
+              'slide-up': 'slideUp 0.5s ease-out forwards'
             },
             keyframes: {
               float: {
-                '0%, 100%': { transform: 'translateY(0) scale(1) rotate(0deg)' },
-                '33%': { transform: 'translateY(-30px) scale(1.1) rotate(2deg)' },
-                '66%': { transform: 'translateY(20px) scale(0.95) rotate(-2deg)' },
+                '0%, 100%': { transform: 'translateY(0) scale(1)' },
+                '50%': { transform: 'translateY(-20px) scale(1.05)' },
               },
               blob: {
                 '0%': { transform: 'translate(0px, 0px) scale(1)' },
                 '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
                 '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
                 '100%': { transform: 'translate(0px, 0px) scale(1)' },
-              }
+              },
+              fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
+              slideUp: { from: { opacity: 0, transform: 'translateY(20px)' }, to: { opacity: 1, transform: 'translateY(0)' } }
             }
           }
         }
       }
     </script>
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      body { background-color: #fdfdfd; color: #1f2937; overflow: hidden; }
-      .bg-noise {
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 50; opacity: 0.03;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-      }
-      .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 20px); }
-      /* Ẩn thanh cuộn */
-      ::-webkit-scrollbar { display: none; }
-    </style>
+        body { background-color: #FAFAFA; color: #1f2937; overflow: hidden; height: 100vh; width: 100vw; }
+        
+        /* Hiệu ứng kính mờ cao cấp */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 40px 80px -20px rgba(0, 98, 65, 0.15);
+        }
 
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "framer-motion": "https://esm.sh/framer-motion@10.16.4",
-        "lucide-react": "https://esm.sh/lucide-react@0.292.0"
-      }
-    }
-    </script>
-    
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        /* Nền nhiễu hạt (Noise) */
+        .bg-noise {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Floating Input Labels */
+        .input-group { position: relative; margin-bottom: 1.5rem; }
+        .input-field {
+            width: 100%; height: 72px; padding: 24px 24px 8px;
+            background: rgba(249, 250, 251, 0.8);
+            border-radius: 24px; border: 2px solid transparent;
+            font-size: 18px; font-weight: 600; color: #111827;
+            outline: none; transition: all 0.3s;
+        }
+        .input-field:focus { background: white; border-color: #00704A; box-shadow: 0 10px 30px rgba(0, 112, 74, 0.1); }
+        .input-label {
+            position: absolute; left: 24px; top: 50%; transform: translateY(-50%);
+            color: #9CA3AF; font-weight: 500; font-size: 16px; pointer-events: none; transition: all 0.3s;
+        }
+        .input-field:focus ~ .input-label,
+        .input-field:not(:placeholder-shown) ~ .input-label {
+            top: 20px; font-size: 12px; color: #00704A; font-weight: 700;
+        }
+
+        /* Nút bấm xịn */
+        .btn-primary {
+            width: 100%; padding: 20px; border-radius: 30px;
+            background: #00704A; color: white;
+            font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            box-shadow: 0 20px 40px -10px rgba(0, 112, 74, 0.4);
+            transition: all 0.3s; position: relative; overflow: hidden;
+        }
+        .btn-primary:active { transform: scale(0.97); }
+        .btn-primary::after {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.5s;
+        }
+        .btn-primary:hover::after { left: 100%; transition: 0.7s; }
+
+        /* Chuyển cảnh */
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; opacity: 0; transition: opacity 0.5s ease; }
+        .screen.active { display: flex; opacity: 1; }
+    </style>
 
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 </head>
-<body>
-    <div id="root"></div>
-    
-    <div id="error-display" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; padding:20px; color:red; overflow:auto;"></div>
+<body class="flex items-center justify-center font-sans">
+
+    <div class="bg-noise"></div>
+    <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-300 rounded-full blur-[100px] opacity-40 animate-float"></div>
+        <div class="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] bg-brand-100 rounded-full blur-[120px] opacity-60 animate-blob"></div>
+    </div>
+
+    <div class="relative z-10 w-full h-full md:max-w-[430px] md:h-[90vh] md:rounded-[40px] md:border-[8px] md:border-white md:shadow-2xl bg-white/60 backdrop-blur-2xl overflow-hidden glass-panel">
+        
+        <div id="screen-welcome" class="screen active p-8 pt-12 justify-between">
+            <div class="animate-slide-up" style="animation-delay: 0.1s;">
+                <span class="inline-block px-4 py-1.5 rounded-full bg-brand-100 border border-brand-300 text-brand-700 text-xs font-black tracking-widest uppercase mb-4 shadow-sm">
+                    ✨ Membership
+                </span>
+                <h1 class="text-4xl font-black text-gray-900 leading-tight mb-2">
+                    Chào mừng đến<br>
+                    <span class="text-brand-600 font-serif italic">The Cafe 33</span>
+                </h1>
+                <p class="text-gray-500 text-lg font-medium">Đăng ký thành viên để tích điểm và nhận ưu đãi độc quyền.</p>
+            </div>
+
+            <div class="animate-slide-up flex-1 flex items-center" style="animation-delay: 0.2s;">
+                <div class="w-full bg-white/80 backdrop-blur-xl border border-white rounded-3xl p-6 shadow-lg relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 w-20 h-20 bg-brand-100 rounded-full blur-2xl opacity-50 -mr-10 -mt-10"></div>
+                    
+                    <div class="flex items-start gap-4 relative z-10">
+                        <div class="w-14 h-14 bg-brand-100 rounded-2xl flex items-center justify-center text-brand-600 shadow-inner shrink-0">
+                            <span class="material-symbols-rounded text-3xl">redeem</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-1">Quà thành viên mới</h3>
+                            <div class="h-px w-full bg-gray-200 my-2"></div>
+                            <p class="text-lg text-gray-800 font-medium">Mua 1 Size L</p>
+                            <p class="text-xl text-brand-600 font-black">TẶNG 1 SIZE M</p>
+                            <p class="text-xs text-gray-400 mt-2 font-medium bg-gray-50 inline-block px-2 py-1 rounded">Áp dụng lần đầu</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="animate-slide-up pb-6" style="animation-delay: 0.3s;">
+                <button onclick="goToRegister()" class="btn-primary">
+                    Bắt đầu đăng ký
+                </button>
+            </div>
+        </div>
+
+        <div id="screen-register" class="screen p-8 pt-6">
+            <div class="flex items-center mb-8">
+                <button onclick="goToWelcome()" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-600 shadow-sm hover:bg-gray-50 transition-colors">
+                    <span class="material-symbols-rounded">arrow_back</span>
+                </button>
+            </div>
+
+            <div class="mb-8">
+                <h2 class="text-3xl font-black text-gray-900 mb-2">Tạo tài khoản</h2>
+                <p class="text-gray-500 font-medium">Nhập thông tin để nhận quà ngay.</p>
+            </div>
+
+            <div class="space-y-6 flex-1">
+                <div class="input-group">
+                    <input type="text" id="reg-name" class="input-field" placeholder=" " autocomplete="off">
+                    <label class="input-label">Họ và tên của bạn</label>
+                </div>
+                <div class="input-group">
+                    <input type="tel" id="reg-phone" class="input-field" placeholder=" " inputmode="numeric">
+                    <label class="input-label">Số điện thoại</label>
+                </div>
+            </div>
+
+            <div class="pb-6">
+                <button onclick="submitRegister()" id="btn-submit" class="btn-primary">
+                    ĐĂNG KÝ NGAY
+                </button>
+                <p class="text-center text-xs text-gray-400 mt-4 font-medium">Thông tin của bạn được bảo mật tuyệt đối.</p>
+            </div>
+        </div>
+
+        <div id="screen-success" class="screen p-8 justify-center items-center text-center relative overflow-hidden">
+            <div class="absolute inset-0 pointer-events-none">
+                <div class="absolute top-10 left-10 w-4 h-4 bg-yellow-400 rounded-full animate-bounce"></div>
+                <div class="absolute top-20 right-20 w-3 h-3 bg-red-400 rounded-full animate-pulse"></div>
+            </div>
+
+            <div class="relative mb-8">
+                <div class="w-24 h-24 bg-brand-100 rounded-full flex items-center justify-center mx-auto relative z-10 shadow-lg">
+                    <span class="material-symbols-rounded text-5xl text-brand-600">check</span>
+                </div>
+                <div class="absolute inset-0 bg-brand-200 rounded-full blur-xl opacity-50 animate-pulse"></div>
+            </div>
+
+            <h2 class="text-3xl font-black text-gray-900 mb-2">Đăng Ký Thành Công!</h2>
+            <p class="text-lg text-gray-500 font-medium mb-10">Chào mừng <span id="user-display-name" class="text-brand-600 font-bold">Bạn</span> gia nhập.</p>
+
+            <div class="w-full bg-gradient-to-br from-brand-600 to-brand-800 rounded-[32px] p-8 text-white shadow-2xl relative overflow-hidden mb-8 transform hover:scale-105 transition-transform duration-500">
+                <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                
+                <div class="relative z-10">
+                    <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-4 border border-white/20">
+                        <span class="material-symbols-rounded text-yellow-300 text-sm">stars</span> VOUCHER
+                    </div>
+                    <h3 class="text-2xl font-bold opacity-90">Mua 1 Size L</h3>
+                    <div class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-brand-300 mb-6">TẶNG 1 SIZE M</div>
+                    
+                    <div class="relative w-full h-px bg-white/30 my-6">
+                        <div class="absolute -left-10 top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full"></div>
+                        <div class="absolute -right-10 top-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full"></div>
+                    </div>
+
+                    <div class="bg-black/20 rounded-xl p-3 border border-white/10">
+                        <p class="text-[10px] text-brand-100 uppercase tracking-widest mb-1 opacity-70">MÃ ƯU ĐÃI</p>
+                        <span class="font-mono text-2xl font-bold tracking-[0.2em]">WELCOME33</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full bg-white rounded-2xl p-4 flex items-center gap-4 shadow-sm border border-gray-100">
+                <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500">
+                    <span class="material-symbols-rounded">screenshot_monitor</span>
+                </div>
+                <div class="text-left">
+                    <p class="font-bold text-gray-900 text-sm">Chụp màn hình lại nhé</p>
+                    <p class="text-xs text-gray-500">Đưa cho nhân viên để nhận quà ngay</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
     <script>
-      window.onerror = function(message, source, lineno, colno, error) {
-        document.getElementById('error-display').style.display = 'block';
-        document.getElementById('error-display').innerHTML = `<h3>Lỗi Hệ Thống:</h3><p>${message}</p><p>Tại dòng: ${lineno}</p>`;
-      };
-    </script>
-
-    <script type="text/babel" data-type="module">
-        import React, { useState, useEffect } from 'react';
-        import ReactDOM from 'react-dom/client';
-        import { motion, AnimatePresence } from 'framer-motion';
-        import { ChevronLeft, Check, Camera, Sparkles, Gift } from 'lucide-react';
-
         // --- 1. FIREBASE CONFIG ---
-        // (Copy y nguyên từ hệ thống POS của bạn)
+        // (Thay config chuẩn của bạn vào đây)
         const firebaseConfig = {
             apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
             authDomain: "the-cafe-33.firebaseapp.com",
             databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "the-cafe-33",
             storageBucket: "the-cafe-33.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID", // Bạn điền vào nếu có
-            appId: "YOUR_APP_ID"             // Bạn điền vào nếu có
+            messagingSenderId: "...",
+            appId: "..."
         };
 
-        // Khởi tạo Firebase an toàn
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        // Khởi tạo Firebase
+        if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        } else {
+            alert("Lỗi: Không tải được Firebase SDK. Kiểm tra mạng!");
+        }
         const db = firebase.database();
 
-        // --- 2. COMPONENTS (Đã bỏ TypeScript) ---
+        // --- 2. HÀM CHUYỂN MÀN HÌNH ---
+        function switchScreen(id) {
+            // Ẩn tất cả screen
+            document.querySelectorAll('.screen').forEach(el => {
+                el.classList.remove('active');
+                setTimeout(() => el.style.display = 'none', 500); // Đợi hiệu ứng fade out
+            });
 
-        // GlassCard Component
-        const GlassCard = ({ children, className = '', delay = 0 }) => {
-            return (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: delay, ease: "easeOut" }}
-                    className={`relative overflow-hidden bg-white/60 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)] ${className}`}
-                >
-                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
-                    {children}
-                </motion.div>
-            );
-        };
+            // Hiện screen mục tiêu
+            const target = document.getElementById(id);
+            target.style.display = 'flex';
+            // Hack nhỏ để kích hoạt transition opacity
+            setTimeout(() => target.classList.add('active'), 50);
+        }
 
-        // Button Component
-        const Button = ({ children, onClick, variant = 'primary', className = '', disabled = false }) => {
-            const baseStyles = "w-full py-5 px-8 rounded-[28px] font-bold text-lg tracking-tight transition-all duration-300 flex items-center justify-center relative overflow-hidden group";
+        function goToRegister() { switchScreen('screen-register'); }
+        function goToWelcome() { switchScreen('screen-welcome'); }
+
+        // --- 3. XỬ LÝ ĐĂNG KÝ ---
+        function submitRegister() {
+            const nameInput = document.getElementById('reg-name');
+            const phoneInput = document.getElementById('reg-phone');
+            const btn = document.getElementById('btn-submit');
+
+            const name = nameInput.value.trim();
+            const phone = phoneInput.value.replace(/[^0-9]/g, '');
+
+            // Validate
+            if (name.length < 2) {
+                alert("Vui lòng nhập tên đầy đủ!");
+                return;
+            }
+            if (phone.length < 9) {
+                alert("Số điện thoại không hợp lệ!");
+                return;
+            }
+
+            // Hiệu ứng Loading
+            const originalText = btn.innerText;
+            btn.innerHTML = `<span class="animate-pulse">ĐANG XỬ LÝ...</span>`;
+            btn.disabled = true;
+
+            // Kiểm tra Firebase
+            const userRef = db.ref('customers/' + phone);
             
-            const variants = {
-                primary: `bg-starbucks-600 text-white shadow-[0_20px_40px_-10px_rgba(0,112,74,0.4)] hover:shadow-[0_25px_50px_-10px_rgba(0,112,74,0.5)] active:scale-[0.98]`,
-                secondary: "bg-white text-starbucks-900 border border-gray-100 hover:bg-gray-50 shadow-lg shadow-gray-200/50"
-            };
-
-            return (
-                <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    className={`${baseStyles} ${variants[variant]} ${disabled ? 'opacity-50 cursor-not-allowed grayscale' : ''} ${className}`}
-                    onClick={disabled ? undefined : onClick}
-                    disabled={disabled}
-                >
-                    <span className="relative z-10 flex items-center gap-2">{children}</span>
-                </motion.button>
-            );
-        };
-
-        // Input Component
-        const Input = ({ label, id, value, ...props }) => {
-            return (
-                <motion.div 
-                    className="relative group mb-4"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                >
-                    <input
-                        id={id}
-                        className={`peer w-full bg-gray-50/80 hover:bg-white focus:bg-white border-0 ring-1 ring-gray-200/50 rounded-[24px] px-6 pt-6 pb-2 h-[72px] text-lg text-gray-900 font-semibold tracking-tight placeholder-transparent focus:outline-none focus:ring-2 focus:ring-starbucks-300/50 transition-all duration-300 shadow-sm focus:shadow-md ${value ? 'bg-white shadow-md' : ''}`}
-                        placeholder={label}
-                        value={value}
-                        {...props}
-                    />
-                    <label
-                        htmlFor={id}
-                        className={`absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 text-base font-medium transition-all duration-300 pointer-events-none origin-left peer-focus:top-5 peer-focus:text-xs peer-focus:text-starbucks-600 peer-focus:font-bold ${value ? 'top-5 text-xs text-starbucks-600 font-bold' : ''}`}
-                    >
-                        {label}
-                    </label>
-                </motion.div>
-            );
-        };
-
-        // --- 3. SCREENS ---
-
-        // WELCOME SCREEN
-        const WelcomeScreen = ({ onNext }) => {
-            return (
-                <div className="flex flex-col h-full justify-between p-6 pt-12 safe-area-bottom">
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="space-y-4">
-                        <span className="inline-block px-3 py-1 rounded-full bg-starbucks-100 border border-starbucks-200 text-starbucks-700 text-xs font-bold tracking-wider uppercase mb-2">Membership</span>
-                        <h1 className="text-4xl font-extrabold leading-tight text-gray-900">Chào mừng đến với <br/><span className="text-starbucks-600 font-serif italic">The Cafe 33</span></h1>
-                        <p className="text-gray-500 text-lg leading-relaxed">Đăng ký thành viên để tích điểm và nhận ưu đãi độc quyền.</p>
-                    </motion.div>
-
-                    <div className="flex-1 flex items-center justify-center relative my-8">
-                        <GlassCard className="w-full relative z-10 border-l-4 border-l-starbucks-600" delay={0.2}>
-                            <div className="flex items-start gap-4">
-                                <div className="p-3 bg-starbucks-100 rounded-2xl text-starbucks-600"><Gift size={32} /></div>
-                                <div className="flex-1">
-                                    <h3 className="text-xl font-bold text-gray-900 mb-1">Quà tặng thành viên</h3>
-                                    <div className="w-full h-px bg-gray-200 my-3" />
-                                    <div className="space-y-1">
-                                        <p className="text-lg text-gray-800 font-medium">Mua 1 nước size L</p>
-                                        <p className="text-lg text-starbucks-600 font-bold">Tặng 1 nước size M</p>
-                                        <p className="text-xs text-gray-400 mt-2">Áp dụng cho lần đầu đăng ký</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </GlassCard>
-                    </div>
-
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="pb-4">
-                        <Button onClick={onNext}>Bắt đầu đăng ký</Button>
-                    </motion.div>
-                </div>
-            );
-        };
-
-        // REGISTER SCREEN
-        const RegisterScreen = ({ onBack, onRegister }) => {
-            const [fullName, setFullName] = useState('');
-            const [phoneNumber, setPhoneNumber] = useState('');
-            const [isLoading, setIsLoading] = useState(false);
-
-            // Validate đơn giản: Tên > 2 ký tự, SĐT > 9 số
-            const isValid = fullName.length > 2 && phoneNumber.length >= 9;
-
-            const handleSubmit = () => {
-                if (isValid) {
-                    setIsLoading(true);
-                    // Giả lập delay nhẹ để hiện loading cho đẹp
-                    onRegister({ fullName, phoneNumber }, () => setIsLoading(false));
-                }
-            };
-
-            return (
-                <div className="flex flex-col h-full p-6 safe-area-bottom">
-                    <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="pt-6 pb-6">
-                        <button onClick={onBack} className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors text-gray-600"><ChevronLeft size={32} /></button>
-                    </motion.div>
-
-                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Tạo tài khoản</h2>
-                        <p className="text-gray-500">Nhập thông tin của bạn để nhận quà ngay.</p>
-                    </motion.div>
-
-                    <div className="space-y-4 flex-1">
-                        <Input id="fullname" label="Họ và tên" value={fullName} onChange={(e) => setFullName(e.target.value)} type="text" autoComplete="name" />
-                        <Input id="phone" label="Số điện thoại" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))} type="tel" inputMode="numeric" autoComplete="tel" />
-                    </div>
-
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="pb-4">
-                        <Button onClick={handleSubmit} disabled={!isValid || isLoading}>
-                            {isLoading ? "Đang xử lý..." : "Đăng ký ngay"}
-                        </Button>
-                        <p className="text-center text-xs text-gray-400 mt-4">The Cafe 33 cam kết bảo mật thông tin của bạn.</p>
-                    </motion.div>
-                </div>
-            );
-        };
-
-        // SUCCESS SCREEN
-        const SuccessScreen = ({ userData }) => {
-            const displayName = userData?.fullName || "Bạn";
-            return (
-                <div className="flex flex-col h-full items-center justify-center p-6 relative overflow-hidden">
-                    <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.6, type: "spring", bounce: 0.4 }} className="z-10 text-center w-full max-w-sm">
-                        
-                        {/* Icon Success */}
-                        <div className="relative mx-auto mb-6 w-24 h-24">
-                            <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }} transition={{ duration: 2, repeat: Infinity }} className="absolute inset-0 bg-starbucks-400/30 rounded-full blur-xl" />
-                            <div className="relative w-full h-full rounded-full bg-gradient-to-tr from-starbucks-500 to-starbucks-400 flex items-center justify-center shadow-lg">
-                                <Check size={48} className="text-white" strokeWidth={3} />
-                            </div>
-                        </div>
-
-                        <h2 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">Đăng ký thành công!</h2>
-                        <p className="text-lg text-gray-500 mb-8">Chào mừng <span className="text-starbucks-600 font-bold">{displayName}</span></p>
-
-                        {/* VOUCHER CARD */}
-                        <motion.div className="mb-8 relative" initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }}>
-                            <div className="relative overflow-hidden rounded-[32px] shadow-2xl">
-                                <div className="absolute inset-0 bg-gradient-to-br from-starbucks-600 via-starbucks-700 to-starbucks-900" />
-                                <div className="p-8 relative z-10 text-white text-center">
-                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold uppercase tracking-widest mb-4">
-                                        <Sparkles size={12} className="text-yellow-300" /> Voucher
-                                    </div>
-                                    <h3 className="text-2xl font-bold leading-tight mb-2">Mua 1 Size L</h3>
-                                    <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-starbucks-100 to-white mb-6">Tặng 1 Size M</div>
-                                    
-                                    <div className="relative w-full h-px bg-white/20 my-6">
-                                        <div className="absolute -left-10 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white" />
-                                        <div className="absolute -right-10 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white" />
-                                    </div>
-                                    
-                                    <div className="bg-white/10 rounded-2xl p-4 border border-white/10 backdrop-blur-sm">
-                                        <p className="text-[10px] text-starbucks-100 mb-1 uppercase tracking-wider opacity-80">Mã ưu đãi</p>
-                                        <span className="font-mono text-2xl font-bold tracking-[0.2em] text-white">WELCOME33</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-
-                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-white rounded-[24px] p-4 flex items-center gap-4 text-left border border-gray-100 shadow-sm">
-                            <div className="w-10 h-10 rounded-xl bg-starbucks-50 flex items-center justify-center text-starbucks-600 shrink-0"><Camera size={20} /></div>
-                            <div>
-                                <p className="text-gray-900 font-bold text-sm">Chụp màn hình lại nhé</p>
-                                <p className="text-gray-500 text-xs">Đưa cho nhân viên để nhận quà</p>
-                            </div>
-                        </motion.div>
-
-                    </motion.div>
-                </div>
-            );
-        };
-
-        // --- 4. MAIN APP LOGIC ---
-        const App = () => {
-            const [currentScreen, setCurrentScreen] = useState('welcome');
-            const [userData, setUserData] = useState(null);
-
-            const handleRegister = (data, stopLoadingCallback) => {
-                const cleanPhone = data.phoneNumber.replace(/[^0-9]/g, '');
+            userRef.once('value', (snapshot) => {
+                const existing = snapshot.val();
                 
-                // --- KẾT NỐI FIREBASE ---
-                const userRef = db.ref('customers/' + cleanPhone);
-                userRef.once('value', snapshot => {
-                    const existing = snapshot.val();
-                    if (existing) {
-                        alert(`SĐT ${cleanPhone} đã là thành viên (Điểm: ${existing.points}). Không thể đăng ký mới.`);
-                        stopLoadingCallback();
-                    } else {
-                        // Tạo thành viên mới
-                        const newUser = {
-                            name: data.fullName,
-                            phone: cleanPhone,
-                            points: 0,
-                            joinDate: new Date().toISOString(),
-                            source: 'web_app_scan'
-                        };
-                        
-                        userRef.set(newUser, (err) => {
-                            stopLoadingCallback();
-                            if (err) {
-                                alert("Lỗi Firebase: " + err.message);
-                            } else {
-                                setUserData(data);
-                                setCurrentScreen('success');
-                            }
-                        });
-                    }
-                });
-            };
+                if (existing) {
+                    alert(`SĐT ${phone} đã đăng ký rồi ạ! \n(Điểm tích lũy: ${existing.points})`);
+                    btn.innerText = originalText;
+                    btn.disabled = false;
+                } else {
+                    // Tạo mới
+                    const newUser = {
+                        name: name,
+                        phone: phone,
+                        points: 0,
+                        joinDate: new Date().toISOString(),
+                        source: 'web_scan_v2'
+                    };
 
-            return (
-                <div className="min-h-screen w-full bg-[#FAFAFA] text-gray-900 flex items-center justify-center overflow-hidden font-sans relative">
-                    <div className="bg-noise"></div>
-                    <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none opacity-80">
-                        <div className="absolute top-[-15%] right-[-15%] w-[600px] h-[600px] bg-gradient-to-br from-starbucks-300/40 to-starbucks-100/40 rounded-full blur-[100px] animate-float"></div>
-                        <div className="absolute bottom-[-20%] left-[-10%] w-[700px] h-[700px] bg-gradient-to-tr from-starbucks-100/60 to-blue-50/50 rounded-full blur-[120px] animate-float"></div>
-                    </div>
+                    userRef.set(newUser, (error) => {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
 
-                    <div className="relative z-10 w-full h-[100dvh] md:max-w-[430px] md:h-[90vh] md:max-h-[932px] md:rounded-[48px] md:border-[12px] md:border-white md:shadow-2xl bg-white/70 backdrop-blur-3xl overflow-hidden ring-1 ring-black/5">
-                        <div className="hidden md:block absolute top-4 left-1/2 -translate-x-1/2 w-32 h-[34px] bg-black rounded-full z-50 shadow-sm"></div>
-                        
-                        <main className="w-full h-full relative">
-                            <AnimatePresence mode="wait">
-                                {currentScreen === 'welcome' && (
-                                    <motion.div key="welcome" className="absolute inset-0 w-full h-full" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, filter: 'blur(10px)', scale: 0.95 }} transition={{ duration: 0.6 }}>
-                                        <WelcomeScreen onNext={() => setCurrentScreen('register')} />
-                                    </motion.div>
-                                )}
-                                {currentScreen === 'register' && (
-                                    <motion.div key="register" className="absolute inset-0 w-full h-full" initial={{ opacity: 0, x: 100 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.6 }}>
-                                        <RegisterScreen onBack={() => setCurrentScreen('welcome')} onRegister={handleRegister} />
-                                    </motion.div>
-                                )}
-                                {currentScreen === 'success' && (
-                                    <motion.div key="success" className="absolute inset-0 w-full h-full" initial={{ opacity: 0, scale: 1.1 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8 }}>
-                                        <SuccessScreen userData={userData} />
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </main>
-                    </div>
-                </div>
-            );
-        };
-
-        // Render App
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+                        if (error) {
+                            alert("Lỗi hệ thống: " + error.message);
+                        } else {
+                            // Thành công -> Chuyển màn hình
+                            document.getElementById('user-display-name').innerText = name;
+                            switchScreen('screen-success');
+                        }
+                    });
+                }
+            });
+        }
     </script>
 </body>
 </html>
