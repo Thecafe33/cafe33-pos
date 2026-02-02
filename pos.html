@@ -5756,10 +5756,10 @@ function getCountdownStr(endTimeStr) {
     // --- [FINAL FIX] HÀM RENDER CHI TIẾT BED MOBILE ---
 // Fix lỗi: Đồng hồ chỉ chạy khi trạng thái là ACTIVE (Đang dùng)
 
+// --- [FIX FINAL v3] RENDER MOBILE (LOGIC CHUẨN PC: VẼ TRƯỚC - TÍNH SAU) ---
 function renderDetailContentMobile(b) {
-    // 1. Dọn dẹp timer cũ (Bắt buộc)
+    // 1. Dọn dẹp timer cũ
     if (mobileTimerInterval) clearInterval(mobileTimerInterval);
-    
     window.currentMobileBooking = b;
 
     const container = document.getElementById('mob-bed-detail-content');
@@ -5770,14 +5770,13 @@ function renderDetailContentMobile(b) {
     const statusText = isWaiting ? "CHỜ XẾP" : `BED 0${b.bedId}`;
     const isDone = b.status === 'đã xong';
     const isCancelled = b.status === 'đã hủy';
-    // Logic Active chuẩn: Có status active HOẶC đang dùng
     const isActive = (b.status === 'active' || (b.status && b.status.includes('active')) || (b.status && b.status.includes('đang dùng')));
 
-    // 3. Chuẩn bị dữ liệu hiển thị đồng hồ
-    // Chỉ tính toán đếm ngược nếu đang Active
+    // Chuẩn bị đồng hồ
     const countdown = isActive ? getCountdownStr(b.end) : { timeStr: b.start, label: "DỰ KIẾN", style: "bg-white/20" };
 
-    // 4. Render HTML
+    // --- 2. VẼ GIAO DIỆN (RENDER HTML NGAY LẬP TỨC) ---
+    // Lưu ý: Chỗ tổng tiền ta để tạm "..." hoặc "0đ" để chờ logic bên dưới điền vào
     container.innerHTML = `
     <div class="bg-primary squircle p-8 text-white relative overflow-hidden shadow-2xl shadow-[#006241]/20 min-h-[220px] flex flex-col justify-between">
         <div class="relative z-10">
@@ -5872,68 +5871,63 @@ function renderDetailContentMobile(b) {
     ` : ''}
     `;
 
-    // 5. NÚT ĐIỀU KHIỂN (BOTTOM BAR)
+    // --- 3. XỬ LÝ NÚT (BOTTOM BAR) ---
     let btnHtml = '';
-
     if (isWaiting && !isCancelled) {
-        // [CHỜ XẾP]
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
-            <button onclick="handleMobileBedOrder('${b.id}')" 
-                class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">
-                GỌI MÓN
-            </button>
-            <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" 
-                class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">
-                XẾP BED
-            </button>
+            <button onclick="handleMobileBedOrder('${b.id}')" class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">GỌI MÓN</button>
+            <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">XẾP BED</button>
         </div>`;
-    } 
-    else if (isActive && !isCancelled) {
-        // [ĐANG DÙNG]
+    } else if (isActive && !isCancelled) {
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
-            <button onclick="handleMobileBedOrder('${b.id}')" 
-                class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">
-                GỌI MÓN
-            </button>
-            <button onclick="handleBedCheckout(window.currentMobileBooking)" 
-                class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">
-                TRẢ BED
-            </button>
+            <button onclick="handleMobileBedOrder('${b.id}')" class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">GỌI MÓN</button>
+            <button onclick="handleBedCheckout(window.currentMobileBooking)" class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">TRẢ BED</button>
         </div>`;
-    } 
-    else {
-        // [ĐÃ XONG/HỦY]
+    } else {
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
-            <button onclick="closeMobileBedDetail()" class="w-full h-16 bg-slate-200 text-slate-500 rounded-full font-bold text-[15px] uppercase">
-                Đóng
-            </button>
+            <button onclick="closeMobileBedDetail()" class="w-full h-16 bg-slate-200 text-slate-500 rounded-full font-bold text-[15px] uppercase">Đóng</button>
         </div>`;
     }
     actionContainer.innerHTML = btnHtml;
-// 5. [QUAN TRỌNG] TÍNH TIỀN SAU KHI HTML ĐÃ CÓ (FIX LỖI 0đ)
-    if(b.phone) {
-        calculateSessionSpend(b.phone, b.start, (isDone ? b.realEndTime : b.end)).then(total => {
-            const el = document.getElementById('mob-detail-total-display');
-            if(el) {
-                el.innerText = total.toLocaleString() + 'đ';
-                // Thêm hiệu ứng nháy nhẹ để biết đã load xong
-                el.classList.add('animate-pulse');
-                setTimeout(() => el.classList.remove('animate-pulse'), 500);
-            }
-        });
+
+    // --- 4. [LOGIC PC] TÍNH TIỀN THÔNG MINH ---
+    // Tìm phần tử hiển thị giá
+    const priceEl = document.getElementById('mob-detail-total-display');
+    
+    if (priceEl && b.phone) {
+        let savedTotal = b.totalSpend ? Number(b.totalSpend) : null;
+
+        // ƯU TIÊN 1: Nếu đơn ĐÃ XONG và có LƯU GIÁ -> Hiện luôn (Không tính lại)
+        if (isDone && savedTotal !== null) {
+            priceEl.innerText = savedTotal.toLocaleString() + 'đ';
+        } 
+        // ƯU TIÊN 2: Nếu chưa có giá hoặc đang chạy -> Tính toán
+        else {
+            // Xác định mốc thời gian để tính
+            // Nếu đã xong -> dùng realEndTime
+            // Nếu đang chạy -> dùng End dự kiến
+            let timeEndForCalc = isDone ? (b.realEndTime || b.end) : b.end;
+
+            calculateSessionSpend(b.phone, b.start, timeEndForCalc).then(total => {
+                if (priceEl) {
+                    priceEl.innerText = total.toLocaleString() + 'đ';
+                    // Hiệu ứng nháy nhẹ báo hiệu đã load xong
+                    priceEl.classList.add('animate-pulse');
+                    setTimeout(() => priceEl.classList.remove('animate-pulse'), 500);
+                }
+            });
+        }
     }
-    // 6. KÍCH HOẠT ĐỒNG HỒ LIVE (CHỈ KHI ACTIVE)
-    // --- [FIX] QUAN TRỌNG: Chỉ chạy setInterval khi isActive = true ---
+
+    // --- 5. ĐỒNG HỒ LIVE ---
     if (isActive) {
         mobileTimerInterval = setInterval(() => {
             const currentCountdown = getCountdownStr(b.end);
-            
             const tEl = document.getElementById('mob-live-timer');
             const bEl = document.getElementById('mob-live-badge');
-            
             if (tEl && bEl) {
                 tEl.innerText = currentCountdown.timeStr;
                 bEl.innerText = currentCountdown.label;
@@ -5942,7 +5936,6 @@ function renderDetailContentMobile(b) {
         }, 1000);
     }
 }
-
 
 // Bổ sung hàm đóng để dọn dẹp Timer
 function closeMobileBedDetail() {
@@ -7985,6 +7978,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
