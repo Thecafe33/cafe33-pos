@@ -4037,23 +4037,61 @@ function handleMobileBedOrder(bookingId) {
     // 4. Chuyển sang màn hình Menu
     switchView('menu');
 
-    // 5. HIỂN THỊ BANNER (DÙNG STYLE TRỰC TIẾP)
-    const banner = document.getElementById('mob-bed-order-banner');
-    if (banner) {
-        // Điền thông tin
-        const bedLabel = (booking.bedId && booking.bedId != "WAITING") ? `BED 0${booking.bedId}` : "CHỜ XẾP";
-        document.getElementById('mob-banner-bed').innerText = bedLabel;
-        document.getElementById('mob-banner-cust').innerText = booking.name || "Khách lẻ";
-        
-        const durationText = (typeof getDurationLabel === 'function') 
-                             ? getDurationLabel(booking.start, booking.end) 
-                             : `${booking.start} - ${booking.end}`;
-        document.getElementById('mob-banner-time').innerText = `${booking.start} - ${booking.end} (${durationText})`;
+   // 5. TẠO BANNER BẰNG CODE (ĐẢM BẢO KHÔNG BỊ CHE)
+    // ============================================================
+    
+    // A. Xóa banner cũ nếu có (tránh trùng)
+    const oldBanner = document.getElementById('js-mob-banner');
+    if (oldBanner) oldBanner.remove();
 
-        // Ép hiển thị bằng style (mạnh hơn class hidden)
-        banner.classList.remove('hidden');
-        banner.style.display = 'flex';
-    }
+    // B. Chuẩn bị dữ liệu hiển thị
+    const bedLabel = (booking.bedId && booking.bedId != "WAITING") ? `BED 0${booking.bedId}` : "CHỜ XẾP";
+    const custName = booking.name || "Khách lẻ";
+    const durationText = (typeof getDurationLabel === 'function') 
+                         ? getDurationLabel(booking.start, booking.end) 
+                         : `${booking.start} - ${booking.end}`;
+
+    // C. Tạo phần tử HTML mới
+    const bannerDiv = document.createElement('div');
+    bannerDiv.id = 'js-mob-banner';
+    
+    // Style cứng (Inline Style) để đè tất cả CSS khác
+    bannerDiv.style.cssText = `
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 2147483647; /* Cao nhất có thể */
+        background-color: #E6F4F1;
+        border-bottom: 1px solid #bce3db;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        animation: slideDown 0.3s ease-out;
+    `;
+
+    // Nội dung HTML bên trong
+    bannerDiv.innerHTML = `
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div style="width:40px; height:40px; background:white; color:#006241; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold; border:1px solid #bce3db;">
+                🛏️
+            </div>
+            <div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:10px; font-weight:900; bg:white; color:white; background:#006241; padding:2px 6px; border-radius:4px;">${bedLabel}</span>
+                    <span style="font-size:10px; font-weight:bold; color:#006241; text-transform:uppercase;">ĐANG GỌI MÓN</span>
+                </div>
+                <div style="font-size:14px; font-weight:bold; color:#334155; line-height:1.2; margin-top:2px;">${custName}</div>
+                <div style="font-size:10px; font-weight:bold; color:#64748b; font-family:monospace;">${durationText}</div>
+            </div>
+        </div>
+        <button onclick="resetOrderingMode()" style="width:36px; height:36px; background:white; color:#ef4444; border-radius:50%; border:1px solid #fee2e2; display:flex; align-items:center; justify-content:center; font-size:18px;">
+            ✕
+        </button>
+    `;
+
+    // D. Gắn thẳng vào body (Ngoài cùng)
+    document.body.appendChild(bannerDiv);
 }
 // --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
 // --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
@@ -7310,12 +7348,9 @@ function resetOrderingMode() {
     const island = document.getElementById('bed-dynamic-island');
     if (island) island.classList.add('hidden');
     
-   // 3. Ẩn Banner Mobile (MỚI)
-    const mobBanner = document.getElementById('mob-bed-order-banner');
-    if (mobBanner) {
-        mobBanner.classList.add('hidden');
-        mobBanner.style.display = 'none'; // Ẩn triệt để
-    }
+   // 3. XÓA BANNER MOBILE (MỚI)
+    const jsBanner = document.getElementById('js-mob-banner');
+    if (jsBanner) jsBanner.remove(); // Xóa hoàn toàn khỏi giao diện
     // 4. Xóa SĐT tại ô nhập liệu và reset trạng thái SĐT
     const sdtInput = document.getElementById('kh-sdt');
     if (sdtInput) {
@@ -8009,6 +8044,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
