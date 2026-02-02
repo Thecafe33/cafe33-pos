@@ -34,65 +34,71 @@
     </script>
 
     <style>
-        body { background-color: #FAFAFA; overflow: hidden; height: 100vh; font-family: 'Inter', sans-serif; }
+        /* Sử dụng dvh để fix lỗi thanh địa chỉ trên mobile */
+        body { 
+            background-color: #FAFAFA; 
+            overflow: hidden; 
+            height: 100dvh; 
+            width: 100vw;
+            font-family: 'Inter', sans-serif; 
+        }
         
-        /* Hiệu ứng chuyển màn hình */
+        /* Vùng an toàn cho iPhone đời mới (tai thỏ/dynamic island) */
+        .safe-bottom {
+            padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+        }
+
         .screen { display: none; height: 100%; flex-direction: column; opacity: 0; transition: opacity 0.3s ease-in-out; }
         .screen.active { display: flex; opacity: 1; }
         
-        /* Custom UI từ ảnh mẫu */
         .voucher-card {
             background: white;
             border-radius: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
-            border-left: 6px solid #006241; /* Vạch xanh bên trái */
-            position: relative;
-            overflow: hidden;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.06);
+            border-left: 6px solid #006241;
+            position: relative; overflow: hidden;
         }
         
         .btn-action {
             background-color: #006241;
             color: white;
-            border-radius: 99px; /* Bo tròn hoàn toàn */
+            border-radius: 99px;
             font-weight: 700;
             font-size: 16px;
             padding: 18px;
             width: 100%;
-            transition: transform 0.1s;
+            box-shadow: 0 8px 20px -5px rgba(0, 98, 65, 0.4); /* Bóng đổ cho nút nổi lên */
+            transition: transform 0.1s, box-shadow 0.1s;
         }
-        .btn-action:active { transform: scale(0.98); }
+        .btn-action:active { transform: scale(0.98); box-shadow: 0 4px 10px -2px rgba(0, 98, 65, 0.3); }
 
         .input-underline {
-            width: 100%;
-            padding: 16px 0;
+            width: 100%; padding: 16px 0;
             border-bottom: 2px solid #E5E7EB;
-            font-size: 18px;
-            font-weight: 600;
-            color: #1F2937;
-            outline: none;
-            background: transparent;
+            font-size: 18px; font-weight: 600; color: #1F2937;
+            outline: none; background: transparent;
             transition: border-color 0.3s;
+            border-radius: 0; /* Fix bo góc trên iOS */
         }
         .input-underline:focus { border-bottom-color: #006241; }
     </style>
 </head>
 <body class="bg-[#FAFAFA]">
 
-    <div class="w-full h-full max-w-md mx-auto bg-[#FAFAFA] relative flex flex-col">
+    <div class="w-full h-full max-w-md mx-auto bg-[#FAFAFA] relative flex flex-col shadow-2xl">
         
-        <div id="view-welcome" class="screen active p-8">
-            
-            <div class="mt-8 mb-6">
+        <div id="view-welcome" class="screen active px-8 pt-8">
+            <div class="mt-4 mb-6">
                 <h1 class="text-[34px] leading-tight font-black text-gray-900 tracking-tight">
-                    Chào mừng bạn đến với<br>
+                    Chào mừng bạn đến<br>
                     <span class="font-serif italic text-brand font-bold text-[38px]">The Cafe 33</span>
                 </h1>
                 <p class="text-gray-500 mt-4 text-[15px] leading-relaxed">
-                    Đăng ký thành viên để tích điểm tại Xolifa và The Cafe 33
+                    Đăng ký thành viên để tích điểm tại XOLIFA và The Cafe 33
                 </p>
             </div>
 
-            <div class="voucher-card p-6 mt-4">
+            <div class="voucher-card p-6 mt-2">
                 <div class="flex items-start gap-4 mb-5">
                     <div class="w-12 h-12 bg-[#F1F8F6] rounded-xl flex items-center justify-center shrink-0">
                         <span class="material-symbols-rounded text-brand text-[28px]">redeem</span>
@@ -101,35 +107,32 @@
                         <h3 class="text-lg font-bold text-gray-800">Quà tặng lần đầu đăng ký</h3>
                     </div>
                 </div>
-
                 <div class="h-px w-full bg-gray-100 mb-5"></div>
-
                 <div class="space-y-1 mb-4">
                     <p class="text-gray-700 font-medium text-[16px]">Mua 1 nước size L</p>
                     <p class="text-[18px] font-bold text-brand">Tặng 1 nước size M</p>
                 </div>
-
-                <p class="text-gray-400 text-xs">Áp dụng tại The Cafe 33 – mua mang đi</p>
+                <p class="text-gray-400 text-xs">Áp dụng tại The Cafe 33 – chỉ mua mang đi</p>
             </div>
 
-            <div class="mt-auto pb-8">
-                <button onclick="switchView('register')" class="btn-action shadow-xl shadow-green-900/10">
+            <div class="mt-auto w-full safe-bottom">
+                <button onclick="switchView('register')" class="btn-action">
                     Bắt đầu đăng ký
                 </button>
             </div>
         </div>
 
-        <div id="view-register" class="screen p-8 bg-white h-full">
-            <div class="pt-4 mb-8">
-                <button onclick="switchView('welcome')" class="flex items-center text-gray-500 hover:text-brand transition-colors">
+        <div id="view-register" class="screen px-8 pt-8 bg-white h-full">
+            <div class="pt-2 mb-6">
+                <button onclick="switchView('welcome')" class="w-10 h-10 -ml-2 flex items-center justify-center rounded-full active:bg-gray-100 text-gray-500 hover:text-brand transition-colors">
                     <span class="material-symbols-rounded text-3xl">chevron_left</span>
                 </button>
             </div>
 
             <h2 class="text-3xl font-bold text-gray-900 mb-2">Tạo tài khoản</h2>
-            <p class="text-gray-500 mb-10">Nhập thông tin để nhận ưu đãi ngay.</p>
+            <p class="text-gray-500 mb-8">Nhập thông tin để nhận ưu đãi ngay.</p>
 
-            <div class="space-y-8 flex-1">
+            <div class="space-y-6 flex-1 overflow-y-auto">
                 <div>
                     <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Họ và tên</label>
                     <input type="text" id="inp-name" class="input-underline capitalize" placeholder="Ví dụ: Minh Tuấn">
@@ -140,27 +143,26 @@
                 </div>
             </div>
 
-            <div class="pb-8">
+            <div class="mt-auto w-full safe-bottom">
                 <button id="btn-submit" onclick="submitForm()" class="btn-action">
                     Xác nhận
                 </button>
-                <p class="text-center text-xs text-gray-400 mt-4">Thông tin của bạn được bảo mật.</p>
+                <p class="text-center text-xs text-gray-400 mt-4 mb-2">Thông tin của bạn được bảo mật.</p>
             </div>
         </div>
 
-        <div id="view-success" class="screen p-8 justify-center items-center text-center bg-white">
-            <div class="w-24 h-24 bg-[#E6F4F1] rounded-full flex items-center justify-center mx-auto mb-6">
+        <div id="view-success" class="screen px-8 justify-center items-center text-center bg-white">
+            <div class="w-24 h-24 bg-[#E6F4F1] rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
                 <span class="material-symbols-rounded text-5xl text-brand">check</span>
             </div>
             
             <h2 class="text-2xl font-bold text-gray-900 mb-2">Đăng Ký Thành Công!</h2>
             <p class="text-gray-500 mb-10">Chào mừng <span id="user-name-display" class="text-brand font-bold">Bạn</span> gia nhập.</p>
 
-            <div class="w-full bg-gradient-to-br from-[#006241] to-[#004e32] rounded-[24px] p-8 text-white shadow-2xl relative overflow-hidden mb-8 text-left">
+            <div class="w-full bg-gradient-to-br from-[#006241] to-[#004e32] rounded-[24px] p-8 text-white shadow-xl relative overflow-hidden mb-8 text-left transform scale-100 transition-transform">
                 <div class="absolute -right-10 -top-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
-                
                 <div class="relative z-10">
-                    <span class="bg-white/20 px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest mb-4 inline-block">Voucher</span>
+                    <span class="bg-white/20 px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest mb-4 inline-block backdrop-blur-sm">Voucher</span>
                     <h3 class="text-3xl font-black mb-1">TẶNG 1 SIZE M</h3>
                     <p class="text-white/80 text-sm mb-6">Khi mua 1 nước Size L bất kỳ</p>
                     
@@ -174,19 +176,22 @@
                 </div>
             </div>
 
-            <div class="bg-gray-50 p-4 rounded-xl flex items-center gap-3 w-full border border-gray-100">
-                <span class="material-symbols-rounded text-gray-400">screenshot</span>
+            <div class="bg-gray-50 p-4 rounded-2xl flex items-center gap-4 w-full border border-gray-100">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-gray-400 shadow-sm border border-gray-100">
+                    <span class="material-symbols-rounded">screenshot</span>
+                </div>
                 <div class="text-left">
                     <p class="text-sm font-bold text-gray-900">Chụp màn hình lại nhé</p>
                     <p class="text-xs text-gray-500">Đưa cho nhân viên để nhận quà</p>
                 </div>
             </div>
-        </div>
+            
+            <div class="h-10"></div> </div>
 
     </div>
 
     <script>
-        // --- 1. CONFIG FIREBASE (ĐIỀN ĐÚNG THÔNG TIN CỦA BẠN VÀO ĐÂY) ---
+        // --- CONFIG FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
             authDomain: "the-cafe-33.firebaseapp.com",
@@ -200,22 +205,25 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- 2. LOGIC CHUYỂN CẢNH ---
         function switchView(viewId) {
-            ['view-welcome', 'view-register', 'view-success'].forEach(id => {
-                const el = document.getElementById(id);
-                el.classList.remove('active');
-                setTimeout(() => {
-                    if(!el.classList.contains('active')) el.style.display = 'none';
-                }, 300);
-            });
-
+            const current = document.querySelector('.screen.active');
             const target = document.getElementById('view-' + viewId);
-            target.style.display = 'flex';
-            setTimeout(() => target.classList.add('active'), 10);
+            
+            if(current) {
+                current.style.opacity = '0';
+                setTimeout(() => {
+                    current.classList.remove('active');
+                    current.style.display = 'none';
+                    
+                    target.style.display = 'flex';
+                    setTimeout(() => {
+                        target.classList.add('active');
+                        target.style.opacity = '1';
+                    }, 50);
+                }, 200);
+            }
         }
 
-        // --- 3. XỬ LÝ FORM ---
         function submitForm() {
             const nameEl = document.getElementById('inp-name');
             const phoneEl = document.getElementById('inp-phone');
@@ -228,26 +236,23 @@
             if (phone.length < 9) return alert("Số điện thoại không hợp lệ!");
 
             const oldText = btn.innerText;
-            btn.innerText = "Đang xử lý...";
+            btn.innerHTML = `<span class="animate-pulse">Đang xử lý...</span>`;
             btn.disabled = true;
-            btn.style.opacity = "0.7";
+            btn.style.opacity = "0.8";
 
-            // Check Firebase
             const userRef = db.ref('customers/' + phone);
             userRef.once('value', (snapshot) => {
                 const existing = snapshot.val();
-                
                 if (existing) {
                     alert("SĐT này đã là thành viên rồi ạ! \n(Điểm: " + existing.points + ")");
                     resetBtn();
                 } else {
-                    // Tạo mới
                     userRef.set({
                         name: name,
                         phone: phone,
                         points: 0,
                         joinDate: new Date().toISOString(),
-                        source: 'scan_v4_clean'
+                        source: 'scan_fixed_ui'
                     }, (error) => {
                         if (error) {
                             alert("Lỗi: " + error.message);
@@ -261,7 +266,7 @@
             });
 
             function resetBtn() {
-                btn.innerText = oldText;
+                btn.innerHTML = oldText;
                 btn.disabled = false;
                 btn.style.opacity = "1";
             }
