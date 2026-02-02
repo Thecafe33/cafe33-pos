@@ -542,6 +542,36 @@ window.handleUpdate = function() {
 // --- HÀM ĐẶT BED (LOGIC MỚI: CHỜ XẾP BED) ---
 // --- HÀM ĐẶT BED (BẢN FULL: CHẶN TRÙNG KHÁCH + GỢI Ý GIỜ + CHỜ XẾP BED) ---
 function handleBooking() {
+  // 1. KIỂM TRA TRẠNG THÁI QUÁN (STORE OFF)
+    // Gọi Firebase check nóng xem quán có đang Off không
+    document.getElementById('loading-overlay').classList.remove('hidden'); // Hiện loading tí cho chuyên nghiệp
+    
+    db.ref('store_status').once('value', statusSnap => {
+        const storeStatus = statusSnap.val();
+        
+        // Logic kiểm tra
+        if (storeStatus && storeStatus.isOff) {
+            const now = new Date();
+            const until = new Date(storeStatus.offUntil);
+            
+            // Nếu vẫn còn trong thời gian Off
+            if (now < until) {
+                document.getElementById('loading-overlay').classList.add('hidden');
+                
+                // Format giờ mở lại cho dễ đọc
+                const timeStr = until.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+                
+                showAppModal(
+                    "Tạm Ngưng Nhận Khách", 
+                    `<span class="text-red-500 font-bold">${storeStatus.reason}</span><br>
+                     Vui lòng quay lại sau <b>${timeStr}</b> nhé!`, 
+                    "🛑"
+                );
+                return; // Dừng luôn, không cho chạy tiếp code đặt bed
+            }
+        }
+
+        // NẾU QUÁN MỞ -> CHẠY TIẾP LOGIC CŨ BÊN DƯỚI...
     if (!document.getElementById('agree-rules').checked) return alert("Vui lòng đồng ý nội quy!");
     
     // 1. Lấy dữ liệu
@@ -1132,6 +1162,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
