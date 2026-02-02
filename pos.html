@@ -4037,61 +4037,47 @@ function handleMobileBedOrder(bookingId) {
     // 4. Chuyển sang màn hình Menu
     switchView('menu');
 
-   // 5. TẠO BANNER BẰNG CODE (ĐẢM BẢO KHÔNG BỊ CHE)
+   // 5. TẠO BANNER MỚI (GẮN TRỰC TIẾP VÀO BODY ĐỂ KHÔNG BỊ CHE)
     // ============================================================
     
-    // A. Xóa banner cũ nếu có (tránh trùng)
-    const oldBanner = document.getElementById('js-mob-banner');
-    if (oldBanner) oldBanner.remove();
+    // A. Xóa banner cũ (nếu đang tồn tại để tránh trùng lặp)
+    const existing = document.getElementById('js-fixed-banner');
+    if (existing) existing.remove();
 
-    // B. Chuẩn bị dữ liệu hiển thị
+    // B. Chuẩn bị thông tin
     const bedLabel = (booking.bedId && booking.bedId != "WAITING") ? `BED 0${booking.bedId}` : "CHỜ XẾP";
     const custName = booking.name || "Khách lẻ";
-    const durationText = (typeof getDurationLabel === 'function') 
-                         ? getDurationLabel(booking.start, booking.end) 
-                         : `${booking.start} - ${booking.end}`;
+    const timeInfo = `${booking.start} - ${booking.end}`;
 
-    // C. Tạo phần tử HTML mới
-    const bannerDiv = document.createElement('div');
-    bannerDiv.id = 'js-mob-banner';
-    
-    // Style cứng (Inline Style) để đè tất cả CSS khác
-    bannerDiv.style.cssText = `
-        position: fixed;
-        top: 0; left: 0; right: 0;
-        z-index: 2147483647; /* Cao nhất có thể */
-        background-color: #E6F4F1;
-        border-bottom: 1px solid #bce3db;
-        padding: 12px 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        animation: slideDown 0.3s ease-out;
-    `;
-
-    // Nội dung HTML bên trong
-    bannerDiv.innerHTML = `
-        <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:40px; height:40px; background:white; color:#006241; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold; border:1px solid #bce3db;">
+    // C. Tạo HTML cho Banner (Style cứng để đè mọi thứ)
+    const bannerHTML = `
+    <div id="js-fixed-banner" style="position: fixed; top: 0; left: 0; right: 0; z-index: 999999; background: #E6F4F1; border-bottom: 1px solid #bce3db; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 20px rgba(0,0,0,0.15); animation: slideDown 0.3s ease-out;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 42px; height: 42px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid #bce3db; color: #006241; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                 🛏️
             </div>
-            <div>
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <span style="font-size:10px; font-weight:900; bg:white; color:white; background:#006241; padding:2px 6px; border-radius:4px;">${bedLabel}</span>
-                    <span style="font-size:10px; font-weight:bold; color:#006241; text-transform:uppercase;">ĐANG GỌI MÓN</span>
+            <div style="display: flex; flex-direction: column;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="background: #006241; color: white; font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 6px;">${bedLabel}</span>
+                    <span style="color: #006241; font-size: 10px; font-weight: 800; text-transform: uppercase;">ĐANG GỌI MÓN</span>
                 </div>
-                <div style="font-size:14px; font-weight:bold; color:#334155; line-height:1.2; margin-top:2px;">${custName}</div>
-                <div style="font-size:10px; font-weight:bold; color:#64748b; font-family:monospace;">${durationText}</div>
+                <div style="font-weight: 800; color: #334155; font-size: 14px; margin-top: 2px; line-height: 1.2;">
+                    ${custName}
+                </div>
+                <div style="font-size: 10px; font-weight: 700; color: #64748b; font-family: monospace;">
+                    ${timeInfo}
+                </div>
             </div>
         </div>
-        <button onclick="resetOrderingMode()" style="width:36px; height:36px; background:white; color:#ef4444; border-radius:50%; border:1px solid #fee2e2; display:flex; align-items:center; justify-content:center; font-size:18px;">
+        <button onclick="resetOrderingMode()" style="width: 36px; height: 36px; background: white; border-radius: 50%; border: 1px solid #fee2e2; color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
             ✕
         </button>
+    </div>
     `;
 
-    // D. Gắn thẳng vào body (Ngoài cùng)
-    document.body.appendChild(bannerDiv);
+    // D. Chèn vào cuối trang (Body)
+    document.body.insertAdjacentHTML('beforeend', bannerHTML);
+
 }
 // --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
 // --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
@@ -7348,9 +7334,9 @@ function resetOrderingMode() {
     const island = document.getElementById('bed-dynamic-island');
     if (island) island.classList.add('hidden');
     
-   // 3. XÓA BANNER MOBILE (MỚI)
-    const jsBanner = document.getElementById('js-mob-banner');
-    if (jsBanner) jsBanner.remove(); // Xóa hoàn toàn khỏi giao diện
+   // 2. Xóa Banner nổi (MỚI)
+    const fixedBanner = document.getElementById('js-fixed-banner');
+    if (fixedBanner) fixedBanner.remove();
     // 4. Xóa SĐT tại ô nhập liệu và reset trạng thái SĐT
     const sdtInput = document.getElementById('kh-sdt');
     if (sdtInput) {
@@ -8044,6 +8030,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
