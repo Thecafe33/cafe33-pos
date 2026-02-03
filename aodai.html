@@ -1,39 +1,26 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>The Cafe 33 - Thuê Áo Dài</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Thuê Áo Dài - The Cafe 33</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=League+Spartan:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,400,1,0" rel="stylesheet" />
 
     <script>
       tailwind.config = {
         theme: {
           extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              brand: ['League Spartan', 'sans-serif'],
-            },
+            fontFamily: { sans: ['Inter', 'sans-serif'] },
             colors: {
-              brand: {
-                DEFAULT: '#006241', // Xanh The Cafe 33
-                dark: '#004f32',
-                light: '#e6f4f1',
-                bg: '#F5F5F7' // Màu nền xám kiểu iOS
-              }
+              brand: { DEFAULT: '#006241', dark: '#004f32' }, // Xanh The Cafe 33
+              apple: { bg: '#F5F5F7', gray: '#86868b', border: '#d2d2d7' }
             },
             boxShadow: {
-              'ios': '0 4px 20px -5px rgba(0,0,0,0.05)',
-              'float': '0 20px 40px -10px rgba(0,98,65,0.2)',
-            },
-            animation: {
-              'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            },
-            keyframes: {
-              slideUp: { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } }
+              'ios': '0 4px 24px rgba(0,0,0,0.06)',
+              'float': '0 10px 30px -10px rgba(0,98,65,0.3)',
             }
           }
         }
@@ -41,27 +28,301 @@
     </script>
 
     <style>
-      body { background-color: #F5F5F7; -webkit-tap-highlight-color: transparent; }
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.5); }
-    </style>
+        body { background-color: #F5F5F7; color: #1d1d1f; height: 100dvh; overflow: hidden; }
+        
+        /* Hiệu ứng chuyển cảnh (Step Transition) */
+        .step-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            background: #F5F5F7;
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+            opacity: 0; pointer-events: none; transform: translateX(50px);
+            overflow-y: auto; /* Cho phép cuộn nội dung dài */
+            padding-bottom: 100px; /* Chừa chỗ cho nút Next */
+        }
+        
+        .step-container.active {
+            opacity: 1; pointer-events: auto; transform: translateX(0); z-index: 10;
+        }
+        
+        .step-container.prev {
+            opacity: 0; transform: translateX(-50px);
+        }
 
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+        /* Input Style iOS */
+        .ios-input {
+            width: 100%; padding: 18px; border-radius: 16px;
+            background: white; border: 1px solid transparent;
+            font-size: 17px; font-weight: 500; color: #1d1d1f;
+            outline: none; transition: all 0.2s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        }
+        .ios-input:focus { border-color: #006241; }
+
+        /* Counter Button */
+        .counter-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: white; border: 1px solid #d2d2d7;
+            font-weight: bold; font-size: 20px; cursor: pointer;
+            active: scale(0.9); transition: all 0.2s;
+        }
+        .counter-btn:active { transform: scale(0.9); background: #f2f2f2; }
+
+        /* Bottom Bar */
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            padding: 20px; background: rgba(245, 245, 247, 0.9);
+            backdrop-filter: blur(20px); border-top: 1px solid #e5e5ea;
+            z-index: 50;
+        }
+        
+        .btn-next {
+            width: 100%; padding: 16px; border-radius: 14px;
+            background: #006241; color: white;
+            font-size: 17px; font-weight: 600; text-align: center;
+            transition: opacity 0.2s;
+        }
+        .btn-next:active { opacity: 0.7; }
+        .btn-next:disabled { background: #d2d2d7; color: #86868b; cursor: not-allowed; }
+
+        /* Smooth checkbox */
+        .checkbox-wrapper { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+        .custom-checkbox {
+            width: 24px; height: 24px; border-radius: 6px;
+            border: 2px solid #86868b; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; flex-shrink: 0; margin-top: 2px;
+        }
+        input[type="checkbox"]:checked + .custom-checkbox {
+            background: #006241; border-color: #006241;
+        }
+        input[type="checkbox"]:checked + .custom-checkbox::after {
+            content: '✔'; color: white; font-size: 14px; font-weight: bold;
+        }
+    </style>
 
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 </head>
 <body>
-    <div id="root"></div>
 
-    <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { motion, AnimatePresence } = window.Motion;
+    <div id="app-container" class="relative w-full h-full max-w-md mx-auto bg-[#F5F5F7] shadow-2xl overflow-hidden">
 
-        // --- FIREBASE CONFIG (Dùng chung với POS) ---
+        <div id="step-1" class="step-container active p-8 flex flex-col justify-center items-center text-center">
+            <div class="mb-8">
+                <span class="text-[12px] font-bold text-gray-400 uppercase tracking-widest">Dịch vụ mới</span>
+                <h1 class="text-4xl font-black text-[#1d1d1f] mt-2 leading-tight">
+                    The Cafe 33<br>
+                    <span class="text-brand">Thuê Áo Dài</span><br>& Máy Ảnh
+                </h1>
+            </div>
+            <div class="w-full aspect-square bg-white rounded-[32px] shadow-ios flex items-center justify-center mb-8 relative overflow-hidden">
+                <div class="absolute inset-0 bg-brand opacity-5"></div>
+                <span class="material-symbols-rounded text-8xl text-brand">apparel</span>
+            </div>
+            <p class="text-gray-500 font-medium px-4">
+                Chào mừng bạn đến với dịch vụ thuê đồ chuyên nghiệp tại The Cafe 33.
+            </p>
+        </div>
+
+        <div id="step-2" class="step-container p-6 pt-12">
+            <h2 class="text-3xl font-bold text-[#1d1d1f] mb-2">Thông tin của bạn</h2>
+            <p class="text-gray-500 mb-8">Để chúng tôi liên hệ khi cần thiết.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase ml-3 mb-1 block">Họ và tên</label>
+                    <input type="text" id="cust-name" class="ios-input capitalize" placeholder="Ví dụ: Nguyễn Văn A">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase ml-3 mb-1 block">Số điện thoại</label>
+                    <input type="tel" id="cust-phone" class="ios-input" placeholder="090..." inputmode="numeric">
+                </div>
+            </div>
+        </div>
+
+        <div id="step-3" class="step-container p-6 pt-12">
+            <h2 class="text-3xl font-bold text-[#1d1d1f] mb-8">Chi tiết thuê áo</h2>
+            
+            <div class="bg-white p-5 rounded-2xl shadow-sm mb-6">
+                <p class="text-xs font-bold text-gray-400 uppercase mb-2">Tổng số bộ cần thuê</p>
+                <div class="flex items-center justify-between">
+                    <button class="counter-btn" onclick="adjustVal('total-sets', -1)">-</button>
+                    <span id="display-total-sets" class="text-3xl font-black text-brand">1</span>
+                    <button class="counter-btn" onclick="adjustVal('total-sets', 1)">+</button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-2xl shadow-sm">
+                    <p class="text-xs font-bold text-gray-400 uppercase mb-2">Áo Nữ</p>
+                    <input type="number" id="qty-female" class="w-full text-2xl font-bold text-center outline-none border-b border-gray-100 pb-2" value="1" min="0" oninput="validateStep3()">
+                </div>
+                <div class="bg-white p-4 rounded-2xl shadow-sm">
+                    <p class="text-xs font-bold text-gray-400 uppercase mb-2">Áo Nam</p>
+                    <input type="number" id="qty-male" class="w-full text-2xl font-bold text-center outline-none border-b border-gray-100 pb-2" value="0" min="0" oninput="validateStep3()">
+                </div>
+            </div>
+            <p id="step3-error" class="text-red-500 text-xs font-bold text-center hidden mb-4">Tổng Nam + Nữ phải bằng Tổng số bộ!</p>
+
+            <div class="space-y-2">
+                <label class="text-xs font-bold text-gray-400 uppercase ml-3">Ghi chú chi tiết</label>
+                <textarea id="desc-ao" class="ios-input h-32 resize-none" placeholder="Mô tả màu sắc, kiểu dáng, size áo..."></textarea>
+            </div>
+        </div>
+
+        <div id="step-4" class="step-container p-6 pt-12">
+            <h2 class="text-3xl font-bold text-[#1d1d1f] mb-2">Phụ kiện & Guốc</h2>
+            <p class="text-gray-500 text-sm mb-8">Miễn phí 1 phụ kiện/bộ áo dài.</p>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm mb-6 flex justify-between items-center">
+                <div>
+                    <p class="font-bold text-lg">Phụ kiện</p>
+                    <p class="text-xs text-gray-400">Quạt, mấn, kiềng...</p>
+                    <p class="text-xs text-brand font-bold mt-1">Quá số bộ: +5k/món</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="counter-btn" onclick="adjustVal('acc-qty', -1)">-</button>
+                    <span id="display-acc-qty" class="text-2xl font-bold w-8 text-center">1</span>
+                    <button class="counter-btn" onclick="adjustVal('acc-qty', 1)">+</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm mb-6 flex justify-between items-center">
+                <div>
+                    <p class="font-bold text-lg">Guốc mộc</p>
+                    <p class="text-xs text-brand font-bold mt-1">10.000đ / đôi</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button class="counter-btn" onclick="adjustVal('clog-qty', -1)">-</button>
+                    <span id="display-clog-qty" class="text-2xl font-bold w-8 text-center">0</span>
+                    <button class="counter-btn" onclick="adjustVal('clog-qty', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="step-5" class="step-container p-6 pt-12">
+            <h2 class="text-3xl font-bold text-[#1d1d1f] mb-6">Quy định thuê</h2>
+            
+            <div class="bg-white p-6 rounded-3xl shadow-ios space-y-4 mb-6">
+                <div class="flex gap-3">
+                    <span class="material-symbols-rounded text-brand">search_check</span>
+                    <p class="text-sm text-gray-600">Kiểm tra kỹ đồ trước khi thuê, báo ngay nếu có lỗi.</p>
+                </div>
+                <div class="h-px bg-gray-100"></div>
+                <div class="flex gap-3">
+                    <span class="material-symbols-rounded text-brand">schedule</span>
+                    <p class="text-sm text-gray-600">Trả đúng hẹn. Quá 24h tính thêm <b class="text-red-500">50% phí</b> ngày tiếp theo.</p>
+                </div>
+                <div class="h-px bg-gray-100"></div>
+                <div class="flex gap-3">
+                    <span class="material-symbols-rounded text-brand">payments</span>
+                    <p class="text-sm text-gray-600">Cọc <b>100K/bộ</b>. Hoàn tiền 100% nếu trả đồ nguyên vẹn.</p>
+                </div>
+                <div class="h-px bg-gray-100"></div>
+                <div class="flex gap-3">
+                    <span class="material-symbols-rounded text-brand">warning</span>
+                    <p class="text-sm text-gray-600">Hư hỏng/Mất mát đền bù <b>70-90%</b> giá trị gốc.</p>
+                </div>
+                <div class="h-px bg-gray-100"></div>
+                <div class="flex gap-3">
+                    <span class="material-symbols-rounded text-brand">local_laundry_service</span>
+                    <p class="text-sm text-gray-600">Khách <b>không cần giặt</b> đồ trước khi trả.</p>
+                </div>
+            </div>
+
+            <label class="checkbox-wrapper p-4 bg-brand-light/20 rounded-xl border border-brand-light">
+                <input type="checkbox" id="agree-check" class="hidden" onchange="toggleNextButton()">
+                <div class="custom-checkbox"></div>
+                <span class="text-sm font-bold text-[#1d1d1f]">Tôi đã đọc và đồng ý với các quy định trên.</span>
+            </label>
+        </div>
+
+        <div id="step-6" class="step-container p-6 pt-8">
+            <h2 class="text-2xl font-bold text-[#1d1d1f] mb-6">Xác nhận đơn thuê</h2>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm mb-4">
+                <div class="flex justify-between mb-1">
+                    <span class="text-gray-500 text-sm">Khách hàng</span>
+                    <span class="font-bold" id="summ-name">--</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-500 text-sm">SĐT</span>
+                    <span class="font-bold" id="summ-phone">--</span>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-6">
+                <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                    <div>
+                        <p class="font-bold">Thuê Áo Dài</p>
+                        <p class="text-xs text-gray-400"><span id="summ-sets">0</span> bộ x 60.000đ</p>
+                    </div>
+                    <span class="font-bold" id="bill-ao">0đ</span>
+                </div>
+                
+                <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                    <div>
+                        <p class="font-bold">Phụ kiện thêm</p>
+                        <p class="text-xs text-gray-400"><span id="summ-extra-acc">0</span> món x 5.000đ</p>
+                    </div>
+                    <span class="font-bold" id="bill-acc">0đ</span>
+                </div>
+
+                <div class="p-5 border-b border-gray-100 flex justify-between items-center">
+                    <div>
+                        <p class="font-bold">Guốc gỗ</p>
+                        <p class="text-xs text-gray-400"><span id="summ-clogs">0</span> đôi x 10.000đ</p>
+                    </div>
+                    <span class="font-bold" id="bill-clog">0đ</span>
+                </div>
+
+                <div class="p-5 bg-gray-50">
+                    <p class="text-xs font-bold text-gray-400 uppercase mb-3">Chọn mức tiền cọc</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="selectDeposit(100000)" id="dep-100" class="deposit-btn py-2 rounded-lg border border-gray-200 bg-white text-sm font-bold active:border-brand text-center">100K</button>
+                        <button onclick="selectDeposit(200000)" id="dep-200" class="deposit-btn py-2 rounded-lg border border-gray-200 bg-white text-sm font-bold active:border-brand text-center">200K</button>
+                        <button onclick="selectDeposit(300000)" id="dep-300" class="deposit-btn py-2 rounded-lg border border-gray-200 bg-white text-sm font-bold active:border-brand text-center">300K</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-end px-2 mb-24">
+                <span class="text-gray-500 font-bold">Tổng thanh toán</span>
+                <div class="text-right">
+                    <span class="text-3xl font-black text-brand" id="final-total">0đ</span>
+                    <p class="text-[10px] text-gray-400">(Bao gồm tiền cọc)</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="step-7" class="step-container p-8 flex flex-col items-center justify-center text-center bg-white">
+            <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                <span class="material-symbols-rounded text-6xl text-brand">check_circle</span>
+            </div>
+            <h2 class="text-3xl font-black text-[#1d1d1f] mb-2">Đã gửi đơn!</h2>
+            <p class="text-gray-500 mb-8">Vui lòng đưa màn hình này cho nhân viên để xác nhận và thanh toán.</p>
+            
+            <div class="bg-gray-50 p-6 rounded-3xl w-full text-left space-y-3 border border-gray-100">
+                <p class="font-bold text-lg border-b border-gray-200 pb-2 mb-2">Phiếu xác nhận</p>
+                <div class="flex justify-between"><span class="text-gray-500">Khách:</span> <span class="font-bold" id="final-name">...</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Tổng thu:</span> <span class="font-bold text-brand text-xl" id="final-money">...</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Tiền cọc:</span> <span class="font-bold text-orange-500" id="final-deposit">...</span></div>
+            </div>
+
+            <button onclick="location.reload()" class="mt-8 text-gray-400 text-sm font-bold underline">Tạo đơn mới</button>
+        </div>
+
+        <div class="bottom-bar" id="nav-bar">
+            <button id="btn-action" onclick="nextStep()" class="btn-next">
+                Bắt đầu ngay
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIG FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
             authDomain: "the-cafe-33.firebaseapp.com",
@@ -74,220 +335,216 @@
         if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- DỮ LIỆU MẪU (ÁO DÀI) ---
-        const PRODUCTS = [
-            { id: 1, name: "Áo Dài Truyền Thống Đỏ", price: 150000, img: "https://i.pinimg.com/564x/bd/0d/9e/bd0d9e7630739c322d73894732007624.jpg", tag: "Hot" },
-            { id: 2, name: "Áo Dài Cách Tân Hoa Nhí", price: 120000, img: "https://i.pinimg.com/564x/4a/52/63/4a5263234d7202396324905273760366.jpg", tag: "Mới" },
-            { id: 3, name: "Áo Dài Trắng Nữ Sinh", price: 100000, img: "https://i.pinimg.com/564x/07/9e/97/079e97e8877520779770533379965243.jpg", tag: "" },
-            { id: 4, name: "Việt Phục Nhật Bình", price: 250000, img: "https://i.pinimg.com/736x/8a/e6/7d/8ae67d740702d4f803870878477202e2.jpg", tag: "Premium" },
-            { id: 5, name: "Áo Dài Nhung Đỏ", price: 180000, img: "https://i.pinimg.com/564x/1e/8a/5a/1e8a5a54645229642408376997622955.jpg", tag: "" },
-            { id: 6, name: "Áo Tấc Nam Ngũ Thân", price: 200000, img: "https://i.pinimg.com/564x/62/13/88/62138833948332483832843823483248.jpg", tag: "Nam" },
-        ];
-
-        // --- COMPONENT: HEADER ---
-        const Header = ({ cartCount, onOpenCart }) => (
-            <div className="fixed top-0 left-0 right-0 z-50 glass px-6 py-4 flex justify-between items-end shadow-ios">
-                <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dịch vụ</p>
-                    <h1 className="text-2xl font-brand font-bold text-brand uppercase tracking-tighter">Thuê Áo Dài</h1>
-                </div>
-                <button onClick={onOpenCart} className="relative p-2 bg-brand-light rounded-full text-brand transition-transform active:scale-90">
-                    <span className="material-symbols-rounded text-2xl">shopping_bag</span>
-                    {cartCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-sm animate-bounce">
-                            {cartCount}
-                        </span>
-                    )}
-                </button>
-            </div>
-        );
-
-        // --- COMPONENT: PRODUCT CARD ---
-        const ProductCard = ({ item, onAdd }) => (
-            <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-[24px] p-3 shadow-ios flex flex-col h-full active:scale-[0.98] transition-transform"
-            >
-                <div className="relative aspect-[3/4] rounded-[20px] overflow-hidden mb-3 bg-gray-100">
-                    <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
-                    {item.tag && (
-                        <span className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-black text-brand uppercase shadow-sm">
-                            {item.tag}
-                        </span>
-                    )}
-                </div>
-                <h3 className="font-bold text-gray-800 text-sm leading-tight mb-1 line-clamp-2 min-h-[2.5em]">{item.name}</h3>
-                <div className="mt-auto flex items-center justify-between">
-                    <span className="text-brand font-black text-lg">{item.price.toLocaleString()}đ</span>
-                    <button onClick={() => onAdd(item)} className="w-8 h-8 bg-brand rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/30 active:scale-90 transition-all">
-                        <span className="material-symbols-rounded text-lg">add</span>
-                    </button>
-                </div>
-            </motion.div>
-        );
-
-        // --- COMPONENT: CART MODAL ---
-        const CartModal = ({ isOpen, onClose, cart, onRemove, onSubmit }) => {
-            const [name, setName] = useState("");
-            const [phone, setPhone] = useState("");
-            const [loading, setLoading] = useState(false);
-
-            const total = cart.reduce((sum, item) => sum + item.price, 0);
-
-            const handleSubmit = () => {
-                if (!name || !phone) return alert("Vui lòng nhập tên và SĐT ạ!");
-                setLoading(true);
-                onSubmit({ name, phone, cart }, () => setLoading(false));
-            };
-
-            if (!isOpen) return null;
-
-            return (
-                <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
-                    <div className="relative bg-white w-full sm:max-w-md h-[85vh] sm:h-auto sm:rounded-[32px] rounded-t-[32px] flex flex-col shadow-2xl animate-slide-up">
-                        
-                        {/* Header Cart */}
-                        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
-                            <h2 className="text-xl font-black text-brand uppercase">Giỏ đồ của bạn</h2>
-                            <button onClick={onClose} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
-                        </div>
-
-                        {/* List Items */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                            {cart.length === 0 ? (
-                                <div className="text-center text-gray-400 py-10 flex flex-col items-center">
-                                    <span className="material-symbols-rounded text-6xl mb-2 opacity-50">checkroom</span>
-                                    <p>Chưa có bộ nào được chọn</p>
-                                </div>
-                            ) : (
-                                cart.map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-4 bg-brand-light/50 p-3 rounded-2xl">
-                                        <img src={item.img} className="w-16 h-16 rounded-xl object-cover bg-white" />
-                                        <div className="flex-1">
-                                            <p className="font-bold text-gray-800 text-sm">{item.name}</p>
-                                            <p className="text-brand font-black">{item.price.toLocaleString()}đ</p>
-                                        </div>
-                                        <button onClick={() => onRemove(idx)} className="text-red-400 p-2">
-                                            <span className="material-symbols-rounded">delete</span>
-                                        </button>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-
-                        {/* Footer Form */}
-                        <div className="p-6 bg-white border-t border-gray-100 pb-safe">
-                            <div className="space-y-3 mb-6">
-                                <input 
-                                    type="text" 
-                                    placeholder="Họ và tên bạn" 
-                                    className="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-brand/50 transition-all"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                />
-                                <input 
-                                    type="tel" 
-                                    placeholder="Số điện thoại" 
-                                    className="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-brand/50 transition-all"
-                                    value={phone}
-                                    onChange={(e) => setPhone(e.target.value.replace(/\D/g,''))}
-                                />
-                            </div>
-
-                            <div className="flex justify-between items-end mb-4">
-                                <span className="text-gray-400 font-bold text-sm uppercase">Tổng cộng</span>
-                                <span className="text-3xl font-brand font-black text-brand">{total.toLocaleString()}đ</span>
-                            </div>
-
-                            <button 
-                                onClick={handleSubmit}
-                                disabled={cart.length === 0 || loading}
-                                className="w-full bg-brand text-white py-4 rounded-[20px] font-bold text-lg uppercase shadow-lg shadow-brand/30 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2"
-                            >
-                                {loading ? <span className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></span> : "XÁC NHẬN THUÊ"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
+        // --- STATE MANAGEMENT ---
+        let currentStep = 1;
+        let rentalData = {
+            totalSets: 1,
+            male: 0,
+            female: 1,
+            accQty: 1,
+            clogQty: 0,
+            deposit: 200000 // Default 200k
         };
 
-        // --- APP MAIN ---
-        const App = () => {
-            const [cart, setCart] = useState([]);
-            const [isCartOpen, setIsCartOpen] = useState(false);
+        // --- LOGIC UI ---
+        function nextStep() {
+            if (!validateCurrentStep()) return;
 
-            const addToCart = (item) => {
-                setCart([...cart, item]);
-                // Hiệu ứng rung nhẹ
-                if (navigator.vibrate) navigator.vibrate(50);
+            // Xử lý chuyển bước
+            if (currentStep === 6) {
+                // Submit Firebase
+                submitOrder();
+                return;
+            }
+
+            // UI Transition
+            document.getElementById(`step-${currentStep}`).classList.remove('active');
+            document.getElementById(`step-${currentStep}`).classList.add('prev');
+            
+            currentStep++;
+            
+            document.getElementById(`step-${currentStep}`).classList.remove('prev');
+            document.getElementById(`step-${currentStep}`).classList.add('active');
+
+            updateButtonLabel();
+            
+            // Nếu qua bước 6 thì tính toán tiền
+            if (currentStep === 6) calculateBill();
+            // Nếu qua bước 7 thì ẩn nút
+            if (currentStep === 7) document.getElementById('nav-bar').style.display = 'none';
+        }
+
+        function validateCurrentStep() {
+            if (currentStep === 2) {
+                const name = document.getElementById('cust-name').value.trim();
+                const phone = document.getElementById('cust-phone').value.trim();
+                if (name.length < 2 || phone.length < 9) {
+                    alert("Vui lòng nhập đầy đủ Họ tên và SĐT!");
+                    return false;
+                }
+            }
+            if (currentStep === 3) {
+                if (rentalData.male + rentalData.female !== rentalData.totalSets) {
+                    document.getElementById('step3-error').classList.remove('hidden');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function updateButtonLabel() {
+            const btn = document.getElementById('btn-action');
+            if (currentStep === 1) btn.innerText = "Bắt đầu ngay";
+            else if (currentStep === 6) btn.innerText = "Xác nhận & Thanh toán";
+            else btn.innerText = "Tiếp theo";
+
+            // Logic disable nút ở bước 5 (Quy định)
+            if (currentStep === 5) {
+                btn.disabled = !document.getElementById('agree-check').checked;
+            } else {
+                btn.disabled = false;
+            }
+        }
+
+        function toggleNextButton() {
+            if (currentStep === 5) {
+                document.getElementById('btn-action').disabled = !document.getElementById('agree-check').checked;
+            }
+        }
+
+        // --- LOGIC DATA & CALCULATION ---
+        
+        // Điều chỉnh số lượng (+/-)
+        function adjustVal(key, delta) {
+            if (key === 'total-sets') {
+                rentalData.totalSets = Math.max(1, rentalData.totalSets + delta);
+                document.getElementById('display-total-sets').innerText = rentalData.totalSets;
+                // Auto reset Nam/Nữ logic tạm thời (cho user tự nhập lại)
+            } else if (key === 'acc-qty') {
+                rentalData.accQty = Math.max(0, rentalData.accQty + delta);
+                document.getElementById('display-acc-qty').innerText = rentalData.accQty;
+            } else if (key === 'clog-qty') {
+                rentalData.clogQty = Math.max(0, rentalData.clogQty + delta);
+                document.getElementById('display-clog-qty').innerText = rentalData.clogQty;
+            }
+        }
+
+        // Validate Step 3 (Nam + Nữ = Tổng)
+        function validateStep3() {
+            rentalData.female = parseInt(document.getElementById('qty-female').value) || 0;
+            rentalData.male = parseInt(document.getElementById('qty-male').value) || 0;
+            
+            const err = document.getElementById('step3-error');
+            if (rentalData.female + rentalData.male !== rentalData.totalSets) {
+                err.classList.remove('hidden');
+            } else {
+                err.classList.add('hidden');
+            }
+        }
+
+        // Chọn cọc
+        function selectDeposit(amount) {
+            rentalData.deposit = amount;
+            // UI Update
+            [100, 200, 300].forEach(k => {
+                const btn = document.getElementById(`dep-${k}`);
+                if (amount === k * 1000) {
+                    btn.className = "deposit-btn py-2 rounded-lg border-2 border-brand bg-brand-light text-brand text-sm font-bold";
+                } else {
+                    btn.className = "deposit-btn py-2 rounded-lg border border-gray-200 bg-white text-sm font-bold text-gray-500";
+                }
+            });
+            calculateBill(); // Tính lại tổng ngay
+        }
+
+        // TÍNH TIỀN (CORE LOGIC)
+        function calculateBill() {
+            // 1. Tiền thuê áo: 60k/bộ
+            const aoPrice = rentalData.totalSets * 60000;
+            
+            // 2. Tiền phụ kiện: (Tổng PK - Tổng Áo) * 5k. Nếu âm thì = 0 (Free mỗi áo 1 cái)
+            const extraAccCount = Math.max(0, rentalData.accQty - rentalData.totalSets);
+            const accPrice = extraAccCount * 5000;
+
+            // 3. Tiền guốc: 10k/đôi
+            const clogPrice = rentalData.clogQty * 10000;
+
+            // 4. Tổng bill
+            const total = aoPrice + accPrice + clogPrice + rentalData.deposit;
+
+            // Render UI Step 6
+            document.getElementById('summ-name').innerText = document.getElementById('cust-name').value;
+            document.getElementById('summ-phone').innerText = document.getElementById('cust-phone').value;
+            
+            document.getElementById('summ-sets').innerText = rentalData.totalSets;
+            document.getElementById('bill-ao').innerText = aoPrice.toLocaleString() + 'đ';
+
+            document.getElementById('summ-extra-acc').innerText = extraAccCount;
+            document.getElementById('bill-acc').innerText = accPrice.toLocaleString() + 'đ';
+
+            document.getElementById('summ-clogs').innerText = rentalData.clogQty;
+            document.getElementById('bill-clog').innerText = clogPrice.toLocaleString() + 'đ';
+
+            // Highlight nút cọc đang chọn
+            selectDeposit(rentalData.deposit);
+
+            document.getElementById('final-total').innerText = total.toLocaleString() + 'đ';
+        }
+
+        // --- SUBMIT FIREBASE ---
+        function submitOrder() {
+            const btn = document.getElementById('btn-action');
+            btn.innerHTML = "Đang xử lý...";
+            btn.disabled = true;
+
+            const finalData = {
+                customer: {
+                    name: document.getElementById('cust-name').value,
+                    phone: document.getElementById('cust-phone').value
+                },
+                rental: {
+                    totalSets: rentalData.totalSets,
+                    male: rentalData.male,
+                    female: rentalData.female,
+                    desc: document.getElementById('desc-ao').value,
+                    accQty: rentalData.accQty,
+                    clogQty: rentalData.clogQty,
+                    deposit: rentalData.deposit
+                },
+                payment: {
+                    ao: rentalData.totalSets * 60000,
+                    acc: Math.max(0, rentalData.accQty - rentalData.totalSets) * 5000,
+                    clog: rentalData.clogQty * 10000,
+                    deposit: rentalData.deposit,
+                    total: parseInt(document.getElementById('final-total').innerText.replace(/\D/g,''))
+                },
+                status: 'pending',
+                type: 'rental_step_v1',
+                createdAt: new Date().toISOString()
             };
 
-            const removeFromCart = (index) => {
-                const newCart = [...cart];
-                newCart.splice(index, 1);
-                setCart(newCart);
-            };
+            db.ref('rentals').push(finalData, (err) => {
+                if (err) {
+                    alert("Lỗi: " + err.message);
+                    btn.disabled = false;
+                    btn.innerHTML = "Thử lại";
+                } else {
+                    // Fill data vào Step 7
+                    document.getElementById('final-name').innerText = finalData.customer.name;
+                    document.getElementById('final-money').innerText = finalData.payment.total.toLocaleString() + 'đ';
+                    document.getElementById('final-deposit').innerText = finalData.payment.deposit.toLocaleString() + 'đ';
+                    
+                    // Chuyển screen
+                    document.getElementById(`step-6`).classList.remove('active');
+                    document.getElementById(`step-6`).classList.add('prev');
+                    document.getElementById(`step-7`).classList.add('active');
+                    document.getElementById('nav-bar').style.display = 'none';
+                }
+            });
+        }
 
-            const handleCheckout = (userData, stopLoading) => {
-                // Đẩy đơn lên Firebase
-                const orderData = {
-                    customerName: userData.name,
-                    phone: userData.phone,
-                    items: userData.cart,
-                    total: userData.cart.reduce((sum, i) => sum + i.price, 0),
-                    status: 'pending', // Chờ xử lý
-                    type: 'rental_aodai',
-                    createdAt: new Date().toISOString()
-                };
-
-                db.ref('rentals').push(orderData, (error) => {
-                    stopLoading();
-                    if (error) {
-                        alert("Lỗi: " + error.message);
-                    } else {
-                        alert(`Cảm ơn ${userData.name}! Đơn thuê của bạn đã được gửi. Chúng tôi sẽ liên hệ sớm!`);
-                        setCart([]);
-                        setIsCartOpen(false);
-                    }
-                });
-            };
-
-            return (
-                <div className="pb-24 pt-20 max-w-lg mx-auto min-h-screen relative">
-                    <Header cartCount={cart.length} onOpenCart={() => setIsCartOpen(true)} />
-
-                    <div className="px-4 grid grid-cols-2 gap-4">
-                        {PRODUCTS.map(product => (
-                            <ProductCard key={product.id} item={product} onAdd={addToCart} />
-                        ))}
-                    </div>
-
-                    {/* Footer Floating Info */}
-                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-5 py-2 rounded-full shadow-lg border border-white flex items-center gap-2 text-xs font-bold text-gray-500 z-40 whitespace-nowrap">
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                        The Cafe 33 Studio
-                    </div>
-
-                    <AnimatePresence>
-                        {isCartOpen && (
-                            <CartModal 
-                                isOpen={isCartOpen} 
-                                onClose={() => setIsCartOpen(false)} 
-                                cart={cart}
-                                onRemove={removeFromCart}
-                                onSubmit={handleCheckout}
-                            />
-                        )}
-                    </AnimatePresence>
-                </div>
-            );
-        };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // Init
+        selectDeposit(200000); // Mặc định cọc 200k
     </script>
 </body>
 </html>
