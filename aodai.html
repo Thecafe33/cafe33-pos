@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>The Cafe 33 - Thuê Áo Dài</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=League+Spartan:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@48,400,1,0" rel="stylesheet" />
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              brand: ['League Spartan', 'sans-serif'],
+            },
+            colors: {
+              brand: {
+                DEFAULT: '#006241', // Xanh The Cafe 33
+                dark: '#004f32',
+                light: '#e6f4f1',
+                bg: '#F5F5F7' // Màu nền xám kiểu iOS
+              }
+            },
+            boxShadow: {
+              'ios': '0 4px 20px -5px rgba(0,0,0,0.05)',
+              'float': '0 20px 40px -10px rgba(0,98,65,0.2)',
+            },
+            animation: {
+              'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            },
+            keyframes: {
+              slideUp: { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } }
+            }
+          }
+        }
+      }
+    </script>
+
+    <style>
+      body { background-color: #F5F5F7; -webkit-tap-highlight-color: transparent; }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,0.5); }
+    </style>
+
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // --- FIREBASE CONFIG (Dùng chung với POS) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+            authDomain: "the-cafe-33.firebaseapp.com",
+            databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "the-cafe-33",
+            storageBucket: "the-cafe-33.appspot.com",
+            messagingSenderId: "YOUR_ID",
+            appId: "YOUR_ID"
+        };
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- DỮ LIỆU MẪU (ÁO DÀI) ---
+        const PRODUCTS = [
+            { id: 1, name: "Áo Dài Truyền Thống Đỏ", price: 150000, img: "https://i.pinimg.com/564x/bd/0d/9e/bd0d9e7630739c322d73894732007624.jpg", tag: "Hot" },
+            { id: 2, name: "Áo Dài Cách Tân Hoa Nhí", price: 120000, img: "https://i.pinimg.com/564x/4a/52/63/4a5263234d7202396324905273760366.jpg", tag: "Mới" },
+            { id: 3, name: "Áo Dài Trắng Nữ Sinh", price: 100000, img: "https://i.pinimg.com/564x/07/9e/97/079e97e8877520779770533379965243.jpg", tag: "" },
+            { id: 4, name: "Việt Phục Nhật Bình", price: 250000, img: "https://i.pinimg.com/736x/8a/e6/7d/8ae67d740702d4f803870878477202e2.jpg", tag: "Premium" },
+            { id: 5, name: "Áo Dài Nhung Đỏ", price: 180000, img: "https://i.pinimg.com/564x/1e/8a/5a/1e8a5a54645229642408376997622955.jpg", tag: "" },
+            { id: 6, name: "Áo Tấc Nam Ngũ Thân", price: 200000, img: "https://i.pinimg.com/564x/62/13/88/62138833948332483832843823483248.jpg", tag: "Nam" },
+        ];
+
+        // --- COMPONENT: HEADER ---
+        const Header = ({ cartCount, onOpenCart }) => (
+            <div className="fixed top-0 left-0 right-0 z-50 glass px-6 py-4 flex justify-between items-end shadow-ios">
+                <div>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Dịch vụ</p>
+                    <h1 className="text-2xl font-brand font-bold text-brand uppercase tracking-tighter">Thuê Áo Dài</h1>
+                </div>
+                <button onClick={onOpenCart} className="relative p-2 bg-brand-light rounded-full text-brand transition-transform active:scale-90">
+                    <span className="material-symbols-rounded text-2xl">shopping_bag</span>
+                    {cartCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-sm animate-bounce">
+                            {cartCount}
+                        </span>
+                    )}
+                </button>
+            </div>
+        );
+
+        // --- COMPONENT: PRODUCT CARD ---
+        const ProductCard = ({ item, onAdd }) => (
+            <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-[24px] p-3 shadow-ios flex flex-col h-full active:scale-[0.98] transition-transform"
+            >
+                <div className="relative aspect-[3/4] rounded-[20px] overflow-hidden mb-3 bg-gray-100">
+                    <img src={item.img} alt={item.name} className="w-full h-full object-cover" />
+                    {item.tag && (
+                        <span className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-black text-brand uppercase shadow-sm">
+                            {item.tag}
+                        </span>
+                    )}
+                </div>
+                <h3 className="font-bold text-gray-800 text-sm leading-tight mb-1 line-clamp-2 min-h-[2.5em]">{item.name}</h3>
+                <div className="mt-auto flex items-center justify-between">
+                    <span className="text-brand font-black text-lg">{item.price.toLocaleString()}đ</span>
+                    <button onClick={() => onAdd(item)} className="w-8 h-8 bg-brand rounded-full flex items-center justify-center text-white shadow-lg shadow-brand/30 active:scale-90 transition-all">
+                        <span className="material-symbols-rounded text-lg">add</span>
+                    </button>
+                </div>
+            </motion.div>
+        );
+
+        // --- COMPONENT: CART MODAL ---
+        const CartModal = ({ isOpen, onClose, cart, onRemove, onSubmit }) => {
+            const [name, setName] = useState("");
+            const [phone, setPhone] = useState("");
+            const [loading, setLoading] = useState(false);
+
+            const total = cart.reduce((sum, item) => sum + item.price, 0);
+
+            const handleSubmit = () => {
+                if (!name || !phone) return alert("Vui lòng nhập tên và SĐT ạ!");
+                setLoading(true);
+                onSubmit({ name, phone, cart }, () => setLoading(false));
+            };
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
+                    <div className="relative bg-white w-full sm:max-w-md h-[85vh] sm:h-auto sm:rounded-[32px] rounded-t-[32px] flex flex-col shadow-2xl animate-slide-up">
+                        
+                        {/* Header Cart */}
+                        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center">
+                            <h2 className="text-xl font-black text-brand uppercase">Giỏ đồ của bạn</h2>
+                            <button onClick={onClose} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">✕</button>
+                        </div>
+
+                        {/* List Items */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                            {cart.length === 0 ? (
+                                <div className="text-center text-gray-400 py-10 flex flex-col items-center">
+                                    <span className="material-symbols-rounded text-6xl mb-2 opacity-50">checkroom</span>
+                                    <p>Chưa có bộ nào được chọn</p>
+                                </div>
+                            ) : (
+                                cart.map((item, idx) => (
+                                    <div key={idx} className="flex items-center gap-4 bg-brand-light/50 p-3 rounded-2xl">
+                                        <img src={item.img} className="w-16 h-16 rounded-xl object-cover bg-white" />
+                                        <div className="flex-1">
+                                            <p className="font-bold text-gray-800 text-sm">{item.name}</p>
+                                            <p className="text-brand font-black">{item.price.toLocaleString()}đ</p>
+                                        </div>
+                                        <button onClick={() => onRemove(idx)} className="text-red-400 p-2">
+                                            <span className="material-symbols-rounded">delete</span>
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Footer Form */}
+                        <div className="p-6 bg-white border-t border-gray-100 pb-safe">
+                            <div className="space-y-3 mb-6">
+                                <input 
+                                    type="text" 
+                                    placeholder="Họ và tên bạn" 
+                                    className="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-brand/50 transition-all"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                                <input 
+                                    type="tel" 
+                                    placeholder="Số điện thoại" 
+                                    className="w-full bg-gray-50 p-4 rounded-2xl font-bold text-gray-700 outline-none focus:ring-2 focus:ring-brand/50 transition-all"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value.replace(/\D/g,''))}
+                                />
+                            </div>
+
+                            <div className="flex justify-between items-end mb-4">
+                                <span className="text-gray-400 font-bold text-sm uppercase">Tổng cộng</span>
+                                <span className="text-3xl font-brand font-black text-brand">{total.toLocaleString()}đ</span>
+                            </div>
+
+                            <button 
+                                onClick={handleSubmit}
+                                disabled={cart.length === 0 || loading}
+                                className="w-full bg-brand text-white py-4 rounded-[20px] font-bold text-lg uppercase shadow-lg shadow-brand/30 active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2"
+                            >
+                                {loading ? <span className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></span> : "XÁC NHẬN THUÊ"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- APP MAIN ---
+        const App = () => {
+            const [cart, setCart] = useState([]);
+            const [isCartOpen, setIsCartOpen] = useState(false);
+
+            const addToCart = (item) => {
+                setCart([...cart, item]);
+                // Hiệu ứng rung nhẹ
+                if (navigator.vibrate) navigator.vibrate(50);
+            };
+
+            const removeFromCart = (index) => {
+                const newCart = [...cart];
+                newCart.splice(index, 1);
+                setCart(newCart);
+            };
+
+            const handleCheckout = (userData, stopLoading) => {
+                // Đẩy đơn lên Firebase
+                const orderData = {
+                    customerName: userData.name,
+                    phone: userData.phone,
+                    items: userData.cart,
+                    total: userData.cart.reduce((sum, i) => sum + i.price, 0),
+                    status: 'pending', // Chờ xử lý
+                    type: 'rental_aodai',
+                    createdAt: new Date().toISOString()
+                };
+
+                db.ref('rentals').push(orderData, (error) => {
+                    stopLoading();
+                    if (error) {
+                        alert("Lỗi: " + error.message);
+                    } else {
+                        alert(`Cảm ơn ${userData.name}! Đơn thuê của bạn đã được gửi. Chúng tôi sẽ liên hệ sớm!`);
+                        setCart([]);
+                        setIsCartOpen(false);
+                    }
+                });
+            };
+
+            return (
+                <div className="pb-24 pt-20 max-w-lg mx-auto min-h-screen relative">
+                    <Header cartCount={cart.length} onOpenCart={() => setIsCartOpen(true)} />
+
+                    <div className="px-4 grid grid-cols-2 gap-4">
+                        {PRODUCTS.map(product => (
+                            <ProductCard key={product.id} item={product} onAdd={addToCart} />
+                        ))}
+                    </div>
+
+                    {/* Footer Floating Info */}
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-5 py-2 rounded-full shadow-lg border border-white flex items-center gap-2 text-xs font-bold text-gray-500 z-40 whitespace-nowrap">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        The Cafe 33 Studio
+                    </div>
+
+                    <AnimatePresence>
+                        {isCartOpen && (
+                            <CartModal 
+                                isOpen={isCartOpen} 
+                                onClose={() => setIsCartOpen(false)} 
+                                cart={cart}
+                                onRemove={removeFromCart}
+                                onSubmit={handleCheckout}
+                            />
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
