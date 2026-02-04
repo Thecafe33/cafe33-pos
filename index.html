@@ -626,108 +626,91 @@ function isSlotAvailable(s, e, bookedSlots) {
 // =============================================================
 // LOGIC GỢI Ý: BẮT DÍNH TỪNG PHÚT & KHÔNG BỎ SÓT (NO HIDDEN BUFFER)
 // =============================================================
+// =============================================================
+// LOGIC GỢI Ý: NAM CHÂM + ĐỘC QUYỀN (WINNER TAKES ALL)
+// =============================================================
 
 function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
     let suggestions = [];
     const reqDuration = reqEnd - reqStart;
     
-    // 1. CHUẨN BỊ DỮ LIỆU THỜI GIAN
+    // 1. CHUẨN BỊ TIME DATA
     const now = new Date();
     const d = String(now.getDate()).padStart(2, '0');
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const y = now.getFullYear();
     const todayStr = `${d}/${m}/${y}`;
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-    // [FIX QUAN TRỌNG]: Bỏ buffer 15p. Chỉ cần giờ > hiện tại là lấy.
-    // Việc check 5p chuẩn bị đã có handleBooking lo.
     const minValidTime = (dateStr === todayStr) ? currentMinutes : 0; 
 
-    // 2. TẠO TẬP HỢP MỐC THỜI GIAN TIỀM NĂNG (CANDIDATES)
+    // 2. TẠO GAP POINTS & CANDIDATES
+    let gapPoints = new Set(); // Mốc trả Bed (Nam châm)
     let candidateStarts = new Set();
     
-    // A. Giờ khách muốn
+    // A. Lấy giờ trả Bed làm mốc
+    bookedSlots.forEach(slot => {
+        const be = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
+        gapPoints.add(be); 
+        if (Math.abs(be - reqStart) <= 120) candidateStarts.add(be);
+    });
+
+    // B. Thêm giờ khách muốn & Giờ mở cửa
     candidateStarts.add(reqStart);
+    candidateStarts.add(480);
 
-    // B. [NAM CHÂM]: Lấy giờ TRẢ BED của các đơn cũ làm mốc
-    bookedSlots.forEach(slot => {
-        const be = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
-        // Lấy tất cả các mốc trả bed trong phạm vi ±120 phút
-        if (Math.abs(be - reqStart) <= 120) {
-            candidateStarts.add(be); 
-        }
-    });
+    // C. Quét xung quanh (Bước nhảy 5p)
+    for (let offset = -60; offset <= 60; offset += 5) candidateStarts.add(reqStart + offset);
 
-    // C. Giờ mở cửa
-    candidateStarts.add(480); 
-
-    // D. Quét xung quanh ±60p (Bước nhảy 5 phút để mịn hơn)
-    for (let offset = -60; offset <= 60; offset += 5) {
-        candidateStarts.add(reqStart + offset);
-    }
-
-    // 3. CHẤM ĐIỂM & TÍNH QUÀ
+    // 3. CHẤM ĐIỂM
     let scoredSuggestions = [];
-    
-    // Tạo Set check Gap nhanh
-    let gapPoints = new Set();
-    bookedSlots.forEach(slot => {
-        const be = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
-        gapPoints.add(be);
-    });
 
     candidateStarts.forEach(startT => {
-        // Lọc giờ quá khứ
         if (startT < 480 || startT > 1250 || startT <= minValidTime) return;
 
-        // --- CHIẾN THUẬT A: DỜI GIỜ (GIỮ NGUYÊN THỜI LƯỢNG) ---
+        // --- CHIẾN THUẬT A: DỜI GIỜ (FULL TIME - DOANH THU CAO) ---
         const endT = startT + reqDuration;
-        
         if (endT <= 1250 && isSlotAvailable(startT, endT, bookedSlots)) {
             let score = 0;
             const diff = Math.abs(startT - reqStart);
 
-            // [TIÊU CHÍ VÀNG]: Khớp đúng giờ trả khách cũ (Lấp Gap) -> Điểm cực cao
-            if (gapPoints.has(startT)) score += 500; // Tăng trọng số lên 500 để chắc chắn đứng đầu
+            // [NAM CHÂM]: Khớp Gap -> Điểm tuyệt đối
+            if (gapPoints.has(startT)) score += 1000; 
             else score -= 50; 
 
-            // Tiêu chí phụ: Gần giờ khách muốn
-            score -= diff * 5; // Trừ điểm mạnh hơn nếu lệch xa
+            // Gần giờ khách muốn
+            score -= diff * 5; 
 
             let noteText = "";
             if (diff === 0) noteText = "May quá, còn đúng giờ này!";
-            else if (gapPoints.has(startT)) noteText = "Vừa khít có khách trả Bed luôn!"; // Thông báo hấp dẫn
+            else if (gapPoints.has(startT)) noteText = "Vừa khít có khách trả Bed luôn!";
             else if (startT > reqStart) noteText = "Dời lại chút xíu là có chỗ!";
             else noteText = "Đi sớm hơn chút có chỗ đẹp!";
 
             scoredSuggestions.push({
                 start: startT, end: endT, isShorter: false,
+                diff: diff,
                 score: score,
                 note: noteText,
                 bonus: ""
             });
         }
 
-        // --- CHIẾN THUẬT B: CẮT NGẮN (CHỈ DÙNG KHI CẦN THIẾT) ---
-        // Chỉ thử cắt ngắn dựa trên các mốc "Nam châm" (Gap Points) hoặc giờ khách muốn
-        // Để tránh gợi ý rác
+        // --- CHIẾN THUẬT B: CẮT NGẮN (DOANH THU THẤP - DỰ PHÒNG) ---
+        // Chỉ chạy nếu startT là một mốc Nam Châm hoặc giờ gốc
         if (gapPoints.has(startT) || startT === reqStart) {
             const shrinkOpts = [
                 { s: startT, e: startT + reqDuration - 15 },
                 { s: startT + 15, e: startT + reqDuration }
             ];
-
             shrinkOpts.forEach(opt => {
                 if (opt.e - opt.s >= 30 && opt.e <= 1250 && opt.s > minValidTime) {
                     if (isSlotAvailable(opt.s, opt.e, bookedSlots)) {
-                        let sScore = -50; 
-                        if (gapPoints.has(opt.s)) sScore += 200; // Ưu tiên cao nếu khớp gap
+                        let sScore = -200; // Điểm rất thấp để ko cạnh tranh với Full Time
+                        if (gapPoints.has(opt.s)) sScore += 100; // Vớt vát nếu khớp gap
                         sScore -= Math.abs(opt.s - reqStart);
 
                         const lostMin = reqDuration - (opt.e - opt.s);
                         let bonusText = "";
-                        
-                        // LOGIC QUÀ (Như Tiên sinh yêu cầu)
                         if (lostMin >= 10 && lostMin <= 20) bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
                         else if (lostMin > 20 && lostMin <= 60) bonusText = "✨ ƯU ĐÃI KÉP: Free chăn + Giảm 5k";
                         else if (lostMin > 60 && lostMin <= 65) bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
@@ -736,6 +719,7 @@ function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
                         if(bonusText) {
                             scoredSuggestions.push({
                                 start: opt.s, end: opt.e, isShorter: true,
+                                diff: Math.abs(opt.s - reqStart),
                                 score: sScore,
                                 note: `Ngắn hơn ${lostMin}p`,
                                 bonus: bonusText
@@ -749,15 +733,32 @@ function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
 
     // 4. SẮP XẾP & LỌC TRÙNG
     scoredSuggestions.sort((a, b) => b.score - a.score);
-
     let unique = []; let seen = new Set();
     scoredSuggestions.forEach(item => {
         const key = item.start + '-' + item.end;
         if (!seen.has(key)) { seen.add(key); unique.push(item); }
     });
 
+    // =========================================================
+    // 5. [CHIẾN THUẬT ĐỘC QUYỀN - THE KILLER LOGIC]
+    // =========================================================
+    if (unique.length > 0) {
+        const bestOption = unique[0];
+        
+        // Điều kiện để kích hoạt chế độ "Độc Quyền":
+        // 1. Là phương án Full Time (không bị cắt ngắn)
+        // 2. Độ lệch giờ <= 15 phút (Khách chỉ cần chờ chút xíu)
+        if (!bestOption.isShorter && bestOption.diff <= 15) {
+            // XÓA SẠCH CÁC GỢI Ý KHÁC -> CHỈ TRẢ VỀ 1 CÁI
+            return [bestOption];
+        }
+    }
+
+    // Nếu không có phương án hoàn hảo, mới hiện 3 cái để khách chọn
     return unique.slice(0, 3);
 }
+
+
 // 3. HÀM CHÍNH: HANDLE BOOKING (GIỮ NGUYÊN STRUCURE, THAY LOGIC)
 // =============================================================
 // LOGIC ĐẶT BED: CÓ CHECK 5 PHÚT CHUẨN BỊ (PREP BUFFER)
@@ -918,27 +919,60 @@ function handleBooking() {
 }
 // 4. UI GỢI Ý (HIỆN THỊ QUÀ TẶNG BÙ ĐẮP)
 // 1. SỬA LẠI GIAO DIỆN GỢI Ý (Sửa chữ nút bấm thành "CHỌN" thay vì "CHỐT")
+// =============================================================
+// UI GỢI Ý - THÔNG MINH THEO SỐ LƯỢNG
+// =============================================================
+
 function showSuggestionUI(suggestions) {
     let title = ""; let html = ""; let icon = "";
 
     if (suggestions.length === 0) {
+        // CASE: KHÔNG CÒN GÌ
         icon = "🥺"; title = "Huhu, full mất rồi!";
         html = `
             <div class="text-center py-2">
-                <p class="text-[#1e3932] text-sm font-medium mb-2">
-                    Tiếc quá, hôm nay <b>The cafe 33</b> trộm vía khách đông nên đã kín lịch vào giờ này rồi ạ.
-                </p>
-                <p class="text-gray-500 text-xs italic">
-                   Bạn vui lòng chọn sang ngày mai hoặc khung giờ khác xa hơn nhé. Hẹn gặp bạn sớm! ❤️
-                </p>
+                <p class="text-[#1e3932] text-sm font-medium mb-2">Tiếc quá, hôm nay <b>The cafe 33</b> trộm vía khách đông nên đã kín lịch vào giờ này rồi ạ.</p>
+                <p class="text-gray-500 text-xs italic">Bạn vui lòng chọn sang ngày mai hoặc khung giờ khác xa hơn nhé. Hẹn gặp bạn sớm! ❤️</p>
+            </div>`;
+    } 
+    else if (suggestions.length === 1) {
+        // CASE: ĐỘC QUYỀN (WINNER) - CHỈ HIỆN 1 CÁI
+        const s = suggestions[0];
+        
+        // Tính giờ hiển thị
+        const h1 = Math.floor(s.start / 60).toString().padStart(2, '0');
+        const m1 = (s.start % 60).toString().padStart(2, '0');
+        const h2 = Math.floor(s.end / 60).toString().padStart(2, '0');
+        const m2 = (s.end % 60).toString().padStart(2, '0');
+        const timeStr = `${h1}:${m1} - ${h2}:${m2}`;
+        
+        icon = "🎯"; // Icon bia mục tiêu (Chuẩn xác)
+        title = "Tìm thấy chỗ ngay gần đó!";
+        
+        // Lời thoại khẳng định chắc nịch
+        html = `
+            <p class="text-[#1e3932] text-sm font-medium mb-4 text-left leading-relaxed">
+                Giờ bạn chọn vừa kín, nhưng <b>The cafe 33</b> tìm thấy một khung giờ <b>hoàn hảo</b> ngay sát bên cho bạn đây:
+            </p>
+            
+            <div onclick="applyAutoBook('${timeStr}')" class="suggestion-box cursor-pointer group" style="border: 2px solid #006241; background: #f0fdf9;">
+                <div class="suggestion-left">
+                    <div class="suggestion-time" style="color: #006241; font-size: 18px;">${timeStr}</div>
+                    <div class="suggestion-note text-[#006241] font-bold">✅ ${s.note}</div>
+                </div>
+                <div class="btn-pick-now group-active:scale-95 transition-transform" style="padding: 12px 20px;">CHỐT NGAY</div>
             </div>
+            
+            <p class="text-[10px] text-gray-400 text-center mt-3 italic">*Khung giờ hoàn hảo và duy nhất còn lại đó nha!</p>
         `;
+
     } else {
+        // CASE: 3 LỰA CHỌN (KHI KHÔNG CÓ CÁI NÀO HOÀN HẢO)
         icon = "✨"; title = "Tiếc quá, vừa có khách đặt!";
         html = `
             <p class="text-[#1e3932] text-sm font-medium mb-4 text-left leading-relaxed">
                 Khung giờ bạn chọn vừa khít có người đặt trước mất rồi.<br>
-                Nhưng đừng lo, <b>The cafe 33</b> đã nhanh tay giữ lại <b>3 lựa chọn "xịn" nhất</b> dành riêng cho bạn đây:
+                Nhưng đừng lo, <b>The cafe 33</b> đã nhanh tay giữ lại <b> các lựa chọn "xịn" nhất</b> dành riêng cho bạn:
             </p>
         `;
         
@@ -949,21 +983,16 @@ function showSuggestionUI(suggestions) {
             const m2 = (s.end % 60).toString().padStart(2, '0');
             const timeStr = `${h1}:${m1} - ${h2}:${m2}`;
             
-            // Style hiển thị Bonus (Màu cam nổi bật)
             const bonusHtml = s.bonus 
                 ? `<div class="suggestion-bonus-badge">${s.bonus}</div>` 
                 : `<div class="suggestion-note">✅ ${s.note}</div>`;
 
             html += `
             <div onclick="applyAutoBook('${timeStr}')" class="suggestion-box cursor-pointer group">
-                <div class="suggestion-left">
-                    <div class="suggestion-time">${timeStr}</div>
-                    ${bonusHtml}
-                </div>
+                <div class="suggestion-left"><div class="suggestion-time">${timeStr}</div>${bonusHtml}</div>
                 <div class="btn-pick-now group-active:scale-95 transition-transform">DÙNG GIỜ NÀY</div>
             </div>`;
         });
-        
         html += `<p class="text-[10px] text-gray-400 text-center mt-3 italic">*Bấm chọn để điền tự động vào phiếu đặt</p>`;
     }
 
@@ -1457,6 +1486,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
