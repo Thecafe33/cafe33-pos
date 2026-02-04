@@ -622,96 +622,131 @@ function isSlotAvailable(s, e, bookedSlots) {
 function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
     let suggestions = [];
     const reqDuration = reqEnd - reqStart;
-
-    // --- PHẦN 1: MÀNG LỌC THỜI GIAN (QUAN TRỌNG) ---
-    // Xác định mốc thời gian tối thiểu hợp lệ (minValidTime)
+    
+    // 1. CHUẨN BỊ DỮ LIỆU THỜI GIAN
     const now = new Date();
     const d = String(now.getDate()).padStart(2, '0');
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const y = now.getFullYear();
     const todayStr = `${d}/${m}/${y}`;
-    
-    // Nếu đặt hôm nay: Mốc là giờ hiện tại + 15 phút (để khách kịp chuẩn bị)
-    // Nếu đặt ngày khác: Mốc là 0 (lấy từ sáng sớm)
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const minValidTime = (dateStr === todayStr) ? (currentMinutes + 15) : 0;
 
-    // --- PHẦN 2: CHIẾN THUẬT "CẮT GIỜ" (SHRINK) ---
-    // Cố gắng cắt bớt 15-30p đầu hoặc đuôi để lọt vừa khe trống
-    const shrinkOptions = [
-        { s: reqStart + 15, e: reqEnd },      // Cắt đầu 15p
-        { s: reqStart, e: reqEnd - 15 },      // Cắt đuôi 15p
-        { s: reqStart + 30, e: reqEnd },      // Cắt đầu 30p
-        { s: reqStart, e: reqEnd - 30 }       // Cắt đuôi 30p
-    ];
-
-    shrinkOptions.forEach(opt => {
-        // Điều kiện: 
-        // 1. Thời lượng còn lại phải >= 30 phút
-        // 2. Giờ bắt đầu phải nằm ở TƯƠNG LAI (> minValidTime)
-        if ((opt.e - opt.s >= 30) && (opt.s > minValidTime)) {
-            if (isSlotAvailable(opt.s, opt.e, bookedSlots)) {
-                const lost = reqDuration - (opt.e - opt.s); // Số phút bị mất
-                suggestions.push({
-                    start: opt.s, 
-                    end: opt.e,
-                    isShorter: true, // Đánh dấu là bị ngắn hơn
-                    diff: 999, // Ưu tiên thấp hơn loại Dời giờ
-                    note: `Ngắn hơn ${lost}p so với dự định`,
-                    bonus: `🎁 BÙ ĐẮP: Free chăn + Giảm 5k`
-                });
-            }
+    // 2. XÁC ĐỊNH CÁC "ĐIỂM VÀNG" (GOLDEN MOMENTS)
+    // Là các mốc thời gian mà vừa khít có khách trả Bed -> Không tạo gap
+    let perfectStartPoints = new Set();
+    
+    // Mốc mở cửa cũng là một điểm vàng (08:00)
+    perfectStartPoints.add(480); 
+    
+    bookedSlots.forEach(slot => {
+        const be = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
+        // Chỉ thêm vào nếu giờ trả bed nằm trong phạm vi hợp lý (gần giờ khách muốn đặt)
+        if (Math.abs(be - reqStart) <= 120) {
+            perfectStartPoints.add(be);
         }
     });
 
-    // --- PHẦN 3: CHIẾN THUẬT "DỜI GIỜ" (SHIFT) ---
-    // Giữ nguyên thời lượng, dịch chuyển lên xuống trong khoảng 60 phút
-    for (let offset = -60; offset <= 60; offset += 15) {
-        if (offset === 0) continue; // Bỏ qua giờ gốc (vì đã full)
-
-        const newS = reqStart + offset;
-        const newE = reqEnd + offset;
-
-        // Điều kiện:
-        // 1. Trong giờ mở cửa (08:00 - 480p đến 20:50 - 1250p)
-        // 2. Giờ bắt đầu phải nằm ở TƯƠNG LAI (> minValidTime)
-        if (newS >= 480 && newE <= 1250 && newS > minValidTime) {
-            if (isSlotAvailable(newS, newE, bookedSlots)) {
-                suggestions.push({
-                    start: newS, 
-                    end: newE,
-                    isShorter: false, // Đánh dấu là đủ giờ
-                    diff: Math.abs(offset), // Độ lệch so với giờ gốc (để sắp xếp)
-                    note: offset > 0 ? "Dời lại xíu thôi, giờ này vắng!" : "Đi sớm hơn chút, tha hồ chọn chỗ!",
-                    bonus: "" // Không cần đền bù
-                });
-            }
-        }
+    // 3. TẠO DANH SÁCH ỨNG CỬ VIÊN (CANDIDATES)
+    // Kết hợp giữa giờ khách muốn và các điểm vàng
+    let candidateStarts = new Set();
+    
+    // A. Thêm giờ khách muốn (Ưu tiên số 1 nếu trống)
+    candidateStarts.add(reqStart);
+    
+    // B. Thêm các điểm vàng (Ưu tiên số 2 - Tối ưu doanh thu)
+    perfectStartPoints.forEach(t => candidateStarts.add(t));
+    
+    // C. Thêm các giờ lân cận (Backup - Chỉ dùng khi bí quá)
+    // Nhưng chỉ thêm bước nhảy 30p để tránh vụn vặt 15p (như 14:45)
+    for (let offset = -60; offset <= 60; offset += 30) {
+        candidateStarts.add(reqStart + offset);
     }
 
-    // --- PHẦN 4: LỌC & SẮP XẾP (FINAL POLISH) ---
-    // 1. Sắp xếp ưu tiên:
-    //    - Ưu tiên loại ĐỦ GIỜ (Shift) trước.
-    //    - Sau đó ưu tiên giờ GẦN GIỜ GỐC NHẤT (diff nhỏ nhất).
-    suggestions.sort((a, b) => {
-        if (a.isShorter !== b.isShorter) return a.isShorter ? 1 : -1; 
-        return a.diff - b.diff;
+    // 4. KIỂM TRA VÀ CHẤM ĐIỂM TỪNG ỨNG CỬ VIÊN
+    let scoredSuggestions = [];
+
+    candidateStarts.forEach(startT => {
+        // Lọc cơ bản: Trong giờ hoạt động & Tương lai
+        if (startT < 480 || startT > 1250 || startT <= minValidTime) return;
+
+        // --- CHIẾN THUẬT 1: GIỮ NGUYÊN THỜI LƯỢNG (DỜI GIỜ) ---
+        const endT = startT + reqDuration;
+        if (endT <= 1250 && isSlotAvailable(startT, endT, bookedSlots)) {
+            let score = 0;
+            
+            // TIÊU CHÍ 1: KHÔNG TẠO GAP (QUAN TRỌNG NHẤT)
+            // Nếu startT trùng khớp với một giờ trả Bed nào đó -> Điểm cực cao
+            if (perfectStartPoints.has(startT)) {
+                score += 100; // Thưởng lớn cho việc tối ưu doanh thu
+            } else {
+                // Nếu không trùng khớp -> Phạt nặng vì tạo rác thời gian
+                // Ví dụ: Có bed trả lúc 14:30 mà gợi ý 14:45 -> Gap 15p -> Trừ điểm
+                score -= 50; 
+            }
+
+            // TIÊU CHÍ 2: GẦN GIỜ KHÁCH MUỐN
+            const diff = Math.abs(startT - reqStart);
+            score -= diff; // Càng xa càng trừ điểm
+
+            scoredSuggestions.push({
+                start: startT, end: endT,
+                isShorter: false,
+                diff: diff,
+                score: score,
+                note: (diff === 0) ? "May quá, còn đúng giờ này!" : (startT > reqStart ? "Dời lại chút để khớp lịch!" : "Đi sớm hơn chút có chỗ đẹp!"),
+                bonus: ""
+            });
+        }
+
+        // --- CHIẾN THUẬT 2: CẮT NGẮN (SHRINK) ---
+        // Chỉ chạy khi chiến thuật 1 không tìm ra đủ 3 lựa chọn "xịn"
+        // (Để code gọn, ta cứ tính, lát sort sẽ đẩy xuống dưới)
+        const shrinkOpts = [
+            { s: startT, e: startT + reqDuration - 15 }, // Cắt đuôi 15p
+            { s: startT + 15, e: startT + reqDuration }  // Cắt đầu 15p
+        ];
+
+        shrinkOpts.forEach(opt => {
+            if (opt.e - opt.s >= 30 && opt.e <= 1250 && opt.s > minValidTime) {
+                if (isSlotAvailable(opt.s, opt.e, bookedSlots)) {
+                    let sScore = -100; // Điểm thấp vì bị cắt giờ
+                    
+                    // Vẫn ưu tiên khớp mốc thời gian
+                    if (perfectStartPoints.has(opt.s)) sScore += 50;
+                    
+                    sScore -= Math.abs(opt.s - reqStart);
+
+                    scoredSuggestions.push({
+                        start: opt.s, end: opt.e,
+                        isShorter: true,
+                        diff: Math.abs(opt.s - reqStart),
+                        score: sScore,
+                        note: `Ngắn hơn ${reqDuration - (opt.e - opt.s)}p`,
+                        bonus: "🎁 BÙ ĐẮP: Free chăn + Giảm 5k"
+                    });
+                }
+            }
+        });
     });
 
-    // 2. Lọc trùng (Deduplicate)
-    let uniqueSuggestions = [];
-    let seenKeys = new Set();
+    // 5. SẮP XẾP & CHỌN LỌC (FINAL FILTER)
+    // Sắp xếp theo điểm số (Cao -> Thấp)
+    scoredSuggestions.sort((a, b) => b.score - a.score);
 
-    suggestions.forEach(item => {
+    // Lọc trùng
+    let unique = [];
+    let seen = new Set();
+    scoredSuggestions.forEach(item => {
         const key = item.start + '-' + item.end;
-        if (!seenKeys.has(key)) {
-            seenKeys.add(key);
-            uniqueSuggestions.push(item);
+        if (!seen.has(key)) {
+            seen.add(key);
+            unique.push(item);
         }
     });
 
-    // 3. Trả về tối đa 3 gợi ý tốt nhất
-    return uniqueSuggestions.slice(0, 3);
+    // Trả về 3 cái điểm cao nhất
+    return unique.slice(0, 3);
 }
 // 3. HÀM CHÍNH: HANDLE BOOKING (GIỮ NGUYÊN STRUCURE, THAY LOGIC)
 function handleBooking() {
@@ -1365,6 +1400,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
