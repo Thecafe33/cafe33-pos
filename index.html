@@ -623,49 +623,53 @@ function isSlotAvailable(s, e, bookedSlots) {
 // LOGIC GỢI Ý: NAM CHÂM + QUÀ TẶNG "XỨNG ĐÁNG"
 // =============================================================
 
+// =============================================================
+// LOGIC GỢI Ý: BẮT DÍNH TỪNG PHÚT & KHÔNG BỎ SÓT (NO HIDDEN BUFFER)
+// =============================================================
+
 function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
     let suggestions = [];
     const reqDuration = reqEnd - reqStart;
     
-    // 1. Chuẩn bị Time Data
+    // 1. CHUẨN BỊ DỮ LIỆU THỜI GIAN
     const now = new Date();
     const d = String(now.getDate()).padStart(2, '0');
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const y = now.getFullYear();
     const todayStr = `${d}/${m}/${y}`;
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const minValidTime = (dateStr === todayStr) ? (currentMinutes + 15) : 0;
 
-    // 2. TẠO TẬP HỢP CÁC MỐC THỜI GIAN TIỀM NĂNG (CANDIDATES)
+    // [FIX QUAN TRỌNG]: Bỏ buffer 15p. Chỉ cần giờ > hiện tại là lấy.
+    // Việc check 5p chuẩn bị đã có handleBooking lo.
+    const minValidTime = (dateStr === todayStr) ? currentMinutes : 0; 
+
+    // 2. TẠO TẬP HỢP MỐC THỜI GIAN TIỀM NĂNG (CANDIDATES)
     let candidateStarts = new Set();
-
-    // A. Mốc thời gian khách muốn (Giữ lại để check)
+    
+    // A. Giờ khách muốn
     candidateStarts.add(reqStart);
 
-    // B. QUAN TRỌNG: Lấy giờ trả Bed của TẤT CẢ các đơn cũ làm mốc
-    // Ví dụ: Có đơn trả lúc 14:30 -> Thêm 14:30 vào danh sách tiềm năng
+    // B. [NAM CHÂM]: Lấy giờ TRẢ BED của các đơn cũ làm mốc
     bookedSlots.forEach(slot => {
         const be = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
-        
-        // Chỉ lấy mốc trả bed nằm trong phạm vi ±90 phút so với giờ khách muốn
-        if (Math.abs(be - reqStart) <= 90) {
-            candidateStarts.add(be); // Thử đặt ngay khi khách kia vừa ra
+        // Lấy tất cả các mốc trả bed trong phạm vi ±120 phút
+        if (Math.abs(be - reqStart) <= 120) {
+            candidateStarts.add(be); 
         }
     });
 
-    // C. Thêm mốc mở cửa (08:00)
-    candidateStarts.add(480);
+    // C. Giờ mở cửa
+    candidateStarts.add(480); 
 
-    // D. Vẫn giữ logic dời giờ truyền thống (Backup) nhưng bước nhảy nhỏ hơn
-    // Quét xung quanh giờ khách muốn ±60p
-    for (let offset = -60; offset <= 60; offset += 15) {
+    // D. Quét xung quanh ±60p (Bước nhảy 5 phút để mịn hơn)
+    for (let offset = -60; offset <= 60; offset += 5) {
         candidateStarts.add(reqStart + offset);
     }
 
     // 3. CHẤM ĐIỂM & TÍNH QUÀ
     let scoredSuggestions = [];
     
-    // Tạo Set các điểm trả bed để check khớp gap
+    // Tạo Set check Gap nhanh
     let gapPoints = new Set();
     bookedSlots.forEach(slot => {
         const be = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
@@ -673,7 +677,7 @@ function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
     });
 
     candidateStarts.forEach(startT => {
-        // Lọc giờ không hợp lệ
+        // Lọc giờ quá khứ
         if (startT < 480 || startT > 1250 || startT <= minValidTime) return;
 
         // --- CHIẾN THUẬT A: DỜI GIỜ (GIỮ NGUYÊN THỜI LƯỢNG) ---
@@ -683,18 +687,17 @@ function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
             let score = 0;
             const diff = Math.abs(startT - reqStart);
 
-            // Ưu tiên số 1: Khớp đúng giờ trả khách cũ (Lấp Gap)
-            if (gapPoints.has(startT)) score += 200; 
-            else score -= 50; // Phạt nếu tạo gap
+            // [TIÊU CHÍ VÀNG]: Khớp đúng giờ trả khách cũ (Lấp Gap) -> Điểm cực cao
+            if (gapPoints.has(startT)) score += 500; // Tăng trọng số lên 500 để chắc chắn đứng đầu
+            else score -= 50; 
 
-            // Ưu tiên số 2: Gần giờ khách muốn
-            // (14:30 gần 14:29 hơn là 15:00, nên 14:30 sẽ thắng)
-            score -= diff * 2; 
+            // Tiêu chí phụ: Gần giờ khách muốn
+            score -= diff * 5; // Trừ điểm mạnh hơn nếu lệch xa
 
             let noteText = "";
             if (diff === 0) noteText = "May quá, còn đúng giờ này!";
-            else if (diff <= 5) noteText = "Dời xíu xiu là có chỗ ngay!"; // Lệch 1-5 phút
-            else if (startT > reqStart) noteText = "Dời lại chút cho thư thả!";
+            else if (gapPoints.has(startT)) noteText = "Vừa khít có khách trả Bed luôn!"; // Thông báo hấp dẫn
+            else if (startT > reqStart) noteText = "Dời lại chút xíu là có chỗ!";
             else noteText = "Đi sớm hơn chút có chỗ đẹp!";
 
             scoredSuggestions.push({
@@ -705,47 +708,43 @@ function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
             });
         }
 
-        // --- CHIẾN THUẬT B: CẮT NGẮN (LOGIC QUÀ TẶNG MỚI) ---
-        // Chỉ thử cắt ngắn nếu bản thân cái mốc startT này là một mốc đẹp (khớp gap hoặc chính là giờ khách muốn)
-        // Để tránh thử cắt lung tung quá nhiều
-        
-        const shrinkOpts = [
-            { s: startT, e: startT + reqDuration - 15 },
-            { s: startT + 15, e: startT + reqDuration }
-        ];
+        // --- CHIẾN THUẬT B: CẮT NGẮN (CHỈ DÙNG KHI CẦN THIẾT) ---
+        // Chỉ thử cắt ngắn dựa trên các mốc "Nam châm" (Gap Points) hoặc giờ khách muốn
+        // Để tránh gợi ý rác
+        if (gapPoints.has(startT) || startT === reqStart) {
+            const shrinkOpts = [
+                { s: startT, e: startT + reqDuration - 15 },
+                { s: startT + 15, e: startT + reqDuration }
+            ];
 
-        shrinkOpts.forEach(opt => {
-            if (opt.e - opt.s >= 30 && opt.e <= 1250 && opt.s > minValidTime) {
-                if (isSlotAvailable(opt.s, opt.e, bookedSlots)) {
-                    let sScore = -50; 
-                    if (gapPoints.has(opt.s)) sScore += 150; // Khớp gap vẫn ưu tiên cao
-                    sScore -= Math.abs(opt.s - reqStart);
+            shrinkOpts.forEach(opt => {
+                if (opt.e - opt.s >= 30 && opt.e <= 1250 && opt.s > minValidTime) {
+                    if (isSlotAvailable(opt.s, opt.e, bookedSlots)) {
+                        let sScore = -50; 
+                        if (gapPoints.has(opt.s)) sScore += 200; // Ưu tiên cao nếu khớp gap
+                        sScore -= Math.abs(opt.s - reqStart);
 
-                    const lostMin = reqDuration - (opt.e - opt.s);
-                    let bonusText = "";
+                        const lostMin = reqDuration - (opt.e - opt.s);
+                        let bonusText = "";
+                        
+                        // LOGIC QUÀ (Như Tiên sinh yêu cầu)
+                        if (lostMin >= 10 && lostMin <= 20) bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
+                        else if (lostMin > 20 && lostMin <= 60) bonusText = "✨ ƯU ĐÃI KÉP: Free chăn + Giảm 5k";
+                        else if (lostMin > 60 && lostMin <= 65) bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
+                        else if (lostMin > 65) bonusText = "✨ ƯU ĐÃI VIP: Free chăn + Giảm 5k";
 
-                    // LOGIC QUÀ TẶNG (Theo yêu cầu của Tiên sinh)
-                    if (lostMin >= 10 && lostMin <= 20) {
-                        bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
-                    } else if (lostMin > 20 && lostMin <= 60) {
-                        bonusText = "✨ ƯU ĐÃI KÉP: Free chăn + Giảm 5k";
-                    } else if (lostMin > 60 && lostMin <= 65) {
-                        bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
-                    } else if (lostMin > 65) {
-                        bonusText = "✨ ƯU ĐÃI VIP: Free chăn + Giảm 5k";
-                    }
-
-                    if(bonusText) {
-                        scoredSuggestions.push({
-                            start: opt.s, end: opt.e, isShorter: true,
-                            score: sScore,
-                            note: `Ngắn hơn ${lostMin}p`,
-                            bonus: bonusText
-                        });
+                        if(bonusText) {
+                            scoredSuggestions.push({
+                                start: opt.s, end: opt.e, isShorter: true,
+                                score: sScore,
+                                note: `Ngắn hơn ${lostMin}p`,
+                                bonus: bonusText
+                            });
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     });
 
     // 4. SẮP XẾP & LỌC TRÙNG
@@ -759,7 +758,6 @@ function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
 
     return unique.slice(0, 3);
 }
-
 // 3. HÀM CHÍNH: HANDLE BOOKING (GIỮ NGUYÊN STRUCURE, THAY LOGIC)
 // =============================================================
 // LOGIC ĐẶT BED: CÓ CHECK 5 PHÚT CHUẨN BỊ (PREP BUFFER)
@@ -809,7 +807,7 @@ function handleBooking() {
             showAppModal(
                 "Cần thêm xíu thời gian", 
                 `<p class="text-left text-sm text-[#1e3932] mb-2">
-                    Tiên sinh ơi, <b>The cafe 33</b> cần tối thiểu <b>5-10 phút</b> để dọn dẹp và chuẩn bị giường nệm thơm tho nhất đón Tiên sinh ạ.
+                    Bạn ơi, <b>The cafe 33</b> cần tối thiểu <b>5</b> để dọn dẹp và chuẩn bị bed.
                  </p>
                  <p class="text-left text-sm text-gray-500 italic">
                     Hệ thống xin phép dời lịch sang <b>${newStartStr}</b> để nhân viên kịp chuẩn bị chu đáo nhé?
@@ -1459,6 +1457,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
