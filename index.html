@@ -85,53 +85,62 @@
         font-weight: 800;
     }
     /* CSS GỢI Ý THÔNG MINH - THE CAFE 33 */
+/* CSS GỢI Ý THÔNG MINH - THE CAFE 33 (PREMIUM) */
 .suggestion-box {
     background: #ffffff; 
-    border: 1px solid #e5e7eb; 
+    border: 1px solid #f3f4f6; 
     border-radius: 16px; 
-    margin-bottom: 10px; 
-    padding: 12px 16px;
+    margin-bottom: 12px; 
+    padding: 14px;
     position: relative;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .suggestion-box:active {
     border-color: #006241; 
     background-color: #f0fdf9;
     transform: scale(0.98);
 }
+.suggestion-left { display: flex; flex-direction: column; gap: 4px; }
 .suggestion-time { 
     font-weight: 800; 
     color: #1e3932; 
-    font-size: 15px; 
+    font-size: 16px; 
     font-family: 'Inter', sans-serif;
+    line-height: 1.2;
 }
-.suggestion-info {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
+.suggestion-note {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 500;
 }
-.suggestion-bonus {
+.suggestion-bonus-badge {
     font-size: 10px;
-    color: #d97706; /* Màu cam hổ phách */
+    color: #b45309; /* Màu hổ phách đậm */
     background: #fffbeb;
-    padding: 4px 8px;
-    border-radius: 6px;
+    padding: 6px 10px;
+    border-radius: 8px;
     font-weight: 700;
     margin-top: 6px;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     border: 1px dashed #fcd34d;
+    width: fit-content;
 }
 .btn-pick-now { 
     font-size: 10px; 
     font-weight: 800; 
     text-transform: uppercase;
     color: white; 
-    background: #006241; 
-    padding: 8px 14px; 
-    border-radius: 20px;
-    box-shadow: 0 2px 5px rgba(0,98,65,0.2);
+    background: linear-gradient(135deg, #006241 0%, #004d33 100%);
+    padding: 10px 16px; 
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,98,65,0.2);
+    white-space: nowrap;
 }
 </style>
 </head>
@@ -613,88 +622,97 @@ function isSlotAvailable(s, e, bookedSlots) {
 function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
     let suggestions = [];
     const reqDuration = reqEnd - reqStart;
-    
-    // --- BƯỚC QUAN TRỌNG: XÁC ĐỊNH MỐC THỜI GIAN "CHẾT" ---
+
+    // --- PHẦN 1: MÀNG LỌC THỜI GIAN (QUAN TRỌNG) ---
+    // Xác định mốc thời gian tối thiểu hợp lệ (minValidTime)
     const now = new Date();
     const d = String(now.getDate()).padStart(2, '0');
     const m = String(now.getMonth() + 1).padStart(2, '0');
     const y = now.getFullYear();
-    const todayStr = `${d}/${m}/${y}`; // Format dd/mm/yyyy
-
-    // Tính phút hiện tại trong ngày (Ví dụ 14:30 = 870 phút)
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const todayStr = `${d}/${m}/${y}`;
     
-    // Nếu đặt hôm nay: Chỉ gợi ý các giờ > giờ hiện tại + 15 phút (cho khách kịp thở)
+    // Nếu đặt hôm nay: Mốc là giờ hiện tại + 15 phút (để khách kịp chuẩn bị)
     // Nếu đặt ngày khác: Mốc là 0 (lấy từ sáng sớm)
-    let minValidTime = (dateStr === todayStr) ? (currentMinutes + 15) : 0;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const minValidTime = (dateStr === todayStr) ? (currentMinutes + 15) : 0;
 
-    // --- CHIẾN THUẬT A: CO GIÃN THỜI GIAN (SHRINK) ---
-    // Cắt bớt đầu đuôi để chui lọt khe hẹp
+    // --- PHẦN 2: CHIẾN THUẬT "CẮT GIỜ" (SHRINK) ---
+    // Cố gắng cắt bớt 15-30p đầu hoặc đuôi để lọt vừa khe trống
     const shrinkOptions = [
-        { s: reqStart + 15, e: reqEnd, type: 'cut-head' },      // Cắt đầu 15p
-        { s: reqStart, e: reqEnd - 15, type: 'cut-tail' },      // Cắt đuôi 15p
-        { s: reqStart + 30, e: reqEnd, type: 'cut-head-30' },   // Cắt đầu 30p
-        { s: reqStart, e: reqEnd - 30, type: 'cut-tail-30' }    // Cắt đuôi 30p
+        { s: reqStart + 15, e: reqEnd },      // Cắt đầu 15p
+        { s: reqStart, e: reqEnd - 15 },      // Cắt đuôi 15p
+        { s: reqStart + 30, e: reqEnd },      // Cắt đầu 30p
+        { s: reqStart, e: reqEnd - 30 }       // Cắt đuôi 30p
     ];
 
     shrinkOptions.forEach(opt => {
-        // ĐIỀU KIỆN 1: Phải còn đủ tối thiểu 30 phút
-        // ĐIỀU KIỆN 2: Giờ bắt đầu phải ở TƯƠNG LAI ( > minValidTime)
-        if (opt.e - opt.s >= 30 && opt.s > minValidTime) { 
+        // Điều kiện: 
+        // 1. Thời lượng còn lại phải >= 30 phút
+        // 2. Giờ bắt đầu phải nằm ở TƯƠNG LAI (> minValidTime)
+        if ((opt.e - opt.s >= 30) && (opt.s > minValidTime)) {
             if (isSlotAvailable(opt.s, opt.e, bookedSlots)) {
+                const lost = reqDuration - (opt.e - opt.s); // Số phút bị mất
                 suggestions.push({
-                    start: opt.s, end: opt.e,
-                    isShorter: true,
-                    bonus: "🎁 Free chăn + Giảm 5k" // Đền bù vì bị cắt giờ
+                    start: opt.s, 
+                    end: opt.e,
+                    isShorter: true, // Đánh dấu là bị ngắn hơn
+                    diff: 999, // Ưu tiên thấp hơn loại Dời giờ
+                    note: `Ngắn hơn ${lost}p so với dự định`,
+                    bonus: `🎁 BÙ ĐẮP: Free chăn + Giảm 5k`
                 });
             }
         }
     });
 
-    // --- CHIẾN THUẬT B: DỊCH CHUYỂN (SHIFT) ---
-    // Giữ nguyên thời lượng, chỉ dời giờ lên xuống
+    // --- PHẦN 3: CHIẾN THUẬT "DỜI GIỜ" (SHIFT) ---
+    // Giữ nguyên thời lượng, dịch chuyển lên xuống trong khoảng 60 phút
     for (let offset = -60; offset <= 60; offset += 15) {
-        if (offset === 0) continue; 
-        
+        if (offset === 0) continue; // Bỏ qua giờ gốc (vì đã full)
+
         const newS = reqStart + offset;
         const newE = reqEnd + offset;
-        
-        // Check khung giờ mở cửa (08:00 - 20:50)
-        if (newS >= 480 && newE <= 1250) {
-            // QUAN TRỌNG: Check xem giờ gợi ý có ở quá khứ không?
-            if (newS > minValidTime) {
-                if (isSlotAvailable(newS, newE, bookedSlots)) {
-                    suggestions.push({
-                        start: newS, end: newE,
-                        isShorter: false,
-                        bonus: "" 
-                    });
-                }
+
+        // Điều kiện:
+        // 1. Trong giờ mở cửa (08:00 - 480p đến 20:50 - 1250p)
+        // 2. Giờ bắt đầu phải nằm ở TƯƠNG LAI (> minValidTime)
+        if (newS >= 480 && newE <= 1250 && newS > minValidTime) {
+            if (isSlotAvailable(newS, newE, bookedSlots)) {
+                suggestions.push({
+                    start: newS, 
+                    end: newE,
+                    isShorter: false, // Đánh dấu là đủ giờ
+                    diff: Math.abs(offset), // Độ lệch so với giờ gốc (để sắp xếp)
+                    note: offset > 0 ? "Dời lại xíu thôi, giờ này vắng!" : "Đi sớm hơn chút, tha hồ chọn chỗ!",
+                    bonus: "" // Không cần đền bù
+                });
             }
         }
     }
 
-    // --- LỌC TRÙNG & SẮP XẾP ---
-    let unique = [];
-    let seen = new Set();
-    
-    // Ưu tiên: 1. Đủ giờ (Shift) -> 2. Gần giờ muốn đặt nhất
+    // --- PHẦN 4: LỌC & SẮP XẾP (FINAL POLISH) ---
+    // 1. Sắp xếp ưu tiên:
+    //    - Ưu tiên loại ĐỦ GIỜ (Shift) trước.
+    //    - Sau đó ưu tiên giờ GẦN GIỜ GỐC NHẤT (diff nhỏ nhất).
     suggestions.sort((a, b) => {
         if (a.isShorter !== b.isShorter) return a.isShorter ? 1 : -1; 
-        return Math.abs(a.start - reqStart) - Math.abs(b.start - reqStart); 
+        return a.diff - b.diff;
     });
+
+    // 2. Lọc trùng (Deduplicate)
+    let uniqueSuggestions = [];
+    let seenKeys = new Set();
 
     suggestions.forEach(item => {
         const key = item.start + '-' + item.end;
-        if (!seen.has(key)) {
-            seen.add(key);
-            unique.push(item);
+        if (!seenKeys.has(key)) {
+            seenKeys.add(key);
+            uniqueSuggestions.push(item);
         }
     });
 
-    return unique.slice(0, 3); // Lấy 3 cái ngon nhất
+    // 3. Trả về tối đa 3 gợi ý tốt nhất
+    return uniqueSuggestions.slice(0, 3);
 }
-
 // 3. HÀM CHÍNH: HANDLE BOOKING (GIỮ NGUYÊN STRUCURE, THAY LOGIC)
 function handleBooking() {
     // A. Validate
@@ -799,51 +817,95 @@ function handleBooking() {
     });
 }
 // 4. UI GỢI Ý (HIỆN THỊ QUÀ TẶNG BÙ ĐẮP)
+// 1. SỬA LẠI GIAO DIỆN GỢI Ý (Sửa chữ nút bấm thành "CHỌN" thay vì "CHỐT")
 function showSuggestionUI(suggestions) {
-    let html = `<p class="text-sm text-gray-500 mb-4 text-left">Khung giờ bạn chọn đã kín Bed. <b>The cafe 33</b> gợi ý các lựa chọn tốt nhất cho bạn:</p>`;
-    
+    let title = "";
+    let html = "";
+    let icon = "";
+
     if (suggestions.length === 0) {
-        html = `<p class="text-sm text-red-500 font-bold">Huhu, hôm nay khách đông quá nên kín sạch lịch rồi. Bạn chọn ngày khác giúp Shop nha!</p>`;
+        // CASE: TUYỆT VỌNG (FULL SẠCH)
+        // Tâm lý: Xin lỗi chân thành + Đổ tại "được thương" (Social Proof)
+        icon = "🥺";
+        title = "Huhu, full mất rồi!";
+        html = `
+            <div class="text-center py-2">
+                <p class="text-[#1e3932] text-sm font-medium mb-2">
+                    Hôm nay <b>The cafe 33</b> được mọi người thương nên kín sạch Bed vào giờ này rồi ạ.
+                </p>
+                <p class="text-gray-500 text-xs italic">
+                    Tiên sinh/Bạn thử chọn sang ngày mai hoặc khung giờ khác xa hơn nhé. Hứa sẽ để dành chỗ đẹp nhất! ❤️
+                </p>
+            </div>
+        `;
     } else {
+        // CASE: CÒN CỨU ĐƯỢC (GỢI Ý)
+        // Tâm lý: Tiếc nuối -> Nhưng đã nhanh tay giữ phần riêng cho khách
+        icon = "✨";
+        title = "Tiếc quá, vừa có khách đặt!";
+        html = `
+            <p class="text-[#1e3932] text-sm font-medium mb-4 text-left leading-relaxed">
+                Khung giờ bạn chọn vừa khít có người đặt trước mất rồi. <br>
+                Nhưng đừng lo, <b>The cafe 33</b> đã nhanh tay lọc ra <b>3 lựa chọn "xịn" nhất</b> còn lại cho bạn đây:
+            </p>
+        `;
+        
         suggestions.forEach(s => {
-            // Convert phút ra giờ HH:mm
             const h1 = Math.floor(s.start / 60).toString().padStart(2, '0');
             const m1 = (s.start % 60).toString().padStart(2, '0');
             const h2 = Math.floor(s.end / 60).toString().padStart(2, '0');
             const m2 = (s.end % 60).toString().padStart(2, '0');
             const timeStr = `${h1}:${m1} - ${h2}:${m2}`;
             
-            // Nếu có Bonus (do bị cắt ngắn giờ) thì hiện màu cam
-            const bonusHtml = s.bonus ? `<div class="suggestion-bonus">${s.bonus}</div>` : '';
+            // Nếu có Bonus -> Dùng style đặc biệt
+            const bonusHtml = s.bonus 
+                ? `<div class="suggestion-bonus-badge">${s.bonus}</div>` 
+                : `<div class="suggestion-note">✅ ${s.note}</div>`;
 
             html += `
-            <div onclick="applyAutoBook('${timeStr}')" class="suggestion-box cursor-pointer">
-                <div class="suggestion-info">
-                    <div>
-                        <div class="suggestion-time">${timeStr}</div>
-                        ${bonusHtml}
-                    </div>
-                    <div class="btn-pick-now">CHỌN</div>
+            <div onclick="applyAutoBook('${timeStr}')" class="suggestion-box cursor-pointer group">
+                <div class="suggestion-left">
+                    <div class="suggestion-time">${timeStr}</div>
+                    ${bonusHtml}
                 </div>
+                <div class="btn-pick-now group-active:scale-95 transition-transform">CHỐT LUÔN</div>
             </div>`;
         });
+        
+        html += `<p class="text-[10px] text-gray-400 text-center mt-3 italic">*Chọn ngay kẻo lỡ tiếp nha bạn ơi!</p>`;
     }
-    showAppModal("Bed đang full vào khung giờ này mất rồi", html, "☕");
-}
 
+    showAppModal(title, html, icon);
+}
 // 5. AUTO BOOK KHI KHÁCH CHỌN GỢI Ý
+// 2. SỬA LẠI HÀM "CHỌN GIỜ" (QUAN TRỌNG NHẤT)
+// Chỉ điền giờ -> Không đặt ngay -> Nhắc khách bấm nút
 function applyAutoBook(timeRange) {
     const s = timeRange.split(' - ')[0];
     const e = timeRange.split(' - ')[1];
     
+    // 1. Điền giờ mới vào ô nhập liệu
     document.getElementById('book-start').value = s;
     document.getElementById('book-end').value = e;
+    
+    // 2. Tắt Modal gợi ý hiện tại
     document.getElementById('modal-overlay').classList.add('hidden');
     
-    // Gọi lại hàm đặt (lúc này chắc chắn sẽ thành công vì mình đã check rồi)
-    setTimeout(() => { handleBooking(); }, 300);
+    // 3. Hiện thông báo nhắc nhở (Để khách tự bấm nút đặt)
+    setTimeout(() => {
+        showAppModal(
+            "Đã cập nhật giờ", 
+            `Thời gian đã được đổi thành: <br><b class="text-xl text-[#006241]">${timeRange}</b><br><br>
+            Vui lòng kiểm tra lại thông tin và bấm nút <br><b>"XÁC NHẬN ĐẶT CHỖ"</b> để hoàn tất nhé! 👇`, 
+            "👌"
+        );
+        
+        // (Tùy chọn) Cuộn màn hình xuống nút đặt cho khách dễ thấy
+        const btn = document.getElementById('btn-booking');
+        if(btn) btn.scrollIntoView({behavior: "smooth", block: "center"});
+        
+    }, 300);
 }
-
 // --- 6. QUÀ & LỊCH SỬ ---
 function loadRewards() {
     db.ref('rewards').on('value', snap => {
@@ -1303,6 +1365,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
