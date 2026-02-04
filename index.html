@@ -630,6 +630,10 @@ function isSlotAvailable(s, e, bookedSlots) {
 // LOGIC GỢI Ý: NAM CHÂM + ĐỘC QUYỀN (WINNER TAKES ALL)
 // =============================================================
 
+// =============================================================
+// LOGIC GỢI Ý SIÊU CẤP: NAM CHÂM + TỰ CẮT ĐUÔI THEO GIỜ ĐÓNG CỬA
+// =============================================================
+
 function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
     let suggestions = [];
     const reqDuration = reqEnd - reqStart;
@@ -641,88 +645,135 @@ function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
     const y = now.getFullYear();
     const todayStr = `${d}/${m}/${y}`;
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    // Mốc thời gian hợp lệ (Bỏ buffer 15p, lấy luôn hiện tại)
     const minValidTime = (dateStr === todayStr) ? currentMinutes : 0; 
+    const CLOSE_TIME = 1250; // 20:50
 
     // 2. TẠO GAP POINTS & CANDIDATES
-    let gapPoints = new Set(); // Mốc trả Bed (Nam châm)
+    let gapPoints = new Set(); 
     let candidateStarts = new Set();
     
-    // A. Lấy giờ trả Bed làm mốc
+    // A. Lấy giờ trả Bed làm mốc (Mở rộng phạm vi tìm kiếm lên ±180 phút để bắt được slot xa)
     bookedSlots.forEach(slot => {
         const be = parseInt(slot.end.split(':')[0]) * 60 + parseInt(slot.end.split(':')[1]);
         gapPoints.add(be); 
-        if (Math.abs(be - reqStart) <= 120) candidateStarts.add(be);
+        // Tìm kiếm rộng hơn (3 tiếng) để không bỏ sót cơ hội
+        if (Math.abs(be - reqStart) <= 180) candidateStarts.add(be);
     });
 
     // B. Thêm giờ khách muốn & Giờ mở cửa
     candidateStarts.add(reqStart);
-    candidateStarts.add(480);
+    candidateStarts.add(480); // 08:00
 
-    // C. Quét xung quanh (Bước nhảy 5p)
-    for (let offset = -60; offset <= 60; offset += 5) candidateStarts.add(reqStart + offset);
+    // C. Quét xung quanh (Mở rộng lên ±120p, bước nhảy 15p cho nhanh)
+    for (let offset = -120; offset <= 120; offset += 15) candidateStarts.add(reqStart + offset);
 
     // 3. CHẤM ĐIỂM
     let scoredSuggestions = [];
 
     candidateStarts.forEach(startT => {
-        if (startT < 480 || startT > 1250 || startT <= minValidTime) return;
+        // Lọc giờ quá khứ hoặc quá trễ
+        if (startT < 480 || startT >= CLOSE_TIME - 30 || startT <= minValidTime) return;
 
-        // --- CHIẾN THUẬT A: DỜI GIỜ (FULL TIME - DOANH THU CAO) ---
-        const endT = startT + reqDuration;
-        if (endT <= 1250 && isSlotAvailable(startT, endT, bookedSlots)) {
-            let score = 0;
-            const diff = Math.abs(startT - reqStart);
+        // Tính toán End Time dự kiến
+        let rawEndT = startT + reqDuration;
+        let actualEndT = rawEndT;
+        let isTrimmedByCloseTime = false;
 
-            // [NAM CHÂM]: Khớp Gap -> Điểm tuyệt đối
-            if (gapPoints.has(startT)) score += 1000; 
-            else score -= 50; 
-
-            // Gần giờ khách muốn
-            score -= diff * 5; 
-
-            let noteText = "";
-            if (diff === 0) noteText = "May quá, còn đúng giờ này!";
-            else if (gapPoints.has(startT)) noteText = "Vừa khít có khách trả Bed luôn!";
-            else if (startT > reqStart) noteText = "Dời lại chút xíu là có chỗ!";
-            else noteText = "Đi sớm hơn chút có chỗ đẹp!";
-
-            scoredSuggestions.push({
-                start: startT, end: endT, isShorter: false,
-                diff: diff,
-                score: score,
-                note: noteText,
-                bonus: ""
-            });
+        // [LOGIC MỚI]: NẾU LỐ GIỜ ĐÓNG CỬA -> TỰ ĐỘNG CẮT VỀ 20:50
+        if (rawEndT > CLOSE_TIME) {
+            actualEndT = CLOSE_TIME;
+            isTrimmedByCloseTime = true;
         }
 
-        // --- CHIẾN THUẬT B: CẮT NGẮN (DOANH THU THẤP - DỰ PHÒNG) ---
-        // Chỉ chạy nếu startT là một mốc Nam Châm hoặc giờ gốc
-        if (gapPoints.has(startT) || startT === reqStart) {
-            const shrinkOpts = [
+        // Kiểm tra tính khả dụng với actualEndT
+        // Điều kiện: Phải còn ít nhất 30 phút sử dụng
+        if (actualEndT - startT >= 30 && isSlotAvailable(startT, actualEndT, bookedSlots)) {
+            
+            // --- TÍNH ĐIỂM SỐ (SCORE) ---
+            let score = 0;
+            const diffStart = Math.abs(startT - reqStart); // Độ lệch giờ bắt đầu
+            const lostMin = reqDuration - (actualEndT - startT); // Số phút bị mất (do cắt ngắn hoặc chạm trần)
+
+            // 1. Ưu tiên Khớp Gap (Nam Châm)
+            if (gapPoints.has(startT)) score += 1000; 
+            else score -= 50;
+
+            // 2. Trừ điểm nếu lệch giờ bắt đầu
+            score -= diffStart * 2;
+
+            // 3. Trừ điểm nếu bị mất thời gian (Cắt ngắn)
+            if (lostMin > 0) score -= lostMin * 5; 
+            
+            // --- XÂY DỰNG NỘI DUNG ---
+            let noteText = "";
+            let bonusText = "";
+
+            // Case 1: Đủ giờ (Full Time)
+            if (lostMin <= 0) {
+                if (diffStart === 0) noteText = "May quá, còn đúng giờ này!";
+                else if (gapPoints.has(startT)) noteText = "Vừa khít có khách trả Bed luôn!";
+                else if (startT > reqStart) noteText = "Dời lại chút xíu là có chỗ!";
+                else noteText = "Đi sớm hơn chút có chỗ đẹp!";
+            } 
+            // Case 2: Bị cắt ngắn (Do chạm giờ đóng cửa hoặc chiến thuật cắt)
+            else {
+                // Logic Quà Tặng
+                if (lostMin >= 10 && lostMin <= 20) bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
+                else if (lostMin > 20 && lostMin <= 60) bonusText = "✨ ƯU ĐÃI KÉP: Free chăn + Giảm 5k";
+                else if (lostMin > 60 && lostMin <= 65) bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
+                else if (lostMin > 65) bonusText = "✨ ƯU ĐÃI VIP: Free chăn + Giảm 5k";
+
+                // Nếu bị chạm giờ đóng cửa
+                if (isTrimmedByCloseTime) {
+                    noteText = `Dời đến cuối ngày (Đóng cửa 20:50)`;
+                } else {
+                    noteText = `Ngắn hơn ${lostMin}p`;
+                }
+            }
+
+            // Chỉ thêm vào danh sách nếu là Full Time HOẶC có Quà Tặng (để tránh gợi ý rác)
+            if (lostMin <= 0 || bonusText !== "") {
+                scoredSuggestions.push({
+                    start: startT, end: actualEndT, isShorter: (lostMin > 0),
+                    diff: diffStart,
+                    score: score,
+                    note: noteText,
+                    bonus: bonusText
+                });
+            }
+        }
+        
+        // --- CHIẾN THUẬT CẮT NGẮN CHỦ ĐỘNG (SHRINK) ---
+        // Vẫn giữ logic này để tìm các khe hẹp giữa giờ (không phải cuối ngày)
+        // Chỉ chạy nếu chưa bị chạm trần đóng cửa
+        if (!isTrimmedByCloseTime && (gapPoints.has(startT) || startT === reqStart)) {
+             const shrinkOpts = [
                 { s: startT, e: startT + reqDuration - 15 },
                 { s: startT + 15, e: startT + reqDuration }
             ];
             shrinkOpts.forEach(opt => {
-                if (opt.e - opt.s >= 30 && opt.e <= 1250 && opt.s > minValidTime) {
+                if (opt.e - opt.s >= 30 && opt.e <= CLOSE_TIME && opt.s > minValidTime) {
                     if (isSlotAvailable(opt.s, opt.e, bookedSlots)) {
-                        let sScore = -200; // Điểm rất thấp để ko cạnh tranh với Full Time
-                        if (gapPoints.has(opt.s)) sScore += 100; // Vớt vát nếu khớp gap
+                        let sScore = -200; 
+                        if (gapPoints.has(opt.s)) sScore += 100;
                         sScore -= Math.abs(opt.s - reqStart);
 
-                        const lostMin = reqDuration - (opt.e - opt.s);
-                        let bonusText = "";
-                        if (lostMin >= 10 && lostMin <= 20) bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
-                        else if (lostMin > 20 && lostMin <= 60) bonusText = "✨ ƯU ĐÃI KÉP: Free chăn + Giảm 5k";
-                        else if (lostMin > 60 && lostMin <= 65) bonusText = "✨ ĐẶC QUYỀN: Free chăn êm";
-                        else if (lostMin > 65) bonusText = "✨ ƯU ĐÃI VIP: Free chăn + Giảm 5k";
+                        const lMin = reqDuration - (opt.e - opt.s);
+                        let bText = "";
+                        if (lMin >= 10 && lMin <= 20) bText = "✨ ĐẶC QUYỀN: Free chăn êm";
+                        else if (lMin > 20 && lMin <= 60) bText = "✨ ƯU ĐÃI KÉP: Free chăn + Giảm 5k";
+                        else if (lMin > 60 && lMin <= 65) bText = "✨ ĐẶC QUYỀN: Free chăn êm";
+                        else if (lMin > 65) bText = "✨ ƯU ĐÃI VIP: Free chăn + Giảm 5k";
 
-                        if(bonusText) {
+                        if(bText) {
                             scoredSuggestions.push({
                                 start: opt.s, end: opt.e, isShorter: true,
                                 diff: Math.abs(opt.s - reqStart),
                                 score: sScore,
-                                note: `Ngắn hơn ${lostMin}p`,
-                                bonus: bonusText
+                                note: `Ngắn hơn ${lMin}p`,
+                                bonus: bText
                             });
                         }
                     }
@@ -739,24 +790,18 @@ function findSmartSlots(bookedSlots, reqStart, reqEnd, dateStr) {
         if (!seen.has(key)) { seen.add(key); unique.push(item); }
     });
 
-    // =========================================================
-    // 5. [CHIẾN THUẬT ĐỘC QUYỀN - THE KILLER LOGIC]
-    // =========================================================
+    // 5. CHIẾN THUẬT ĐỘC QUYỀN (KILLER LOGIC)
     if (unique.length > 0) {
         const bestOption = unique[0];
-        
-        // Điều kiện để kích hoạt chế độ "Độc Quyền":
-        // 1. Là phương án Full Time (không bị cắt ngắn)
-        // 2. Độ lệch giờ <= 15 phút (Khách chỉ cần chờ chút xíu)
+        // Nếu option tốt nhất là Full Time và lệch <= 15p -> Lấy duy nhất nó
         if (!bestOption.isShorter && bestOption.diff <= 15) {
-            // XÓA SẠCH CÁC GỢI Ý KHÁC -> CHỈ TRẢ VỀ 1 CÁI
             return [bestOption];
         }
     }
 
-    // Nếu không có phương án hoàn hảo, mới hiện 3 cái để khách chọn
     return unique.slice(0, 3);
 }
+
 
 
 // 3. HÀM CHÍNH: HANDLE BOOKING (GIỮ NGUYÊN STRUCURE, THAY LOGIC)
@@ -963,7 +1008,7 @@ function showSuggestionUI(suggestions) {
                 <div class="btn-pick-now group-active:scale-95 transition-transform" style="padding: 12px 20px;">CHỐT NGAY</div>
             </div>
             
-            <p class="text-[10px] text-gray-400 text-center mt-3 italic">*Khung giờ hoàn hảo và duy nhất còn lại đó nha!</p>
+            <p class="text-[10px] text-gray-400 text-center mt-3 italic">*Đảm bảo đủ số phút sử dụng luôn đó</p>
         `;
 
     } else {
@@ -1486,6 +1531,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
