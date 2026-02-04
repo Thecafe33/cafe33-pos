@@ -235,8 +235,7 @@
           <div class="flex items-start gap-3 p-6 bg-gray-50 rounded-[2rem] border border-gray-100 text-left"><input type="checkbox" id="agree-rules" class="mt-1 w-7 h-7 accent-[#006241]"><label for="agree-rules" class="text-[12px] leading-relaxed text-gray-600 font-medium italic">Tôi cam kết đã đọc và tuân thủ toàn bộ nội quy của <span class="brand-font">The cafe 33</span>.</label></div>
         </div>
         <button id="btn-booking" onclick="handleBooking()" class="w-full p-5 rounded-3xl sb-green text-white font-bold uppercase text-lg shadow-xl tracking-widest active:scale-95 transition-all">Xác nhận đặt chỗ</button>
-      </div><input type="hidden" id="hidden-bonus-code" value="">
-      
+      </div>
     </div>
 
     <div id="tab-rewards" class="p-6 tab-content hidden pb-40"><h3 class="text-2xl text-[#006241] mb-6 brand-font text-left">Đổi quà tặng</h3><div id="rewards-list" class="grid grid-cols-1 gap-4"></div></div>
@@ -892,12 +891,7 @@ function handleBooking() {
                 });
 
                 if (overlapCount < 4) { // Quán có 4 Bed
-                    
-                  // ---> CÒN CHỖ
-                  // Lấy mã quà tặng từ túi ẩn (nếu có)
-                    const bonusCode = document.getElementById('hidden-bonus-code').value;
-                    let finalNote = bonusCode ? `SYSTEM_AUTO: ${bonusCode}` : "";
-                  
+                    // ---> CÒN CHỖ
                     if (cName) {
                         db.ref('customers/' + curPhone).update({
                             companionName: cName, compName: cName, companionPhone: cPhone, compPhone: cPhone,
@@ -908,7 +902,7 @@ function handleBooking() {
                         phone: curPhone, name: userData.name || "Khách hàng",
                         date: dateStr, start: startVal, end: endVal,
                         compName: cName, compPhone: cPhone,
-                        bedId: "", status: "chờ xếp bed", type: "app", note: finalNote,
+                        bedId: "", status: "chờ xếp bed", type: "app",
                         createdAt: new Date().toISOString()
                     }, () => {
                         clearTimeout(safetyTimer); loading.classList.add('hidden');
@@ -966,13 +960,13 @@ function showSuggestionUI(suggestions) {
                 Giờ bạn chọn vừa kín, nhưng <b>The cafe 33</b> tìm thấy một khung giờ <b>hoàn hảo</b> ngay sát bên cho bạn đây:
             </p>
             
-           <div onclick="applyAutoBook('${timeStr}', '${s.bonus}')" class="suggestion-box cursor-pointer group">
-    <div class="suggestion-left">
-        <div class="suggestion-time">${timeStr}</div>
-        ${bonusHtml}
-    </div>
-    <div class="btn-pick-now group-active:scale-95 transition-transform">DÙNG GIỜ NÀY</div>
-</div>
+            <div onclick="applyAutoBook('${timeStr}')" class="suggestion-box cursor-pointer group" style="border: 2px solid #006241; background: #f0fdf9;">
+                <div class="suggestion-left">
+                    <div class="suggestion-time" style="color: #006241; font-size: 18px;">${timeStr}</div>
+                    <div class="suggestion-note text-[#006241] font-bold">✅ ${s.note}</div>
+                </div>
+                <div class="btn-pick-now group-active:scale-95 transition-transform" style="padding: 12px 20px;">CHỐT NGAY</div>
+            </div>
             
             <p class="text-[10px] text-gray-400 text-center mt-3 italic">*Đảm bảo đủ số phút sử dụng luôn đó</p>
         `;
@@ -1012,34 +1006,30 @@ function showSuggestionUI(suggestions) {
 // 5. AUTO BOOK KHI KHÁCH CHỌN GỢI Ý
 // 2. SỬA LẠI HÀM "CHỌN GIỜ" (QUAN TRỌNG NHẤT)
 // Chỉ điền giờ -> Không đặt ngay -> Nhắc khách bấm nút
-function applyAutoBook(timeRange, bonusText) {
+function applyAutoBook(timeRange) {
     const s = timeRange.split(' - ')[0];
     const e = timeRange.split(' - ')[1];
     
-    // 1. Điền giờ
+    // 1. Điền giờ mới vào ô nhập liệu
     document.getElementById('book-start').value = s;
     document.getElementById('book-end').value = e;
-
-    // 2. [QUAN TRỌNG] Cất quà vào túi ẩn
-    // Nếu bonusText là undefined hoặc null thì gán rỗng
-    document.getElementById('hidden-bonus-code').value = bonusText || "";
     
-    // 3. Tắt Modal & Nhắc khách xác nhận
+    // 2. Tắt Modal gợi ý hiện tại
     document.getElementById('modal-overlay').classList.add('hidden');
     
+    // 3. Hiện thông báo nhắc nhở (Để khách tự bấm nút đặt)
     setTimeout(() => {
-        // Nếu có quà thì hiện trong thông báo cho khách yên tâm
-        let bonusMsg = bonusText ? `<br><span class="text-amber-600 font-bold text-xs">${bonusText}</span>` : "";
-
         showAppModal(
             "Đã cập nhật giờ", 
-            `Thời gian đã được đổi thành: <br><b class="text-xl text-[#006241]">${timeRange}</b>${bonusMsg}<br><br>
-            Vui lòng kiểm tra lại và bấm nút <br><b>"XÁC NHẬN ĐẶT CHỖ"</b> để hoàn tất nhé! 👇`, 
+            `Thời gian đã được đổi thành: <br><b class="text-xl text-[#006241]">${timeRange}</b><br><br>
+            Vui lòng kiểm tra lại thông tin và bấm nút <br><b>"XÁC NHẬN ĐẶT CHỖ"</b> để hoàn tất nhé! 👇`, 
             "👌"
         );
         
+        // (Tùy chọn) Cuộn màn hình xuống nút đặt cho khách dễ thấy
         const btn = document.getElementById('btn-booking');
         if(btn) btn.scrollIntoView({behavior: "smooth", block: "center"});
+        
     }, 300);
 }
 // --- 6. QUÀ & LỊCH SỬ ---
@@ -1501,7 +1491,6 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
-
 
 
 
