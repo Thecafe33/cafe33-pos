@@ -272,20 +272,32 @@
             document.getElementById('input-display').innerText = formatted || "";
         }
 
-        function submitPhone() {
+       function submitPhone() {
             if (currentInput.length < 3) return; // Validate sơ sơ
             
+            // Đổi nút thành đang chờ
+            const btn = document.querySelector('button[onclick="submitPhone()"]');
+            const originalText = btn.innerText;
+            btn.innerText = "⏳";
+            
+            // Hiệu ứng màn hình
+            document.getElementById('input-display').innerHTML = '<span class="text-green-600 text-2xl font-bold animate-pulse">Đang kiểm tra...</span>';
+
             // GỬI SĐT VỀ POS QUA FIREBASE
-            // Dùng set() để ghi đè, tạo sự kiện value change bên POS
             db.ref('client_input').set({
                 type: 'phone_update',
                 value: currentInput,
                 timestamp: Date.now()
+            }).then(() => {
+                // Sau khi gửi xong, giữ nguyên trạng thái chờ 
+                // POS sẽ phản hồi lại và hàm listenToPOS sẽ tự đóng bàn phím
+                setTimeout(() => {
+                     btn.innerText = originalText; // Reset nút phòng khi lỗi
+                }, 3000);
+            }).catch(err => {
+                alert("Lỗi kết nối: " + err.message);
+                btn.innerText = "Lỗi";
             });
-
-            // Hiệu ứng loading giả
-            document.getElementById('input-display').innerHTML = '<span class="text-green-500 text-2xl">Đang kiểm tra...</span>';
-            setTimeout(closeKeypad, 500); // Đóng keypad chờ POS phản hồi
         }
     </script>
 </body>
