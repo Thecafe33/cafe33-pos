@@ -4121,16 +4121,8 @@ function handleMobileBedOrder(bookingId) {
     pendingBedOrder = booking; 
 
     // 1. Kiểm tra nợ cũ (Giữ nguyên)
-    if (booking.phone) {
-        var cleanPhone = normalizePhone(booking.phone);
-        db.ref('customers/' + cleanPhone).once('value', snap => {
-            var cust = snap.val();
-            if (cust && cust.pendingFee > 0) {
-                alert(`⚠️ Khách này có khoản nợ cũ: ${cust.pendingFee.toLocaleString()}đ\nLý do: ${cust.pendingFeeReason}\n\nHệ thống sẽ tự động thêm vào bill.`);
-                addToCart("Phí Vệ Sinh (Nợ cũ)", "Phạt", cust.pendingFee);
-                db.ref('customers/' + cleanPhone).update({ pendingFee: 0, pendingFeeReason: null });
-            }
-        });
+   if (booking.phone) {
+        scanAndAddDebt(booking.phone);
     }
 
     // 2. [FIX QUAN TRỌNG] XỬ LÝ ĐIỀN SĐT VÀO GIỎ
@@ -4349,6 +4341,7 @@ function autoFillCustomer() {
         // Hiệu ứng báo hiệu
         elName.classList.add('bg-green-50', 'text-green-700');
         setTimeout(() => elName.classList.remove('bg-green-50', 'text-green-700'), 1000);
+        scanAndAddDebt(phone, true);
         
         console.log("Auto-fill OK:", customer.name, "Đi cùng:", customer.lastCompName);
     } else {
@@ -4451,11 +4444,16 @@ renderCustomerSuggestions(sdt, 'pc');
     // Vì key của customerMap chính là SĐT, ta chỉ cần "nhặt" nó ra
     const m = customerMap[sdt];
 
-    if (m) {
+   if (m) {
         // --- TÌM THẤY ---
-        // Lưu ý: m chính là object {name: "...", points: ...} luôn, không cần Object.values gì cả
         status.innerText = "★ THÀNH VIÊN: " + m.name;
         status.className = "text-[8px] font-black text-green-500 uppercase mt-1 text-center";
+        
+        // >>> CHÈN THÊM DÒNG NÀY <<<
+        // Gọi hàm quét nợ (chờ 500ms để nhập xong hãy báo)
+        if(window.debtTimeout) clearTimeout(window.debtTimeout);
+        window.debtTimeout = setTimeout(() => scanAndAddDebt(sdt), 500);
+        // ---------------------------
     } else {
         // --- KHÔNG TÌM THẤY ---
         // Chỉ báo khách mới khi đã nhập đủ dài (ví dụ 10 số) để đỡ nháy loạn xạ
@@ -7204,14 +7202,17 @@ function handleMobileBedOrder(bookingId) {
     var statusLabel = document.getElementById('sdt-status');
 
     if (sdtInput) {
-        // BƯỚC 1: XÓA TRẮNG CŨ
-        sdtInput.value = "";
+        sdtInput.value = ""; // Xóa cũ
         if (statusLabel) statusLabel.innerText = "";
 
-        // BƯỚC 2: ĐIỀN MỚI
         if (booking.phone) {
             sdtInput.value = booking.phone;
             if (typeof checkSdtLive === 'function') checkSdtLive(); 
+            
+            // >>> CHÈN THÊM DÒNG NÀY <<<
+            // Quét nợ ngay khi bấm vào gọi món
+            scanAndAddDebt(booking.phone);
+            // ---------------------------
         }
     }
 
@@ -7672,6 +7673,42 @@ function confirmMoveBed(newBedId) {
             }
         }
     });
+}
+    // --- HÀM QUÉT VÀ XỬ LÝ NỢ CŨ (AUTO DEBT CHECK) ---
+function scanAndAddDebt(phone, onlyAlert = false) {
+    if (!phone || phone.length < 3) return;
+    
+    let key = normalizePhone(phone);
+    let cust = customerMap[key];
+
+    // Chỉ xử lý nếu có nợ > 0
+    if (cust && cust.pendingFee > 0) {
+        let fee = cust.pendingFee;
+        let reason = cust.pendingFeeReason || "Phí chưa thanh toán";
+
+        // 1. Hiển thị cảnh báo
+        if (typeof showAppModal === 'function') {
+            showAppModal("⚠️ CẢNH BÁO NỢ CŨ", 
+                `Khách <b>${cust.name}</b> đang nợ: <b class="text-red-500">${fee.toLocaleString()}đ</b><br>Lý do: ${reason}<br>${onlyAlert ? "Vui lòng thu tiền!" : "Hệ thống sẽ tự động thêm vào bill."}`, 
+                "💰");
+        } else {
+            alert(`⚠️ CẢNH BÁO: Khách ${cust.name} đang nợ ${fee.toLocaleString()}đ\nLý do: ${reason}`);
+        }
+
+        // 2. Nếu đang ở chế độ gọi món (không phải chỉ xem lịch), tự động thêm vào giỏ
+        if (!onlyAlert) {
+            // Thêm vào giỏ hàng (giả lập món ăn)
+            addToCart(`Nợ cũ: ${reason}`, "Phí", fee);
+            
+            // Xóa nợ trên Firebase ngay để tránh add 2 lần nếu refresh
+            // (Nếu Tiên sinh muốn chắc chắn hơn thì có thể đợi lúc thanh toán mới xóa, 
+            // nhưng cách này tiện cho thu ngân nhất)
+            db.ref('customers/' + key).update({
+                pendingFee: 0,
+                pendingFeeReason: null
+            });
+        }
+    }
 }
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
@@ -8184,6 +8221,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
