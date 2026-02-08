@@ -3879,13 +3879,14 @@ function selectBedItem(index) {
         else { if(wrapperCancel) wrapperCancel.classList.remove('hidden'); }
         
         // Tính tiền tạm tính cho Active
+        // Tính tiền tạm tính cho Active
         if (data.phone) {
              calculateSessionSpend(data.phone, data.start, data.end).then(total => {
                 var infoDiv = document.getElementById('done-session-info');
                 if (infoDiv) {
                     infoDiv.innerHTML = `
-                    <div class="bg-white border border-emerald-100 rounded-[2rem] p-4 shadow-sm relative overflow-hidden">
-                        <div class="flex justify-between items-center">
+                    <div class="bg-white border border-emerald-100 rounded-[2rem] p-4 shadow-sm relative overflow-hidden group">
+                        <div class="flex justify-between items-center mb-2">
                             <div>
                                 <p class="text-[9px] font-bold uppercase tracking-[0.2em] text-gray-400 mb-1">CHI TIÊU TẠM TÍNH</p>
                                 <div class="flex items-baseline gap-1">
@@ -3896,6 +3897,14 @@ function selectBedItem(index) {
                             <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-[#065F46]">
                                 <span class="material-symbols-outlined">payments</span>
                             </div>
+                        </div>
+
+                        <div class="border-t border-dashed border-emerald-100 pt-2 flex justify-center">
+                            <button onclick="copyBedNotification('${data.end}')" 
+                                class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 hover:bg-emerald-50 text-gray-500 hover:text-emerald-600 transition-all active:scale-95">
+                                <span class="material-symbols-outlined text-[16px]">content_copy</span>
+                                <span class="text-[10px] font-bold uppercase">Copy Thông báo kết thúc</span>
+                            </button>
                         </div>
                     </div>`;
                     infoDiv.classList.remove('hidden');
@@ -5852,10 +5861,19 @@ function renderDetailContentMobile(b) {
         </div>
     </div>
 
-    <div class="flex items-end justify-between px-2 pt-2 pb-1">
+   <div class="flex items-end justify-between px-2 pt-2 pb-1">
         <span class="text-[12px] font-bold text-gray-400 uppercase tracking-[0.1em]">Tổng chi tiêu</span>
         <span id="mob-detail-total-display" class="text-4xl font-black text-primary tracking-tight">...</span>
     </div>
+
+    ${isActive ? `
+    <div class="flex justify-center mt-2 pb-2">
+        <button onclick="copyBedNotification('${b.end}')" 
+            class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm active:scale-90 active:bg-[#006241] active:text-white transition-all">
+            <span class="material-symbols-outlined text-[20px]">content_copy</span>
+        </button>
+    </div>
+    ` : ''}
 
     ${(!isActive && !isWaiting) ? `
     <div class="glass-widget rounded-[32px] p-6 space-y-4 relative overflow-hidden animate-slide-up">
@@ -7476,6 +7494,28 @@ function submitStoreOff() {
 function resumeStore() {
     db.ref('store_status').set({ isOff: false });
 }
+    // --- HÀM COPY THÔNG BÁO BED (MỚI) ---
+function copyBedNotification(endTime) {
+    const text = `🌟 Chào bạn đến Cafe in Bed 🌟
+Thời gian sử dụng Bed của bạn kết thúc lúc ${endTime}.
+Vui lòng tự theo dõi thời gian, hệ thống không gửi thông báo kết thúc.
+The Cafe 33 nghiêm cấm mọi hành vi vi phạm thuần phong mỹ tục trong khu vực Bed.
+Mọi vi phạm sẽ bị xử lý theo đúng nội quy đã cam kết, bao gồm bồi thường 2.244.000đ nếu phát sinh thiệt hại.
+Vui lòng không làm bẩn nệm. Phí vệ sinh 30–50K sẽ được áp dụng nếu vi phạm.
+Hãy sử dụng dịch vụ văn minh – đúng quy định.
+🤖 The Cafe 33`;
+
+    navigator.clipboard.writeText(text).then(() => {
+        // Dùng lại hàm showAppModal có sẵn của Tiên sinh
+        if(typeof showAppModal === 'function') {
+            showAppModal("Đã sao chép", "Nội dung thông báo đã được lưu vào bộ nhớ đệm!<br>Tiên sinh có thể paste gửi cho khách ngay.", "📋");
+        } else {
+            alert("Đã sao chép nội dung thông báo!");
+        }
+    }).catch(err => {
+        console.error('Không thể copy: ', err);
+    });
+}
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -7960,5 +8000,6 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
