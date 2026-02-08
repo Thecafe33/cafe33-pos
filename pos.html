@@ -1806,6 +1806,7 @@ db.ref("customers").on("value", snap => {
         }
     });
     switchView('menu'); // <--- Kích hoạt giao diện & Hiện Bottom Bar ngay lập tức
+    listenToClientInput();
 };
 
 // =========================================================
@@ -7741,6 +7742,41 @@ function syncToCustomerDisplay(state, overrideData = {}) {
     // Gửi lên Firebase
     db.ref('session_display').set(payload);
 }
+    // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH ---
+function listenToClientInput() {
+    db.ref('client_input').on('value', (snap) => {
+        const data = snap.val();
+        
+        // Kiểm tra dữ liệu hợp lệ và tránh lặp (check timestamp nếu cần, ở đây check null)
+        if (!data || !data.value) return;
+
+        // Chỉ xử lý nếu dữ liệu mới (trong vòng 2 giây) để tránh load lại trang bị nhập lại
+        const now = Date.now();
+        if (now - data.timestamp > 2000) return;
+
+        console.log("📞 Nhận SĐT từ khách:", data.value);
+
+        // 1. Điền vào ô SĐT trên POS
+        const sdtInput = document.getElementById('kh-sdt');
+        if (sdtInput) {
+            sdtInput.value = data.value;
+            
+            // 2. Kích hoạt tìm khách & Quét nợ & Đồng bộ lại màn hình khách
+            checkSdtLive(); 
+            
+            // Nếu có hàm quét nợ thì gọi luôn
+            if (typeof scanAndAddDebt === 'function') {
+                scanAndAddDebt(data.value);
+            }
+        }
+
+        // 3. Reset nhánh input để không bị gọi lại lần sau
+        db.ref('client_input').set(null);
+    });
+}
+
+// Gọi hàm này khi khởi động POS
+listenToClientInput();
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -8252,6 +8288,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
