@@ -149,44 +149,42 @@
         function listenToPOS() {
             db.ref('session_display').on('value', (snap) => {
                 const data = snap.val();
-                if(!data) return resetScreen(); // Không có dữ liệu -> Reset luôn
+                if(!data) return resetScreen();
 
-                // --- XỬ LÝ TRẠNG THÁI ---
-                
-                // 1. THANH TOÁN THÀNH CÔNG
+                // >>> ƯU TIÊN 1: LỆNH MỞ BÀN PHÍM (Đặt lên đầu để không bị logic khác chặn) <<<
+                if (data.state === 'input_phone') {
+                    // Ẩn hết các view khác
+                    document.getElementById('view-success').classList.add('hidden');
+                    // Mở bàn phím
+                    openKeypad(); 
+                    return; // Dừng lại, không chạy logic bên dưới
+                }
+
+                // 2. THANH TOÁN THÀNH CÔNG
                 if (data.state === 'success') {
                     document.getElementById('view-success').classList.remove('hidden');
-                    
-                    // Sau 5 giây: Tự động ẩn thông báo thành công VÀ XÓA TRẮNG màn hình
                     setTimeout(() => {
                         document.getElementById('view-success').classList.add('hidden');
-                        resetScreen(); // <--- QUAN TRỌNG: Gọi hàm lau bảng
+                        resetScreen();
                     }, 5000);
                 } 
-                // 2. TRẠNG THÁI CHỜ (IDLE)
+                // 3. TRẠNG THÁI CHỜ
                 else if (data.state === 'idle') {
                     document.getElementById('view-success').classList.add('hidden');
                     resetScreen();
                 }
-                    // >>> LOGIC MỚI: TỰ BẬT BÀN PHÍM KHI POS YÊU CẦU <<<
-                else if (data.state === 'input_phone') {
-                    document.getElementById('view-success').classList.add('hidden');
-                    // Gọi hàm mở bàn phím có sẵn
-                    openKeypad(); 
-                }
-                // 3. ĐANG ORDER (CART/WELCOME)
+                // 4. HIỂN THỊ GIỎ HÀNG / TÊN KHÁCH
                 else {
                     document.getElementById('view-success').classList.add('hidden');
                     
-                    // Cập nhật Header User Info
-                    const headerInfo = document.getElementById('header-user-info');
+                    // Nếu POS gửi tên khách -> Tắt bàn phím (nghĩa là đã nhận diện xong)
                     if (data.customerName && data.customerName !== "Khách mới" && data.customerName !== "Khách lẻ") {
-                        document.getElementById('cust-name').innerText = data.customerName;
-                        document.getElementById('cust-points').innerText = data.customerPoints || 0;
-                        headerInfo.classList.remove('hidden');
-                        closeKeypad(); 
+                         document.getElementById('header-user-info').classList.remove('hidden');
+                         document.getElementById('cust-name').innerText = data.customerName;
+                         document.getElementById('cust-points').innerText = data.customerPoints || 0;
+                         closeKeypad(); 
                     } else {
-                        headerInfo.classList.add('hidden');
+                         document.getElementById('header-user-info').classList.add('hidden');
                     }
                     
                     updateCartUI(data);
