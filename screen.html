@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xin chào - The Cafe 33</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; overflow: hidden; background: #F2F4F7; }
@@ -25,10 +28,12 @@
 
     <div id="view-idle" class="flex flex-col items-center justify-center text-center space-y-6 animate-pop">
         <div class="w-48 h-48 bg-white rounded-full flex items-center justify-center shadow-2xl border-4 border-[#006241]">
-            <span class="text-8xl">☕</span> </div>
+            <span class="text-8xl">☕</span>
+        </div>
         <div>
             <h1 class="text-6xl font-black text-[#006241] mb-2 uppercase tracking-tighter">The Cafe 33</h1>
             <p class="text-2xl font-bold text-gray-400 uppercase tracking-[0.3em]">Xin chào quý khách</p>
+            <p id="conn-status" class="text-xs text-gray-300 mt-4 font-mono">Đang kết nối...</p>
         </div>
     </div>
 
@@ -76,40 +81,81 @@
     </div>
 
     <script>
-        // 1. CẤU HÌNH FIREBASE (Dùng chung config với file POS)
+        // 2. CẤU HÌNH FIREBASE (Copy y chang từ file POS của Tiên sinh)
         const firebaseConfig = {
-            apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
-            authDomain: "the-cafe-33.firebaseapp.com",
-            databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "the-cafe-33",
-            storageBucket: "the-cafe-33.appspot.com",
-            messagingSenderId: "...",
-            appId: "..."
+          apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+          authDomain: "the-cafe-33.firebaseapp.com",
+          databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "the-cafe-33",
+          storageBucket: "the-cafe-33.appspot.com",
+          messagingSenderId: "...",
+          appId: "..."
         };
-        firebase.initializeApp(firebaseConfig);
+
+        // Khởi tạo
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.database();
+        const auth = firebase.auth();
 
-        // 2. LẮNG NGHE DỮ LIỆU TỪ POS CHÍNH
-        db.ref('session_display').on('value', (snap) => {
-            const data = snap.val();
-            if(!data) return renderView('idle');
+        // 3. TỰ ĐỘNG ĐĂNG NHẬP (Phần quan trọng mới thêm)
+        function autoLoginScreen() {
+            const email = "elio@thecafe33.com"; 
+            const pass = "Thecafe33ty"; 
 
-            // Điều hướng view
-            if (data.state === 'success') {
-                renderView('success');
-                // Tự động về trang chủ sau 5 giây
-                setTimeout(() => renderView('idle'), 5000);
-            } 
-            else if (data.state === 'cart' || data.state === 'welcome') {
-                renderView('cart');
-                updateCartUI(data);
-            } 
-            else {
-                renderView('idle');
-            }
-        });
+            document.getElementById('conn-status').innerText = "Đang đăng nhập...";
 
-        // Hàm chuyển đổi màn hình
+            auth.signInWithEmailAndPassword(email, pass)
+                .then((userCredential) => {
+                    console.log("✅ Màn hình phụ đã đăng nhập thành công!");
+                    document.getElementById('conn-status').innerText = "Đã kết nối máy chủ";
+                    document.getElementById('conn-status').className = "text-xs text-green-500 mt-4 font-bold uppercase tracking-wider";
+                    
+                    // Sau khi đăng nhập xong mới bắt đầu lắng nghe dữ liệu
+                    listenToPOS();
+                })
+                .catch((error) => {
+                    console.error("❌ Lỗi đăng nhập:", error.message);
+                    document.getElementById('conn-status').innerText = "Lỗi kết nối: " + error.message;
+                    document.getElementById('conn-status').className = "text-xs text-red-500 mt-4 font-bold";
+                });
+        }
+
+        // 4. LẮNG NGHE DỮ LIỆU TỪ POS CHÍNH
+        function listenToPOS() {
+            db.ref('session_display').on('value', (snap) => {
+                const data = snap.val();
+                
+                // Nếu không có dữ liệu -> Về màn hình chờ
+                if(!data) return renderView('idle');
+
+                // Logic chuyển màn hình
+                if (data.state === 'success') {
+                    renderView('success');
+                    // Tự động về trang chủ sau 5 giây
+                    setTimeout(() => {
+                        // Chỉ về idle nếu trạng thái trên server vẫn là success (tránh xung đột nếu đang order mới)
+                        if(document.getElementById('view-success').classList.contains('hidden') === false) {
+                            renderView('idle');
+                        }
+                    }, 5000);
+                } 
+                else if (data.state === 'cart' || data.state === 'welcome') {
+                    renderView('cart');
+                    updateCartUI(data);
+                } 
+                else {
+                    renderView('idle');
+                }
+            });
+        }
+
+        // Chạy ngay khi mở file
+        autoLoginScreen();
+
+        // --- CÁC HÀM HỖ TRỢ GIAO DIỆN ---
+
         function renderView(viewName) {
             ['view-idle', 'view-cart', 'view-success'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
@@ -117,7 +163,6 @@
             document.getElementById('view-' + viewName).classList.remove('hidden');
         }
 
-        // Hàm cập nhật nội dung
         function updateCartUI(data) {
             // 1. Thông tin khách
             document.getElementById('cust-name').innerText = data.customerName || "Khách lẻ";
@@ -132,20 +177,32 @@
 
             if (data.cart && data.cart.length > 0) {
                 data.cart.forEach(item => {
+                    // Logic hiển thị Size
+                    let sizeHtml = item.size ? `<span class="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded ml-2">${item.size}</span>` : '';
+
                     listEl.innerHTML += `
-                    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100 animate-pop">
                         <div class="flex items-center gap-4">
-                            <div class="bg-gray-100 w-10 h-10 flex items-center justify-center rounded-lg font-black text-[#006241]">${item.qty}x</div>
+                            <div class="bg-[#E6F4F1] w-12 h-12 flex items-center justify-center rounded-xl font-black text-[#006241] text-lg border border-[#006241]/10">
+                                ${item.qty}
+                            </div>
                             <div>
-                                <p class="font-black text-xl text-gray-800">${item.name}</p>
-                                <p class="text-sm font-bold text-gray-400 uppercase">${item.size}</p>
+                                <div class="flex items-center">
+                                    <p class="font-black text-xl text-gray-800">${item.name}</p>
+                                    ${sizeHtml}
+                                </div>
+                                <p class="text-xs font-bold text-gray-400 uppercase tracking-wide mt-0.5">Đang chuẩn bị</p>
                             </div>
                         </div>
                         <p class="font-black text-xl text-[#006241]">${(item.price * item.qty).toLocaleString()}đ</p>
                     </div>`;
                 });
             } else {
-                listEl.innerHTML = `<div class="text-center text-gray-300 font-bold text-xl py-10">Đang chờ gọi món...</div>`;
+                listEl.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-64 text-gray-300">
+                    <span class="text-6xl mb-4 opacity-50">🛒</span>
+                    <span class="font-bold text-xl uppercase tracking-widest opacity-60">Đang chờ món...</span>
+                </div>`;
             }
         }
     </script>
