@@ -145,34 +145,69 @@
         });
 
         // 3. LISTEN FROM POS (HIỂN THỊ)
+       // 3. LISTEN FROM POS (LOGIC ĐÃ SỬA: TỰ RESET SAU KHI XONG)
         function listenToPOS() {
             db.ref('session_display').on('value', (snap) => {
                 const data = snap.val();
-                if(!data) return;
+                if(!data) return resetScreen(); // Không có dữ liệu -> Reset luôn
 
-                // Cập nhật Header User Info
-                const headerInfo = document.getElementById('header-user-info');
-                if (data.customerName && data.customerName !== "Khách mới" && data.customerName !== "Khách lẻ") {
-                    document.getElementById('cust-name').innerText = data.customerName;
-                    document.getElementById('cust-points').innerText = data.customerPoints || 0;
-                    headerInfo.classList.remove('hidden');
-                    
-                    // Nếu đang mở keypad mà thấy có tên rồi thì đóng luôn
-                    closeKeypad(); 
-                } else {
-                    headerInfo.classList.add('hidden');
-                }
-
+                // --- XỬ LÝ TRẠNG THÁI ---
+                
+                // 1. THANH TOÁN THÀNH CÔNG
                 if (data.state === 'success') {
                     document.getElementById('view-success').classList.remove('hidden');
-                    setTimeout(() => document.getElementById('view-success').classList.add('hidden'), 5000);
-                } else {
+                    
+                    // Sau 5 giây: Tự động ẩn thông báo thành công VÀ XÓA TRẮNG màn hình
+                    setTimeout(() => {
+                        document.getElementById('view-success').classList.add('hidden');
+                        resetScreen(); // <--- QUAN TRỌNG: Gọi hàm lau bảng
+                    }, 5000);
+                } 
+                // 2. TRẠNG THÁI CHỜ (IDLE)
+                else if (data.state === 'idle') {
                     document.getElementById('view-success').classList.add('hidden');
+                    resetScreen();
+                }
+                // 3. ĐANG ORDER (CART/WELCOME)
+                else {
+                    document.getElementById('view-success').classList.add('hidden');
+                    
+                    // Cập nhật Header User Info
+                    const headerInfo = document.getElementById('header-user-info');
+                    if (data.customerName && data.customerName !== "Khách mới" && data.customerName !== "Khách lẻ") {
+                        document.getElementById('cust-name').innerText = data.customerName;
+                        document.getElementById('cust-points').innerText = data.customerPoints || 0;
+                        headerInfo.classList.remove('hidden');
+                        closeKeypad(); 
+                    } else {
+                        headerInfo.classList.add('hidden');
+                    }
+                    
                     updateCartUI(data);
                 }
             });
         }
 
+        // --- HÀM LAU BẢNG (RESET TOÀN BỘ) ---
+        function resetScreen() {
+            // 1. Ẩn thông tin khách trên góc
+            document.getElementById('header-user-info').classList.add('hidden');
+            document.getElementById('cust-name').innerText = "Khách lẻ";
+            document.getElementById('cust-points').innerText = "0";
+
+            // 2. Xóa giỏ hàng về rỗng
+            document.getElementById('cart-list').innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-gray-300 gap-4 mt-20">
+                    <span class="material-symbols-outlined text-8xl opacity-20">shopping_cart</span>
+                    <p class="text-xl font-bold uppercase opacity-50">Xin chào quý khách</p>
+                </div>`;
+            
+            // 3. Về 0 tiền
+            document.getElementById('total-price').innerText = "0";
+            
+            // 4. Đóng bàn phím nếu đang mở
+            closeKeypad();
+        }
         // 4. LOGIC GIAO DIỆN CART
         function updateCartUI(data) {
             document.getElementById('total-price').innerText = Number(data.total || 0).toLocaleString();
