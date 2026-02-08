@@ -4311,8 +4311,10 @@ function finalizeBedCheckIn(bedId) {
         }
     });
 }
-function openBookingModal() { document.getElementById('modal-add-booking').classList.remove('hidden'); document.getElementById('new_cust_name').value = "Khách vãng lai"; document.getElementById('new_cust_phone').value = ""; document.getElementById('new_cust_phone').focus(); switchTimeMode('duration'); }
-function closeBookingModal() { document.getElementById('modal-add-booking').classList.add('hidden'); }
+function openBookingModal() { document.getElementById('modal-add-booking').classList.remove('hidden'); document.getElementById('new_cust_name').value = "Khách vãng lai"; document.getElementById('new_cust_phone').value = ""; document.getElementById('new_cust_phone').focus(); switchTimeMode('duration');if (typeof syncToCustomerDisplay === 'function') {
+        syncToCustomerDisplay('input_phone');  } }
+function closeBookingModal() { document.getElementById('modal-add-booking').classList.add('hidden'); if (typeof syncToCustomerDisplay === 'function') {
+        syncToCustomerDisplay('idle'); }  }
 // --- [FIXED] AUTO FILL (BAO GỒM CẢ NGƯỜI ĐI CÙNG) ---
 function autoFillCustomer() {
     // 1. Lấy SĐT
@@ -7751,38 +7753,55 @@ function syncToCustomerDisplay(state, overrideData = {}) {
     db.ref('session_display').set(payload);
 }
     // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH ---
+// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (LOGIC THÔNG MINH) ---
 function listenToClientInput() {
     db.ref('client_input').on('value', (snap) => {
         const data = snap.val();
         
-        // Kiểm tra dữ liệu hợp lệ và tránh lặp (check timestamp nếu cần, ở đây check null)
+        // Kiểm tra dữ liệu hợp lệ
         if (!data || !data.value) return;
-
-        // Chỉ xử lý nếu dữ liệu mới (trong vòng 2 giây) để tránh load lại trang bị nhập lại
+        
+        // Bỏ qua dữ liệu cũ quá 2 giây (tránh bị nhập lại khi F5)
         const now = Date.now();
         if (now - data.timestamp > 2000) return;
 
         console.log("📞 Nhận SĐT từ khách:", data.value);
 
-        // 1. Điền vào ô SĐT trên POS
-        const sdtInput = document.getElementById('kh-sdt');
-        if (sdtInput) {
-            sdtInput.value = data.value;
-            
-            // 2. Kích hoạt tìm khách & Quét nợ & Đồng bộ lại màn hình khách
-            checkSdtLive(); 
-            
-            // Nếu có hàm quét nợ thì gọi luôn
-            if (typeof scanAndAddDebt === 'function') {
-                scanAndAddDebt(data.value);
+        // 1. KIỂM TRA: Modal Đặt Bed có đang mở không?
+        const bookingModal = document.getElementById('modal-add-booking');
+        const isBookingOpen = bookingModal && !bookingModal.classList.contains('hidden');
+
+        if (isBookingOpen) {
+            // === TRƯỜNG HỢP A: ĐANG MỞ POPUP ĐẶT BED ===
+            const input = document.getElementById('new_cust_phone');
+            if (input) {
+                input.value = data.value;
+                
+                // Gọi hàm Auto-fill để tự điền tên và người đi cùng (nếu khách cũ)
+                if (typeof handleBookingInput === 'function') {
+                    handleBookingInput(); 
+                }
+                
+                // Hiệu ứng nháy xanh để nhân viên biết đã nhận số
+                input.classList.add('bg-green-100', 'transition-colors', 'duration-500');
+                setTimeout(() => input.classList.remove('bg-green-100'), 500);
+            }
+        } else {
+            // === TRƯỜNG HỢP B: ĐANG Ở MÀN HÌNH CHÍNH (GIỎ HÀNG) ===
+            const sdtInput = document.getElementById('kh-sdt');
+            if (sdtInput) {
+                sdtInput.value = data.value;
+                
+                // Tìm khách và quét nợ
+                if (typeof checkSdtLive === 'function') checkSdtLive(); 
+                if (typeof scanAndAddDebt === 'function') scanAndAddDebt(data.value);
             }
         }
 
-        // 3. Reset nhánh input để không bị gọi lại lần sau
+        // Reset Firebase để tránh gọi lại
         db.ref('client_input').set(null);
     });
 }
-
 // Gọi hàm này khi khởi động POS
 listenToClientInput();
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
@@ -8296,6 +8315,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
