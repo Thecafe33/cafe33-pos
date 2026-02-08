@@ -2212,7 +2212,7 @@ function renderCart() {
     
     if(document.getElementById('pay-total-display-2')) 
         document.getElementById('pay-total-display-2').innerText = formattedTotal;
-
+syncToCustomerDisplay('cart');
     updateSuggestions(); // Cập nhật các nút gợi ý tiền (50k, 100k...)
 }
 
@@ -2440,7 +2440,8 @@ function quickPaid(v) {
     document.getElementById('cash-paid').value = v.toLocaleString('en-US'); 
     calcChange(); 
 }
-function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart();updateCartPadding(); }
+function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart();updateCartPadding();// >>> THÊM DÒNG NÀY <<<
+    syncToCustomerDisplay('idle');  }
 
 // =========================================================
 // 6. LỊCH SỬ & DOANH THU (ĐÃ SỬA LỖI HIỂN THỊ)
@@ -4453,6 +4454,7 @@ renderCustomerSuggestions(sdt, 'pc');
         // Gọi hàm quét nợ (chờ 500ms để nhập xong hãy báo)
         if(window.debtTimeout) clearTimeout(window.debtTimeout);
         window.debtTimeout = setTimeout(() => scanAndAddDebt(sdt), 500);
+       syncToCustomerDisplay('welcome');
         // ---------------------------
     } else {
         // --- KHÔNG TÌM THẤY ---
@@ -4463,6 +4465,7 @@ renderCustomerSuggestions(sdt, 'pc');
         } else {
             status.innerText = ""; // Chưa nhập xong thì chưa báo gì
         }
+       syncToCustomerDisplay('cart', { customerName: "Khách mới", customerPoints: 0 });
     }
 }
 function showAppModal(title, msg, icon = '') { document.getElementById('app-modal-title').innerText = title; document.getElementById('app-modal-msg').innerHTML = msg; document.getElementById('app-modal-icon').innerText = icon; document.getElementById('app-modal').classList.remove('hidden'); }
@@ -5337,7 +5340,7 @@ function saveOrderToFirebase(method) {
             alert("❌ Lỗi lưu đơn: " + error.message);
         } else {
             console.log("✅ Đã lưu đơn thành công!");
-            
+            syncToCustomerDisplay('success');
             // Dọn dẹp giỏ hàng
             cart = [];
             renderCart();
@@ -7360,6 +7363,9 @@ function resetOrderingMode() {
     const sdtStatus = document.getElementById('sdt-status');
     if (sdtStatus) sdtStatus.innerText = "";
 
+    // >>> THÊM DÒNG NÀY <<<
+    syncToCustomerDisplay('idle'); // Màn hình phụ về trạng thái chờ
+
     console.log("Đã thoát chế độ Order Bed - Trở về khách vãng lai");
 }
   // =========================================================
@@ -7709,6 +7715,31 @@ function scanAndAddDebt(phone, onlyAlert = false) {
             });
         }
     }
+}
+    // --- HÀM ĐỒNG BỘ MÀN HÌNH KHÁCH (CUSTOMER DISPLAY BRIDGE) ---
+function syncToCustomerDisplay(state, overrideData = {}) {
+    // Lấy dữ liệu hiện tại từ các biến toàn cục
+    const sdtInput = document.getElementById('kh-sdt');
+    let sdt = sdtInput ? normalizePhone(sdtInput.value) : "";
+    let cust = customerMap[sdt] || { name: "Khách mới", points: 0 };
+
+    const payload = {
+        state: state, // 'idle', 'welcome', 'cart', 'success'
+        updatedAt: firebase.database.ServerValue.TIMESTAMP,
+        customerName: cust.name,
+        customerPoints: cust.points,
+        total: currentTotal,
+        cart: cart.map(i => ({
+            name: i.name,
+            qty: i.qty,
+            size: i.size,
+            price: i.price
+        })),
+        ...overrideData // Cho phép ghi đè nếu cần
+    };
+
+    // Gửi lên Firebase
+    db.ref('session_display').set(payload);
 }
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
 document.addEventListener('DOMContentLoaded', updateCartPadding);
@@ -8221,6 +8252,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
