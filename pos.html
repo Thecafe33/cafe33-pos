@@ -7754,16 +7754,15 @@ function syncToCustomerDisplay(state, overrideData = {}) {
 }
     // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH ---
 // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (LOGIC THÔNG MINH) ---
+// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (ĐÃ FIX LỖI KHÔNG HIỆN TÊN) ---
 function listenToClientInput() {
     db.ref('client_input').on('value', (snap) => {
         const data = snap.val();
         
-        // Kiểm tra dữ liệu hợp lệ
+        // Kiểm tra dữ liệu
         if (!data || !data.value) return;
-        
-        // Bỏ qua dữ liệu cũ quá 2 giây (tránh bị nhập lại khi F5)
         const now = Date.now();
-        if (now - data.timestamp > 2000) return;
+        if (now - data.timestamp > 2000) return; // Bỏ qua tin cũ
 
         console.log("📞 Nhận SĐT từ khách:", data.value);
 
@@ -7777,14 +7776,31 @@ function listenToClientInput() {
             if (input) {
                 input.value = data.value;
                 
-                // Gọi hàm Auto-fill để tự điền tên và người đi cùng (nếu khách cũ)
-                if (typeof handleBookingInput === 'function') {
-                    handleBookingInput(); 
-                }
+                // Gọi hàm điền tên trên POS
+                if (typeof handleBookingInput === 'function') handleBookingInput(); 
                 
-                // Hiệu ứng nháy xanh để nhân viên biết đã nhận số
-                input.classList.add('bg-green-100', 'transition-colors', 'duration-500');
+                // Hiệu ứng nháy xanh trên POS
+                input.classList.add('bg-green-100');
                 setTimeout(() => input.classList.remove('bg-green-100'), 500);
+
+                // >>> QUAN TRỌNG: BẮN TÍN HIỆU NGƯỢC LẠI MÀN HÌNH PHỤ <<<
+                // Để màn hình phụ tắt bàn phím và hiện "Xin chào..."
+                let cleanSdt = normalizePhone(data.value);
+                let cust = customerMap[cleanSdt];
+                
+                if (cust) {
+                    // Tìm thấy khách -> Gửi tên và điểm
+                    syncToCustomerDisplay('welcome', { 
+                        customerName: cust.name, 
+                        customerPoints: cust.points 
+                    });
+                } else {
+                    // Khách mới -> Gửi "Khách mới"
+                    syncToCustomerDisplay('welcome', { 
+                        customerName: "Khách mới", 
+                        customerPoints: 0 
+                    });
+                }
             }
         } else {
             // === TRƯỜNG HỢP B: ĐANG Ở MÀN HÌNH CHÍNH (GIỎ HÀNG) ===
@@ -7792,8 +7808,9 @@ function listenToClientInput() {
             if (sdtInput) {
                 sdtInput.value = data.value;
                 
-                // Tìm khách và quét nợ
+                // Hàm checkSdtLive này đã có sẵn lệnh syncToCustomerDisplay bên trong rồi
                 if (typeof checkSdtLive === 'function') checkSdtLive(); 
+                
                 if (typeof scanAndAddDebt === 'function') scanAndAddDebt(data.value);
             }
         }
@@ -8315,6 +8332,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
