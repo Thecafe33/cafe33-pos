@@ -5027,47 +5027,48 @@ function deletePenalty(phone, bookingId) {
 // --- HÀM LẮNG NGHE TIỀN VỀ (BẢN FIX: SOI KỸ DỮ LIỆU) ---
 // --- HÀM LẮNG NGHE TIỀN VỀ (BẢN FIX: SẮP XẾP THEO THỜI GIAN) ---
 // --- HÀM LẮNG NGHE TIỀN VỀ (PHIÊN BẢN TỐI ƯU: SERVER-SIDE SORTING) ---
+// --- HÀM LẮNG NGHE TIỀN VỀ (BẢN FINAL: DÙNG KEY PAY_TIMESTAMP) ---
 function listenForPayment(code, amount) {
+    // 1. Tắt listener cũ để tránh trùng lặp
     if (paymentListener) {
-        db.ref('payment_events').off(); 
+        db.ref('payment_events').off();
     }
 
     console.log("🔍 Đang đợi tiền đơn:", code, "- Mệnh giá:", amount);
 
-    // Lệnh truy vấn thông minh:
+    // 2. LẮNG NGHE (LOGIC MỚI)
+    // Vì Key là "PAY_{Timestamp}..." -> Chữ P nằm sau chữ C, và Timestamp lớn nằm dưới.
+    // -> Đơn mới nhất LUÔN LUÔN nằm ở đáy danh sách.
+    // -> Chỉ cần lấy 5 cái cuối cùng là chắc chắn có nó.
     paymentListener = db.ref('payment_events')
-        .orderByChild('createdAt') // 1. Sắp xếp theo thời gian tạo
-        .limitToLast(5)            // 2. Chỉ lấy 5 thằng mới nhất
-        .on('value', (snap) => {   // 3. Lắng nghe liên tục
-            
-            const events = snap.val();
+        .limitToLast(5) 
+        .on('value', (snap) => {   
+            const events = snap.val(); 
             if (!events) return;
 
-            // Duyệt qua 5 giao dịch mới nhất này
-            Object.keys(events).forEach(key => {
-                const data = events[key];
+            // Duyệt qua các đơn mới nhất này (Object.values là đủ, không cần sort lại)
+            Object.values(events).forEach(data => {
                 
-                // --- SO KHỚP DỮ LIỆU ---
+                // A. Ép kiểu dữ liệu
                 const eventAmount = Number(data.amount || 0);
                 const targetAmount = Number(amount || 0);
                 
-                // Chuẩn hóa mã đơn để so sánh
+                // B. Lấy mã đơn từ trong ruột gói tin (Backend đã lưu vào data.orderCode)
                 const dataCode = String(data.orderCode || "").trim();
-                const keyStr = String(key).trim();
-                const targetCode = String(code || "").trim();
+                const targetCode = String(code || "").trim(); // Ví dụ: CF173909...
 
-                // Logic bắt dính:
-                // 1. Mã đơn khớp (so cả Key lẫn field orderCode)
-                // 2. HOẶC Nội dung chuyển khoản có chứa mã đơn
-                const isCodeMatch = (keyStr === targetCode) || 
-                                    (dataCode === targetCode) || 
-                                    (data.description && data.description.includes(targetCode));
+                // C. So khớp
+                // 1. Mã đơn khớp chính xác
+                // 2. HOẶC Nội dung chuyển khoản có chứa mã đơn (dự phòng)
+                const isCodeMatch = (dataCode === targetCode) || 
+                                    (data.description && data.description.includes(targetCode)) ||
+                                    (data.content && data.content.includes(targetCode));
                 
-                // 3. Tiền phải đủ hoặc dư
+                // 3. Tiền phải đủ
                 const isAmountMatch = eventAmount >= targetAmount;
 
                 if (isCodeMatch && isAmountMatch) {
-                    console.log("✅ BẮT ĐƯỢC GIAO DỊCH:", data);
+                    console.log("⚡ TIỀN VỀ (Key Mới):", data);
                     handlePaymentSuccess(data.amount);
                 }
             });
@@ -8372,6 +8373,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
