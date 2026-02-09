@@ -5,34 +5,58 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Cafe 33 - Customer Screen</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+    
     <style>
-        body { font-family: 'Inter', sans-serif; overflow: hidden; background: #F2F4F7; user-select: none; }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(30px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 20px 60px -10px rgba(0, 98, 65, 0.1);
+        /* Tối ưu hiệu năng: Tắt user-select để tránh bôi đen nhầm */
+        body { font-family: 'Inter', sans-serif; overflow: hidden; background: #F0FDF4; user-select: none; -webkit-user-select: none; }
+        
+        /* Thay thế hiệu ứng kính mờ (nặng) bằng nền trắng sạch (nhẹ) */
+        .lite-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); /* Shadow rất nhẹ */
         }
+
+        /* Nút bấm phẳng, phản hồi nhanh */
         .numpad-btn {
-            background: white; border-radius: 20px; font-weight: 900; font-size: 2rem; color: #1e3932;
-            box-shadow: 0 4px 0 #e5e7eb; transition: all 0.1s; display: flex; align-items: center; justify-content: center;
+            background: #ffffff; 
+            border-radius: 16px; 
+            font-weight: 900; 
+            font-size: 1.8rem; 
+            color: #1e3932;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 0 #cbd5e1; /* Giả lập độ nổi bằng border-bottom nhẹ */
+            transition: transform 0.1s; 
+            display: flex; align-items: center; justify-content: center;
         }
-        .numpad-btn:active { transform: translateY(4px); box-shadow: none; background: #f3f4f6; }
-        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .numpad-btn:active { 
+            transform: translateY(2px); 
+            box-shadow: none; 
+            background: #f1f5f9; 
+        }
+
+        /* Animation đơn giản: Chỉ dịch chuyển vị trí (GPU friendly) */
+        .slide-up { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
-<body class="flex flex-col h-screen w-screen relative overflow-hidden">
+<body class="flex flex-col h-screen w-screen relative overflow-hidden bg-[#F2F4F7]">
 
-    <header class="flex justify-between items-center p-6 z-20 shrink-0">
-        <div class="flex items-center gap-4">
-            <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-md border-2 border-[#006241]">
-                <span class="text-3xl">☕</span>
+    <header class="flex justify-between items-center px-6 py-4 z-20 shrink-0 bg-white border-b border-gray-100">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-[#006241] text-2xl">
+                ☕
             </div>
             <div>
                 <h1 class="text-xl font-black text-[#006241] uppercase tracking-tighter leading-none">The Cafe 33</h1>
@@ -40,65 +64,64 @@
             </div>
         </div>
 
-        <div id="header-user-info" class="hidden flex items-center gap-3 bg-white px-2 pr-5 py-2 rounded-full shadow-sm border border-green-100">
-            <div class="w-10 h-10 bg-[#E6F4F1] rounded-full flex items-center justify-center text-[#006241]">
-                <span class="material-symbols-outlined">person</span>
-            </div>
+        <div id="header-user-info" class="hidden flex items-center gap-3 bg-[#E6F4F1] px-4 py-2 rounded-full border border-[#006241]/20">
+            <span class="material-symbols-outlined text-[#006241]">person</span>
             <div class="text-right">
-                <p id="cust-name" class="text-sm font-black text-gray-800 leading-none">Khách lẻ</p>
-                <p class="text-[10px] font-bold text-[#006241] mt-0.5"><span id="cust-points">0</span> điểm</p>
+                <p id="cust-name" class="text-sm font-black text-[#006241] leading-none">Khách lẻ</p>
+                <p class="text-[10px] font-bold text-gray-500 mt-0.5"><span id="cust-points">0</span> điểm</p>
             </div>
         </div>
     </header>
 
-    <main class="flex-1 relative p-6 pt-0 overflow-hidden flex flex-col">
+    <main class="flex-1 relative p-4 overflow-hidden flex flex-col">
         
-        <div id="view-cart" class="glass-panel w-full h-full rounded-[40px] flex flex-col overflow-hidden relative transition-all duration-500">
-            <div id="cart-list" class="flex-1 overflow-y-auto p-8 space-y-4">
-                <div class="flex flex-col items-center justify-center h-full text-gray-300 gap-4">
-                    <span class="material-symbols-outlined text-8xl opacity-20">shopping_cart</span>
-                    <p class="text-xl font-bold uppercase opacity-50">Chưa có món nào</p>
+        <div id="view-cart" class="lite-card w-full h-full flex flex-col overflow-hidden relative">
+            
+            <div id="cart-list" class="flex-1 overflow-y-auto p-6 space-y-3">
+                <div class="flex flex-col items-center justify-center h-full text-gray-300 gap-3">
+                    <span class="material-symbols-outlined text-7xl opacity-20">shopping_cart</span>
+                    <p class="text-lg font-bold uppercase opacity-50">Mời quý khách gọi món</p>
                 </div>
             </div>
 
-            <div class="bg-white/80 backdrop-blur-md p-6 border-t border-white flex justify-between items-center gap-6">
+            <div class="bg-gray-50 p-5 border-t border-gray-100 flex justify-between items-center gap-4">
                 
-                <button onclick="openKeypad()" class="flex items-center gap-3 bg-white border-2 border-gray-100 px-6 py-4 rounded-[24px] shadow-sm active:scale-95 transition-all group hover:border-[#006241]">
-                    <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center group-hover:bg-[#E6F4F1] transition-colors">
-                        <span class="material-symbols-outlined text-gray-500 group-hover:text-[#006241]">dialpad</span>
+                <button onclick="openKeypad()" class="flex items-center gap-3 bg-white border border-gray-200 px-5 py-3 rounded-2xl shadow-sm active:scale-95 transition-transform">
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-gray-600">dialpad</span>
                     </div>
                     <div class="text-left">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Thành viên</p>
-                        <p class="text-lg font-black text-gray-800 group-hover:text-[#006241]">Nhập SĐT</p>
+                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Thành viên</p>
+                        <p class="text-base font-black text-gray-800">Nhập SĐT</p>
                     </div>
                 </button>
 
                 <div class="text-right">
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-1">Tổng thanh toán</p>
-                    <p class="text-6xl font-black text-[#006241] tracking-tighter leading-none" id="total-price">0</p>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-1">Tổng thanh toán</p>
+                    <p class="text-5xl font-black text-[#006241] tracking-tight leading-none" id="total-price">0</p>
                 </div>
             </div>
         </div>
 
         <div id="view-keypad" class="hidden absolute inset-0 z-50 flex flex-col justify-end">
-            <div onclick="closeKeypad()" class="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"></div>
+            <div onclick="closeKeypad()" class="absolute inset-0 bg-black/60 transition-opacity fade-in"></div>
             
-            <div class="bg-[#F2F4F7] h-[85%] w-full rounded-t-[40px] shadow-2xl p-6 flex flex-col relative z-10 slide-up border-t border-white/50">
+            <div class="bg-[#F2F4F7] h-[80%] w-full rounded-t-[32px] shadow-2xl p-5 flex flex-col relative z-10 slide-up">
                 
-                <div class="flex justify-between items-center mb-6 px-2">
+                <div class="flex justify-between items-center mb-4 px-2">
                     <div>
-                        <h2 class="text-2xl font-black text-[#006241]">Nhập số điện thoại</h2>
-                        <p class="text-sm font-bold text-gray-400">Tích điểm & Nhận ưu đãi</p>
+                        <h2 class="text-xl font-black text-[#006241] uppercase">Nhập số điện thoại</h2>
+                        <p class="text-xs font-bold text-gray-400">Tích điểm & Nhận ưu đãi</p>
                     </div>
-                    <button onclick="closeKeypad()" class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm font-bold">✕</button>
+                    <button onclick="closeKeypad()" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-400 font-bold border border-gray-200">✕</button>
                 </div>
 
-                <div class="bg-white p-6 rounded-[24px] mb-6 shadow-inner border border-gray-200 flex items-center justify-center relative">
-                    <span id="input-display" class="text-5xl font-black text-gray-800 tracking-widest min-h-[60px]"></span>
-                    <span class="animate-pulse w-1 h-10 bg-[#006241] ml-1"></span>
+                <div class="bg-white p-4 rounded-2xl mb-4 border border-gray-200 flex items-center justify-center relative shadow-inner">
+                    <span id="input-display" class="text-4xl font-black text-gray-800 tracking-widest min-h-[48px]"></span>
+                    <span class="animate-pulse w-1 h-8 bg-[#006241] ml-1"></span>
                 </div>
 
-                <div class="flex-1 grid grid-cols-3 gap-3">
+                <div class="flex-1 grid grid-cols-3 gap-3 pb-2">
                     <button onclick="pressNum('1')" class="numpad-btn">1</button>
                     <button onclick="pressNum('2')" class="numpad-btn">2</button>
                     <button onclick="pressNum('3')" class="numpad-btn">3</button>
@@ -108,23 +131,23 @@
                     <button onclick="pressNum('7')" class="numpad-btn">7</button>
                     <button onclick="pressNum('8')" class="numpad-btn">8</button>
                     <button onclick="pressNum('9')" class="numpad-btn">9</button>
-                    <button onclick="pressClear()" class="numpad-btn text-red-500 text-xl">XÓA</button>
+                    <button onclick="pressClear()" class="numpad-btn text-red-500 text-lg">XÓA</button>
                     <button onclick="pressNum('0')" class="numpad-btn">0</button>
-                    <button onclick="submitPhone()" class="numpad-btn bg-[#006241] text-white text-xl shadow-[#064e3b]">OK</button>
+                    <button onclick="submitPhone()" class="numpad-btn bg-[#006241] text-white text-lg shadow-none border-none active:bg-[#004f32]">GỬI</button>
                 </div>
             </div>
         </div>
 
-        <div id="view-success" class="hidden absolute inset-0 z-50 bg-[#006241] flex flex-col items-center justify-center text-white animate-pop">
-            <span class="material-symbols-outlined text-9xl mb-4 animate-bounce">check_circle</span>
-            <h2 class="text-5xl font-black">Thành Công!</h2>
-            <p class="text-2xl font-bold opacity-80 mt-2">Cảm ơn quý khách</p>
+        <div id="view-success" class="hidden absolute inset-0 z-50 bg-[#006241] flex flex-col items-center justify-center text-white fade-in">
+            <span class="material-symbols-outlined text-8xl mb-4">check_circle</span>
+            <h2 class="text-4xl font-black">Thành Công!</h2>
+            <p class="text-xl font-bold opacity-80 mt-2">Cảm ơn quý khách</p>
         </div>
 
     </main>
 
     <script>
-        // 1. CẤU HÌNH FIREBASE (Copy từ POS)
+        // 1. CẤU HÌNH FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
             authDomain: "the-cafe-33.firebaseapp.com",
@@ -140,27 +163,24 @@
 
         // 2. AUTO LOGIN
         auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty").then(() => {
-            console.log("Connected");
+            console.log("Connected Lite");
             listenToPOS();
-        });
+        }).catch(e => console.error(e));
 
-        // 3. LISTEN FROM POS (HIỂN THỊ)
-       // 3. LISTEN FROM POS (LOGIC ĐÃ SỬA: TỰ RESET SAU KHI XONG)
+        // 3. LISTEN FROM POS (LOGIC ƯU TIÊN)
         function listenToPOS() {
             db.ref('session_display').on('value', (snap) => {
                 const data = snap.val();
                 if(!data) return resetScreen();
 
-                // >>> ƯU TIÊN 1: LỆNH MỞ BÀN PHÍM (Đặt lên đầu để không bị logic khác chặn) <<<
+                // >>> ƯU TIÊN 1: LỆNH MỞ BÀN PHÍM TỪ POS <<<
                 if (data.state === 'input_phone') {
-                    // Ẩn hết các view khác
                     document.getElementById('view-success').classList.add('hidden');
-                    // Mở bàn phím
                     openKeypad(); 
-                    return; // Dừng lại, không chạy logic bên dưới
+                    return; 
                 }
 
-                // 2. THANH TOÁN THÀNH CÔNG
+                // CÁC TRẠNG THÁI KHÁC
                 if (data.state === 'success') {
                     document.getElementById('view-success').classList.remove('hidden');
                     setTimeout(() => {
@@ -168,16 +188,14 @@
                         resetScreen();
                     }, 5000);
                 } 
-                // 3. TRẠNG THÁI CHỜ
                 else if (data.state === 'idle') {
                     document.getElementById('view-success').classList.add('hidden');
                     resetScreen();
                 }
-                // 4. HIỂN THỊ GIỎ HÀNG / TÊN KHÁCH
                 else {
                     document.getElementById('view-success').classList.add('hidden');
                     
-                    // Nếu POS gửi tên khách -> Tắt bàn phím (nghĩa là đã nhận diện xong)
+                    // Logic hiển thị tên khách
                     if (data.customerName && data.customerName !== "Khách mới" && data.customerName !== "Khách lẻ") {
                          document.getElementById('header-user-info').classList.remove('hidden');
                          document.getElementById('cust-name').innerText = data.customerName;
@@ -192,60 +210,53 @@
             });
         }
 
-        // --- HÀM LAU BẢNG (RESET TOÀN BỘ) ---
-        function resetScreen() {
-            // 1. Ẩn thông tin khách trên góc
-            document.getElementById('header-user-info').classList.add('hidden');
-            document.getElementById('cust-name').innerText = "Khách lẻ";
-            document.getElementById('cust-points').innerText = "0";
-
-            // 2. Xóa giỏ hàng về rỗng
-            document.getElementById('cart-list').innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-gray-300 gap-4 mt-20">
-                    <span class="material-symbols-outlined text-8xl opacity-20">shopping_cart</span>
-                    <p class="text-xl font-bold uppercase opacity-50">Xin chào quý khách</p>
-                </div>`;
-            
-            // 3. Về 0 tiền
-            document.getElementById('total-price').innerText = "0";
-            
-            // 4. Đóng bàn phím nếu đang mở
-            closeKeypad();
-        }
-        // 4. LOGIC GIAO DIỆN CART
+        // --- HÀM UI ---
         function updateCartUI(data) {
             document.getElementById('total-price').innerText = Number(data.total || 0).toLocaleString();
-            
             const listEl = document.getElementById('cart-list');
             listEl.innerHTML = '';
 
             if (data.cart && data.cart.length > 0) {
                 data.cart.forEach(item => {
-                    let sizeBadge = item.size ? `<span class="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded ml-2 uppercase">${item.size}</span>` : '';
+                    let sizeBadge = item.size ? `<span class="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-0.5 rounded ml-2 uppercase border border-gray-200">${item.size}</span>` : '';
+                    
                     listEl.innerHTML += `
-                    <div class="flex justify-between items-center bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 animate-slide-up mb-2">
-                        <div class="flex items-center gap-4">
-                            <div class="bg-[#E6F4F1] w-12 h-12 flex items-center justify-center rounded-2xl font-black text-[#006241] text-lg border border-[#006241]/10">${item.qty}</div>
+                    <div class="flex justify-between items-center bg-white p-3 rounded-2xl border border-gray-100 mb-2 shadow-sm fade-in">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-[#F0FDF4] w-10 h-10 flex items-center justify-center rounded-xl font-black text-[#006241] border border-[#006241]/10">${item.qty}</div>
                             <div>
                                 <div class="flex items-center">
-                                    <p class="font-black text-lg text-gray-800">${item.name}</p>
+                                    <p class="font-bold text-gray-800 leading-tight">${item.name}</p>
                                     ${sizeBadge}
                                 </div>
                             </div>
                         </div>
-                        <p class="font-black text-xl text-[#006241]">${(item.price * item.qty).toLocaleString()}</p>
+                        <p class="font-black text-lg text-[#006241]">${(item.price * item.qty).toLocaleString()}</p>
                     </div>`;
                 });
             } else {
                 listEl.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-gray-300 gap-4 mt-20">
-                    <span class="material-symbols-outlined text-8xl opacity-20">shopping_cart</span>
-                    <p class="text-xl font-bold uppercase opacity-50">Chưa có món nào</p>
+                <div class="flex flex-col items-center justify-center h-64 text-gray-300 gap-2">
+                    <span class="material-symbols-outlined text-6xl opacity-30">shopping_bag</span>
+                    <p class="text-sm font-bold uppercase opacity-50">Chưa có món</p>
                 </div>`;
             }
         }
 
-        // 5. LOGIC BÀN PHÍM & GỬI SĐT
+        function resetScreen() {
+            document.getElementById('header-user-info').classList.add('hidden');
+            document.getElementById('cust-name').innerText = "Khách lẻ";
+            document.getElementById('cust-points').innerText = "0";
+            document.getElementById('total-price').innerText = "0";
+            document.getElementById('cart-list').innerHTML = `
+                <div class="flex flex-col items-center justify-center h-64 text-gray-300 gap-2">
+                    <span class="material-symbols-outlined text-6xl opacity-30">storefront</span>
+                    <p class="text-sm font-bold uppercase opacity-50">Xin chào quý khách</p>
+                </div>`;
+            closeKeypad();
+        }
+
+        // --- KEYPAD LOGIC ---
         let currentInput = "";
 
         function openKeypad() {
@@ -265,35 +276,28 @@
             updateDisplay();
         }
         function updateDisplay() {
-            // Format số điện thoại (090 123 4567)
             let formatted = currentInput.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
             document.getElementById('input-display').innerText = formatted || "";
         }
 
-       function submitPhone() {
-            if (currentInput.length < 3) return; // Validate sơ sơ
+        function submitPhone() {
+            if (currentInput.length < 3) return;
             
-            // Đổi nút thành đang chờ
+            // Hiệu ứng loading đơn giản
             const btn = document.querySelector('button[onclick="submitPhone()"]');
             const originalText = btn.innerText;
-            btn.innerText = "⏳";
-            
-            // Hiệu ứng màn hình
-            document.getElementById('input-display').innerHTML = '<span class="text-green-600 text-2xl font-bold animate-pulse">Đang kiểm tra...</span>';
+            btn.innerText = "...";
+            document.getElementById('input-display').innerHTML = '<span class="text-green-600 font-bold">Đang gửi...</span>';
 
-            // GỬI SĐT VỀ POS QUA FIREBASE
             db.ref('client_input').set({
                 type: 'phone_update',
                 value: currentInput,
                 timestamp: Date.now()
             }).then(() => {
-                // Sau khi gửi xong, giữ nguyên trạng thái chờ 
-                // POS sẽ phản hồi lại và hàm listenToPOS sẽ tự đóng bàn phím
-                setTimeout(() => {
-                     btn.innerText = originalText; // Reset nút phòng khi lỗi
-                }, 3000);
+                // Giữ trạng thái chờ POS phản hồi
+                setTimeout(() => { btn.innerText = originalText; }, 2000);
             }).catch(err => {
-                alert("Lỗi kết nối: " + err.message);
+                alert("Lỗi: " + err.message);
                 btn.innerText = "Lỗi";
             });
         }
