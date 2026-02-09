@@ -5053,6 +5053,8 @@ function listenForPayment(code, amount) {
     // Hàm xử lý khi xác nhận thành công
 function handlePaymentSuccess(receivedAmount) {
     // Ngắt kết nối để không chạy lại lần 2
+    // >>> BÁO MÀN HÌNH KHÁCH ĂN MỪNG <<<
+    if (typeof syncToCustomerDisplay === 'function') syncToCustomerDisplay('success');
     db.ref('payment_events').off();
     paymentListener = null;
 
@@ -5115,7 +5117,12 @@ function showPaymentQR() {
             // Hiển thị mã QR từ PayOS trả về
             // Dùng api.qrserver để đảm bảo ảnh nét
             qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=" + encodeURIComponent(result.qrCode);
-            
+            if (typeof syncToCustomerDisplay === 'function') {
+                syncToCustomerDisplay('qr_payment', {
+                    qrUrl: qrUrl,
+                    amount: currentTotal
+                });
+            }
             currentOrderCode = result.orderCodeFull; // Lưu mã đơn: CF123456...
             qrText.innerText = currentOrderCode; 
             statusEl.innerHTML = '<b class="text-amber-500 animate-pulse">Đang chờ thanh toán...</b>';
@@ -7822,6 +7829,15 @@ function listenToClientInput() {
 // Gọi hàm này khi khởi động POS
 listenToClientInput();
     // 1. Hàm bật popup chọn ngày (Thay thế alert tính năng đang phát triển)
+    // --- HÀM ĐÓNG QR ĐỒNG BỘ (MỚI) ---
+function closeQRModal() {
+    document.getElementById('qr-modal').classList.add('hidden');
+    // Báo màn hình khách quay về trạng thái bình thường
+    if (typeof syncToCustomerDisplay === 'function') {
+        syncToCustomerDisplay('cart'); 
+    }
+    setMethod('Tiền mặt'); // Reset về tiền mặt cho đơn sau
+}
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
 </script>
@@ -7877,7 +7893,7 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 <div id="qr-modal" class="fixed inset-0 bg-black/80 z-[100000] hidden flex items-center justify-center p-6 backdrop-blur-md">
     <div class="bg-white rounded-[30px] p-8 max-w-sm w-full text-center shadow-2xl relative">
-        <button onclick="document.getElementById('qr-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 text-2xl">✕</button>
+        <button onclick="closeQRModal()" class="absolute top-4 right-4 text-gray-400 text-2xl">✕</button>
         <h3 class="text-[#006241] font-black text-xl uppercase mb-6">Quét mã thanh toán</h3>
         <img id="vietqr-img" src="" class="w-64 h-64 mx-auto mb-4 rounded-xl border border-gray-100">
         <div class="bg-yellow-50 p-3 rounded-xl mb-4">
@@ -8332,6 +8348,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
