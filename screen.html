@@ -57,6 +57,7 @@
     outline: none; transition: border-color 0.2s;
 }
 .native-input:focus { border-color: #006241; background: #ffffff; }
+        
     </style>
 </head>
 <body class="flex flex-col h-screen w-screen relative overflow-hidden bg-[#F2F4F7]">
@@ -121,7 +122,24 @@
         </div>
     </div>
 </div>
-      
+      <div id="view-qr" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center bg-white fade-in">
+            <div class="w-full max-w-md text-center p-6">
+                <h2 class="text-3xl font-black text-[#006241] mb-2 uppercase tracking-tight">Thanh Toán QR</h2>
+                <p class="text-gray-500 font-bold mb-8">Vui lòng mở App Ngân hàng để quét</p>
+                
+                <div class="bg-white p-4 rounded-[32px] shadow-2xl border-2 border-gray-100 inline-block mb-8 relative">
+                    <img id="qr-image" src="" class="w-72 h-72 rounded-xl object-contain bg-gray-50">
+                    <div class="absolute -bottom-4 -right-4 w-12 h-12 bg-[#006241] rounded-full flex items-center justify-center text-white border-4 border-white shadow-lg">
+                        <span class="material-symbols-outlined">qr_code_scanner</span>
+                    </div>
+                </div>
+                
+                <div class="bg-[#F0FDF4] p-5 rounded-3xl border border-[#DCFCE7] max-w-xs mx-auto">
+                    <p class="text-xs font-bold text-[#166534] uppercase tracking-widest mb-1">Số tiền cần thanh toán</p>
+                    <p class="text-5xl font-black text-[#15803d] tracking-tight" id="qr-amount">0</p>
+                </div>
+            </div>
+        </div>
 
         <div id="view-success" class="hidden absolute inset-0 z-50 bg-[#006241] flex flex-col items-center justify-center text-white fade-in">
             <span class="material-symbols-outlined text-9xl mb-6">check_circle</span>
@@ -164,7 +182,24 @@
             openNativeInput(); // <--- Đổi tên hàm gọi ở đây
             return; 
         }
+// ... đoạn check input_phone ở trên ...
 
+                // >>> THÊM ĐOẠN NÀY: NHẬN LỆNH HIỆN QR <<<
+                else if (data.state === 'qr_payment') {
+                    // Ẩn các view khác
+                    document.getElementById('view-native-input').classList.add('hidden');
+                    document.getElementById('view-success').classList.add('hidden');
+                    
+                    // Hiện màn hình QR
+                    document.getElementById('view-qr').classList.remove('hidden');
+                    
+                    // Cập nhật ảnh và tiền
+                    document.getElementById('qr-image').src = data.qrUrl;
+                    document.getElementById('qr-amount').innerText = Number(data.amount).toLocaleString() + 'đ';
+                    return;
+                }
+                
+                // ... đoạn check success ở dưới ...
                 // CÁC TRẠNG THÁI KHÁC
                 if (data.state === 'success') {
                     document.getElementById('view-success').classList.remove('hidden');
@@ -239,6 +274,7 @@
                     <p class="text-sm font-bold uppercase opacity-50">33 xin chào</p>
                 </div>`;
             closeNativeInput();
+            document.getElementById('view-qr').classList.add('hidden');
         }
 
         // --- KEYPAD LOGIC ---
