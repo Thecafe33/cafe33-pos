@@ -78,7 +78,20 @@
     </header>
 
    <main class="flex-1 relative p-6 overflow-hidden flex flex-col" style="padding-bottom: 50px;">
+       150px;">
         
+        <div id="screensaver" class="hidden absolute inset-0 z-40 bg-white flex flex-col items-center justify-center overflow-hidden">
+            <div id="media-container" class="w-full h-full relative">
+                </div>
+            
+            <div class="absolute bottom-0 w-full bg-gradient-to-t from-black/60 to-transparent p-6 pt-20">
+                <p class="text-white text-xl font-bold uppercase tracking-widest text-center animate-pulse">
+                    Mời quý khách gọi món tại quầy
+                </p>
+            </div>
+        </div>
+
+    
         <div id="view-cart" class="lite-card w-full h-full flex flex-col overflow-hidden relative">
             
             <div id="cart-list" class="flex-1 overflow-y-auto p-6 space-y-3">
@@ -169,7 +182,90 @@
             console.log("Connected Lite");
             listenToPOS();
         }).catch(e => console.error(e));
+        
+// --- CẤU HÌNH PLAYLIST QUẢNG CÁO ---
+        const promoPlaylist = [
+            // Ảnh 1: Hiện 5 giây
+            { type: 'image', src: 'gs://the-cafe-33.firebasestorage.app/1768316658706.jpg', duration: 5000 },
+            { type: 'image', src: 'gs://the-cafe-33.firebasestorage.app/1770299826548.jpg', duration: 5000 },
+            
+            // Video: Tự động hết video thì chuyển (không cần set duration)
+            { type: 'video', src: 'gs://the-cafe-33.firebasestorage.app/IMG_20260113_145355.png' },
+            
+            // Ảnh 2: Hiện 5 giây
+            { type: 'image', src: 'gs://the-cafe-33.firebasestorage.app/IMG_20260113_145355.png', duration: 5000 },
+             
+            // Ảnh 3: Hiện 5 giây
+            { type: 'image', src: 'gs://the-cafe-33.firebasestorage.app/Đỏ Cam Xanh Lá Rực Rỡ Hình Ảnh Đồ Ăn Thức Uống Bữa Sáng Poster_20260122_230631_0000.png', duration: 5000 }
+        ];
 
+        let currentSlideIndex = 0;
+        let slideTimeout = null;
+        let isSaverRunning = false;
+
+        // --- HÀM CHẠY QUẢNG CÁO ---
+        function startScreensaver() {
+            if (isSaverRunning) return; // Đang chạy thì thôi
+            isSaverRunning = true;
+            
+            document.getElementById('screensaver').classList.remove('hidden');
+            document.getElementById('view-cart').classList.add('opacity-0'); // Ẩn giỏ hàng đi
+            
+            showSlide();
+        }
+
+        function stopScreensaver() {
+            if (!isSaverRunning) return;
+            isSaverRunning = false;
+            
+            clearTimeout(slideTimeout);
+            document.getElementById('screensaver').classList.add('hidden');
+            document.getElementById('view-cart').classList.remove('opacity-0'); // Hiện lại giỏ hàng
+            document.getElementById('media-container').innerHTML = ""; // Dọn dẹp
+        }
+
+        function showSlide() {
+            if (!isSaverRunning) return;
+
+            const container = document.getElementById('media-container');
+            const item = promoPlaylist[currentSlideIndex];
+            
+            container.innerHTML = ""; // Xóa cái cũ
+
+            if (item.type === 'image') {
+                // Render Ảnh
+                const img = document.createElement('img');
+                img.src = item.src;
+                img.className = "w-full h-full object-cover animate-fade-in"; // object-cover để full màn hình đẹp
+                container.appendChild(img);
+
+                // Hẹn giờ chuyển tiếp
+                slideTimeout = setTimeout(nextSlide, item.duration);
+            } 
+            else if (item.type === 'video') {
+                // Render Video
+                const vid = document.createElement('video');
+                vid.src = item.src;
+                vid.className = "w-full h-full object-cover animate-fade-in";
+                vid.muted = true;    // Phải tắt tiếng mới tự chạy được (luật trình duyệt)
+                vid.autoplay = true;
+                vid.playsInline = true;
+                
+                // Khi video hết -> chuyển tiếp
+                vid.onended = nextSlide;
+                
+                // Fallback: Nếu video lỗi không chạy được thì 3s sau chuyển luôn
+                vid.onerror = () => setTimeout(nextSlide, 3000);
+                
+                container.appendChild(vid);
+            }
+        }
+
+        function nextSlide() {
+            currentSlideIndex++;
+            if (currentSlideIndex >= promoPlaylist.length) currentSlideIndex = 0; // Quay vòng lại đầu
+            showSlide();
+        }
         // 3. LISTEN FROM POS (LOGIC ƯU TIÊN)
         function listenToPOS() {
             db.ref('session_display').on('value', (snap) => {
@@ -180,6 +276,7 @@
                if (data.state === 'input_phone') {
             document.getElementById('view-success').classList.add('hidden');
             openNativeInput(); // <--- Đổi tên hàm gọi ở đây
+                   stopScreensaver();
             return; 
         }
 // ... đoạn check input_phone ở trên ...
@@ -196,6 +293,7 @@
                     // Cập nhật ảnh và tiền
                     document.getElementById('qr-image').src = data.qrUrl;
                     document.getElementById('qr-amount').innerText = Number(data.amount).toLocaleString() + 'đ';
+                    stopScreensaver();
                     return;
                 }
                 
@@ -207,6 +305,7 @@
                         document.getElementById('view-success').classList.add('hidden');
                         resetScreen();
                     }, 5000);
+                    stopScreensaver();
                 } 
                 else if (data.state === 'idle') {
                     document.getElementById('view-success').classList.add('hidden');
