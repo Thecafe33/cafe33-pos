@@ -5025,48 +5025,50 @@ function deletePenalty(phone, bookingId) {
 // --- HÀM LẮNG NGHE TIỀN VỀ TỪ PAYOS (CHÈN MỚI) ---
 // --- HÀM LẮNG NGHE TIỀN VỀ THEO MÃ ĐƠN HÀNG (VIẾT LẠI) ---
 // --- HÀM LẮNG NGHE TIỀN VỀ (BẢN FIX: SOI KỸ DỮ LIỆU) ---
+// --- HÀM LẮNG NGHE TIỀN VỀ (BẢN FIX: SẮP XẾP THEO THỜI GIAN) ---
 function listenForPayment(code, amount) {
     if (paymentListener) {
-        db.ref('payment_events').off(); // Tắt cái cũ đi cho đỡ nhiễu
+        db.ref('payment_events').off(); 
     }
 
     console.log("🔍 Đang rình tiền về cho đơn:", code, "- Số tiền:", amount);
 
-    // Lắng nghe 5 giao dịch mới nhất (tăng lên 5 cho chắc)
-    paymentListener = db.ref('payment_events').limitToLast(5).on('value', (snap) => {
-        const events = snap.val();
-        if (!events) return;
+    // QUAN TRỌNG: Thêm .orderByChild('createdAt')
+    // Để đảm bảo lấy đúng 10 giao dịch MỚI NHẤT theo thời gian, không phải theo bảng chữ cái
+    paymentListener = db.ref('payment_events')
+        .orderByChild('createdAt') // <--- DÒNG NÀY QUYẾT ĐỊNH TẤT CẢ
+        .limitToLast(10)           // Lấy rộng ra 10 đơn cho chắc
+        .on('value', (snap) => {
+            const events = snap.val();
+            if (!events) return;
 
-        // Duyệt qua từng giao dịch
-        Object.keys(events).forEach(key => {
-            const data = events[key];
-            
-            // --- LOGIC SO SÁNH CHẶT CHẼ ---
-            // 1. Ép kiểu về String/Number để so sánh chính xác
-            const eventAmount = Number(data.amount || 0);
-            const targetAmount = Number(amount || 0);
-            
-            // 2. Lấy mã đơn từ data (PayOS thường trả về orderCode trong nội dung)
-            const dataCode = String(data.orderCode || ""); 
-            const targetCode = String(code || ""); 
-
-            // 3. So khớp:
-            // - Khớp Mã (Key trùng HOẶC Data bên trong trùng)
-            // - Khớp Số tiền (Lớn hơn hoặc bằng là duyệt)
-            // - Trạng thái phải là success
-            
-            const isCodeMatch = (key === targetCode) || (dataCode == targetCode) || (data.description && data.description.includes(targetCode));
-            const isAmountMatch = eventAmount >= targetAmount;
-            const isSuccess = (data.status === "success" || data.desc === "success");
-
-            if (isCodeMatch && isAmountMatch && isSuccess) {
-                console.log("🎯 BẮT ĐƯỢC TIỀN RỒI:", data);
+            // Duyệt qua danh sách (Lưu ý: events là object, thứ tự key có thể lộn xộn, nhưng ta chỉ cần tìm thấy là được)
+            Object.keys(events).forEach(key => {
+                const data = events[key];
                 
-                // Chốt đơn ngay
-                handlePaymentSuccess(data.amount);
-            }
+                // 1. Ép kiểu dữ liệu
+                const eventAmount = Number(data.amount || 0);
+                const targetAmount = Number(amount || 0);
+                
+                const dataCode = String(data.orderCode || ""); 
+                const targetCode = String(code || ""); 
+
+                // 2. So khớp
+                // Kiểm tra Key, hoặc OrderCode bên trong, hoặc nội dung CK chứa mã
+                const isCodeMatch = (key === targetCode) || (dataCode == targetCode) || (data.description && data.description.includes(targetCode));
+                
+                // Kiểm tra tiền (Lớn hơn hoặc bằng)
+                const isAmountMatch = eventAmount >= targetAmount;
+                
+                // Kiểm tra trạng thái
+                const isSuccess = (data.status === "success" || data.desc === "success");
+
+                if (isCodeMatch && isAmountMatch && isSuccess) {
+                    console.log("🎯 BẮT ĐƯỢC TIỀN RỒI:", data);
+                    handlePaymentSuccess(data.amount);
+                }
+            });
         });
-    });
 }
     // Hàm xử lý khi xác nhận thành công
 function handlePaymentSuccess(receivedAmount) {
@@ -8367,6 +8369,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
