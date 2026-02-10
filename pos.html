@@ -1644,6 +1644,31 @@ input, button, select, textarea { font-size: 1rem; }
         </div>
     </div>
 </div>
+    <div id="modal-rules-check" class="hidden fixed inset-0 z-[100000] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
+    <div class="bg-white w-[90%] max-w-[380px] rounded-[32px] p-8 shadow-2xl text-center border border-white/60">
+        <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">📜</div>
+        <h3 class="text-xl font-black text-[#1e3932] uppercase mb-2">Khách Mới Tại Quán</h3>
+        <p class="text-sm font-bold text-gray-500 mb-6">Khách này chưa ký cam kết nội quy Bed. Yêu cầu khách đọc và đồng ý?</p>
+        
+        <div class="flex flex-col gap-3">
+            <button onclick="triggerRulesToScreen()" class="w-full py-4 bg-[#006241] text-white rounded-[20px] font-black uppercase text-sm shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                <span>📲</span> Đẩy nội quy sang màn hình
+            </button>
+            <button onclick="skipRulesAndPay()" class="w-full py-4 bg-gray-100 text-gray-500 rounded-[20px] font-bold uppercase text-sm hover:bg-gray-200 transition-all">
+                Không cần (Bỏ qua)
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-waiting-rules" class="hidden fixed inset-0 z-[100001] flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
+    <div class="text-center">
+        <div class="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+        <h3 class="text-2xl font-black text-white uppercase tracking-widest mb-2">Đang chờ khách...</h3>
+        <p class="text-white/80 font-bold text-lg">Vui lòng nhắc khách bấm "Đồng Ý"<br>trên màn hình phụ</p>
+        <button onclick="cancelRulesWait()" class="mt-8 text-white/50 font-bold underline text-sm hover:text-white">Hủy bỏ</button>
+    </div>
+</div>
 <script>    
 function normalizePhone(p){
     return String(p || "").replace(/[^0-9]/g, "");
@@ -4441,7 +4466,9 @@ function submitNewBooking() {
         compPhone: compPhone,
         status: "chờ khách",
         bedId: "",
-        type: "walk-in"
+        type: "walk-in",
+        isWalkIn: true, // <--- THÊM DÒNG NÀY ĐỂ NHẬN DIỆN
+        rulesAgreed: false // Mặc định là chưa đồng ý
     }, (err) => {
         if(btn) { btn.innerHTML = "TẠO LỊCH & CHỜ XẾP"; btn.disabled = false; }
         
@@ -5449,6 +5476,14 @@ function saveOrderToFirebase(method) {
 }
 // --- HÀM NỐI VÀO NÚT THANH TOÁN TRÊN UI ---
 function completeOrder() {
+    // 1. Kiểm tra điều kiện chặn:
+    // - Có đơn Bed đang chờ (pendingBedOrder)
+    // - Là đơn tại quán (isWalkIn = true)
+    // - Chưa đồng ý nội quy (rulesAgreed != true)
+    if (pendingBedOrder && pendingBedOrder.isWalkIn && !pendingBedOrder.rulesAgreed) {
+        document.getElementById('modal-rules-check').classList.remove('hidden');
+        return; // DỪNG LẠI, KHÔNG LƯU ĐƠN
+    }
     // Tự động phát hiện phương thức thanh toán dựa trên UI
     let method = 'Tiền mặt';
     
@@ -7810,55 +7845,83 @@ function syncToCustomerDisplay(state, overrideData = {}) {
 // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (LOGIC THÔNG MINH) ---
 // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (ĐÃ FIX LỖI KHÔNG HIỆN TÊN) ---
 // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (BẢN UPDATE: PC & MOBILE) ---
+// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (BẢN FINAL: GỘP CẢ 2 LOGIC) ---
 function listenToClientInput() {
     db.ref('client_input').on('value', (snap) => {
         const data = snap.val();
         
-        // Kiểm tra dữ liệu (bỏ qua tin quá cũ > 5 giây để tránh bị spam khi vừa mở app)
-        if (!data || !data.value) return;
+        // 1. Kiểm tra cơ bản
+        if (!data) return;
+
+        // Chống spam: Bỏ qua tin nhắn cũ quá 5 giây
         if (Date.now() - data.timestamp > 5000) {
-             db.ref('client_input').set(null); // Xóa tin cũ rích
+             db.ref('client_input').set(null);
              return;
         }
 
+        // ============================================================
+        // 🛑 ƯU TIÊN 1: LOGIC NỘI QUY (MỚI)
+        // ============================================================
+        if (data.type === 'rules_agreed') {
+            console.log("✅ Khách đã đồng ý nội quy!");
+            
+            // A. Tắt popup chờ
+            document.getElementById('modal-waiting-rules').classList.add('hidden');
+            
+            // B. Cập nhật trạng thái đơn (đánh dấu đã đồng ý)
+            if(pendingBedOrder) pendingBedOrder.rulesAgreed = true;
+
+            // C. Tự động chạy tiếp quy trình thanh toán (để lưu đơn & chọn bed)
+            // Lấy phương thức thanh toán đang chọn hiện tại
+            let method = document.getElementById('btn-bank').classList.contains('sb-green') ? 'Chuyển khoản' : 'Tiền mặt';
+            saveOrderToFirebase(method);
+            
+            // D. Xóa tin nhắn & THOÁT HÀM NGAY (để không chạy nhầm logic SĐT bên dưới)
+            db.ref('client_input').set(null);
+            return; 
+        }
+
+        // ============================================================
+        // 📱 ƯU TIÊN 2: LOGIC NHẬP SĐT (CŨ)
+        // ============================================================
+        
+        // Nếu không có giá trị (value) thì bỏ qua, vì nhập SĐT bắt buộc phải có số
+        if (!data.value) return; 
+
         console.log("📞 Nhận SĐT từ khách:", data.value);
 
-        // 1. KIỂM TRA: Có đang mở Popup Đặt Bed không?
+        // Kiểm tra xem đang mở Popup Đặt Bed hay đang ở màn hình Thu ngân?
         const bookingModal = document.getElementById('modal-add-booking');
         const isBookingOpen = bookingModal && !bookingModal.classList.contains('hidden');
 
         if (isBookingOpen) {
-            // --- TRƯỜNG HỢP A: ĐANG ĐẶT BED ---
+            // -> ĐANG ĐẶT BED: Điền vào ô popup
             const input = document.getElementById('new_cust_phone');
             if (input) {
                 input.value = data.value;
                 if (typeof handleBookingInput === 'function') handleBookingInput();
                 
-                // Hiệu ứng nháy xanh
+                // Hiệu ứng nháy xanh báo nhận
                 input.classList.add('bg-green-100');
                 setTimeout(() => input.classList.remove('bg-green-100'), 500);
             }
         } else {
-            // --- TRƯỜNG HỢP B: ĐANG Ở MÀN HÌNH CHÍNH (ORDER/THANH TOÁN) ---
-            
-            // 1. Điền vào ô PC
+            // -> ĐANG THU NGÂN: Điền vào ô chính & ô mobile
             const pcInput = document.getElementById('kh-sdt');
             if (pcInput) pcInput.value = data.value;
 
-            // 2. Điền vào ô Mobile (QUAN TRỌNG: Để Tiên sinh thấy trên đt/mtb)
             const mobInput = document.getElementById('pay-sdt-mobile');
             if (mobInput) {
                 mobInput.value = data.value;
-                // Nếu đang ở màn hình thanh toán mobile -> Cập nhật tên khách ngay
                 if (typeof syncMobileInputs === 'function') syncMobileInputs();
             }
 
-            // 3. Kích hoạt tìm kiếm khách hàng & Nợ
+            // Kích hoạt tìm kiếm khách hàng & Quét nợ cũ
             if (typeof checkSdtLive === 'function') checkSdtLive(); 
             if (typeof scanAndAddDebt === 'function') scanAndAddDebt(data.value);
         }
 
-        // Xóa tin nhắn ngay lập tức để tránh xử lý lặp lại
+        // Xử lý xong thì xóa tin nhắn
         db.ref('client_input').set(null);
     });
 }
@@ -7898,6 +7961,33 @@ function syncBedWelcomeToScreen(bookingData) {
         endTime: timeEnd,
         orderType: 'bed'
     });
+}
+    // --- LOGIC NỘI QUY BED ---
+
+// 1. Bấm nút "Đẩy nội quy"
+function triggerRulesToScreen() {
+    document.getElementById('modal-rules-check').classList.add('hidden');
+    document.getElementById('modal-waiting-rules').classList.remove('hidden');
+
+    // Gửi lệnh sang màn hình khách
+    syncToCustomerDisplay('show_rules');
+}
+
+// 2. Bấm nút "Bỏ qua"
+function skipRulesAndPay() {
+    document.getElementById('modal-rules-check').classList.add('hidden');
+    // Đánh dấu giả là đã đồng ý để lần sau không hỏi nữa
+    if(pendingBedOrder) pendingBedOrder.rulesAgreed = true; 
+    
+    // Tiếp tục thanh toán
+    let method = document.getElementById('btn-bank').classList.contains('sb-green') ? 'Chuyển khoản' : 'Tiền mặt';
+    saveOrderToFirebase(method);
+}
+
+// 3. Hủy chờ (nếu khách lâu quá)
+function cancelRulesWait() {
+    document.getElementById('modal-waiting-rules').classList.add('hidden');
+    syncToCustomerDisplay('idle'); // Trả màn hình khách về bình thường
 }
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
@@ -8409,6 +8499,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
