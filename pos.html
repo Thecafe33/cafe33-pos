@@ -4146,7 +4146,28 @@ function handleMobileBedOrder(bookingId) {
     // 3. Tự động thêm món tiền giờ (Giữ nguyên)
     if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
 
-    // 4. Chuyển View
+    // >>> [CODE MỚI] GỬI TÍN HIỆU "CHÀO MỪNG BED" SANG MÀN HÌNH KHÁCH <<<
+    if (booking) {
+        // 1. Che số điện thoại (chỉ hiện 4 số cuối)
+        const rawPhone = booking.phone || "";
+        const maskedPhone = rawPhone.length > 4 
+            ? "******" + rawPhone.slice(-4) 
+            : "Khách lẻ";
+
+        // 2. Gửi lệnh sang Firebase
+        db.ref('session_display').set({
+            state: 'bed_welcome',       // Kích hoạt màn hình màu hồng bên khách
+            customerName: booking.name || "Quý Khách",
+            maskedPhone: maskedPhone,
+            startTime: booking.start || "--:--",
+            endTime: booking.end || "--:--",
+            bedId: booking.bedId,       // Để hiện số Bed nếu cần
+            orderType: 'bed'            // Đánh dấu là đơn Bed
+        });
+    }
+    // -------------------------------------------------------------
+
+    // 4. Chuyển View (Code cũ)
     switchView('menu'); 
     const sidebar = document.getElementById('sidebar-cart');
     if (sidebar) sidebar.classList.remove('hidden');
@@ -7265,6 +7286,20 @@ function handleMobileBedOrder(bookingId) {
     // Tự động thêm món tiền giờ (nếu có logic này)
     if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
 
+    // >>> CHÈN ĐOẠN GỬI TÍN HIỆU BED VÀO ĐÂY (GIỐNG HỆT Ở TRÊN) <<<
+    const maskedPhone = booking.phone && booking.phone.length > 4 
+        ? "******" + booking.phone.slice(-4) : "Khách lẻ";
+        
+    db.ref('session_display').set({
+        state: 'bed_welcome',
+        customerName: booking.name,
+        maskedPhone: maskedPhone,
+        startTime: booking.start,
+        endTime: booking.end,
+        orderType: 'bed'
+    });
+    // -----------------------------------------------------------
+
     switchView('menu');
 
     // Hiển thị Banner thông báo (Giữ nguyên)
@@ -7852,6 +7887,31 @@ function closeQRModal() {
     }
     setMethod('Tiền mặt'); // Reset về tiền mặt cho đơn sau
 }
+    // Hàm này gọi khi bấm nút "GỌI MÓN" (Check-in) từ Booking Modal
+function syncBedWelcomeToScreen(bookingData) {
+    // bookingData là object chứa thông tin lịch đặt (tên, sdt, giờ...)
+    
+    // 1. Che giấu số điện thoại (Chỉ hiện 4 số cuối)
+    // Ví dụ: 0909123456 -> ******3456
+    const rawPhone = bookingData.phone || "";
+    const maskedPhone = rawPhone.length > 4 
+        ? "******" + rawPhone.slice(-4) 
+        : rawPhone;
+
+    // 2. Format giờ (nếu cần)
+    const timeStart = bookingData.timeStart || "--:--"; // Ví dụ "14:00"
+    const timeEnd = bookingData.timeEnd || "--:--";     // Ví dụ "16:00"
+
+    // 3. Gửi sang Firebase
+    db.ref('session_display').set({
+        state: 'bed_welcome',  // Kích hoạt màn hình Bed
+        customerName: bookingData.name,
+        maskedPhone: maskedPhone,
+        startTime: timeStart,
+        endTime: timeEnd,
+        orderType: 'bed'
+    });
+}
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
 </script>
@@ -8362,6 +8422,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
