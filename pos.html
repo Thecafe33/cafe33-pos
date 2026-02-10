@@ -1342,14 +1342,18 @@ input, button, select, textarea { font-size: 1rem; }
         <button id="btn-clear-all" onclick="clearFullOrder()" class="bg-red-50 text-red-500 text-[9px] font-black px-3 py-1.5 rounded-xl uppercase">Xóa</button>
     </div>
 
-    <div id="cart-top-section" class="block md:block">
-       <div class="relative w-full">
-    <input type="tel" id="kh-sdt" oninput="checkSdtLive()" placeholder="SĐT khách..." 
-           class="w-full p-3 bg-gray-50 rounded-xl mb-1 outline-none border-2 border-gray-50 text-center font-bold text-base focus:border-[#006241]">
-    
-    <div id="suggest-pc" class="hidden absolute top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar mt-1"></div>
-</div>
-<p id="sdt-status" class="text-[8px] font-black uppercase mb-3 text-center"></p>
+  <div id="cart-top-section" class="block md:block">
+        <div class="relative w-full group">
+            <input type="tel" id="kh-sdt" oninput="checkSdtLive()" placeholder="SĐT khách..." 
+                   class="w-full p-3 pr-10 bg-gray-50 rounded-xl mb-1 outline-none border-2 border-gray-50 text-center font-bold text-base focus:border-[#006241] transition-all">
+            
+            <button onclick="resetPhoneInput()" class="absolute right-2 top-1/2 -translate-y-[60%] w-8 h-8 flex items-center justify-center text-gray-400 hover:text-[#006241] hover:bg-gray-200 rounded-full transition-all active:rotate-180" title="Xóa & Nhập lại">
+                <span class="material-symbols-outlined text-lg font-bold">sync</span>
+            </button>
+            
+            <div id="suggest-pc" class="hidden absolute top-full left-0 w-full bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto custom-scrollbar mt-1"></div>
+        </div>
+        <p id="sdt-status" class="text-[8px] font-black uppercase mb-3 text-center min-h-[12px]"></p>
     </div>
 
     <div id="cart-list" class="flex-1 overflow-y-auto space-y-1.5 mb-3 pr-1 text-left custom-scrollbar transition-all"></div>
@@ -7989,6 +7993,27 @@ function cancelRulesWait() {
     document.getElementById('modal-waiting-rules').classList.add('hidden');
     syncToCustomerDisplay('idle'); // Trả màn hình khách về bình thường
 }
+    // --- HÀM RESET SĐT NHANH ---
+function resetPhoneInput() {
+    const input = document.getElementById('kh-sdt');
+    if (input) {
+        // 1. Xóa nội dung
+        input.value = "";
+        input.focus(); // Đặt trỏ chuột lại để nhập luôn
+        
+        // 2. Xóa trạng thái hiển thị
+        const status = document.getElementById('sdt-status');
+        if (status) status.innerText = "";
+        
+        // 3. Reset gợi ý & Màn hình khách
+        if (typeof checkSdtLive === 'function') checkSdtLive();
+        
+        // Gửi tín hiệu reset tên khách trên màn hình phụ (về Khách lẻ)
+        if (typeof syncToCustomerDisplay === 'function') {
+            syncToCustomerDisplay('cart', { customerName: "Khách lẻ", customerPoints: 0 });
+        }
+    }
+}
 document.addEventListener('DOMContentLoaded', updateCartPadding);
 
 </script>
@@ -8499,6 +8524,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
