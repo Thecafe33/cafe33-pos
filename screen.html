@@ -534,8 +534,12 @@
 
         // --- KEYPAD LOGIC ---
         // --- NATIVE INPUT LOGIC (SIÊU NHẸ) ---
-
+// --- HÀM MỞ POPUP NHẬP SĐT (CẬP NHẬT: TẮT QUẢNG CÁO NGAY) ---
 function openNativeInput() {
+    // 1. TẮT QUẢNG CÁO NGAY LẬP TỨC
+    stopScreensaver(); 
+
+    // 2. Hiện Popup nhập liệu
     const modal = document.getElementById('view-native-input');
     const input = document.getElementById('native-phone');
     
@@ -546,10 +550,27 @@ function openNativeInput() {
     setTimeout(() => input.focus(), 100);
 }
 
+// --- HÀM ĐÓNG POPUP (CẬP NHẬT: KIỂM TRA ĐỂ BẬT LẠI QUẢNG CÁO) ---
 function closeNativeInput() {
+    // 1. Ẩn Popup
     document.getElementById('view-native-input').classList.add('hidden');
     document.getElementById('native-phone').blur(); // Tắt bàn phím
+
+    // 2. LOGIC THÔNG MINH:
+    // Nếu đang không có khách (Footer đang ẩn) VÀ không có món trong giỏ
+    // -> Thì bật lại quảng cáo cho đỡ trống màn hình
+    const footerUser = document.getElementById('footer-user-info');
+    const totalPrice = document.getElementById('total-price').innerText;
+
+    const isGuestLogin = !footerUser.classList.contains('hidden'); // Đã có tên khách
+    const hasCart = totalPrice !== "0"; // Đang có món
+
+    // Nếu chưa đăng nhập vả giỏ hàng rỗng -> Bật lại quảng cáo
+    if (!isGuestLogin && !hasCart) {
+        startScreensaver();
+    }
 }
+
 
 // Gửi số khi bấm nút
 // --- HÀM GỬI SĐT (BẢN FIX: GỬI XONG TỰ ĐÓNG) ---
