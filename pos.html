@@ -7787,67 +7787,56 @@ function syncToCustomerDisplay(state, overrideData = {}) {
     // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH ---
 // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (LOGIC THÔNG MINH) ---
 // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (ĐÃ FIX LỖI KHÔNG HIỆN TÊN) ---
+// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (BẢN UPDATE: PC & MOBILE) ---
 function listenToClientInput() {
     db.ref('client_input').on('value', (snap) => {
         const data = snap.val();
         
-        // Kiểm tra dữ liệu
+        // Kiểm tra dữ liệu (bỏ qua tin quá cũ > 5 giây để tránh bị spam khi vừa mở app)
         if (!data || !data.value) return;
-        const now = Date.now();
-        if (now - data.timestamp > 2000) return; // Bỏ qua tin cũ
+        if (Date.now() - data.timestamp > 5000) {
+             db.ref('client_input').set(null); // Xóa tin cũ rích
+             return;
+        }
 
         console.log("📞 Nhận SĐT từ khách:", data.value);
 
-        // 1. KIỂM TRA: Modal Đặt Bed có đang mở không?
+        // 1. KIỂM TRA: Có đang mở Popup Đặt Bed không?
         const bookingModal = document.getElementById('modal-add-booking');
         const isBookingOpen = bookingModal && !bookingModal.classList.contains('hidden');
 
         if (isBookingOpen) {
-            // === TRƯỜNG HỢP A: ĐANG MỞ POPUP ĐẶT BED ===
+            // --- TRƯỜNG HỢP A: ĐANG ĐẶT BED ---
             const input = document.getElementById('new_cust_phone');
             if (input) {
                 input.value = data.value;
+                if (typeof handleBookingInput === 'function') handleBookingInput();
                 
-                // Gọi hàm điền tên trên POS
-                if (typeof handleBookingInput === 'function') handleBookingInput(); 
-                
-                // Hiệu ứng nháy xanh trên POS
+                // Hiệu ứng nháy xanh
                 input.classList.add('bg-green-100');
                 setTimeout(() => input.classList.remove('bg-green-100'), 500);
-
-                // >>> QUAN TRỌNG: BẮN TÍN HIỆU NGƯỢC LẠI MÀN HÌNH PHỤ <<<
-                // Để màn hình phụ tắt bàn phím và hiện "Xin chào..."
-                let cleanSdt = normalizePhone(data.value);
-                let cust = customerMap[cleanSdt];
-                
-                if (cust) {
-                    // Tìm thấy khách -> Gửi tên và điểm
-                    syncToCustomerDisplay('welcome', { 
-                        customerName: cust.name, 
-                        customerPoints: cust.points 
-                    });
-                } else {
-                    // Khách mới -> Gửi "Khách mới"
-                    syncToCustomerDisplay('welcome', { 
-                        customerName: "Khách mới", 
-                        customerPoints: 0 
-                    });
-                }
             }
         } else {
-            // === TRƯỜNG HỢP B: ĐANG Ở MÀN HÌNH CHÍNH (GIỎ HÀNG) ===
-            const sdtInput = document.getElementById('kh-sdt');
-            if (sdtInput) {
-                sdtInput.value = data.value;
-                
-                // Hàm checkSdtLive này đã có sẵn lệnh syncToCustomerDisplay bên trong rồi
-                if (typeof checkSdtLive === 'function') checkSdtLive(); 
-                
-                if (typeof scanAndAddDebt === 'function') scanAndAddDebt(data.value);
+            // --- TRƯỜNG HỢP B: ĐANG Ở MÀN HÌNH CHÍNH (ORDER/THANH TOÁN) ---
+            
+            // 1. Điền vào ô PC
+            const pcInput = document.getElementById('kh-sdt');
+            if (pcInput) pcInput.value = data.value;
+
+            // 2. Điền vào ô Mobile (QUAN TRỌNG: Để Tiên sinh thấy trên đt/mtb)
+            const mobInput = document.getElementById('pay-sdt-mobile');
+            if (mobInput) {
+                mobInput.value = data.value;
+                // Nếu đang ở màn hình thanh toán mobile -> Cập nhật tên khách ngay
+                if (typeof syncMobileInputs === 'function') syncMobileInputs();
             }
+
+            // 3. Kích hoạt tìm kiếm khách hàng & Nợ
+            if (typeof checkSdtLive === 'function') checkSdtLive(); 
+            if (typeof scanAndAddDebt === 'function') scanAndAddDebt(data.value);
         }
 
-        // Reset Firebase để tránh gọi lại
+        // Xóa tin nhắn ngay lập tức để tránh xử lý lặp lại
         db.ref('client_input').set(null);
     });
 }
@@ -8373,6 +8362,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
