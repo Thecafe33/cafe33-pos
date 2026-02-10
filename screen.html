@@ -353,7 +353,7 @@
                          document.getElementById('header-user-info').classList.remove('hidden');
                          document.getElementById('cust-name').innerText = data.customerName;
                          document.getElementById('cust-points').innerText = data.customerPoints || 0;
-                         closeKeypad(); 
+                         closeNativeInput(); 
                     } else {
                          document.getElementById('header-user-info').classList.add('hidden');
                     }
@@ -443,32 +443,46 @@ function closeNativeInput() {
 }
 
 // Gửi số khi bấm nút
+// --- HÀM GỬI SĐT (BẢN FIX: GỬI XONG TỰ ĐÓNG) ---
 function submitNativePhone() {
     const input = document.getElementById('native-phone');
     const val = input.value.trim();
     const btn = document.getElementById('btn-submit');
 
+    // 1. Validate: Không cho gửi nếu trống
     if (val.length < 3) {
         input.focus();
         return;
     }
 
+    // 2. Hiệu ứng "Đang gửi..."
     btn.innerText = "Đang gửi...";
     btn.classList.add('opacity-50');
 
+    // 3. Gửi lên Firebase
     db.ref('client_input').set({
         type: 'phone_update',
         value: val,
         timestamp: Date.now()
     }).then(() => {
-        // Thành công thì giữ đó chờ POS phản hồi (hàm listenToPOS sẽ tự đóng modal)
+        // --- THÀNH CÔNG ---
+        btn.innerText = "✔ ĐÃ GỬI"; // Báo cho khách biết
+        
+        // Chờ 0.5 giây cho khách kịp đọc chữ "Đã gửi" rồi mới đóng
         setTimeout(() => {
+            closeNativeInput(); // <--- QUAN TRỌNG: Đóng modal
+            
+            // Reset lại nút bấm về trạng thái ban đầu cho lần sau
             btn.innerText = "GỬI NGAY";
             btn.classList.remove('opacity-50');
-        }, 2000);
+            input.value = ""; 
+        }, 500);
+
     }).catch(err => {
-        alert("Lỗi: " + err.message);
-        btn.innerText = "Lỗi";
+        // --- LỖI ---
+        alert("Lỗi mạng: " + err.message);
+        btn.innerText = "GỬI LẠI";
+        btn.classList.remove('opacity-50');
     });
 }
 
