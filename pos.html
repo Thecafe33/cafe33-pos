@@ -5128,24 +5128,35 @@ function listenForPayment(code, amount) {
         });
 }
     // Hàm xử lý khi xác nhận thành công
+// --- HÀM XỬ LÝ KHI CÓ TIỀN (BẢN FINAL: NO SOUND - SIÊU MƯỢT) ---
 function handlePaymentSuccess(receivedAmount) {
-    // Ngắt kết nối để không chạy lại lần 2
-    // >>> BÁO MÀN HÌNH KHÁCH ĂN MỪNG <<<
-    if (typeof syncToCustomerDisplay === 'function') syncToCustomerDisplay('success');
-    db.ref('payment_events').off();
-    paymentListener = null;
+    console.log("⚡ Bắt đầu xử lý tiền về...");
 
-    if (typeof speakSuccess === "function") speakSuccess(receivedAmount); 
-
+    // 1. CẬP NHẬT GIAO DIỆN POS NGAY LẬP TỨC
     const statusEl = document.getElementById('qr-status');
     if(statusEl) {
         statusEl.innerHTML = `<div class="text-green-600 font-black animate-bounce">✅ ĐÃ NHẬN TIỀN!</div>`;
     }
 
+    // 2. Báo màn hình khách ăn mừng
+    try {
+        if (typeof syncToCustomerDisplay === 'function') syncToCustomerDisplay('success');
+    } catch (e) { console.error("Lỗi Sync màn hình:", e); }
+
+    // 3. Ngắt kết nối Firebase (Dọn dẹp listener để không nhận 2 lần)
+    try {
+        db.ref('payment_events').off();
+        paymentListener = null;
+    } catch (e) { console.error("Lỗi ngắt DB:", e); }
+
+    // 4. Đóng Popup và Lưu đơn sau 1.5 giây
     setTimeout(() => {
         document.getElementById('qr-modal')?.classList.add('hidden');
+        
         if (typeof saveOrderToFirebase === "function") {
             saveOrderToFirebase('Chuyển khoản');
+        } else {
+            alert("Lỗi: Không tìm thấy hàm lưu đơn!");
         }
     }, 1500);
 }
@@ -5220,62 +5231,8 @@ function showPaymentQR() {
         setMethod('Tiền mặt');
     });
 }
-// --- HÀM ĐỌC ÂM THANH KHI NHẬN TIỀN ---
-function speakSuccess(amount) {
-    // 1. Soạn nội dung cần đọc
-    // Dùng toLocaleString('vi-VN') để nó đọc là "Năm mươi nghìn" thay vì "5 không không..."
-    var textToRead = "The Cafe 33 đã nhận " + Number(amount).toLocaleString('vi-VN') + " đồng. Cảm ơn nhó!";
-    
-    // 2. Cấu hình giọng đọc
-    var msg = new SpeechSynthesisUtterance();
-    msg.text = textToRead;
-    msg.lang = 'vi-VN'; // Chọn giọng tiếng Việt
-    msg.volume = 1;     // Âm lượng to nhất (0 -> 1)
-    msg.rate = 1.1;     // Tốc độ đọc (1 là bình thường, 1.1 là nhanh nhẹ vui tươi)
-    
-    // 3. Phát loa
-    window.speechSynthesis.speak(msg);
-}
-// --- BIẾN TOÀN CỤC ĐỂ GIỮ LOA ---
-let synth = window.speechSynthesis;
-let soundLock = null;
 
-// 1. Hàm đọc cơ bản (Fix lỗi giọng chị Google bị kẹt)
-function speakNow(text) {
-    if (synth.speaking) synth.cancel(); // Dừng câu đang nói dở
 
-    let msg = new SpeechSynthesisUtterance(text);
-    msg.lang = 'vi-VN'; 
-    msg.rate = 1.1;
-    msg.volume = 1.0;
-
-    synth.speak(msg);
-}
-
-// 2. Hàm "Mồi loa" (Gắn vào nút Chuyển khoản)
-// Mẹo: Phát một âm thanh rỗng liên tục để trình duyệt tưởng bà đang nghe nhạc
-function unlockAudio() {
-    speakNow("Đang tạo mã thanh toán"); // Nói câu đầu tiên để xin quyền
-    
-    // Hack: Tạo một audio rỗng chạy nền để giữ kết nối loa không bị ngắt
-    if (!soundLock) {
-        soundLock = new Audio("https://github.com/anars/blank-audio/raw/master/10-minutes-of-silence.mp3");
-        soundLock.loop = true;
-        soundLock.play().catch(e => console.log("Không play được audio nền"));
-    }
-}
-
-// 3. Hàm gọi khi tiền về
-function speakSuccess(amount) {
-    // Dừng audio nền lại cho đỡ tốn pin
-    if (soundLock) {
-        soundLock.pause();
-        soundLock = null;
-    }
-
-    let text = "Đã nhận " + Number(amount).toLocaleString('vi-VN') + " đồng. Cảm ơn!";
-    speakNow(text);
-}
 // --- LOGIC MOBILE ---
 function toggleMobileMenu() {
     const sb = document.getElementById('mobile-sidebar');
@@ -8525,6 +8482,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
