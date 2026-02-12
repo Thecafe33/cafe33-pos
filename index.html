@@ -1218,7 +1218,28 @@ function redeemGift(name, cost) {
     
     document.getElementById('loading-overlay').classList.remove('hidden');
     db.ref('customers/' + curPhone).update({ points: np });
-    
+    // 2. [MỚI] Hiện thông báo yêu cầu chụp màn hình
+    setTimeout(() => {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        document.getElementById('gift-detail-modal').classList.add('hidden'); // Tắt modal chi tiết quà cũ đi
+        
+        // Hiện Modal thông báo thành công + Lời nhắc chụp màn hình
+        showAppModal(
+            "Đổi quà thành công!", 
+            `<div class="text-left">
+                <p class="text-sm text-[#1e3932] mb-2">Bạn đã đổi thành công món:</p>
+                <p class="text-2xl font-black text-[#006241] mb-4 brand-font uppercase">${name}</p>
+                
+                <div class="bg-yellow-50 p-4 rounded-2xl border border-yellow-100 shadow-sm">
+                    <p class="text-red-500 font-bold text-[10px] uppercase mb-1 tracking-wider">⚠️ QUAN TRỌNG:</p>
+                    <p class="text-[#1e3932] text-sm font-bold leading-relaxed">
+                        Vui lòng <span class="underline decoration-2 decoration-red-500">chụp lại màn hình</span> và đưa cho The cafe 33 xem lúc order để quà được áp dụng.
+                    </p>
+                </div>
+            </div>`, 
+            "📸" // Icon máy ảnh cho dễ hiểu
+        );
+    }, 500);
     fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST', mode: 'no-cors',
         body: JSON.stringify({ action: 'logRedeem', phone: curPhone, custName: userData.name, giftName: name, pointCost: cost })
@@ -1614,6 +1635,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
