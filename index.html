@@ -142,6 +142,24 @@
     box-shadow: 0 4px 10px rgba(0,98,65,0.2);
     white-space: nowrap;
 }
+    /* --- CSS FORM ĐĂNG KÝ (DYNAMIC ISLAND) --- */
+.input-island {
+    background-color: #F3F4F6; border-radius: 99px; padding: 12px 24px;
+    border: 2px solid transparent; transition: all 0.3s ease; display: flex; 
+    flex-direction: column; margin-bottom: 16px; text-align: left;
+}
+.input-island:focus-within {
+    background-color: #FFFFFF; border-color: #006241; box-shadow: 0 4px 20px -4px rgba(0,98,65,0.2);
+}
+.input-island-label {
+    font-size: 11px; font-weight: 800; color: #9CA3AF;
+    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;
+}
+.input-island-field {
+    background: transparent; border: none; outline: none;
+    font-size: 17px; font-weight: 700; color: #1F2937; width: 100%;
+}
+.input-island-field::placeholder { color: #D1D5DB; font-weight: 500; }
 </style>
 </head>
 <body class="min-h-screen pb-32">
@@ -174,8 +192,40 @@
     <p class="text-[11px] font-bold text-gray-400 mb-12 uppercase tracking-widest">Tích điểm nhận đặc quyền</p>
     <input type="tel" id="login-sdt" placeholder="Số điện thoại của bạn..." class="w-full p-5 rounded-3xl bg-gray-50 border border-gray-100 mb-4 text-center outline-none text-lg">
     <button id="btn-login" onclick="login()" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-lg">Đăng nhập</button>
+    <p class="mt-6 text-sm text-gray-400 font-medium">Chưa có tài khoản?</p>
+<button onclick="showRegister()" class="text-[#006241] font-bold text-sm uppercase tracking-widest hover:underline py-2">
+    Đăng ký thành viên mới
+</button>
   </div>
+<div id="register-screen" class="hidden flex-col min-h-screen p-8 bg-white text-center">
+    <div class="pt-2 mb-6 text-left">
+        <button onclick="hideRegister()" class="w-10 h-10 -ml-2 flex items-center justify-center rounded-full active:bg-gray-100 text-gray-500 hover:text-[#006241] transition-colors">
+            <span class="material-symbols-rounded text-3xl text-2xl font-bold"><</span> 
+        </button>
+    </div>
 
+    <h2 class="text-3xl font-bold text-gray-900 mb-2 text-left brand-font text-[#006241]">Tạo tài khoản</h2>
+    <p class="text-gray-500 mb-8 text-left text-sm">Nhập thông tin để tích điểm ngay.</p>
+
+    <div class="flex-1">
+        <div class="input-island group">
+            <label class="input-island-label">Họ và tên</label>
+            <input type="text" id="reg-name" class="input-island-field capitalize" placeholder="Ví dụ: Minh Tuấn">
+        </div>
+
+        <div class="input-island group">
+            <label class="input-island-label">Số điện thoại</label>
+            <input type="tel" id="reg-phone" class="input-island-field" placeholder="090..." inputmode="numeric">
+        </div>
+    </div>
+
+    <div class="mt-auto w-full pb-8">
+        <button id="btn-reg-submit" onclick="submitRegister()" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-xl active:scale-95 transition-all uppercase text-lg">
+            Xác nhận đăng ký
+        </button>
+        <p class="text-center text-[10px] text-gray-400 mt-5 font-medium uppercase tracking-wider">Tặng ngay 333 điểm khi tham gia</p>
+    </div>
+</div>
   <div id="main-app" class="hidden">
     <div class="p-5 bg-white shadow-sm flex justify-between items-center sticky top-0 z-50">
       <h2 class="text-2xl text-[#006241] brand-font">The cafe 33</h2>
@@ -364,7 +414,80 @@ const db = firebase.database();
 let curPhone = localStorage.getItem('member_phone');
 let userData = {};
 let _cachedGiftList = []; // Thêm biến cache danh sách quà
+// --- LOGIC ĐĂNG KÝ (NO GSA) ---
 
+function showRegister() {
+    document.getElementById('login-screen').classList.add('hidden');
+    const regScreen = document.getElementById('register-screen');
+    regScreen.classList.remove('hidden');
+    regScreen.style.display = 'flex';
+}
+
+function hideRegister() {
+    const regScreen = document.getElementById('register-screen');
+    regScreen.classList.add('hidden');
+    regScreen.style.display = 'none';
+    document.getElementById('login-screen').classList.remove('hidden');
+}
+
+function submitRegister() {
+    const nameEl = document.getElementById('reg-name');
+    const phoneEl = document.getElementById('reg-phone');
+    const btn = document.getElementById('btn-reg-submit');
+
+    const name = nameEl.value.trim();
+    // Hàm normalizePhone đã có sẵn trong code cũ
+    const phone = normalizePhone(phoneEl.value); 
+
+    if (name.length < 2) return alert("Vui lòng nhập tên đầy đủ!");
+    if (phone.length < 9) return alert("Số điện thoại không hợp lệ!");
+
+    const oldText = btn.innerHTML;
+    btn.innerHTML = "Đang xử lý...";
+    btn.disabled = true;
+
+    const userRef = db.ref('customers/' + phone);
+    
+    userRef.once('value', (snapshot) => {
+        if (snapshot.exists()) {
+            alert("SĐT này đã tồn tại! Vui lòng đăng nhập.");
+            btn.innerHTML = oldText;
+            btn.disabled = false;
+            hideRegister();
+        } else {
+            // TẠO USER MỚI TRÊN FIREBASE
+            userRef.set({
+                name: name,
+                phone: phone,
+                points: 333, // Tặng 333 điểm như yêu cầu
+                joinDate: new Date().toISOString(),
+                source: 'app_index',
+                
+                // Các trường bắt buộc cho App Bed
+                lastCompName: "",       
+                lastCompPhone: "",      
+                lastVisit: new Date().toISOString(),
+                pendingFee: 0,          
+                pendingFeeReason: ""    
+            }, (error) => {
+                if (error) {
+                    alert("Lỗi: " + error.message);
+                    btn.innerHTML = oldText;
+                    btn.disabled = false;
+                } else {
+                    // THÀNH CÔNG -> VÀO THẲNG APP
+                    // Không hiện thông báo voucher, không gọi GSA
+                    localStorage.setItem('member_phone', phone);
+                    
+                    document.getElementById('register-screen').classList.add('hidden');
+                    document.getElementById('register-screen').style.display = 'none';
+                    
+                    showDashboard(phone); // Hàm này có sẵn trong index, sẽ tự tải giao diện chính
+                }
+            });
+        }
+    });
+}
 // --- 2. LOGIC CHUNG ---
 window.onload = function() {
     const today = new Date().toISOString().split('T')[0];
@@ -1491,6 +1614,7 @@ window.handleLogout = function() {
 </div>
 </body>
 </html>
+
 
 
 
