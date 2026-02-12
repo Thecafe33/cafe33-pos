@@ -4362,7 +4362,8 @@ function finalizeBedCheckIn(bedId) {
         }
     });
 }
-function openBookingModal() { document.getElementById('modal-add-booking').classList.remove('hidden'); document.getElementById('new_cust_name').value = "Khách vãng lai"; document.getElementById('new_cust_phone').value = ""; document.getElementById('new_cust_phone').focus(); switchTimeMode('duration');if (typeof syncToCustomerDisplay === 'function') {
+function openBookingModal() { document.getElementById('modal-add-booking').classList.remove('hidden'); document.getElementById('new_cust_name').value = "Khách vãng lai"; document.getElementById('new_cust_phone').value = ""; document.getElementById('new_cust_phone').focus(); switchTimeMode('duration');
+        if (typeof syncToCustomerDisplay === 'function') {
         syncToCustomerDisplay('input_phone');  } }
 function closeBookingModal() { document.getElementById('modal-add-booking').classList.add('hidden'); if (typeof syncToCustomerDisplay === 'function') {
         syncToCustomerDisplay('idle'); }  }
@@ -4528,7 +4529,49 @@ function showAppModal(title, msg, icon = '') { document.getElementById('app-moda
 function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); var parts = timeStr.split(':'); d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0); return d; }
 function startPanelCountdown(endTimeStr) { stopPanelCountdown(); var clockEl = document.getElementById('detail-countdown'); if(!clockEl) return; var timeParts = endTimeStr.split(':'); if(timeParts.length < 2) return; var endDate = new Date(); endDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0); bedCountdownInterval = setInterval(function() { var diff = endDate - new Date(); var isOver = diff < 0; diff = Math.abs(diff); var h = Math.floor(diff / 3600000); var m = Math.floor((diff % 3600000) / 60000); var s = Math.floor((diff % 60000) / 1000); var fmt = v => v < 10 ? "0"+v : v; clockEl.innerText = (isOver ? '-' : '') + fmt(h) + ":" + fmt(m) + ":" + fmt(s); clockEl.className = isOver ? "text-3xl font-black text-red-500 font-mono tracking-tighter" : "text-3xl font-black text-[#006241] font-mono tracking-tighter"; }, 1000); }
 function stopPanelCountdown() { if (bedCountdownInterval) clearInterval(bedCountdownInterval); }
-function switchTimeMode(mode) { var btnDur = document.getElementById('tab-duration'); var btnFix = document.getElementById('tab-fixed'); var divDur = document.getElementById('mode-duration'); var divFix = document.getElementById('mode-fixed'); if (mode === 'duration') { btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#006241]"; btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divDur.classList.remove('hidden'); divFix.classList.add('hidden'); document.getElementById('final_duration_minutes').value = 60; } else { btnFix.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-white shadow-sm text-[#006241]"; btnDur.className = "flex-1 py-1.5 text-xs font-bold rounded-md text-gray-400 hover:bg-white/50"; divFix.classList.remove('hidden'); divDur.classList.add('hidden'); var now = new Date(); now.setMinutes(now.getMinutes() + 90); var hh = ("0" + now.getHours()).slice(-2); var mm = ("0" + now.getMinutes()).slice(-2); document.getElementById('custom_end_time').value = `${hh}:${mm}`; calculateDurationFromTime(); } }
+// --- [FIX] HÀM CHUYỂN ĐỔI CHẾ ĐỘ GIỜ (SỬA ĐÚNG ID HTML) ---
+function switchTimeMode(mode) {
+    // Lấy đúng ID từ HTML hiện tại
+    var btnDur = document.getElementById('tab-duration');
+    var btnEnd = document.getElementById('tab-end-time'); // Tên ID chuẩn
+    var boxDur = document.getElementById('mode-duration-box'); // Tên ID chuẩn
+    var boxEnd = document.getElementById('mode-endtime-box'); // Tên ID chuẩn
+
+    if (mode === 'duration') {
+        // Active nút Duration
+        if(btnDur) btnDur.className = "flex-1 py-3 rounded-[16px] text-xs font-black uppercase tracking-wider bg-white text-[#006241] shadow-sm transition-all";
+        if(btnEnd) btnEnd.className = "flex-1 py-3 rounded-[16px] text-xs font-black uppercase tracking-wider text-gray-400 hover:text-gray-600 transition-all";
+        
+        // Hiện box Duration
+        if(boxDur) boxDur.classList.remove('hidden');
+        if(boxEnd) boxEnd.classList.add('hidden');
+        
+        if(document.getElementById('final_duration_minutes')) 
+            document.getElementById('final_duration_minutes').value = 60;
+    } else {
+        // Active nút EndTime
+        if(btnEnd) btnEnd.className = "flex-1 py-3 rounded-[16px] text-xs font-black uppercase tracking-wider bg-white text-[#006241] shadow-sm transition-all";
+        if(btnDur) btnDur.className = "flex-1 py-3 rounded-[16px] text-xs font-black uppercase tracking-wider text-gray-400 hover:text-gray-600 transition-all";
+        
+        // Hiện box EndTime
+        if(boxEnd) boxEnd.classList.remove('hidden');
+        if(boxDur) boxDur.classList.add('hidden');
+
+        // Auto điền giờ gợi ý (Hiện tại + 90p)
+        var now = new Date();
+        now.setMinutes(now.getMinutes() + 90);
+        var hh = ("0" + now.getHours()).slice(-2);
+        var mm = ("0" + now.getMinutes()).slice(-2);
+        
+        var elH = document.getElementById('custom-hour');
+        var elM = document.getElementById('custom-minute');
+        if(elH) elH.value = hh;
+        if(elM) elM.value = mm;
+        
+        // Gọi hàm tính toán nếu có
+        if(typeof calculateDurationFromTime === 'function') calculateDurationFromTime();
+    }
+}
 function calculateDurationFromTime() { 
     // [FIX MỚI] Lấy dữ liệu từ 2 ô input
     var h = document.getElementById('custom-hour').value;
@@ -8486,6 +8529,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
