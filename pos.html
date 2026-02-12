@@ -5342,9 +5342,15 @@ function backMobileStep() {
 }
 // --- HÀM LƯU ĐƠN HÀNG LÊN FIREBASE (TÁCH RIÊNG CHO CHẮC ĂN) ---
 // --- [FIXED] HÀM LƯU ĐƠN HÀNG (KHÔI PHỤC LOGIC CHỌN BED & TRẢ BED) ---
+    // >>> CHÈN DÒNG NÀY <<<
+let isSavingOrder = false;
 function saveOrderToFirebase(method) {
+    // >>> CHÈN ĐOẠN NÀY VÀO ĐẦU TIÊN <<<
+    if (isSavingOrder) return console.log("🚫 Đang lưu, chặn click đúp!");
     // 1. Kiểm tra giỏ hàng
     if (!cart || cart.length === 0) return alert("Giỏ hàng đang trống!");
+    // >>> CHÈN DÒNG NÀY <<<
+    isSavingOrder = true;
 
     const pVal = document.getElementById('cash-paid').value;
     const paid = (method === 'Chuyển khoản') ? currentTotal : (Number(pVal) || currentTotal);
@@ -5378,6 +5384,8 @@ function saveOrderToFirebase(method) {
 
     // 2. Gửi lên Firebase
     db.ref('orders').push(orderData, (error) => {
+        // >>> CHÈN DÒNG NÀY VÀO ĐẦU TIÊN TRONG CALLBACK <<<
+        isSavingOrder = false;
         if (error) {
             alert("❌ Lỗi lưu đơn: " + error.message);
         } else {
@@ -7807,11 +7815,16 @@ function syncToCustomerDisplay(state, overrideData = {}) {
 // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (ĐÃ FIX LỖI KHÔNG HIỆN TÊN) ---
 // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (BẢN UPDATE: PC & MOBILE) ---
 // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (BẢN FINAL: GỘP CẢ 2 LOGIC) ---
+// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (BẢN FIX: CHỐNG DUPLICATE) ---
 function listenToClientInput() {
+    // 1. QUAN TRỌNG: Ngắt kết nối các listener cũ để tránh bị nhân đôi lệnh
+    db.ref('client_input').off();
+
+    // 2. Bắt đầu lắng nghe mới
     db.ref('client_input').on('value', (snap) => {
         const data = snap.val();
         
-        // 1. Kiểm tra cơ bản
+        // Kiểm tra cơ bản
         if (!data) return;
 
         // Chống spam: Bỏ qua tin nhắn cũ quá 5 giây
@@ -7832,12 +7845,12 @@ function listenToClientInput() {
             // B. Cập nhật trạng thái đơn (đánh dấu đã đồng ý)
             if(pendingBedOrder) pendingBedOrder.rulesAgreed = true;
 
-            // C. Tự động chạy tiếp quy trình thanh toán (để lưu đơn & chọn bed)
-            // Lấy phương thức thanh toán đang chọn hiện tại
+            // C. Tự động chạy tiếp quy trình thanh toán
+            // Kiểm tra xem có đang trong quá trình lưu không để tránh gọi lặp lại ở đây
             let method = document.getElementById('btn-bank').classList.contains('sb-green') ? 'Chuyển khoản' : 'Tiền mặt';
             saveOrderToFirebase(method);
             
-            // D. Xóa tin nhắn & THOÁT HÀM NGAY (để không chạy nhầm logic SĐT bên dưới)
+            // D. Xóa tin nhắn ngay lập tức
             db.ref('client_input').set(null);
             return; 
         }
@@ -7845,29 +7858,22 @@ function listenToClientInput() {
         // ============================================================
         // 📱 ƯU TIÊN 2: LOGIC NHẬP SĐT (CŨ)
         // ============================================================
-        
-        // Nếu không có giá trị (value) thì bỏ qua, vì nhập SĐT bắt buộc phải có số
         if (!data.value) return; 
 
         console.log("📞 Nhận SĐT từ khách:", data.value);
 
-        // Kiểm tra xem đang mở Popup Đặt Bed hay đang ở màn hình Thu ngân?
         const bookingModal = document.getElementById('modal-add-booking');
         const isBookingOpen = bookingModal && !bookingModal.classList.contains('hidden');
 
         if (isBookingOpen) {
-            // -> ĐANG ĐẶT BED: Điền vào ô popup
             const input = document.getElementById('new_cust_phone');
             if (input) {
                 input.value = data.value;
                 if (typeof handleBookingInput === 'function') handleBookingInput();
-                
-                // Hiệu ứng nháy xanh báo nhận
                 input.classList.add('bg-green-100');
                 setTimeout(() => input.classList.remove('bg-green-100'), 500);
             }
         } else {
-            // -> ĐANG THU NGÂN: Điền vào ô chính & ô mobile
             const pcInput = document.getElementById('kh-sdt');
             if (pcInput) pcInput.value = data.value;
 
@@ -7877,12 +7883,10 @@ function listenToClientInput() {
                 if (typeof syncMobileInputs === 'function') syncMobileInputs();
             }
 
-            // Kích hoạt tìm kiếm khách hàng & Quét nợ cũ
             if (typeof checkSdtLive === 'function') checkSdtLive(); 
             if (typeof scanAndAddDebt === 'function') scanAndAddDebt(data.value);
         }
 
-        // Xử lý xong thì xóa tin nhắn
         db.ref('client_input').set(null);
     });
 }
@@ -8482,6 +8486,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
