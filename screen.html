@@ -464,7 +464,23 @@
                     showSuccessScreen(data);
                     return;
                 }
-
+// TRONG HÀM listenToPOS() -> THÊM ĐOẠN NÀY:
+        if (data.state === 'show_wheel') {
+            stopScreensaver();
+            document.getElementById('view-qr').classList.add('hidden');
+            document.getElementById('view-rules').classList.add('hidden');
+            
+            // Lưu data tạm để lát quay xong còn gọi success
+            window.cachedSuccessData = data; 
+            
+            // Bật vòng quay
+            document.getElementById('modal-lucky-wheel').classList.remove('hidden');
+            
+            // Reset vòng quay
+            document.getElementById('wheel-inner').style.transform = `rotate(0deg)`;
+            document.getElementById('btn-spin').disabled = false;
+            return;
+        }
                 // Nếu Idle (Rảnh) -> Xóa bộ nhớ & Chạy quảng cáo
                 if (data.state === 'idle') {
                     resetScreen();
@@ -823,8 +839,150 @@ function zoomImage(imgId) {
 function closeZoom() {
     document.getElementById('image-viewer').classList.add('hidden');
 }
+// --- LOGIC VÒNG QUAY TẾT 2026 (TỶ LỆ BÍ MẬT) ---
+let isSpinning = false;
 
+// Danh sách giải thưởng tương ứng với 6 múi trên HTML
+// Index: 0 (0deg), 1 (60deg), 2 (120deg), 3 (180deg), 4 (240deg), 5 (300deg)
+const prizes = [
+    { name: "Chúc mừng năm mới\nAn khang thịnh vượng!", icon: "🧧", type: "lose" }, // Index 0
+    { name: "1 Gấu Bông Xinh Xắn", icon: "🧸", type: "win" },                        // Index 1
+    { name: "Happy New Year 2026\nVạn sự như ý!", icon: "🎆", type: "lose" },        // Index 2
+    { name: "1 Trà Kiwi Mang Đi", icon: "🥝", type: "win" },                         // Index 3
+    { name: "Voucher Giảm 5k\ncho ly tiếp theo", icon: "💸", type: "win" },          // Index 4
+    { name: "Chúc mừng năm mới\nTấn tài tấn lộc!", icon: "🧧", type: "lose" }        // Index 5
+];
+
+function spinLuckyWheel() {
+    if (isSpinning) return;
+    isSpinning = true;
+    
+    const wheel = document.getElementById('wheel-inner');
+    const btn = document.getElementById('btn-spin');
+    btn.disabled = true;
+
+    // --- THUẬT TOÁN TỶ LỆ BÍ MẬT ---
+    const rand = Math.random() * 100; // Ra số từ 0 đến 100
+    let targetIndex = 0;
+
+    // 1. Gấu bông (3%)
+    if (rand < 3) { 
+        targetIndex = 1; 
+    } 
+    // 2. Trà Kiwi (3%) -> (3 -> 6)
+    else if (rand < 6) { 
+        targetIndex = 3; 
+    }
+    // 3. Giảm 5k (14%) -> (6 -> 20)
+    else if (rand < 20) { 
+        targetIndex = 4; 
+    }
+    // 4. Happy New Year 2026 (40%) -> (20 -> 60)
+    else if (rand < 60) { 
+        targetIndex = 2; 
+    }
+    // 5. Chúc mừng năm mới (40%) -> (60 -> 100)
+    else {
+        // Random vào ô số 0 hoặc ô số 5 (đều là Chúc mừng năm mới) để nhìn cho tự nhiên
+        targetIndex = Math.random() > 0.5 ? 0 : 5; 
+    }
+
+    console.log("🎲 Kết quả quay:", prizes[targetIndex].name, `(Index: ${targetIndex})`);
+
+    // --- TÍNH TOÁN GÓC QUAY ---
+    // Mỗi múi 60 độ. Mũi tên chỉ vào 0 độ (Top).
+    // Muốn vào Index X, ta phải quay ngược chiều kim đồng hồ để Index X nằm ở vị trí 0 độ.
+    // Góc của Index X là: X * 60
+    // Góc cần quay = (360 - (X * 60)) + (Số vòng * 360)
+    
+    // Thêm một chút lệch ngẫu nhiên (+/- 20 độ) vào giữa ô để trông thật hơn
+    const offset = Math.floor(Math.random() * 40) - 20; 
+    const baseRotation = (360 - (targetIndex * 60)); 
+    const totalRotation = 3600 + baseRotation + offset; // Quay 10 vòng + góc đích
+
+    wheel.style.transform = `rotate(${totalRotation}deg)`;
+    
+    // Đợi 4s dừng lại
+    setTimeout(() => {
+        isSpinning = false;
+        const result = prizes[targetIndex];
+        
+        // Hiển thị kết quả
+        document.getElementById('wheel-result-icon').innerText = result.icon;
+        
+        if (result.type === "win") {
+            document.getElementById('wheel-result-title').innerText = "Chúc Mừng!";
+            document.getElementById('wheel-result-title').className = "text-3xl font-black text-red-600 uppercase mb-2 animate-bounce";
+            // Hiệu ứng pháo hoa (nếu có thư viện confetti thì gọi ở đây)
+        } else {
+            document.getElementById('wheel-result-title').innerText = "Vui Xuân 2026";
+            document.getElementById('wheel-result-title').className = "text-2xl font-black text-[#006241] uppercase mb-2";
+        }
+        
+        document.getElementById('wheel-result-desc').innerText = result.name;
+        document.getElementById('modal-wheel-result').classList.remove('hidden');
+        
+    }, 4000);
+}
 
     </script>
+    <style>
+    /* CSS vẽ vòng quay nhanh gọn nhẹ */
+    .wheel-bg {
+        background: conic-gradient(
+            #e74c3c 0deg 60deg, #f1c40f 60deg 120deg, 
+            #e74c3c 120deg 180deg, #f1c40f 180deg 240deg, 
+            #e74c3c 240deg 300deg, #f1c40f 300deg 360deg
+        );
+        transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        border-radius: 50%;
+        border: 8px solid #c0392b;
+        box-shadow: 0 0 20px rgba(0,0,0,0.3), inset 0 0 10px rgba(0,0,0,0.5);
+    }
+    .wheel-text {
+        position: absolute; top: 50%; left: 50%;
+        transform-origin: 0 0; width: 50%;
+        padding-left: 20px; font-weight: 900; color: white;
+        text-shadow: 1px 1px 2px black; font-size: 14px;
+        text-transform: uppercase;
+    }
+</style>
+
+<div id="modal-lucky-wheel" class="hidden fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-fade-in">
+    
+    <h2 class="text-4xl font-black text-[#f1c40f] uppercase mb-2 tracking-widest drop-shadow-lg text-center">Vòng Quay Khai Xuân</h2>
+    <p class="text-white font-bold mb-8 text-lg">Mừng Tết Bính Ngọ 2026 - Chạm để thử vận may!</p>
+
+    <div class="relative w-80 h-80 mb-10">
+        <div class="absolute -top-6 left-1/2 -translate-x-1/2 z-20 text-5xl drop-shadow-md">👇</div>
+        
+        <div id="wheel-inner" class="wheel-bg w-full h-full relative overflow-hidden">
+            <div class="wheel-text" style="transform: rotate(0deg) translateY(-50%); width: 45%;">Chúc mừng năm mới</div>
+            <div class="wheel-text" style="transform: rotate(60deg) translateY(-50%); width: 45%; color: #f1c40f;">1 Gấu Bông</div>
+            <div class="wheel-text" style="transform: rotate(120deg) translateY(-50%); width: 45%;">Happy New Year 2026</div>
+            <div class="wheel-text" style="transform: rotate(180deg) translateY(-50%); width: 45%; color: #f1c40f;">1 Trà Kiwi</div>
+            <div class="wheel-text" style="transform: rotate(240deg) translateY(-50%); width: 45%;">Giảm 5k</div>
+            <div class="wheel-text" style="transform: rotate(300deg) translateY(-50%); width: 45%; color: #f1c40f;">Chúc mừng năm mới</div>
+        </div>
+        
+        <button id="btn-spin" onclick="spinLuckyWheel()" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-white rounded-full font-black text-red-600 text-xl shadow-2xl border-4 border-yellow-400 active:scale-90 transition-transform flex items-center justify-center z-10">
+            QUAY
+        </button>
+    </div>
+
+</div>
+
+<div id="modal-wheel-result" class="hidden fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-6">
+    <div class="bg-white rounded-[32px] p-8 max-w-sm w-full text-center shadow-2xl border-4 border-yellow-400">
+        <div class="text-6xl mb-4" id="wheel-result-icon">🎁</div>
+        <h3 class="text-2xl font-black text-red-600 uppercase mb-2" id="wheel-result-title">Chúc Mừng!</h3>
+        <p class="text-lg font-bold text-gray-700 mb-6" id="wheel-result-desc">Bạn nhận được Voucher 10K</p>
+        
+        <button onclick="finishWheelProcess()" class="w-full py-4 bg-red-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl active:scale-95 transition-all">
+            Hoàn Tất
+        </button>
+        <p class="text-[10px] text-gray-400 mt-3 font-bold">Chụp màn hình đưa nhân viên áp dụng ngay nhé!</p>
+    </div>
+</div>
 </body>
 </html>
