@@ -5473,13 +5473,28 @@ function saveOrderToFirebase(method) {
             }
             
             // TRƯỜNG HỢP 3: KHÁCH VÃNG LAI / GỌI THÊM / MANG VỀ -> Kết thúc luôn
+            // TRƯỜNG HỢP 3: KHÁCH VÃNG LAI / GỌI THÊM
             else {
-                // Báo màn hình khách: Thành công
-                syncToCustomerDisplay('success');
+                // >>> LOGIC TÍNH TIỀN NƯỚC CHO VÒNG QUAY <<<
+                let eligibleTotal = 0;
+                cart.forEach(item => {
+                    const mItem = menu.find(m => m.name === item.name);
+                    const type = mItem ? String(mItem.type).toLowerCase() : "";
+                    // Loại trừ Ăn vặt và Khác
+                    if (!type.includes('ăn vặt') && !type.includes('khác')) {
+                        eligibleTotal += (item.price * item.qty);
+                    }
+                });
+
+                // Nếu đủ 50k tiền nước -> Bắn tín hiệu Vòng quay
+                if (eligibleTotal >= 50000) {
+                    syncToCustomerDisplay('show_wheel');
+                } else {
+                    syncToCustomerDisplay('success');
+                }
+                // >>> KẾT THÚC LOGIC <<<
                 
-                // Reset POS (Dùng chế độ Silent để không gửi lệnh idle đè lên lệnh success)
                 resetOrderingMode(true); 
-                
                 switchView('menu');
                 setTimeout(() => showAppModal("Thành công", "Đơn hàng đã được lưu!", "✅"), 300);
             }
@@ -8529,6 +8544,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
