@@ -230,12 +230,12 @@
     <div class="flex-1">
         <div class="input-island group">
             <label class="input-island-label">Họ và tên</label>
-            <input type="text" id="reg-name" class="input-island-field capitalize" placeholder="Ví dụ: Minh Tuấn">
+            <input type="text" id="reg-name" class="input-island-field capitalize" placeholder="Ví dụ: Trần Minh Tuấn">
         </div>
 
         <div class="input-island group">
             <label class="input-island-label">Số điện thoại</label>
-            <input type="tel" id="reg-phone" class="input-island-field" placeholder="090..." inputmode="numeric">
+            <input type="tel" id="reg-phone" class="input-island-field" placeholder="091..." inputmode="numeric">
         </div>
     </div>
 
@@ -1442,9 +1442,9 @@ function openHistory() {
             if (reschedLocked) reschedTitle = `Lịch bắt đầu sau ${minsLeft > 0 ? minsLeft + ' phút' : 'đã qua'} — không thể đổi`;
             else if (reschedMaxed) reschedTitle = 'Đã đổi giờ 2 lần — hết lượt';
 
-            // Trạng thái nút Hủy: ẩn nếu không phải chờ, khóa nếu ≤5 phút
+            // Trạng thái nút Hủy: luôn hiện, khóa (có phí) nếu ≤5 phút
             const cancelLocked = minsLeft <= 5;
-            const cancelHidden = !isWaiting;
+            const cancelHidden = false; // Luôn hiện để thu phí 10K nếu cần
 
             activeContent = \`
                 <div id="active-card" class="bg-white rounded-2xl p-5 shadow-sm border border-amber-100 relative overflow-hidden">
@@ -1687,13 +1687,13 @@ function toggleViolationDetail() {
 // =========================================================
 let editingBookingKey = null;
 
-// 1. MỞ MODAL — có kiểm tra 10 phút & giới hạn 2 lần
+// 1. MỞ MODAL — đọc realtime Firebase để check giới hạn chính xác
 function openRescheduleModal(key) {
-    const booking = _historyCache.find(b => b.key === key);
-    if (!booking) return alert("Không tìm thấy dữ liệu!");
+    const cached = _historyCache.find(b => b.key === key);
+    if (!cached) return alert("Không tìm thấy dữ liệu!");
 
-    // Kiểm tra khóa 10 phút
-    const minsLeft = minutesUntilStart(booking);
+    // Check 10 phút từ cache (giờ bắt đầu không thay đổi)
+    const minsLeft = minutesUntilStart(cached);
     if (minsLeft <= 10) {
         const msg = minsLeft > 0
             ? `Lịch của bạn sẽ bắt đầu sau <b>${minsLeft} phút nữa</b>, không thể thay đổi thời gian vào lúc này.`
@@ -1702,48 +1702,59 @@ function openRescheduleModal(key) {
         return;
     }
 
-    // Kiểm tra giới hạn 2 lần
-    const changeCount = booking.rescheduleCount || 0;
-    if (changeCount >= 2) {
-        showAppModal("Hết lượt đổi giờ", "Mỗi lịch đặt chỉ được đổi giờ tối đa <b>2 lần</b> để đảm bảo công bằng.", "🚫");
-        return;
-    }
+    // Đọc REALTIME từ Firebase để lấy rescheduleCount chính xác (tránh dùng cache cũ)
+    db.ref('bedBookings/' + key).once('value', snap => {
+        const booking = snap.val();
+        if (!booking) return alert("Không tìm thấy dữ liệu!");
 
-    editingBookingKey = key;
+        const changeCount = booking.rescheduleCount || 0;
+        if (changeCount >= 2) {
+            showAppModal("Hết lượt đổi giờ", "Mỗi lịch đặt chỉ được đổi giờ tối đa <b>2 lần</b> để đảm bảo công bằng.", "🚫");
+            return;
+        }
 
-    const p = booking.date.split('/');
-    document.getElementById('re-date').value = `${p[2]}-${p[1]}-${p[0]}`;
-    document.getElementById('re-start').value = booking.start;
-    document.getElementById('re-end').value = booking.end;
+        editingBookingKey = key;
 
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('re-date').setAttribute('min', today);
+        const p = (booking.date || cached.date).split('/');
+        document.getElementById('re-date').value = `${p[2]}-${p[1]}-${p[0]}`;
+        document.getElementById('re-start').value = booking.start || cached.start;
+        document.getElementById('re-end').value = booking.end || cached.end;
 
-    // Hiển thị số lần còn lại
-    const hint = document.getElementById('reschedule-hint');
-    if (hint) {
-        const remaining = 2 - changeCount;
-        hint.innerText = `Còn ${remaining} lần đổi giờ cho lịch này`;
-        hint.style.color = remaining === 1 ? '#f59e0b' : '#006241';
-    }
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('re-date').setAttribute('min', today);
 
-    document.getElementById('history-modal').classList.add('z-[80]');
-    document.getElementById('reschedule-modal').classList.remove('hidden');
+        const hint = document.getElementById('reschedule-hint');
+        if (hint) {
+            const remaining = 2 - changeCount;
+            hint.innerText = `Còn ${remaining} lần đổi giờ cho lịch này`;
+            hint.style.color = remaining === 1 ? '#f59e0b' : '#006241';
+        }
+
+        document.getElementById('history-modal').classList.add('z-[80]');
+        document.getElementById('reschedule-modal').classList.remove('hidden');
+    });
 }
 
-// 2. XÁC NHẬN ĐỔI GIỜ
+// 2. XÁC NHẬN ĐỔI GIỜ — đọc realtime Firebase để guard chính xác
 function submitReschedule() {
     if (!editingBookingKey) return;
 
-    const booking = _historyCache.find(b => b.key === editingBookingKey);
-    const changeCount = booking ? (booking.rescheduleCount || 0) : 0;
+    // Luôn đọc từ Firebase để lấy rescheduleCount thật, không dùng cache
+    db.ref('bedBookings/' + editingBookingKey).once('value', snap => {
+        const liveBooking = snap.val();
+        const changeCount = liveBooking ? (liveBooking.rescheduleCount || 0) : 0;
 
-    // Guard: double check giới hạn
-    if (changeCount >= 2) {
-        showAppModal("Hết lượt", "Đã đổi giờ 2 lần, không thể đổi thêm.", "🚫");
-        document.getElementById('reschedule-modal').classList.add('hidden');
-        return;
-    }
+        if (changeCount >= 2) {
+            showAppModal("Hết lượt", "Đã đổi giờ 2 lần, không thể đổi thêm.", "🚫");
+            document.getElementById('reschedule-modal').classList.add('hidden');
+            return;
+        }
+
+        _doSubmitReschedule(changeCount);
+    });
+}
+
+function _doSubmitReschedule(changeCount) {
 
     const dateVal = document.getElementById('re-date').value;
     const start = document.getElementById('re-start').value;
@@ -1795,7 +1806,7 @@ function submitReschedule() {
             alert(`Khung giờ đó đã đầy (${overlapCount}/4 bed). Chọn giờ khác nhé!`);
         }
     });
-}
+} // end _doSubmitReschedule
   // --- HÀM ĐĂNG XUẤT ---
 window.handleLogout = function() {
     // 1. Hỏi xác nhận cho chắc
