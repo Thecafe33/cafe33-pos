@@ -230,12 +230,12 @@
     <div class="flex-1">
         <div class="input-island group">
             <label class="input-island-label">Họ và tên</label>
-            <input type="text" id="reg-name" class="input-island-field capitalize" placeholder="Ví dụ: Trần Minh Tuấn">
+            <input type="text" id="reg-name" class="input-island-field capitalize" placeholder="Ví dụ: Nguyễn Minh Tuấn">
         </div>
 
         <div class="input-island group">
             <label class="input-island-label">Số điện thoại</label>
-            <input type="tel" id="reg-phone" class="input-island-field" placeholder="091..." inputmode="numeric">
+            <input type="tel" id="reg-phone" class="input-island-field" placeholder="090..." inputmode="numeric">
         </div>
     </div>
 
@@ -1425,55 +1425,60 @@ function openHistory() {
         if (todayBooking) {
             const h = todayBooking;
             const bedText = (h.bedId && h.bedId != "WAITING") ? "BED 0" + h.bedId : "Chờ xếp...";
-            const isWaiting = (h.status || "").includes('chờ');
+            const isWaiting = (h.status || "").includes("chờ");
 
-            // Tính phút còn lại đến giờ bắt đầu
-            const nowMs = new Date();
-            const [sh, sm] = h.start.split(':').map(Number);
-            const startMs = new Date(); startMs.setHours(sh, sm, 0, 0);
-            const minsLeft = Math.floor((startMs - nowMs) / 60000);
+            // Tính phút còn lại
+            const nowMs2 = new Date();
+            const [sh2, sm2] = h.start.split(":").map(Number);
+            const startMs2 = new Date(); startMs2.setHours(sh2, sm2, 0, 0);
+            const minsLeft = Math.floor((startMs2 - nowMs2) / 60000);
 
-            // Trạng thái nút Đổi giờ: khóa khi ≤10 phút hoặc đã đổi 2 lần
+            // Đổi giờ: khóa khi ≤10 phút hoặc đã 2 lần
             const changeCount = h.rescheduleCount || 0;
             const reschedLocked = minsLeft <= 10;
             const reschedMaxed = changeCount >= 2;
-            const reschedDisabled = reschedLocked || reschedMaxed || !isWaiting;
-            let reschedTitle = '';
-            if (reschedLocked) reschedTitle = `Lịch bắt đầu sau ${minsLeft > 0 ? minsLeft + ' phút' : 'đã qua'} — không thể đổi`;
-            else if (reschedMaxed) reschedTitle = 'Đã đổi giờ 2 lần — hết lượt';
+            const reschedDisabled = reschedLocked || reschedMaxed;
 
-            // Trạng thái nút Hủy: luôn hiện, khóa (có phí) nếu ≤5 phút
+            // Hủy: luôn hiện, style thay đổi khi ≤5 phút
             const cancelLocked = minsLeft <= 5;
-            const cancelHidden = false; // Luôn hiện để thu phí 10K nếu cần
 
-            activeContent = \`
-                <div id="active-card" class="bg-white rounded-2xl p-5 shadow-sm border border-amber-100 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl shadow-sm animate-pulse">HÔM NAY</div>
-                    <div class="mb-4">
-                        <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">📅 \${h.date}</p>
-                        <p class="text-3xl font-black text-[#1e3932] tracking-tight">\${h.start}</p>
-                        <p class="text-sm text-gray-500 font-bold mt-1">Đến: \${h.end} • <span class="text-[#006241]">\${bedText}</span></p>
-                        \${changeCount > 0 ? \`<p class="text-[10px] text-amber-600 font-bold mt-1">Đã đổi giờ: \${changeCount}/2 lần</p>\` : ''}
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="openRescheduleModal('\${h.key}')"
-                            \${reschedDisabled ? 'disabled title="' + reschedTitle + '"' : ''}
-                            class="flex-1 py-3 rounded-xl font-bold text-xs border active:scale-95 transition-all \${reschedDisabled ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60' : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100'}">
-                            Đổi giờ\${reschedMaxed ? ' (hết lượt)' : changeCount > 0 ? ' (' + (2-changeCount) + ' còn lại)' : ''}
-                        </button>
-                        <button onclick="cancelBooking('\${h.key}')"
-                            class="\${cancelHidden ? 'hidden' : ''} flex-1 py-3 rounded-xl font-bold text-xs border active:scale-95 transition-all \${cancelLocked ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100'}">
-                            Hủy\${cancelLocked ? ' 🔒' : ''}
-                        </button>
-                    </div>
-                </div>\`;
+            // Build nút đổi giờ
+            let reschedLabel = "Đổi giờ";
+            if (reschedMaxed) reschedLabel = "Đổi giờ (hết lượt)";
+            else if (changeCount > 0) reschedLabel = "Đổi giờ (" + (2 - changeCount) + " còn lại)";
+            const reschedClass = reschedDisabled
+                ? "flex-1 py-3 rounded-xl font-bold text-xs border bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60"
+                : "flex-1 py-3 rounded-xl font-bold text-xs border bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 active:scale-95 transition-all";
+
+            // Build nút hủy
+            const cancelLabel = cancelLocked ? "Hủy (có phí)" : "Hủy";
+            const cancelClass = cancelLocked
+                ? "flex-1 py-3 rounded-xl font-bold text-xs border bg-amber-50 text-amber-600 border-amber-200 active:scale-95 transition-all"
+                : "flex-1 py-3 rounded-xl font-bold text-xs border bg-red-50 text-red-600 border-red-100 hover:bg-red-100 active:scale-95 transition-all";
+
+            const changeInfoHtml = changeCount > 0
+                ? '<p class="text-[10px] text-amber-600 font-bold mt-1">Đã đổi giờ: ' + changeCount + '/2 lần</p>'
+                : "";
+
+            activeContent = '<div id="active-card" class="bg-white rounded-2xl p-5 shadow-sm border border-amber-100 relative overflow-hidden">'
+                + '<div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl shadow-sm animate-pulse">HÔM NAY</div>'
+                + '<div class="mb-4">'
+                + '<p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">📅 ' + h.date + '</p>'
+                + '<p class="text-3xl font-black text-[#1e3932] tracking-tight">' + h.start + '</p>'
+                + '<p class="text-sm text-gray-500 font-bold mt-1">Đến: ' + h.end + ' • <span class="text-[#006241]">' + bedText + '</span></p>'
+                + changeInfoHtml
+                + '</div>'
+                + '<div class="flex gap-2">'
+                + '<button onclick="openRescheduleModal(\"' + h.key + '\")" class="' + reschedClass + '">' + reschedLabel + '</button>'
+                + '<button onclick="cancelBooking(\"' + h.key + '\")" class="' + cancelClass + '">' + cancelLabel + '</button>'
+                + '</div>'
+                + '</div>';
         } else {
-            activeContent = `
-                <div class="bg-white/50 border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center">
-                    <p class="text-2xl mb-2">🛏️</p>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Bạn chưa có lịch đặt bed hôm nay</p>
-                    <button onclick="document.getElementById('history-modal').classList.add('hidden'); showTab('bed')" class="mt-3 text-[10px] font-bold text-[#006241] uppercase hover:underline">Đặt ngay +</button>
-                </div>`;
+            activeContent = '<div class="bg-white/50 border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center">'
+                + '<p class="text-2xl mb-2">🛏️</p>'
+                + '<p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Bạn chưa có lịch đặt bed hôm nay</p>'
+                + '<button onclick="document.getElementById(&quot;history-modal&quot;).classList.add(&quot;hidden&quot;); showTab(&quot;bed&quot;)" class="mt-3 text-[10px] font-bold text-[#006241] uppercase hover:underline">Đặt ngay +</button>'
+                + '</div>';
         }
         activeDiv.innerHTML = `<h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1">Lịch trình hôm nay</h3>` + activeContent;
 
