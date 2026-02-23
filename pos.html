@@ -4151,7 +4151,16 @@ function handleMobileBedOrder(bookingId) {
     activeOrderingBedId = bedId; 
     pendingBedOrder = booking; 
 
-    // 1. Kiểm tra nợ cũ (Giữ nguyên)
+    // Nếu booking đang ACTIVE -> hỏi gia hạn trước khi order
+    var isActive = booking.status && (booking.status.includes('active') || booking.status.includes('đang dùng'));
+    if (isActive) {
+        openExtendModal(booking, function() { _doShowBedDetail(booking, bedId); });
+        return;
+    }
+    _doShowBedDetail(booking, bedId);
+}
+
+function _doShowBedDetail(booking, bedId) {
    if (booking.phone) {
         scanAndAddDebt(booking.phone);
     }
@@ -4707,6 +4716,118 @@ function submitCancelBooking(type) {
 let tempCheckoutData = null;
 
 // --- [REPLACE] HÀM CHECKOUT MỚI (MỞ POPUP SMART) ---
+// ===== GIA HẠN GIỜ (EXTEND TIME) =====
+var _extendBookingData = null;
+var _extendDurationHours = 0;
+var _extendCallback = null;
+
+function openExtendModal(booking, callback) {
+    _extendBookingData = booking;
+    _extendDurationHours = 0;
+    _extendCallback = callback;
+
+    document.getElementById('extend-modal-title').innerText = (booking.name || 'Khách hàng') + ' — Bed 0' + (booking.bedId || '?');
+    document.getElementById('extend-current-end').innerText = booking.end || '--:--';
+    document.getElementById('extend-preview-box').classList.add('hidden');
+    document.getElementById('extend-new-end').innerText = '--:--';
+
+    // Reset button styles
+    [1,2,3].forEach(h => {
+        var btn = document.getElementById('btn-extend-' + h + 'h');
+        if (btn) {
+            btn.classList.remove('border-[#006241]', 'bg-green-50');
+            btn.classList.add('border-gray-200', 'bg-white');
+        }
+    });
+
+    var confirmBtn = document.getElementById('btn-confirm-extend');
+    confirmBtn.disabled = true;
+    confirmBtn.classList.add('opacity-40', 'cursor-not-allowed');
+
+    document.getElementById('modal-extend-time').classList.remove('hidden');
+}
+
+function closeExtendModal() {
+    document.getElementById('modal-extend-time').classList.add('hidden');
+    _extendBookingData = null;
+    _extendDurationHours = 0;
+    _extendCallback = null;
+}
+
+function selectExtendDuration(hours) {
+    _extendDurationHours = hours;
+
+    [1,2,3].forEach(h => {
+        var btn = document.getElementById('btn-extend-' + h + 'h');
+        if (!btn) return;
+        if (h === hours) {
+            btn.classList.add('border-[#006241]', 'bg-green-50');
+            btn.classList.remove('border-gray-200', 'bg-white');
+        } else {
+            btn.classList.remove('border-[#006241]', 'bg-green-50');
+            btn.classList.add('border-gray-200', 'bg-white');
+        }
+    });
+
+    // Calculate new end time
+    if (_extendBookingData && _extendBookingData.end) {
+        var parts = _extendBookingData.end.split(':');
+        var endDate = new Date();
+        endDate.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+        endDate.setTime(endDate.getTime() + hours * 60 * 60 * 1000);
+        var newEnd = endDate.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+        document.getElementById('extend-new-end').innerText = newEnd;
+        document.getElementById('extend-preview-box').classList.remove('hidden');
+    }
+
+    var confirmBtn = document.getElementById('btn-confirm-extend');
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+}
+
+function confirmExtendTime() {
+    if (!_extendBookingData || !_extendDurationHours) return;
+
+    var booking = _extendBookingData;
+    var hours = _extendDurationHours;
+    var callback = _extendCallback;
+
+    // Calculate new end time
+    var parts = booking.end.split(':');
+    var endDate = new Date();
+    endDate.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+    endDate.setTime(endDate.getTime() + hours * 60 * 60 * 1000);
+    var newEndStr = endDate.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+
+    // Update Firebase
+    var bookingId = booking.id || booking.key;
+    if (bookingId) {
+        db.ref('bedBookings/' + bookingId).update({ end: newEndStr });
+        // Update local data
+        booking.end = newEndStr;
+        if (window.currentMobileBooking && window.currentMobileBooking.id === bookingId) {
+            window.currentMobileBooking.end = newEndStr;
+        }
+    }
+
+    // Add hourly charges to cart
+    for (var i = 0; i < hours; i++) {
+        if (typeof autoAddMenuItemToCart === 'function') autoAddMenuItemToCart('1h bed');
+    }
+
+    closeExtendModal();
+
+    // Run callback (proceed to order)
+    if (typeof callback === 'function') callback();
+}
+
+function skipExtendAndOrder() {
+    var callback = _extendCallback;
+    closeExtendModal();
+    if (typeof callback === 'function') callback();
+}
+// ===== END GIA HẠN GIỜ =====
+
 function handleBedCheckout(booking) {
     if (!booking) return;
     
@@ -5473,28 +5594,13 @@ function saveOrderToFirebase(method) {
             }
             
             // TRƯỜNG HỢP 3: KHÁCH VÃNG LAI / GỌI THÊM / MANG VỀ -> Kết thúc luôn
-            // TRƯỜNG HỢP 3: KHÁCH VÃNG LAI / GỌI THÊM
             else {
-                // >>> LOGIC TÍNH TIỀN NƯỚC CHO VÒNG QUAY <<<
-                let eligibleTotal = 0;
-                cart.forEach(item => {
-                    const mItem = menu.find(m => m.name === item.name);
-                    const type = mItem ? String(mItem.type).toLowerCase() : "";
-                    // Loại trừ Ăn vặt và Khác
-                    if (!type.includes('ăn vặt') && !type.includes('khác')) {
-                        eligibleTotal += (item.price * item.qty);
-                    }
-                });
-
-                // Nếu đủ 50k tiền nước -> Bắn tín hiệu Vòng quay
-                if (eligibleTotal >= 50000) {
-                    syncToCustomerDisplay('show_wheel');
-                } else {
-                    syncToCustomerDisplay('success');
-                }
-                // >>> KẾT THÚC LOGIC <<<
+                // Báo màn hình khách: Thành công
+                syncToCustomerDisplay('success');
                 
+                // Reset POS (Dùng chế độ Silent để không gửi lệnh idle đè lên lệnh success)
                 resetOrderingMode(true); 
+                
                 switchView('menu');
                 setTimeout(() => showAppModal("Thành công", "Đơn hàng đã được lưu!", "✅"), 300);
             }
@@ -5693,6 +5799,12 @@ function openBedManagerMobile() {
         const el = document.getElementById(id);
         if(el) el.classList.add('hidden');
     });
+
+    // Ẩn history mobile và revenue mobile (tránh đè lên bed manager)
+    const histMobEl = document.getElementById('view-history-mobile');
+    if (histMobEl) histMobEl.classList.add('hidden');
+    const revMobEl = document.getElementById('view-revenue-mobile');
+    if (revMobEl) revMobEl.classList.add('hidden');
 
     document.getElementById('view-bed-mobile').classList.remove('hidden');
     
@@ -6167,6 +6279,10 @@ function openRevenueMobile() {
     
     // Ẩn view Bed Mobile (nếu đang mở)
     document.getElementById('view-bed-mobile').classList.add('hidden');
+    
+    // Ẩn history mobile (tránh đè lên revenue view)
+    const histMobEl2 = document.getElementById('view-history-mobile');
+    if (histMobEl2) histMobEl2.classList.add('hidden');
     
     // 3. Hiện view Revenue Mobile
     document.getElementById('view-revenue-mobile').classList.remove('hidden');
@@ -7314,8 +7430,20 @@ function handleMobileBedOrder(bookingId) {
     activeOrderingBedId = booking.bedId || "WAITING"; 
     pendingBedOrder = booking; 
 
-    // [FIX QUAN TRỌNG] XỬ LÝ SĐT
-    var sdtInput = document.getElementById('kh-sdt');
+    // Nếu booking đang ACTIVE -> hỏi gia hạn trước khi order
+    var isActive = booking.status && (booking.status.includes('active') || booking.status.includes('đang dùng'));
+    if (isActive) {
+        // Đóng bed detail panel nếu đang mở
+        var detailPanel = document.getElementById('mobile-bed-detail');
+        if (detailPanel) detailPanel.classList.add('hidden');
+
+        openExtendModal(booking, function() { _doHandleMobileBedOrder(booking); });
+        return;
+    }
+    _doHandleMobileBedOrder(booking);
+}
+
+function _doHandleMobileBedOrder(booking) {
     var statusLabel = document.getElementById('sdt-status');
 
     if (sdtInput) {
@@ -8424,6 +8552,64 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
         </div>
     </div>
 </div>
+<!-- ===== MODAL GIA HẠN GIỜ ===== -->
+<div id="modal-extend-time" class="hidden fixed inset-0 z-[200000] flex items-end justify-center bg-black/50 backdrop-blur-sm p-0 animate-fade-in">
+    <div class="bg-white w-full max-w-[480px] rounded-t-[32px] shadow-2xl overflow-hidden flex flex-col relative">
+        <!-- Header -->
+        <div class="bg-[#006241] px-6 pt-6 pb-5 flex justify-between items-center">
+            <div>
+                <p class="text-[10px] text-green-200 uppercase tracking-widest font-bold mb-1">⏰ Gia hạn giờ</p>
+                <h3 class="text-white font-black text-xl leading-tight" id="extend-modal-title">Khách đang dùng</h3>
+            </div>
+            <div class="text-right">
+                <p class="text-[10px] text-green-200 uppercase tracking-widest">Hết giờ lúc</p>
+                <p class="text-white font-black text-2xl" id="extend-current-end">--:--</p>
+            </div>
+        </div>
+
+        <!-- Body -->
+        <div class="px-6 py-5 bg-[#F9FAF7]">
+            <p class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-3">Chọn thêm giờ</p>
+            <div class="flex gap-3 mb-5">
+                <button onclick="selectExtendDuration(1)" id="btn-extend-1h"
+                    class="extend-btn flex-1 h-16 rounded-2xl border-2 border-gray-200 bg-white flex flex-col items-center justify-center transition-all active:scale-95">
+                    <span class="text-2xl font-black text-[#006241]">+1H</span>
+                    <span class="text-[10px] text-gray-400 font-bold">1 giờ</span>
+                </button>
+                <button onclick="selectExtendDuration(2)" id="btn-extend-2h"
+                    class="extend-btn flex-1 h-16 rounded-2xl border-2 border-gray-200 bg-white flex flex-col items-center justify-center transition-all active:scale-95">
+                    <span class="text-2xl font-black text-[#006241]">+2H</span>
+                    <span class="text-[10px] text-gray-400 font-bold">2 giờ</span>
+                </button>
+                <button onclick="selectExtendDuration(3)" id="btn-extend-3h"
+                    class="extend-btn flex-1 h-16 rounded-2xl border-2 border-gray-200 bg-white flex flex-col items-center justify-center transition-all active:scale-95">
+                    <span class="text-2xl font-black text-[#006241]">+3H</span>
+                    <span class="text-[10px] text-gray-400 font-bold">3 giờ</span>
+                </button>
+            </div>
+
+            <!-- Preview new end time -->
+            <div id="extend-preview-box" class="hidden bg-green-50 border border-green-200 rounded-2xl p-4 mb-5 text-center">
+                <p class="text-[10px] text-green-600 uppercase tracking-widest font-bold mb-1">Giờ ra mới</p>
+                <p class="text-3xl font-black text-[#006241]" id="extend-new-end">--:--</p>
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="px-6 pb-8 bg-white flex gap-3 pt-2">
+            <button onclick="skipExtendAndOrder()"
+                class="flex-1 h-14 rounded-2xl border-2 border-gray-200 text-gray-500 font-bold text-sm transition-all active:scale-95">
+                Bỏ qua
+            </button>
+            <button onclick="confirmExtendTime()" id="btn-confirm-extend"
+                class="flex-2 h-14 rounded-2xl bg-[#006241] text-white font-black text-sm transition-all active:scale-95 px-6 opacity-40 cursor-not-allowed" style="flex:2" disabled>
+                ✅ Xác nhận gia hạn
+            </button>
+        </div>
+    </div>
+</div>
+<!-- ===== END MODAL GIA HẠN GIỜ ===== -->
+
     <script>
 // --- [MOBILE GESTURE FIX] XỬ LÝ VUỐT BACK TRÊN ĐIỆN THOẠI ---
 
@@ -8544,32 +8730,3 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
