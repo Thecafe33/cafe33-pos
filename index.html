@@ -230,7 +230,7 @@
     <div class="flex-1">
         <div class="input-island group">
             <label class="input-island-label">Họ và tên</label>
-            <input type="text" id="reg-name" class="input-island-field capitalize" placeholder="Ví dụ: Nguyễn Văn Lò">
+            <input type="text" id="reg-name" class="input-island-field capitalize" placeholder="Ví dụ: Huỳnh Thị Dồ">
         </div>
 
         <div class="input-island group">
@@ -1494,30 +1494,33 @@ function showLateCancelModal(key, timeMsg) {
         m.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px)';
         document.body.appendChild(m);
     }
-    m.innerHTML = `
-    <div style="background:#fff;width:100%;max-width:380px;border-radius:28px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.25)">
-        <div style="background:#ef4444;padding:24px 24px 20px">
-            <p style="color:#fff;font-weight:900;font-size:18px;margin:0 0 4px">Không thể hủy lúc này</p>
-            <p style="color:#fecaca;font-size:12px;font-weight:700;margin:0">Quá gần giờ bắt đầu</p>
-        </div>
-        <div style="padding:20px 24px;background:#fafafa">
-            <p style="font-size:13px;color:#374151;font-weight:600;line-height:1.7;margin:0 0 16px">${timeMsg}<br>Không thể hủy lịch vào lúc này.</p>
-            <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:16px;padding:16px">
-                <p style="font-size:11px;font-weight:900;color:#92400e;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 6px">Nếu vẫn muốn hủy:</p>
-                <p style="font-size:12px;color:#b45309;font-weight:600;margin:0">Lần đặt bed tiếp theo của bạn sẽ bị tính thêm <b>10.000đ</b> phí hủy muộn.</p>
-            </div>
-        </div>
-        <div style="display:flex;gap:12px;padding:16px 24px 24px;background:#fff;border-top:1px solid #f3f4f6">
-            <button onclick="document.getElementById('modal-late-cancel').style.display='none'"
-                style="flex:1;height:48px;border-radius:16px;border:2px solid #e5e7eb;background:#fff;color:#6b7280;font-weight:900;font-size:13px;text-transform:uppercase;cursor:pointer">
-                Giữ lịch
-            </button>
-            <button id="btn-late-cancel-ok"
-                style="flex:1;height:48px;border-radius:16px;border:none;background:#ef4444;color:#fff;font-weight:900;font-size:13px;text-transform:uppercase;cursor:pointer">
-                Hủy &amp; chịu phí
-            </button>
-        </div>
-    </div>`;
+
+    // Dùng innerHTML string thường — không dùng template literal để tránh lỗi nested backtick
+    m.innerHTML = '<div style="background:#fff;width:100%;max-width:380px;border-radius:28px;overflow:hidden">'
+        + '<div style="background:#ef4444;padding:24px 24px 20px">'
+        + '<p style="color:#fff;font-weight:900;font-size:18px;margin:0 0 4px">Không thể hủy lúc này</p>'
+        + '<p style="color:#fecaca;font-size:12px;font-weight:700;margin:0">Quá gần giờ bắt đầu</p>'
+        + '</div>'
+        + '<div style="padding:20px 24px;background:#fafafa">'
+        + '<p id="late-cancel-timemsg" style="font-size:13px;color:#374151;font-weight:600;line-height:1.7;margin:0 0 16px"></p>'
+        + '<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:16px;padding:16px">'
+        + '<p style="font-size:11px;font-weight:900;color:#92400e;text-transform:uppercase;letter-spacing:0.06em;margin:0 0 6px">Nếu vẫn muốn hủy:</p>'
+        + '<p style="font-size:12px;color:#b45309;font-weight:600;margin:0">Lần đặt bed tiếp theo sẽ bị tính thêm <b>10.000đ</b> phí hủy muộn.</p>'
+        + '</div>'
+        + '</div>'
+        + '<div style="display:flex;gap:12px;padding:16px 24px 24px;background:#fff;border-top:1px solid #f3f4f6">'
+        + '<button id="btn-late-cancel-close" style="flex:1;height:48px;border-radius:16px;border:2px solid #e5e7eb;background:#fff;color:#6b7280;font-weight:900;font-size:13px;text-transform:uppercase;cursor:pointer">Giữ lịch</button>'
+        + '<button id="btn-late-cancel-ok" style="flex:1;height:48px;border-radius:16px;border:none;background:#ef4444;color:#fff;font-weight:900;font-size:13px;text-transform:uppercase;cursor:pointer">Hủy &amp; chịu phí</button>'
+        + '</div>'
+        + '</div>';
+
+    // Điền message sau khi innerHTML đã set xong
+    document.getElementById('late-cancel-timemsg').innerHTML = timeMsg + '<br>Không thể hủy lịch vào lúc này.';
+
+    document.getElementById('btn-late-cancel-close').onclick = function() {
+        m.style.display = 'none';
+    };
+
     m.style.display = 'flex';
 
     document.getElementById('btn-late-cancel-ok').onclick = function() {
