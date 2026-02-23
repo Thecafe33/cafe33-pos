@@ -1185,6 +1185,9 @@ input, button, select, textarea { font-size: 1rem; }
                     <button id="btn-store-status" onclick="handleStoreStatusClick()" class="w-full py-4 rounded-[20px] font-black text-xs uppercase shadow-md active:scale-95 transition-all mt-3 bg-white text-gray-400 border border-gray-100">
     Đang Hoạt Động
 </button>
+                    <button id="btn-bed-closing" onclick="openBedClosingModal()" class="w-full py-4 rounded-[20px] font-black text-xs uppercase shadow-sm active:scale-95 transition-all mt-2 bg-white text-[#006241] border-2 border-[#006241]/20 hover:bg-green-50">
+    Giờ Đóng Bed: <span id="bed-closing-display">20:50</span>
+</button>
                 </div>
             </div>
         </div>
@@ -4763,19 +4766,25 @@ let tempCheckoutData = null;
 // ===== GIA HẠN GIỜ (EXTEND TIME) =====
 var _extendBookingData = null;
 var _extendDurationHours = 0;
+var _extendNewEndTime = null;
 var _extendCallback = null;
+var _extendCurrentMode = 'duration';
 
 function openExtendModal(booking, callback) {
     _extendBookingData = booking;
     _extendDurationHours = 0;
+    _extendNewEndTime = null;
     _extendCallback = callback;
+    _extendCurrentMode = 'duration';
 
-    document.getElementById('extend-modal-title').innerText = (booking.name || 'Khách hàng') + ' — Bed 0' + (booking.bedId || '?');
+    document.getElementById('extend-modal-title').innerText = (booking.name || 'Khách hàng') + (booking.bedId && booking.bedId !== 'WAITING' ? ' — Bed 0' + booking.bedId : '');
     document.getElementById('extend-current-end').innerText = booking.end || '--:--';
     document.getElementById('extend-preview-box').classList.add('hidden');
     document.getElementById('extend-new-end').innerText = '--:--';
+    document.getElementById('extend-custom-hour').value = '';
+    document.getElementById('extend-custom-minute').value = '';
+    document.getElementById('extend-time-hint').innerText = 'Nhập giờ khách muốn về';
 
-    // Reset button styles
     [1,2,3].forEach(h => {
         var btn = document.getElementById('btn-extend-' + h + 'h');
         if (btn) {
@@ -4784,22 +4793,54 @@ function openExtendModal(booking, callback) {
         }
     });
 
+    switchExtendMode('duration');
+
     var confirmBtn = document.getElementById('btn-confirm-extend');
     confirmBtn.disabled = true;
     confirmBtn.classList.add('opacity-40', 'cursor-not-allowed');
-
     document.getElementById('modal-extend-time').classList.remove('hidden');
+}
+
+function switchExtendMode(mode) {
+    _extendCurrentMode = mode;
+    _extendDurationHours = 0;
+    _extendNewEndTime = null;
+
+    var durTab = document.getElementById('extend-tab-duration');
+    var endTab = document.getElementById('extend-tab-endtime');
+    var durBox = document.getElementById('extend-mode-duration');
+    var endBox = document.getElementById('extend-mode-endtime');
+
+    if (mode === 'duration') {
+        durTab.className = 'flex-1 py-3 rounded-[14px] text-sm font-black uppercase tracking-wider bg-white text-[#006241] shadow-sm transition-all';
+        endTab.className = 'flex-1 py-3 rounded-[14px] text-sm font-black uppercase tracking-wider text-gray-400 transition-all';
+        durBox.classList.remove('hidden');
+        endBox.classList.add('hidden');
+    } else {
+        endTab.className = 'flex-1 py-3 rounded-[14px] text-sm font-black uppercase tracking-wider bg-white text-[#006241] shadow-sm transition-all';
+        durTab.className = 'flex-1 py-3 rounded-[14px] text-sm font-black uppercase tracking-wider text-gray-400 transition-all';
+        endBox.classList.remove('hidden');
+        durBox.classList.add('hidden');
+        document.getElementById('extend-custom-hour').focus();
+    }
+
+    document.getElementById('extend-preview-box').classList.add('hidden');
+    var confirmBtn = document.getElementById('btn-confirm-extend');
+    confirmBtn.disabled = true;
+    confirmBtn.classList.add('opacity-40', 'cursor-not-allowed');
 }
 
 function closeExtendModal() {
     document.getElementById('modal-extend-time').classList.add('hidden');
     _extendBookingData = null;
     _extendDurationHours = 0;
+    _extendNewEndTime = null;
     _extendCallback = null;
 }
 
 function selectExtendDuration(hours) {
     _extendDurationHours = hours;
+    _extendNewEndTime = null;
 
     [1,2,3].forEach(h => {
         var btn = document.getElementById('btn-extend-' + h + 'h');
@@ -4813,13 +4854,13 @@ function selectExtendDuration(hours) {
         }
     });
 
-    // Calculate new end time
     if (_extendBookingData && _extendBookingData.end) {
         var parts = _extendBookingData.end.split(':');
         var endDate = new Date();
         endDate.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
         endDate.setTime(endDate.getTime() + hours * 60 * 60 * 1000);
         var newEnd = endDate.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+        _extendNewEndTime = newEnd;
         document.getElementById('extend-new-end').innerText = newEnd;
         document.getElementById('extend-preview-box').classList.remove('hidden');
     }
@@ -4829,65 +4870,169 @@ function selectExtendDuration(hours) {
     confirmBtn.classList.remove('opacity-40', 'cursor-not-allowed');
 }
 
+function formatExtendTimeInput(input) {
+    var val = parseInt(input.value);
+    if (isNaN(val)) { input.value = ''; return; }
+    if (input.id === 'extend-custom-hour' && val > 23) input.value = '23';
+    if (input.id === 'extend-custom-minute' && val > 59) input.value = '59';
+}
+
+function calcExtendFromTime() {
+    var hh = document.getElementById('extend-custom-hour').value;
+    var mm = document.getElementById('extend-custom-minute').value;
+    var hint = document.getElementById('extend-time-hint');
+    var confirmBtn = document.getElementById('btn-confirm-extend');
+
+    if (!hh || !mm) {
+        hint.innerText = 'Nhập giờ khách muốn về';
+        hint.style.color = '#9ca3af';
+        document.getElementById('extend-preview-box').classList.add('hidden');
+        confirmBtn.disabled = true;
+        confirmBtn.classList.add('opacity-40', 'cursor-not-allowed');
+        return;
+    }
+
+    var newEndStr = hh.padStart(2,'0') + ':' + mm.padStart(2,'0');
+    var currentEnd = _extendBookingData ? _extendBookingData.end : null;
+
+    if (currentEnd) {
+        var curParts = currentEnd.split(':');
+        var curEnd = new Date(); curEnd.setHours(parseInt(curParts[0]), parseInt(curParts[1]), 0, 0);
+        var newEnd = new Date(); newEnd.setHours(parseInt(hh), parseInt(mm), 0, 0);
+
+        if (newEnd <= curEnd) {
+            hint.innerText = 'Giờ về mới phải sau ' + currentEnd;
+            hint.style.color = '#ef4444';
+            document.getElementById('extend-preview-box').classList.add('hidden');
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-40', 'cursor-not-allowed');
+            _extendNewEndTime = null;
+            return;
+        }
+
+        var diffMs = newEnd - curEnd;
+        var diffH = Math.floor(diffMs / 3600000);
+        var diffM = Math.floor((diffMs % 3600000) / 60000);
+        hint.innerText = 'Thêm ' + (diffH > 0 ? diffH + ' giờ ' : '') + (diffM > 0 ? diffM + ' phút' : '');
+        hint.style.color = '#006241';
+    }
+
+    _extendNewEndTime = newEndStr;
+    _extendDurationHours = 0;
+    document.getElementById('extend-new-end').innerText = newEndStr;
+    document.getElementById('extend-preview-box').classList.remove('hidden');
+    confirmBtn.disabled = false;
+    confirmBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+}
+
 function confirmExtendTime() {
-    if (!_extendBookingData || !_extendDurationHours) return;
+    if (!_extendBookingData || !_extendNewEndTime) return;
 
     var booking = _extendBookingData;
-    var hours = _extendDurationHours;
+    var newEndStr = _extendNewEndTime;
     var callback = _extendCallback;
 
-    // Tính giờ ra mới
-    var parts = booking.end.split(':');
-    var endDate = new Date();
-    endDate.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-    endDate.setTime(endDate.getTime() + hours * 60 * 60 * 1000);
-    var newEndStr = endDate.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-
-    // Cập nhật Firebase
     var bookingId = booking.id || booking.key;
     if (bookingId) {
         db.ref('bedBookings/' + bookingId).update({ end: newEndStr });
-        // Cập nhật local cache
         booking.end = newEndStr;
-        if (window.currentMobileBooking && window.currentMobileBooking.id === bookingId) {
-            window.currentMobileBooking.end = newEndStr;
+        if (window.currentMobileBooking && window.currentMobileBooking.id === bookingId) window.currentMobileBooking.end = newEndStr;
+        if (window.currentPcBooking && window.currentPcBooking.id === bookingId) window.currentPcBooking.end = newEndStr;
+        if (globalAllBookings) {
+            var idx = globalAllBookings.findIndex(b => b.id === bookingId);
+            if (idx > -1) globalAllBookings[idx].end = newEndStr;
         }
-        if (window.currentPcBooking && window.currentPcBooking.id === bookingId) {
-            window.currentPcBooking.end = newEndStr;
-        }
-        // Cập nhật globalAllBookings
-        var idx = globalAllBookings ? globalAllBookings.findIndex(b => b.id === bookingId) : -1;
-        if (idx > -1) globalAllBookings[idx].end = newEndStr;
     }
 
-    // Nếu đang trong trạng thái waiting/chờ: không thêm giờ vào giỏ (chỉ sửa end time)
-    // Nếu đang active (có callback): thêm giờ vào giỏ
-    if (typeof callback === 'function') {
-        for (var i = 0; i < hours; i++) {
+    if (typeof callback === 'function' && _extendDurationHours > 0) {
+        for (var i = 0; i < _extendDurationHours; i++) {
             if (typeof autoAddMenuItemToCart === 'function') autoAddMenuItemToCart('1h bed');
         }
     }
 
     closeExtendModal();
 
-    // Thông báo thành công
-    var msg = `Đã gia hạn +${hours}h → Hết giờ lúc ${newEndStr}`;
-    if (typeof showAppModal === 'function') {
-        showAppModal('Gia hạn thành công!', msg, '⏰');
-    } else {
-        alert(msg);
-    }
-
-    // Chạy callback nếu có (luồng order)
+    if (typeof showAppModal === 'function') showAppModal('Gia hạn thành công', 'Giờ kết thúc mới: ' + newEndStr, null);
     if (typeof callback === 'function') callback();
 }
 
 function skipExtendAndOrder() {
-    var callback = _extendCallback;
+    var cb = _extendCallback;
     closeExtendModal();
-    if (typeof callback === 'function') callback();
+    if (typeof cb === 'function') cb();
 }
 // ===== END GIA HẠN GIỜ =====
+
+// ===== GIỜ ĐÓNG CỬA BED & AUTO-STOP =====
+var currentBedClosingTime = '20:50';
+var BED_AUTOSTOP_TIME = '21:30';
+var _bedAutoStopChecked = false;
+var _bedCloseTimer = null;
+
+db.ref('bed_closing_time').on('value', function(snap) {
+    var val = snap.val();
+    currentBedClosingTime = val || '20:50';
+    var el = document.getElementById('bed-closing-display');
+    if (el) el.innerText = currentBedClosingTime;
+});
+
+function openBedClosingModal() {
+    var parts = currentBedClosingTime.split(':');
+    document.getElementById('closing-hour').value = parts[0] || '20';
+    document.getElementById('closing-minute').value = parts[1] || '50';
+    document.getElementById('modal-bed-closing').classList.remove('hidden');
+}
+
+function saveBedClosingTime() {
+    var hh = (document.getElementById('closing-hour').value || '').padStart(2,'0');
+    var mm = (document.getElementById('closing-minute').value || '').padStart(2,'0');
+    if (!hh || !mm) return alert('Vui lòng nhập đầy đủ!');
+    var newTime = hh + ':' + mm;
+    db.ref('bed_closing_time').set(newTime);
+    document.getElementById('modal-bed-closing').classList.add('hidden');
+    if (typeof showAppModal === 'function') showAppModal('Đã lưu', 'Giờ đóng cửa Bed: ' + newTime, null);
+}
+
+function startBedAutoStopTimer() {
+    if (_bedCloseTimer) clearInterval(_bedCloseTimer);
+    _bedCloseTimer = setInterval(checkBedAutoStop, 30000);
+    checkBedAutoStop();
+}
+
+function checkBedAutoStop() {
+    var now = new Date();
+    var nowStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    if (nowStr >= BED_AUTOSTOP_TIME && !_bedAutoStopChecked) {
+        _bedAutoStopChecked = true;
+        triggerBedAutoStop();
+    }
+    if (nowStr < '01:00') _bedAutoStopChecked = false;
+}
+
+function triggerBedAutoStop() {
+    var activeBookings = (globalAllBookings || []).filter(b =>
+        b.status && (b.status.includes('active') || b.status.includes('đang dùng'))
+    );
+    var count = activeBookings.length;
+    var nowStr = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    activeBookings.forEach(function(b) {
+        var bookingId = b.id || b.key;
+        if (bookingId) {
+            db.ref('bedBookings/' + bookingId).update({
+                status: 'đã xong',
+                realEndTime: nowStr,
+                autoStopped: true,
+                totalSpend: b.totalSpend || 0
+            });
+        }
+    });
+    document.getElementById('autostop-time-display').innerText = BED_AUTOSTOP_TIME;
+    document.getElementById('autostop-count').innerText = count;
+    document.getElementById('modal-bed-autostop').classList.remove('hidden');
+}
+
+startBedAutoStopTimer();
+// ===== END GIỜ ĐÓNG CỬA BED & AUTO-STOP =====
 
 function handleBedCheckout(booking) {
     if (!booking) return;
@@ -8641,61 +8786,159 @@ document.addEventListener('DOMContentLoaded', updateCartPadding);
 </div>
 <!-- ===== MODAL GIA HẠN GIỜ ===== -->
 <div id="modal-extend-time" class="hidden fixed inset-0 z-[200000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-6 animate-fade-in">
-    <div class="bg-white w-full max-w-[420px] rounded-[32px] shadow-2xl overflow-hidden flex flex-col relative">
+    <div class="bg-white w-full max-w-[520px] rounded-[36px] shadow-2xl overflow-hidden flex flex-col relative">
+
         <!-- Header -->
-        <div class="bg-[#006241] px-6 pt-6 pb-5 flex justify-between items-center">
+        <div class="bg-[#006241] px-8 pt-8 pb-7 flex justify-between items-center">
             <div>
-                <p class="text-[10px] text-green-200 uppercase tracking-widest font-bold mb-1">⏰ Gia hạn giờ</p>
-                <h3 class="text-white font-black text-xl leading-tight" id="extend-modal-title">Khách đang dùng</h3>
+                <p class="text-[11px] text-green-200 uppercase tracking-[0.25em] font-bold mb-2">Gia hạn thời gian</p>
+                <h3 class="text-white font-black text-2xl leading-tight" id="extend-modal-title">Khách hàng</h3>
             </div>
-            <div class="text-right">
-                <p class="text-[10px] text-green-200 uppercase tracking-widest">Hết giờ lúc</p>
-                <p class="text-white font-black text-2xl" id="extend-current-end">--:--</p>
+            <div class="text-right bg-white/10 rounded-2xl px-5 py-3">
+                <p class="text-[10px] text-green-200 uppercase tracking-widest mb-1">Hết giờ lúc</p>
+                <p class="text-white font-black text-3xl tracking-tight" id="extend-current-end">--:--</p>
+            </div>
+        </div>
+
+        <!-- Tab chọn mode -->
+        <div class="px-8 pt-6 pb-2 bg-[#F9FAF7]">
+            <div class="bg-gray-100 p-1.5 rounded-[18px] flex">
+                <button onclick="switchExtendMode('duration')" id="extend-tab-duration"
+                    class="flex-1 py-3 rounded-[14px] text-sm font-black uppercase tracking-wider bg-white text-[#006241] shadow-sm transition-all">
+                    Thêm Tiếng
+                </button>
+                <button onclick="switchExtendMode('endtime')" id="extend-tab-endtime"
+                    class="flex-1 py-3 rounded-[14px] text-sm font-black uppercase tracking-wider text-gray-400 transition-all">
+                    Chọn Giờ Về
+                </button>
             </div>
         </div>
 
         <!-- Body -->
-        <div class="px-6 py-5 bg-[#F9FAF7]">
-            <p class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-3">Chọn thêm giờ</p>
-            <div class="flex gap-3 mb-5">
-                <button onclick="selectExtendDuration(1)" id="btn-extend-1h"
-                    class="extend-btn flex-1 h-16 rounded-2xl border-2 border-gray-200 bg-white flex flex-col items-center justify-center transition-all active:scale-95">
-                    <span class="text-2xl font-black text-[#006241]">+1H</span>
-                    <span class="text-[10px] text-gray-400 font-bold">1 giờ</span>
-                </button>
-                <button onclick="selectExtendDuration(2)" id="btn-extend-2h"
-                    class="extend-btn flex-1 h-16 rounded-2xl border-2 border-gray-200 bg-white flex flex-col items-center justify-center transition-all active:scale-95">
-                    <span class="text-2xl font-black text-[#006241]">+2H</span>
-                    <span class="text-[10px] text-gray-400 font-bold">2 giờ</span>
-                </button>
-                <button onclick="selectExtendDuration(3)" id="btn-extend-3h"
-                    class="extend-btn flex-1 h-16 rounded-2xl border-2 border-gray-200 bg-white flex flex-col items-center justify-center transition-all active:scale-95">
-                    <span class="text-2xl font-black text-[#006241]">+3H</span>
-                    <span class="text-[10px] text-gray-400 font-bold">3 giờ</span>
-                </button>
+        <div class="px-8 pb-6 pt-4 bg-[#F9FAF7]">
+
+            <!-- Mode 1: Chọn số tiếng -->
+            <div id="extend-mode-duration">
+                <div class="flex gap-3">
+                    <button onclick="selectExtendDuration(1)" id="btn-extend-1h"
+                        class="extend-btn flex-1 h-20 rounded-[24px] border-2 border-gray-200 bg-white flex flex-col items-center justify-center transition-all active:scale-95">
+                        <span class="text-3xl font-black text-[#006241]">+1H</span>
+                        <span class="text-xs text-gray-400 font-bold mt-1">1 giờ</span>
+                    </button>
+                    <button onclick="selectExtendDuration(2)" id="btn-extend-2h"
+                        class="extend-btn flex-1 h-20 rounded-[24px] border-2 border-gray-200 bg-white flex flex-col items-center justify-center transition-all active:scale-95">
+                        <span class="text-3xl font-black text-[#006241]">+2H</span>
+                        <span class="text-xs text-gray-400 font-bold mt-1">2 giờ</span>
+                    </button>
+                    <button onclick="selectExtendDuration(3)" id="btn-extend-3h"
+                        class="extend-btn flex-1 h-20 rounded-[24px] border-2 border-gray-200 bg-white flex flex-col items-center justify-center transition-all active:scale-95">
+                        <span class="text-3xl font-black text-[#006241]">+3H</span>
+                        <span class="text-xs text-gray-400 font-bold mt-1">3 giờ</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Preview new end time -->
-            <div id="extend-preview-box" class="hidden bg-green-50 border border-green-200 rounded-2xl p-4 mb-2 text-center">
-                <p class="text-[10px] text-green-600 uppercase tracking-widest font-bold mb-1">Giờ ra mới</p>
-                <p class="text-3xl font-black text-[#006241]" id="extend-new-end">--:--</p>
+            <!-- Mode 2: Nhập giờ về -->
+            <div id="extend-mode-endtime" class="hidden">
+                <div class="flex items-center gap-4">
+                    <div class="relative flex-1">
+                        <input type="tel" id="extend-custom-hour" maxlength="2" placeholder="--"
+                            oninput="formatExtendTimeInput(this); calcExtendFromTime()"
+                            class="w-full h-24 bg-white border-2 border-gray-200 rounded-[24px] text-5xl font-black text-[#006241] text-center focus:border-[#006241] outline-none shadow-sm transition-all placeholder:text-gray-200">
+                        <span class="absolute top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-400 uppercase tracking-widest pointer-events-none">Giờ</span>
+                    </div>
+                    <span class="text-5xl font-black text-gray-300 pb-2">:</span>
+                    <div class="relative flex-1">
+                        <input type="tel" id="extend-custom-minute" maxlength="2" placeholder="--"
+                            oninput="formatExtendTimeInput(this); calcExtendFromTime()"
+                            class="w-full h-24 bg-white border-2 border-gray-200 rounded-[24px] text-5xl font-black text-[#006241] text-center focus:border-[#006241] outline-none shadow-sm transition-all placeholder:text-gray-200">
+                        <span class="absolute top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-400 uppercase tracking-widest pointer-events-none">Phút</span>
+                    </div>
+                </div>
+                <p class="text-center text-xs font-bold text-gray-400 mt-3 uppercase tracking-widest" id="extend-time-hint">Nhập giờ khách muốn về</p>
+            </div>
+
+            <!-- Preview giờ ra mới -->
+            <div id="extend-preview-box" class="hidden bg-[#006241] rounded-[24px] p-5 mt-5 text-center">
+                <p class="text-[11px] text-green-200 uppercase tracking-widest font-bold mb-1">Giờ ra mới</p>
+                <p class="text-5xl font-black text-white tracking-tight" id="extend-new-end">--:--</p>
             </div>
         </div>
 
         <!-- Buttons -->
-        <div class="px-6 pb-6 bg-white flex gap-3 pt-3">
+        <div class="px-8 pb-8 bg-white flex gap-4 pt-5 border-t border-gray-100">
             <button onclick="skipExtendAndOrder()"
-                class="flex-1 h-14 rounded-2xl border-2 border-gray-200 text-gray-500 font-bold text-sm transition-all active:scale-95">
+                class="flex-1 h-16 rounded-[22px] border-2 border-gray-200 text-gray-500 font-black text-sm uppercase tracking-wider transition-all active:scale-95 hover:bg-gray-50">
                 Bỏ qua
             </button>
             <button onclick="confirmExtendTime()" id="btn-confirm-extend"
-                class="flex-2 h-14 rounded-2xl bg-[#006241] text-white font-black text-sm transition-all active:scale-95 px-6 opacity-40 cursor-not-allowed" style="flex:2" disabled>
-                ✅ Xác nhận gia hạn
+                class="flex-[2] h-16 rounded-[22px] bg-[#006241] text-white font-black text-sm uppercase tracking-wider transition-all active:scale-95 opacity-40 cursor-not-allowed" disabled>
+                Xác nhận gia hạn
             </button>
         </div>
     </div>
 </div>
 <!-- ===== END MODAL GIA HẠN GIỜ ===== -->
+
+<!-- ===== MODAL SET GIỜ ĐÓNG BED ===== -->
+<div id="modal-bed-closing" class="hidden fixed inset-0 z-[200000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-6 animate-fade-in">
+    <div class="bg-white w-full max-w-[420px] rounded-[36px] shadow-2xl overflow-hidden">
+        <div class="bg-[#006241] px-8 pt-8 pb-7">
+            <p class="text-[11px] text-green-200 uppercase tracking-[0.25em] font-bold mb-2">Cài đặt</p>
+            <h3 class="text-white font-black text-2xl">Giờ đóng cửa Bed</h3>
+            <p class="text-green-200 text-xs mt-2">Hệ thống tự động dừng tất cả lịch lúc 21:30 (giờ cứng). Giờ này chỉ hiển thị thông báo cho khách.</p>
+        </div>
+        <div class="px-8 py-7 bg-[#F9FAF7]">
+            <p class="text-xs font-black text-gray-400 uppercase tracking-widest mb-4">Chọn giờ đóng cửa Bed</p>
+            <div class="flex items-center gap-4 justify-center">
+                <div class="relative">
+                    <input type="tel" id="closing-hour" maxlength="2" placeholder="20"
+                        class="w-32 h-24 bg-white border-2 border-gray-200 rounded-[24px] text-5xl font-black text-[#006241] text-center focus:border-[#006241] outline-none shadow-sm transition-all placeholder:text-gray-200">
+                    <span class="absolute top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-400 uppercase tracking-widest pointer-events-none">Giờ</span>
+                </div>
+                <span class="text-5xl font-black text-gray-300">:</span>
+                <div class="relative">
+                    <input type="tel" id="closing-minute" maxlength="2" placeholder="50"
+                        class="w-32 h-24 bg-white border-2 border-gray-200 rounded-[24px] text-5xl font-black text-[#006241] text-center focus:border-[#006241] outline-none shadow-sm transition-all placeholder:text-gray-200">
+                    <span class="absolute top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-gray-400 uppercase tracking-widest pointer-events-none">Phút</span>
+                </div>
+            </div>
+            <p class="text-center text-xs font-bold text-[#006241] mt-4">Giờ cứng tự động tắt luôn là 21:30</p>
+        </div>
+        <div class="px-8 pb-8 bg-white flex gap-4 pt-5 border-t border-gray-100">
+            <button onclick="document.getElementById('modal-bed-closing').classList.add('hidden')"
+                class="flex-1 h-14 rounded-[20px] border-2 border-gray-200 text-gray-500 font-black text-sm uppercase tracking-wider active:scale-95">
+                Hủy
+            </button>
+            <button onclick="saveBedClosingTime()"
+                class="flex-[2] h-14 rounded-[20px] bg-[#006241] text-white font-black text-sm uppercase tracking-wider active:scale-95">
+                Lưu Giờ Đóng
+            </button>
+        </div>
+    </div>
+</div>
+<!-- ===== END MODAL SET GIỜ ĐÓNG BED ===== -->
+
+<!-- ===== MODAL AUTO-STOP BED ===== -->
+<div id="modal-bed-autostop" class="hidden fixed inset-0 z-[300000] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6 animate-fade-in">
+    <div class="bg-white w-full max-w-[440px] rounded-[36px] shadow-2xl overflow-hidden">
+        <div class="bg-red-600 px-8 pt-8 pb-7 text-center">
+            <p class="text-white font-black text-3xl mb-2">HẾT GIỜ PHỤC VỤ</p>
+            <p class="text-red-200 text-sm font-bold">Tất cả lịch Bed đã được tự động kết thúc</p>
+        </div>
+        <div class="px-8 py-7 text-center bg-[#F9FAF7]">
+            <p class="text-6xl font-black text-red-600 tracking-tight" id="autostop-time-display">21:30</p>
+            <p class="text-gray-500 font-bold text-sm mt-3">Hệ thống đã tắt <span id="autostop-count" class="text-red-600 font-black">0</span> lịch đang hoạt động</p>
+        </div>
+        <div class="px-8 pb-8 bg-white pt-5 border-t border-gray-100">
+            <button onclick="document.getElementById('modal-bed-autostop').classList.add('hidden')"
+                class="w-full h-14 rounded-[20px] bg-red-600 text-white font-black text-sm uppercase tracking-wider active:scale-95">
+                Đã hiểu
+            </button>
+        </div>
+    </div>
+</div>
+<!-- ===== END MODAL AUTO-STOP BED ===== -->
 
     <script>
 // --- [MOBILE GESTURE FIX] XỬ LÝ VUỐT BACK TRÊN ĐIỆN THOẠI ---
