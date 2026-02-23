@@ -2327,9 +2327,13 @@ function completeOrder_OLD() {
             // 1. Trường hợp Trả Bed (Checkout) -> Đóng Bed ngay
             if (isCheckoutFlow && bookingKeyToClose) {
                 console.log("Đang đóng Bed ID:", bookingKeyToClose);
+                // Lấy tổng tiền từ biến giỏ hàng toàn cục
+                var checkoutTotal = (typeof currentTotal !== 'undefined') ? currentTotal : 0;
+
                 db.ref('bedBookings/' + bookingKeyToClose).update({
                     status: 'đã xong',
-                    realEndTime: new Date().toLocaleTimeString('en-GB')
+                    realEndTime: new Date().toLocaleTimeString('en-GB'),
+                    totalSpend: checkoutTotal
                 });
                 isCheckoutFlow = false;
                 pendingBedOrder = null; // Xong rồi thì reset được
@@ -3915,17 +3919,22 @@ function selectBedItem(index) {
         // Ẩn nút Hủy đơn (vì đang dùng thì không hủy ngang, chỉ trả bed)
         if(wrapperCancel) wrapperCancel.classList.add('hidden'); 
         
-        // --- CHÈN NÚT ĐỔI BED VÀO VỊ TRÍ NÚT HỦY CŨ ---
-        // Tận dụng vị trí trống bên dưới để hiển thị nút đổi bed
-       // --- NÚT ĐỔI BED (PC) - STYLE MỚI: BO TRÒN & NỔI KHỐI ---
+        // --- NÚT ĐỔI BED + NÚT GIA HẠN GIỜ ---
         if (wrapperCancel) {
             wrapperCancel.classList.remove('hidden'); 
             wrapperCancel.innerHTML = `
-                <button onclick="openMoveBedModal('${bookingId}')" 
-                    class="w-full h-14 rounded-[24px] bg-white border-2 border-amber-100 text-amber-600 font-black uppercase tracking-[0.1em] text-[11px] shadow-[0_4px_10px_rgba(251,191,36,0.1)] hover:border-amber-300 hover:shadow-md hover:text-amber-700 active:scale-95 transition-all flex items-center justify-center gap-2 mt-3 group">
-                    <span class="material-symbols-outlined text-lg group-hover:rotate-180 transition-transform duration-500">sync_alt</span>
-                    Chuyển Bed Khác
-                </button>
+                <div class="flex gap-2 mt-3">
+                    <button onclick="openMoveBedModal('${bookingId}')" 
+                        class="flex-1 h-14 rounded-[24px] bg-white border-2 border-amber-100 text-amber-600 font-black uppercase tracking-[0.1em] text-[11px] shadow-[0_4px_10px_rgba(251,191,36,0.1)] hover:border-amber-300 hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group">
+                        <span class="material-symbols-outlined text-lg group-hover:rotate-180 transition-transform duration-500">sync_alt</span>
+                        Đổi Bed
+                    </button>
+                    <button onclick="openExtendModal(window.pendingBedOrder || ${JSON.stringify({id: bookingId, name: data.name, bedId: data.bedId, end: data.end, status: data.status})}, null)" 
+                        class="flex-1 h-14 rounded-[24px] bg-white border-2 border-[#006241]/20 text-[#006241] font-black uppercase tracking-[0.1em] text-[11px] shadow-[0_4px_10px_rgba(0,98,65,0.08)] hover:border-[#006241]/40 hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group">
+                        <span class="material-symbols-outlined text-lg">more_time</span>
+                        Gia Hạn
+                    </button>
+                </div>
             `;
         }
         // ------------------------------------------------
@@ -4151,12 +4160,6 @@ function handleMobileBedOrder(bookingId) {
     activeOrderingBedId = bedId; 
     pendingBedOrder = booking; 
 
-    // Nếu booking đang ACTIVE -> hỏi gia hạn trước khi order
-    var isActive = booking.status && (booking.status.includes('active') || booking.status.includes('đang dùng'));
-    if (isActive) {
-        openExtendModal(booking, function() { _doShowBedDetail(booking, bedId); });
-        return;
-    }
     _doShowBedDetail(booking, bedId);
 }
 
@@ -4457,16 +4460,31 @@ function submitNewBooking() {
     const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
     // 3. [FIX QUAN TRỌNG] CẬP NHẬT HỒ SƠ KHÁCH HÀNG (LƯU BẠN ĐI CÙNG)
-    // Để lần sau nhập SĐT này nó sẽ tự hiện bạn đi cùng cũ
     let cleanPhone = normalizePhone(phone);
     if(cleanPhone) {
-        db.ref('customers/' + cleanPhone).update({
-            name: name,
-            lastVisit: new Date().toISOString(),
-            // Lưu thông tin người đi cùng vào hồ sơ khách
-            lastCompName: compName, 
-            lastCompPhone: compPhone
-        });
+        var existingCustomer = customerMap[cleanPhone];
+        if (!existingCustomer) {
+            // *** KHÁCH MỚI: Tạo hồ sơ mới trong Firebase ***
+            // Backend (onCustomerCreated trigger) sẽ tự động ghi vào Sheet
+            db.ref('customers/' + cleanPhone).set({
+                name: name,
+                phone: cleanPhone,
+                points: 0,
+                createdAt: new Date().toISOString(),
+                lastVisit: new Date().toISOString(),
+                lastCompName: compName || '',
+                lastCompPhone: compPhone || ''
+            });
+            console.log('✅ Tạo khách hàng mới:', name, cleanPhone);
+        } else {
+            // *** KHÁCH CŨ: Chỉ cập nhật thông tin thay đổi (không trigger onCreate) ***
+            db.ref('customers/' + cleanPhone).update({
+                name: name,
+                lastVisit: new Date().toISOString(),
+                lastCompName: compName || '',
+                lastCompPhone: compPhone || ''
+            });
+        }
     }
 
     // 4. Gửi đơn Bed lên Firebase
@@ -4855,6 +4873,14 @@ function handleBedCheckout(booking) {
         extraHoursQty: (diffMinutes > 5) ? Math.ceil(diffMinutes / 60) : 0
     };
 
+    // *** NẾU ĐÚNG GIỜ HOẶC TRẢ SỚM: CHECKOUT THẲNG, KHÔNG CẦN MODAL ***
+    if (diffMinutes <= 5) {
+        let realTimeStr = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+        calculateAndSaveCheckout(booking, realTimeStr);
+        return;
+    }
+
+    // *** QUÁ GIỜ: Hiện modal cho nhân viên chọn cách tính phí ***
     // 2. Điền thông tin vào Popup
     document.getElementById('sco-bed-name').innerText = `BED 0${booking.bedId}`;
     document.getElementById('sco-customer').innerText = booking.name || "Khách lẻ";
@@ -4862,15 +4888,9 @@ function handleBedCheckout(booking) {
     const otEl = document.getElementById('sco-overtime');
     const feeEl = document.getElementById('sco-fee');
 
-    if (diffMinutes > 5) {
-        otEl.innerText = `${diffMinutes} phút`;
-        otEl.className = "text-2xl font-black text-red-500";
-        feeEl.innerText = `+ ${tempCheckoutData.extraHoursQty} giờ`;
-    } else {
-        otEl.innerText = "Đúng giờ";
-        otEl.className = "text-2xl font-black text-green-500";
-        feeEl.innerText = "0 giờ";
-    }
+    otEl.innerText = `${diffMinutes} phút`;
+    otEl.className = "text-2xl font-black text-red-500";
+    feeEl.innerText = `+ ${tempCheckoutData.extraHoursQty} giờ`;
 
     // 3. Hiển thị Popup (Animation)
     const modal = document.getElementById('modal-smart-checkout');
@@ -6183,20 +6203,27 @@ function renderDetailContentMobile(b) {
             <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">XẾP BED</button>
         </div>`;
     } else if (isActive && !isCancelled) {
-        // BED ĐANG ACTIVE: Chỉ hiện 2 nút Gọi Món & Trả Bed (Nút đổi bed đã chuyển lên Header)
+        // BED ĐANG ACTIVE: Nút Gọi Món, Gia Hạn & Trả Bed
         btnHtml = `
-        <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
-            <button onclick="handleMobileBedOrder('${b.id}')" 
-                class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-[24px] text-[#006241] font-black text-[15px] shadow-sm uppercase active:scale-95 transition-transform flex flex-col items-center justify-center leading-none gap-1">
-                <span>GỌI MÓN</span>
-                <span class="text-[9px] font-bold opacity-60 tracking-wider">ORDER</span>
-            </button>
-            
-            <button onclick="handleBedCheckout(window.currentMobileBooking)" 
-                class="flex-1 h-16 bg-[#006241] rounded-[24px] text-white font-black text-[15px] shadow-xl shadow-emerald-900/20 uppercase active:scale-95 transition-transform flex flex-col items-center justify-center leading-none gap-1">
-                <span>TRẢ BED</span>
-                <span class="text-[9px] font-bold opacity-60 tracking-wider">CHECKOUT</span>
-            </button>
+        <div class="fixed bottom-0 left-0 right-0 p-5 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
+            <div class="flex gap-3 mb-3">
+                <button onclick="openExtendModal(window.currentMobileBooking, null)" 
+                    class="flex-1 h-14 bg-white border-2 border-[#006241]/30 rounded-[20px] text-[#006241] font-black text-[13px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                    <span class="material-symbols-outlined text-[18px]">more_time</span>
+                    GIA HẠN
+                </button>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="handleMobileBedOrder('${b.id}')" 
+                    class="flex-1 h-14 bg-white border-2 border-[#006241] rounded-[20px] text-[#006241] font-black text-[14px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center gap-1">
+                    <span>GỌI MÓN</span>
+                </button>
+                
+                <button onclick="handleBedCheckout(window.currentMobileBooking)" 
+                    class="flex-[1.5] h-14 bg-[#006241] rounded-[20px] text-white font-black text-[14px] shadow-xl shadow-emerald-900/20 uppercase active:scale-95 transition-transform flex items-center justify-center gap-1">
+                    <span>TRẢ BED</span>
+                </button>
+            </div>
         </div>`;
     } else {
         btnHtml = `
@@ -7430,16 +7457,6 @@ function handleMobileBedOrder(bookingId) {
     activeOrderingBedId = booking.bedId || "WAITING"; 
     pendingBedOrder = booking; 
 
-    // Nếu booking đang ACTIVE -> hỏi gia hạn trước khi order
-    var isActive = booking.status && (booking.status.includes('active') || booking.status.includes('đang dùng'));
-    if (isActive) {
-        // Đóng bed detail panel nếu đang mở
-        var detailPanel = document.getElementById('mobile-bed-detail');
-        if (detailPanel) detailPanel.classList.add('hidden');
-
-        openExtendModal(booking, function() { _doHandleMobileBedOrder(booking); });
-        return;
-    }
     _doHandleMobileBedOrder(booking);
 }
 
