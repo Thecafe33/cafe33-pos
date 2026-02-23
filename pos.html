@@ -1853,7 +1853,263 @@ db.ref("customers").on("value", snap => {
     });
     switchView('menu'); // <--- Kích hoạt giao diện & Hiện Bottom Bar ngay lập tức
     listenToClientInput();
+
+    // === TỰ ĐỘNG ĐỒNG BỘ DOANH THU NGÀY MỚI ===
+    checkAndSyncDailyRevenue();
 };
+
+// =========================================================
+// TỰ ĐỘNG GHI DOANH THU VÀO SỔ KINH DOANH (GOOGLE SHEETS)
+// =========================================================
+// CẤU HÌNH - Điền thông tin từ file JSON service account của bạn
+const SHEETS_CONFIG = {
+    SPREADSHEET_ID: '1QvFE_9jcjtP5ky-iAC9P-kn6AgMRt6osYPRhzjUPvDU',
+    SHEET_NAME: 'S1a-HKD',
+    SERVICE_ACCOUNT_EMAIL: 'bot-sheet@the-cafe-33.iam.gserviceaccount.com',
+    PRIVATE_KEY: `-----BEGIN PRIVATE KEY-----
+MIIEugIBADANBgkqhkiG9w0BAQEFAASCBKQwggSgAgEAAoIBAQDLvPjA24y9eJVE
+pX6Olx+5ud8BEl14nWG31r4NBiSPqH/mdl/7b26JgMvwwAWVQ4ZngBYn0iS8Dynl
+2c+m2ykuCgxXdjMcWNXFx/yytysNjfVZncgfuQLWfayrIIciJsgbA780vzFQpRJ0
+R+GkvOtyXBN/a23lX+uXVheEfXRt3YHrL0pFk86W0DwcSvEVCwnTG/cLYGBwSMpH
+vWOGU+SuABPr4shO6n/lRSuIHmxCrc5sN6f7UTKgdvMnpxwRcAO1Xvhe6qY/iWfQ
+WncUY8KXq+33YwL/r9pvwnFBWqK6soaMUcNK4jCe3Am9h5KuiDTxUEsRDnKSxfdU
+JSdJa2BtAgMBAAECgf81Uj/IOa2b6PMoBCgbKXIkKYEzxpqv9oCcnJcg0XrAHlla
+96AnLgK/+fVmDNtpNUL304343ga/MTjF7ztpb/JXGkogmc7GnHlWSgDYxRd/dKfB
+zImTw9f6Sunl351+UqgMae6g32kIsisiQ63Kb6cvRunTb0pTvcbq1J1TD4JpPhgI
++Q1y0lhZm4s9/a4BDVVLEjnGmABO1eXwYoX6lIVaTDDSFjMIq25j4d+p1oBrHlxE
+Vu5XzofoRDsfAc8xjh93vC6q6wg5SwRHDBgPjDLmWf2G1fUWf0ldE2APcLNMMXDM
+WIFY2RFpLEWIG9cVyEm7nr9AO0Jc0GIDkCsT9hUCgYEA8VlQlQ/HE5wneuZlJS2V
+8tsuIQqpiMVCyJZ3ZSWTwSmaNV4jsxxNGQ4D38J3/zz98a51Mr2hCq03naWRl2zy
+3EljMiqXXXZk6deu1gDCY+wwAAYuigab5MVnRSmu7Wqr4WQf9GmlcDgqfJv3ZdSE
+UQZHgA5/YFzniY8mL1gf1h8CgYEA2BsqyoaE6/6pKPLmGFdJxWkCx03ScOEjyT2Q
+pRuUMw6kv4jdktOXzcbGBOkj4n2V9gOumNeGm6tsqBYwh7JhMswMZSSofbxv/bOm
+Y4egYMfyzAT5Tzwd/dbSnjMfP93OVPOEtU6xnQZAI0ZRnrzj5cUtKwZ2MlQn/57+
+RbtOv/MCgYB2qmJ7mBFa6/lhbSyoFfzXNrs8lcB7tfm7JHg57Dr0y569xLaq1yx1
+ODXha/2SKov1q8CGHUS0OizRP1oRaQkUFKVIQjbARnkhnOGi6Saq+LM1H9T8GnnG
+BuVa1T7kDwHJxXAMvXERdxw0vn7qu43/RKYdKYOpfqR9NzwgJSUqIwKBgF8URNVq
+Ld0u4/oSNE4NSXXDZ+eMQ8RKKdaGcbdS1PdJwA5NBz9sPOPaSpEqihFCM9JTeGPi
+n2SqHVouuRda0gzpXaK6aC850wQKIHC14UfzcM12esHzrzZZZ70WvO76hac2pPKo
+NtjhQSLD83ElphcXk3HUm/g0soxyxWikqlclAoGAFovt1e5xiouPJSVa7SqSFjso
+MoIMvRJiXfHWODmgxR2qGy/vAM9G3a0QHSCisWY5FPBL3UiVaJJH0s/QVPIrzeVS
+MBDc1ig8tVo2GlwysDker1sTUjAgMjDhsLpZXVw4MLbHToPDy+zYZbZFsE3gWnrU
+fRgr2d+6614bnRftY9Q=
+-----END PRIVATE KEY-----`,
+};
+
+// Hàm chính: Kiểm tra và sync nếu là ngày mới
+async function checkAndSyncDailyRevenue() {
+    const todayStr = new Date().toLocaleDateString('vi-VN', { 
+        day: '2-digit', month: '2-digit', year: 'numeric' 
+    }); // VD: "23/02/2026"
+
+    const syncKey = 'sheets_synced_' + todayStr;
+    if (localStorage.getItem(syncKey) === 'done') {
+        console.log('📊 Doanh thu hôm nay đã được sync trước đó.');
+        return;
+    }
+
+    // Lấy dữ liệu ngày hôm qua
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr_GB = yesterday.toLocaleDateString('en-GB'); // dd/mm/yyyy
+    const dd = String(yesterday.getDate()).padStart(2, '0');
+    const mm = String(yesterday.getMonth() + 1).padStart(2, '0');
+    const yyyy = yesterday.getFullYear();
+
+    console.log(`📊 Ngày mới! Đang tính doanh thu ngày ${dd}/${mm}/${yyyy}...`);
+
+    try {
+        // Lấy orders từ Firebase
+        const snap = await db.ref('orders').once('value');
+        const ordersData = snap.val() || {};
+        const orders = Object.values(ordersData);
+
+        // Tính drinkTotal ngày hôm qua
+        let drinkTotal = 0;
+        orders.forEach(o => {
+            const d = new Date(o.createdAt || 0);
+            const dateKey = d.toLocaleDateString('en-GB');
+            if (dateKey !== yesterdayStr_GB) return;
+            const amount = Number(o.total) || 0;
+            if (amount <= 0) return;
+
+            if (o.itemsArray && Array.isArray(o.itemsArray)) {
+                o.itemsArray.forEach(item => {
+                    const menuItem = menu.find(m => m.name.toLowerCase() === (item.name||'').toLowerCase());
+                    const type = menuItem ? String(menuItem.type || '').toLowerCase() : '';
+                    const isSnack = type.includes('ăn vặt') || type.includes('đồ ăn') || type.includes('snack');
+                    if (!isSnack) {
+                        const price = (item.price > 0) ? item.price : (menuItem ? (menuItem.priceM || menuItem.priceL) : 0);
+                        drinkTotal += price * (item.qty || 1);
+                    }
+                });
+            } else if (o.items) {
+                // Fallback: không tách được snack vs nước, tính cả đơn
+                drinkTotal += amount;
+            }
+        });
+
+        // Trừ 100,000đ chi phí
+        const finalRevenue = Math.max(0, drinkTotal - 100000);
+
+        if (drinkTotal === 0) {
+            console.log('📊 Không có doanh thu nước ngày hôm qua, bỏ qua sync.');
+            localStorage.setItem(syncKey, 'done');
+            return;
+        }
+
+        console.log(`📊 Doanh thu nước: ${drinkTotal.toLocaleString()}đ → Sau khi trừ 100K: ${finalRevenue.toLocaleString()}đ`);
+
+        // Ghi vào Google Sheets
+        await writeToGoogleSheets(dd, mm, yyyy, finalRevenue);
+        localStorage.setItem(syncKey, 'done');
+        console.log('✅ Đã ghi doanh thu vào sổ kinh doanh thành công!');
+        showSyncToast(`✅ Đã ghi doanh thu ${dd}/${mm}: ${finalRevenue.toLocaleString()}đ vào sổ`);
+
+    } catch (err) {
+        console.error('❌ Lỗi sync doanh thu:', err);
+    }
+}
+
+// Tạo JWT token cho Service Account
+async function createServiceAccountJWT() {
+    const header = { alg: 'RS256', typ: 'JWT' };
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+        iss: SHEETS_CONFIG.SERVICE_ACCOUNT_EMAIL,
+        scope: 'https://www.googleapis.com/auth/spreadsheets',
+        aud: 'https://oauth2.googleapis.com/token',
+        exp: now + 3600,
+        iat: now
+    };
+
+    const encodedHeader = btoa(JSON.stringify(header)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+    const encodedPayload = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+    const signingInput = encodedHeader + '.' + encodedPayload;
+
+    // Import private key
+    const pemKey = SHEETS_CONFIG.PRIVATE_KEY
+        .replace(/-----BEGIN PRIVATE KEY-----/, '')
+        .replace(/-----END PRIVATE KEY-----/, '')
+        .replace(/\s/g, '');
+    const keyData = Uint8Array.from(atob(pemKey), c => c.charCodeAt(0));
+
+    const cryptoKey = await crypto.subtle.importKey(
+        'pkcs8', keyData.buffer,
+        { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+        false, ['sign']
+    );
+
+    const signature = await crypto.subtle.sign(
+        'RSASSA-PKCS1-v1_5',
+        cryptoKey,
+        new TextEncoder().encode(signingInput)
+    );
+
+    const encodedSig = btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+    return signingInput + '.' + encodedSig;
+}
+
+// Lấy access token từ Google OAuth
+async function getAccessToken() {
+    const jwt = await createServiceAccountJWT();
+    const resp = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`
+    });
+    const data = await resp.json();
+    if (!data.access_token) throw new Error('Lỗi lấy access token: ' + JSON.stringify(data));
+    return data.access_token;
+}
+
+// Ghi vào Google Sheets: tìm dòng đúng ngày và điền số tiền
+async function writeToGoogleSheets(dd, mm, yyyy, revenue) {
+    const token = await getAccessToken();
+    const spreadsheetId = SHEETS_CONFIG.SPREADSHEET_ID;
+    const sheetName = SHEETS_CONFIG.SHEET_NAME;
+
+    // Đọc cột B (ngày) và D (số tiền) để tìm đúng dòng
+    const readResp = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName + '!B1:D60')}`,
+        { headers: { 'Authorization': 'Bearer ' + token } }
+    );
+    const readData = await readResp.json();
+    const rows = readData.values || [];
+
+    // Tìm dòng có ngày khớp (dạng dd/mm/yyyy hoặc Date serial Excel)
+    // Target date string trong sheet: "dd/mm" hoặc full date
+    const targetDateStr = `${dd}/${mm}`;
+    const targetFull = `${dd}/${mm}/${yyyy}`;
+    // Dòng trong sheet bắt đầu từ row 10 (index 9), tức là rows[9] = sheet row 10
+    let targetRow = -1;
+    for (let i = 0; i < rows.length; i++) {
+        const cellVal = String(rows[i][0] || '');
+        // Xử lý các định dạng ngày khác nhau
+        if (cellVal.includes(targetDateStr) || cellVal.includes(targetFull) || 
+            cellVal.includes(`${dd}/${mm}`) || cellVal === `${yyyy}-${mm}-${dd}`) {
+            targetRow = i + 1; // 1-indexed sheet row
+            break;
+        }
+        // Xử lý nếu là date ISO
+        if (cellVal.startsWith(`${yyyy}-${mm}-${dd}`)) {
+            targetRow = i + 1;
+            break;
+        }
+    }
+
+    if (targetRow === -1) {
+        // Không tìm thấy dòng → Thêm dòng mới trước dòng "Tổng cộng"
+        // Tìm dòng Tổng cộng
+        let tongRow = -1;
+        for (let i = 0; i < rows.length; i++) {
+            if (String(rows[i][1] || '').toLowerCase().includes('tổng cộng') || 
+                String(rows[i][2] || '').toLowerCase().includes('tổng')) {
+                tongRow = i + 1;
+                break;
+            }
+        }
+        if (tongRow === -1) tongRow = rows.length + 1;
+
+        // Insert row trước dòng Tổng cộng
+        await fetch(
+            `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName + '!B' + tongRow + ':D' + tongRow)}?valueInputOption=USER_ENTERED`,
+            {
+                method: 'PUT',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    values: [[`${dd}/${mm}/${yyyy}`, `Doanh thu bán hàng hoá ngày ${dd}/${mm}`, revenue]]
+                })
+            }
+        );
+        return;
+    }
+
+    // Tìm thấy dòng → Cập nhật cột D (Số tiền)
+    const cellAddress = `${sheetName}!D${targetRow}`;
+    await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(cellAddress)}?valueInputOption=USER_ENTERED`,
+        {
+            method: 'PUT',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ values: [[revenue]] })
+        }
+    );
+}
+
+// Toast thông báo nhỏ khi sync thành công
+function showSyncToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+        background: #006241; color: white; padding: 10px 20px; border-radius: 20px;
+        font-size: 12px; font-weight: 700; z-index: 9999; white-space: nowrap;
+        box-shadow: 0 4px 20px rgba(0,98,65,0.4); opacity: 1; transition: opacity 0.5s;
+    `;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 500); }, 4000);
+}
 
 // =========================================================
 // 4. MENU & GIỎ HÀNG (CORE)
