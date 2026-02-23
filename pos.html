@@ -3742,9 +3742,14 @@ function selectBedItem(index) {
     // 2. Xác định trạng thái
     var isDone = (data.status && data.status.includes('đã xong'));
     var isCancelled = (data.status && data.status.includes('đã hủy'));
-    var isActive = (data.status && (data.status.includes('active') || data.status.includes('đang dùng')));
+    var isActive = (data.status && (
+        data.status.includes('active') || 
+        data.status.includes('đang dùng') ||
+        data.status === 'active'
+    ));
     var hasBed = (data.bedId && data.bedId != "WAITING");
     var bookingId = data.id || data.key;
+    console.log("📋 Bed status:", data.status, "| isActive:", isActive, "| bedId:", data.bedId);
     
     // Check phạt vệ sinh
     var hasPenalty = data.hasPenalty === true;
@@ -3916,22 +3921,22 @@ function selectBedItem(index) {
     // Thay bằng đoạn này:
 
     if(isActive) { 
-        // Ẩn nút Hủy đơn (vì đang dùng thì không hủy ngang, chỉ trả bed)
-        if(wrapperCancel) wrapperCancel.classList.add('hidden'); 
-        
+        // Lưu booking hiện tại vào biến toàn cục để nút Gia Hạn dùng
+        window.currentPcBooking = data;
+
         // --- NÚT ĐỔI BED + NÚT GIA HẠN GIỜ ---
         if (wrapperCancel) {
             wrapperCancel.classList.remove('hidden'); 
             wrapperCancel.innerHTML = `
                 <div class="flex gap-2 mt-3">
                     <button onclick="openMoveBedModal('${bookingId}')" 
-                        class="flex-1 h-14 rounded-[24px] bg-white border-2 border-amber-100 text-amber-600 font-black uppercase tracking-[0.1em] text-[11px] shadow-[0_4px_10px_rgba(251,191,36,0.1)] hover:border-amber-300 hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group">
-                        <span class="material-symbols-outlined text-lg group-hover:rotate-180 transition-transform duration-500">sync_alt</span>
+                        class="flex-1 h-14 rounded-[24px] bg-white border-2 border-amber-100 text-amber-600 font-black uppercase tracking-[0.15em] text-[12px] shadow-[0_4px_10px_rgba(251,191,36,0.1)] hover:border-amber-300 hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group">
+                        <span class="material-symbols-outlined text-[18px] group-hover:rotate-180 transition-transform duration-500">sync_alt</span>
                         Đổi Bed
                     </button>
-                    <button onclick="openExtendModal(window.pendingBedOrder || ${JSON.stringify({id: bookingId, name: data.name, bedId: data.bedId, end: data.end, status: data.status})}, null)" 
-                        class="flex-1 h-14 rounded-[24px] bg-white border-2 border-[#006241]/20 text-[#006241] font-black uppercase tracking-[0.1em] text-[11px] shadow-[0_4px_10px_rgba(0,98,65,0.08)] hover:border-[#006241]/40 hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group">
-                        <span class="material-symbols-outlined text-lg">more_time</span>
+                    <button onclick="openExtendModal(window.currentPcBooking, null)" 
+                        class="flex-1 h-14 rounded-[24px] bg-white border-2 border-[#006241]/30 text-[#006241] font-black uppercase tracking-[0.15em] text-[12px] shadow-[0_4px_10px_rgba(0,98,65,0.08)] hover:border-[#006241]/50 hover:shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group">
+                        <span class="material-symbols-outlined text-[18px]">more_time</span>
                         Gia Hạn
                     </button>
                 </div>
@@ -3940,18 +3945,30 @@ function selectBedItem(index) {
         // ------------------------------------------------
     }
     else { 
-        // Nếu không active (Waiting), hiện nút Hủy như bình thường
+        // Waiting: hiện nút Hủy + nút Gia Hạn cạnh nhau
+        window.currentPcBooking = data;
         if(wrapperCancel) {
             wrapperCancel.classList.remove('hidden'); 
             wrapperCancel.innerHTML = `
-                <button id="btn-action-cancel" class="w-full py-3 rounded-2xl border-2 border-dashed border-red-200 text-red-400 font-black uppercase tracking-[0.2em] text-[10px] hover:bg-red-50 transition-all">
-                    HỦY LỊCH NÀY
-                </button>
+                <div class="flex gap-2 mt-1">
+                    <button id="btn-action-cancel" 
+                        class="flex-1 h-13 py-3 rounded-[20px] border-2 border-dashed border-red-200 text-red-400 font-black uppercase tracking-[0.15em] text-[11px] hover:bg-red-50 active:scale-95 transition-all flex items-center justify-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">cancel</span>
+                        Hủy Lịch
+                    </button>
+                    <button id="btn-action-extend"
+                        class="flex-1 h-13 py-3 rounded-[20px] border-2 border-[#006241]/30 text-[#006241] font-black uppercase tracking-[0.15em] text-[11px] bg-white hover:border-[#006241]/60 hover:bg-green-50 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-sm">
+                        <span class="material-symbols-outlined text-[16px]">more_time</span>
+                        Gia Hạn
+                    </button>
+                </div>
             `;
-            // Gán lại sự kiện click cho nút hủy (vì innerHTML đã reset nó)
             document.getElementById('btn-action-cancel').onclick = function() {
                 window.pendingCancelId = bookingId;
                 document.getElementById('modal-cancel-reason').classList.remove('hidden');
+            };
+            document.getElementById('btn-action-extend').onclick = function() {
+                openExtendModal(window.currentPcBooking, null);
             };
         }
     }
@@ -4810,32 +4827,49 @@ function confirmExtendTime() {
     var hours = _extendDurationHours;
     var callback = _extendCallback;
 
-    // Calculate new end time
+    // Tính giờ ra mới
     var parts = booking.end.split(':');
     var endDate = new Date();
     endDate.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
     endDate.setTime(endDate.getTime() + hours * 60 * 60 * 1000);
     var newEndStr = endDate.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
 
-    // Update Firebase
+    // Cập nhật Firebase
     var bookingId = booking.id || booking.key;
     if (bookingId) {
         db.ref('bedBookings/' + bookingId).update({ end: newEndStr });
-        // Update local data
+        // Cập nhật local cache
         booking.end = newEndStr;
         if (window.currentMobileBooking && window.currentMobileBooking.id === bookingId) {
             window.currentMobileBooking.end = newEndStr;
         }
+        if (window.currentPcBooking && window.currentPcBooking.id === bookingId) {
+            window.currentPcBooking.end = newEndStr;
+        }
+        // Cập nhật globalAllBookings
+        var idx = globalAllBookings ? globalAllBookings.findIndex(b => b.id === bookingId) : -1;
+        if (idx > -1) globalAllBookings[idx].end = newEndStr;
     }
 
-    // Add hourly charges to cart
-    for (var i = 0; i < hours; i++) {
-        if (typeof autoAddMenuItemToCart === 'function') autoAddMenuItemToCart('1h bed');
+    // Nếu đang trong trạng thái waiting/chờ: không thêm giờ vào giỏ (chỉ sửa end time)
+    // Nếu đang active (có callback): thêm giờ vào giỏ
+    if (typeof callback === 'function') {
+        for (var i = 0; i < hours; i++) {
+            if (typeof autoAddMenuItemToCart === 'function') autoAddMenuItemToCart('1h bed');
+        }
     }
 
     closeExtendModal();
 
-    // Run callback (proceed to order)
+    // Thông báo thành công
+    var msg = `Đã gia hạn +${hours}h → Hết giờ lúc ${newEndStr}`;
+    if (typeof showAppModal === 'function') {
+        showAppModal('Gia hạn thành công!', msg, '⏰');
+    } else {
+        alert(msg);
+    }
+
+    // Chạy callback nếu có (luồng order)
     if (typeof callback === 'function') callback();
 }
 
@@ -6198,30 +6232,31 @@ function renderDetailContentMobile(b) {
     let btnHtml = '';
     if (isWaiting && !isCancelled) {
         btnHtml = `
-        <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg flex gap-4 z-50">
-            <button onclick="handleMobileBedOrder('${b.id}')" class="flex-1 h-16 bg-white border-2 border-[#006241] rounded-full text-[#006241] font-bold text-[15px] shadow-lg shadow-black/5 transition-all active:scale-95 uppercase">GỌI MÓN</button>
-            <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" class="flex-1 h-16 bg-[#006241] rounded-full text-white font-bold text-[15px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">XẾP BED</button>
-        </div>`;
-    } else if (isActive && !isCancelled) {
-        // BED ĐANG ACTIVE: Nút Gọi Món, Gia Hạn & Trả Bed
-        btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-5 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
             <div class="flex gap-3 mb-3">
                 <button onclick="openExtendModal(window.currentMobileBooking, null)" 
-                    class="flex-1 h-14 bg-white border-2 border-[#006241]/30 rounded-[20px] text-[#006241] font-black text-[13px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center gap-1.5">
+                    class="w-full h-13 py-3 rounded-[20px] bg-white border-2 border-[#006241]/30 text-[#006241] font-black text-[13px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined text-[18px]">more_time</span>
-                    GIA HẠN
+                    GIA HẠN THỜI GIAN
                 </button>
             </div>
             <div class="flex gap-3">
+                <button onclick="handleMobileBedOrder('${b.id}')" class="flex-1 h-14 bg-white border-2 border-[#006241] rounded-[20px] text-[#006241] font-black text-[14px] shadow-sm transition-all active:scale-95 uppercase">GỌI MÓN</button>
+                <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" class="flex-1 h-14 bg-[#006241] rounded-[20px] text-white font-black text-[14px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">XẾP BED</button>
+            </div>
+        </div>`;
+    } else if (isActive && !isCancelled) {
+        // BED ĐANG ACTIVE: Gọi Món + Trả Bed (không cần gia hạn ở đây)
+        btnHtml = `
+        <div class="fixed bottom-0 left-0 right-0 p-5 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
+            <div class="flex gap-3">
                 <button onclick="handleMobileBedOrder('${b.id}')" 
-                    class="flex-1 h-14 bg-white border-2 border-[#006241] rounded-[20px] text-[#006241] font-black text-[14px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center gap-1">
-                    <span>GỌI MÓN</span>
+                    class="flex-1 h-14 bg-white border-2 border-[#006241] rounded-[20px] text-[#006241] font-black text-[14px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center">
+                    GỌI MÓN
                 </button>
-                
                 <button onclick="handleBedCheckout(window.currentMobileBooking)" 
-                    class="flex-[1.5] h-14 bg-[#006241] rounded-[20px] text-white font-black text-[14px] shadow-xl shadow-emerald-900/20 uppercase active:scale-95 transition-transform flex items-center justify-center gap-1">
-                    <span>TRẢ BED</span>
+                    class="flex-[1.5] h-14 bg-[#006241] rounded-[20px] text-white font-black text-[14px] shadow-xl shadow-emerald-900/20 uppercase active:scale-95 transition-transform flex items-center justify-center">
+                    TRẢ BED
                 </button>
             </div>
         </div>`;
