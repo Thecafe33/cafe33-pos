@@ -1281,6 +1281,20 @@ input, button, select, textarea { font-size: 1rem; }
         </div>
     </div>
 
+    <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
+        <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Chuyển khoản</p>
+        <div id="mob-rev-transfer" class="text-[#0369a1] font-black tracking-tighter leading-none flex flex-col items-center">
+            0 <span class="text-[10px] opacity-60">₫</span>
+        </div>
+    </div>
+
+    <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
+        <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Tiền mặt</p>
+        <div id="mob-rev-cash" class="text-[#16a34a] font-black tracking-tighter leading-none flex flex-col items-center">
+            0 <span class="text-[10px] opacity-60">₫</span>
+        </div>
+    </div>
+
 </div>
 
         <div class="px-5">
@@ -3003,7 +3017,7 @@ function calculateStats(orders, mode, customStart, customEnd) {
         }
     }
 
-    var stats = { drinkTotal: 0, snackTotal: 0, labels: labels, chartData: chartData, dailyList: {}, today: 0, yesterday: 0 };
+    var stats = { drinkTotal: 0, snackTotal: 0, transferTotal: 0, cashTotal: 0, labels: labels, chartData: chartData, dailyList: {}, today: 0, yesterday: 0 };
     
     var todayStr = now.toLocaleDateString('en-GB');
     var yest = new Date(now); yest.setDate(now.getDate() - 1); 
@@ -3060,6 +3074,14 @@ function calculateStats(orders, mode, customStart, customEnd) {
                         processSingleItem(nameOnly, qty, 0); // Giá 0 để nó tự tra menu
                     }
                 });
+            }
+
+            // --- CỘNG DỒN THEO PHƯƠNG THỨC THANH TOÁN ---
+            const orderMethod = String(o.method || '').toLowerCase();
+            if (orderMethod.includes('chuyển khoản') || orderMethod.includes('chuyen khoan') || orderMethod.includes('bank') || orderMethod.includes('transfer')) {
+                stats.transferTotal += amount;
+            } else {
+                stats.cashTotal += amount;
             }
 
             // --- CỘNG DỒN BIỂU ĐỒ (Chart) ---
@@ -3159,6 +3181,17 @@ function renderRevenueDashboard(data, mode) {
                     <span class="text-[10px] ${dColor}">${dIcon}</span>
                     <span class="font-black text-xs ${dColor}">${Math.abs(diff).toLocaleString()}</span>
                 </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-left z-0 relative">
+            <div class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
+                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Chuyển khoản</p>
+                <p class="brand-font text-xl text-[#0369a1]">${data.transferTotal.toLocaleString()}</p>
+            </div>
+            <div class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
+                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tiền mặt</p>
+                <p class="brand-font text-xl text-[#16a34a]">${data.cashTotal.toLocaleString()}</p>
             </div>
         </div>
 
@@ -7159,6 +7192,20 @@ function updateRevenueUIMobile(stats, mode) {
     // Ô bên phải: Tiền ĂN VẶT (Giữ nguyên)
     document.getElementById('mob-rev-snack').innerHTML = `
         <span class="text-3xl">${stats.snackTotal.toLocaleString()}</span>
+        <span class="text-xs font-bold opacity-60">₫</span>
+    `;
+
+    // Ô chuyển khoản
+    const transferEl = document.getElementById('mob-rev-transfer');
+    if (transferEl) transferEl.innerHTML = `
+        <span class="text-3xl">${(stats.transferTotal||0).toLocaleString()}</span>
+        <span class="text-xs font-bold opacity-60">₫</span>
+    `;
+
+    // Ô tiền mặt
+    const cashEl = document.getElementById('mob-rev-cash');
+    if (cashEl) cashEl.innerHTML = `
+        <span class="text-3xl">${(stats.cashTotal||0).toLocaleString()}</span>
         <span class="text-xs font-bold opacity-60">₫</span>
     `;
     
