@@ -117,65 +117,42 @@ input, button, select, textarea { font-size: 1rem; }
     .hidden { display: none !important; }
     html, body { background-color: #f3f4f6 !important; height: 100% !important; }
 
-    /* ================================================= */
-    /* --- 2. GIAO DIỆN MOBILE (Màn hình nhỏ < 768px) --- */
-    /* ================================================= */
-    @media only screen and (max-width: 768px) {
-        
-        /* Khung bao ngoài: Sát lề, ẩn thanh cuộn thừa */
-        #view-menu:not(.hidden), #view-bed:not(.hidden) {
-            padding: 4px !important;       /* Cách mép 4px */
-            padding-top: 10px !important;
-            padding-bottom: 0 !important;
-            height: 100% !important;
-            overflow: hidden !important;
-            display: flex !important;
-            flex-direction: column !important;
-        }
-
-        /* Nội dung bên trong: Cuộn dọc, né Bottom Bar */
-        #view-menu-content, #col-left-list {
-            padding: 0 !important;            
-            padding-bottom: 120px !important; 
-            overflow-y: auto !important;
-            height: 100% !important;
-        }
-
-        /* Lưới Menu: 3 Cột, Khoảng cách siêu nhỏ */
-        #menu-grid {
-            display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important; 
-            gap: 6px !important; 
-            width: 100% !important;
-        }
-
-        /* Ô Món ăn: Vuông vức, bo góc nhỏ */
-        #menu-grid > div {
-            aspect-ratio: 1 / 1 !important;   /* Ép hình vuông */
-            min-height: 0 !important;         
-            height: auto !important;
-            padding: 4px !important;          
-            border-radius: 12px !important;   
-        }
-        
+    /* Khung bao ngoài */
+    #view-menu:not(.hidden), #view-bed:not(.hidden) {
+        padding: 4px !important;
+        padding-top: 10px !important;
+        padding-bottom: 0 !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 
-    /* ================================================= */
-    /* --- 3. GIAO DIỆN PC (Màn hình lớn > 769px) --- */
-    /* ================================================= */
-    @media only screen and (min-width: 769px) {
-        #menu-grid {
-            grid-template-columns: repeat(3, 1fr) !important; /* Vẫn 3 cột nhưng thoáng */
-            gap: 20px !important;             /* Khoảng cách rộng rãi */
-            padding-bottom: 20px !important;
-        }
-        #menu-grid > div {
-            aspect-ratio: auto !important;    /* Không ép vuông */
-            height: 140px !important;         /* Chiều cao chữ nhật cố định */
-            padding: 20px !important;         /* Đệm trong lớn */
-            border-radius: 2rem !important;   /* Bo góc to mềm mại */
-        }
+    /* Nội dung bên trong: Cuộn dọc */
+    #view-menu-content, #col-left-list {
+        padding: 0 !important;            
+        padding-bottom: 120px !important; 
+        overflow-y: auto !important;
+        height: 100% !important;
     }
+
+    /* Lưới Menu: 3 Cột */
+    #menu-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important; 
+        gap: 6px !important; 
+        width: 100% !important;
+    }
+
+    /* Ô Món ăn: Vuông vức */
+    #menu-grid > div {
+        aspect-ratio: 1 / 1 !important;
+        min-height: 0 !important;         
+        height: auto !important;
+        padding: 4px !important;          
+        border-radius: 12px !important;   
+    }
+
     /* 3. Đảm bảo class hidden của Tailwind có quyền lực tối cao */
     .hidden {
         display: none !important;
@@ -380,6 +357,20 @@ input, button, select, textarea { font-size: 1rem; }
     /* Tạo khoảng trống dưới cùng danh sách món ăn để không bị Bar che mất */
     #menu-grid {
         padding-bottom: 100px !important;
+    }
+}
+/* --- PC: Lưới menu thoáng hơn --- */
+@media only screen and (min-width: 769px) {
+    #menu-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 20px !important;
+        padding-bottom: 20px !important;
+    }
+    #menu-grid > div {
+        aspect-ratio: auto !important;
+        height: 140px !important;
+        padding: 20px !important;
+        border-radius: 2rem !important;
     }
 }
 /* --- CẬP NHẬT MÀU NỀN TOÀN APP (SÁNG HƠN - FAFAFA) --- */
@@ -1779,9 +1770,9 @@ var activeOrderingBedId = null;
 var isCheckoutFlow = false; // Biến đánh dấu: Có phải đang trả Bed không?
 
 // Đồng hồ hệ thống
+const _clockEl = document.getElementById('clock');
 setInterval(() => {
-    const el = document.getElementById('clock');
-    if(el) el.innerText = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    if(_clockEl) _clockEl.innerText = new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 }, 1000);
 
 // =========================================================
@@ -1803,11 +1794,6 @@ window.onload = function() {
     }, 5000);
 
     // B. Lắng nghe Menu từ Firebase
-    db.ref("customers").on("value", (snap) => {
-    customerMap = snap.val() || {};
-    console.log("Customers:", Object.keys(customerMap).length);
-});
-
     db.ref('menu').on('value', (snapshot) => {
         clearTimeout(safetyTimer); // Hủy bộ đếm thoát hiểm vì đã kết nối được
         const data = snapshot.val();
@@ -1828,13 +1814,13 @@ window.onload = function() {
         document.getElementById('loading-overlay').style.display = 'none';
         alert("Lỗi kết nối: " + error.message);
     });
-// C. Lắng nghe danh sách KHÁCH HÀNG từ Firebase
-db.ref("customers").on("value", snap => {
-    customerMap = snap.val() || {};
-    console.log("👥 Đã load", Object.keys(customerMap).length, "khách");
-});
 
-    // C. Lắng nghe Bed (Chạy ngầm)
+    // C. Lắng nghe danh sách KHÁCH HÀNG từ Firebase
+    db.ref("customers").on("value", snap => {
+        customerMap = snap.val() || {};
+    });
+
+    // D. Lắng nghe Bed (Chạy ngầm)
     db.ref('beds').on('value', (snapshot) => {
         const data = snapshot.val();
         currentBedList = [];
@@ -2562,107 +2548,7 @@ function updateQty(idx, d) {
 // =========================================================
 // 5. THANH TOÁN (PAYMENT)
 // =========================================================
-// --- HÀM THANH TOÁN (ĐÃ SỬA: RESET SẠCH SẼ THÔNG TIN KHÁCH) ---
-// --- HÀM THANH TOÁN (ĐÃ FIX LỖI RESET BIẾN TRƯỚC KHI ĐÓNG BED) ---
-function completeOrder_OLD() {
-    if (cart.length === 0) return showAppModal("Hic!", "Chưa có món nào!", '🛒');
-    
-    let pVal = document.getElementById('cash-paid').value;
-    if (pVal === "" || pVal === "0") pVal = currentTotal;
-    const paid = Number(pVal);
-    if (paid < currentTotal) return alert("Tiền khách đưa chưa đủ!");
-
-    document.getElementById('loading-overlay').style.display = 'flex';
-    
-    // === [FIX] BƯỚC 1: LƯU LẠI ID BED CẦN ĐÓNG NGAY LẬP TỨC ===
-    // Phải lưu vào biến cục bộ ngay lúc này, vì lát nữa pendingBedOrder sẽ bị reset về null
-    var bookingKeyToClose = (pendingBedOrder) ? (pendingBedOrder.id || pendingBedOrder.key) : null;
-    
-    // Lấy thông tin Bed/Khách để lưu đơn hàng
-    var bedIdToSend = ""; 
-    var custNameToSend = "Khách vãng lai";
-    if (pendingBedOrder) { 
-        bedIdToSend = pendingBedOrder.bedId || "WAITING"; 
-        custNameToSend = pendingBedOrder.name; 
-    } else if (activeOrderingBedId) { 
-        bedIdToSend = activeOrderingBedId; 
-    }
-
-    const orderData = {
-        sdt: document.getElementById('kh-sdt').value || "Khách vãng lai",
-        total: currentTotal, 
-        paid: paid, 
-        change: Math.max(0, paid - currentTotal),
-        method: document.getElementById('btn-bank').classList.contains('border-[#006241]') ? 'Chuyển khoản' : 'Tiền mặt',
-        items: cart.map(i => `${i.name}(${i.size})x${i.qty}`).join(', '),
-        itemsArray: cart,
-        bedId: bedIdToSend, 
-        customerName: custNameToSend,
-        createdAt: new Date().toISOString(),
-        status: "pending_sync"
-    };
-
-    // Đẩy đơn hàng lên Firebase
-    db.ref('orders').push(orderData, (error) => {
-        document.getElementById('loading-overlay').style.display = 'none';
-        
-        if(error) alert("Lỗi Firebase: " + error.message);
-        else {
-            // === DỌN DẸP GIAO DIỆN ===
-            document.getElementById('kh-sdt').value = ""; 
-            document.getElementById('sdt-status').innerText = "";
-            var cartInfo = document.getElementById('cart-bed-info');
-            if (cartInfo) cartInfo.remove();
-
-            // Xóa giỏ hàng (Đúng, vì đã thanh toán rồi)
-            cart = [];
-            renderCart();
-
-            // === [QUAN TRỌNG] LOGIC RESET BIẾN THÔNG MINH ===
-            // Nếu đây là đơn "WAITING" (Chờ xếp bed), ta TUYỆT ĐỐI KHÔNG ĐƯỢC RESET pendingBedOrder
-            // Vì lát nữa chọn Bed xong, hàm finalizeBedCheckIn cần dùng biến này để biết update cho ai.
-            
-            if (bedIdToSend !== "WAITING") {
-                // Chỉ reset khi đơn đã xong hẳn (Mang về, hoặc Order thêm cho Bed đã có số)
-                pendingBedOrder = null;
-                activeOrderingBedId = null;
-            }
-
-            // === ĐIỀU HƯỚNG TIẾP THEO ===
-
-            // 1. Trường hợp Trả Bed (Checkout) -> Đóng Bed ngay
-            if (isCheckoutFlow && bookingKeyToClose) {
-                console.log("Đang đóng Bed ID:", bookingKeyToClose);
-                // Lấy tổng tiền từ biến giỏ hàng toàn cục
-                var checkoutTotal = (typeof currentTotal !== 'undefined') ? currentTotal : 0;
-
-                db.ref('bedBookings/' + bookingKeyToClose).update({
-                    status: 'đã xong',
-                    realEndTime: new Date().toLocaleTimeString('en-GB'),
-                    totalSpend: checkoutTotal
-                });
-                isCheckoutFlow = false;
-                pendingBedOrder = null; // Xong rồi thì reset được
-                openBedManager();
-                setTimeout(() => { showAppModal("Hoàn tất!", "Đã thanh toán và TRẢ BED thành công!", '🏁'); }, 150);
-            } 
-            // 2. Trường hợp Khách mới (WAITING) -> Mở Modal chọn Bed
-            else if (bedIdToSend == "WAITING") {
-                 // Không reset pendingBedOrder ở đây, để dành cho bước chọn Bed
-                 renderBedSelection();
-                 document.getElementById('bed-select-modal').classList.remove('hidden');
-            } 
-            // 3. Trường hợp Order thêm / Mang về -> Xong phim
-            else {
-                switchView('menu');
-                setTimeout(() => { showAppModal("Xong!", "Thanh toán thành công!", '✅'); }, 150);
-            }
-        }
-    });
-}
-
 // Các hàm bổ trợ thanh toán
-// --- HÀM CHỌN PHƯƠNG THỨC THANH TOÁN (ĐÃ FIX: LÀM MỜ Ô TIỀN MẶT KHI CK) ---
 function setMethod(m) {
     const isBank = (m === 'Chuyển khoản');
     
@@ -3402,11 +3288,6 @@ function renderDailyRevenueList(list) {
     document.getElementById('history-container').innerHTML = html; 
 }
 
-// --- HÀM VẼ DASHBOARD DOANH THU (STYLE APPLE: SÁNG, SẠCH, XANH THƯƠNG HIỆU) ---
-// --- HÀM VẼ DASHBOARD (CÓ THÊM VÒNG XOAY LOADING NHỎ) ---
-// --- HÀM VẼ DASHBOARD (NÚT X NẰM CHUNG THANH CÔNG CỤ - SIÊU GỌN) ---
-// --- HÀM VẼ DASHBOARD (STYLE "FLOATING PILLS" - SIÊU SANG & BO TRÒN) ---
-// --- HÀM VẼ DASHBOARD (STYLE VIÊN THUỐC - 1 HÀNG NGANG TIẾT KIỆM KHÔNG GIAN) ---
 function renderRevenueDashboard(data, mode) {
     document.getElementById('history-detail-empty').classList.add('hidden');
     const detail = document.getElementById('history-detail-content');
@@ -3506,15 +3387,8 @@ function renderChart(labels, chartData, type) {
 // =========================================================
 // 7. CÁC HÀM KHÁC (NAV, SWITCH VIEW...)
 // =========================================================
-// --- HÀM CHUYỂN VIEW (CẬP NHẬT LOGIC LUXURY THEME) ---
-// --- HÀM CHUYỂN VIEW (ĐÃ FIX: ẨN NÚT 'THANH TOÁN' Ở SIDEBAR KHI ĐANG THANH TOÁN) ---
-/* --- ĐÃ SỬA: Hàm switchView Logic chặt chẽ --- */
-/* --- ĐÃ SỬA: Hàm switchView (Logic ẩn/hiện chuẩn xác cho Mobile) --- */
-/* --- ĐÃ SỬA: switchView (Chặn thanh Bar đi lung tung) --- */
-// --- HÀM CHUYỂN VIEW (ĐÃ FIX LỖI CRASH NULL PROPERTY) ---
-// --- HÀM CHUYỂN VIEW (ĐÃ FIX TOÀN DIỆN LỖI NULL) ---
 // =========================================================
-// [FIX FINAL] HÀM CHUYỂN VIEW (ĐÃ FIX LỖI ĐÈ GIAO DIỆN)
+// [FIX FINAL] HÀM CHUYỂN VIEW
 // =========================================================
 function switchView(v) {
     // 1. Ẩn ngay giao diện Lịch sử Mobile trước khi làm gì khác
@@ -3657,14 +3531,8 @@ if (v === 'payment') {
 }
 }
 // Bed Functions
-// --- HÀM OPEN BED MANAGER (ĐÃ SỬA LỖI NGÀY GIỜ) ---
-// =========================================================
-// QUẢN LÝ BED & LỊCH (ĐÃ NÂNG CẤP: CHỌN NGÀY)
-// =========================================================
-
-// Biến lưu trữ toàn bộ lịch (để không phải tải lại khi đổi ngày)
 var globalAllBookings = []; 
-var currentFilterDateStr = ""; // Lưu ngày đang chọn (dạng dd/mm/yyyy)
+var currentFilterDateStr = "";
 
 function openBedManager() {
     document.getElementById('loading-overlay').style.display = 'flex';
@@ -4468,10 +4336,6 @@ function handleMobileBedOrder(bookingId) {
         }
     }, 100);
 }
-// --- SỬA LỖI: GỌI MÓN KHÔNG NHẬN DIỆN KHÁCH ---
-// --- [FIXED] GỌI MÓN PC (CÓ TỰ ĐỘNG TÍNH GIỜ) ---
-// --- [FIXED] NÚT GỌI MÓN PC: TỰ NHẢY VIEW & HIỆN THÔNG BÁO GIỎ HÀNG ---
-// --- [FIX] SHOW BED DETAIL (RESET SẠCH SẼ TRƯỚC KHI ĐIỀN) ---
  function showBedDetail(bedId, forceBooking) { 
     var booking = null; 
     
@@ -4589,10 +4453,6 @@ function _doShowBedDetail(booking, bedId) {
         island.classList.remove('hidden');
     }
 }
-    //--- SỬA LỖI: XẾP BED BỊ RA ĐƠN MỚI UNDEFINED ---
-// --- [FIX] RESET CHẾ ĐỘ ORDER BED SAU KHI GÁN Ô XONG ---
-// --- [FIX LOGIC] XẾP BED: XỬ LÝ SỚM/TRỄ THEO TIỀN ---
-// --- [FINAL CORE] HÀM XẾP BED & TÍNH GIỜ THÔNG MINH ---
 // Hàm này chạy ngay sau khi bấm chọn ô Bed (Bước cuối của Order hoặc Xếp Bed)
 function finalizeBedCheckIn(bedId) {
     // 1. Kiểm tra dữ liệu đầu vào
@@ -5509,47 +5369,16 @@ function calculateAndSaveCheckout(booking, realTimeStr) {
     });
 }
 
-// Hàm processCheckoutFirebase cũ có thể xóa hoặc để đó không dùng tới nữa
-
 // Hàm phụ: Tìm món trong menu và ném vào giỏ
 function autoAddMenuItemToCart(itemName) {
-    // Tìm món trong mảng menu toàn cục
-    // (Lưu ý: So sánh chữ thường để tránh lỗi viết hoa/thường)
     const item = menu.find(m => m.name.toLowerCase() === itemName.toLowerCase());
-    
     if (item) {
-        // Nếu thấy -> Thêm vào giỏ (dùng hàm addToCart có sẵn của bà)
-        // item.priceM hoặc priceL tuỳ bà set trong menu, ở đây tui lấy đại priceM
         let price = item.priceM > 0 ? item.priceM : item.priceL;
         addToCart(item.name, 'M', price); 
     } else {
         console.warn(`Không tìm thấy món "${itemName}" trong Menu! Kiểm tra lại tên món.`);
     }
 }
-
-// Hàm phụ: Gọi Firebase checkout (Tách ra từ code cũ cho gọn)
-function processCheckoutFirebase(booking) {
-    let btnCheckout = document.getElementById('btn-action-checkout');
-    if(btnCheckout) btnCheckout.innerHTML = 'Wait...';
-    
-    let bookingId = booking.id || booking.key;
-    
-    db.ref('bedBookings/' + bookingId).update({
-        status: 'đã xong',
-        realEndTime: new Date().toLocaleTimeString('en-GB')
-    }, (err) => { 
-        if(!err) openBedManager(); 
-        else {
-            alert("Lỗi: " + err.message);
-            if(btnCheckout) btnCheckout.innerHTML = '<span>🏁 Trả Bed</span>';
-        }
-    }); 
-}
-// --- HÀM VẼ NÚT CHỌN BED (KHÔI PHỤC) ---
-// --- HÀM VẼ NÚT CHỌN BED (PHIÊN BẢN IOS PREMIUM) ---
-// --- HÀM VẼ NÚT CHỌN BED (LAYOUT CHUẨN: 1 TRÊN 2, 3 BÊN PHẢI 1) ---
-// --- MÀU MỚI: TƯƠI TẮN HƠN  ---
-// --- HÀM VẼ NÚT CHỌN BED (STYLE: NỀN TRẮNG - CHỮ XANH TƯƠI #006241) ---
 function renderBedSelection() {
     var container = document.getElementById('bed-selection-container');
     if (!container) return;
@@ -5603,8 +5432,6 @@ function renderBedSelection() {
         container.innerHTML += btnHTML;
     });
 }
-// --- HÀM TÍNH TỔNG CHI TIÊU CỦA 1 LẦN BED ---
-// --- HÀM TÍNH TIỀN (CHUẨN XÁC THEO KHUNG GIỜ) ---
 function calculateSessionSpend(phone, startTimeStr, endTimeStr) {
     return new Promise((resolve) => {
         if (!startTimeStr || !endTimeStr) { resolve(0); return; }
@@ -6576,11 +6403,6 @@ function getCountdownStr(endTimeStr) {
     return { timeStr, label, style };
 }
 
-// --- HÀM RENDER CHÍNH ---
-    // --- [FINAL FIX] HÀM RENDER CHI TIẾT BED MOBILE ---
-// Fix lỗi: Đồng hồ chỉ chạy khi trạng thái là ACTIVE (Đang dùng)
-
-// --- [FIX FINAL v3] RENDER MOBILE (LOGIC CHUẨN PC: VẼ TRƯỚC - TÍNH SAU) ---
 function renderDetailContentMobile(b) {
     // 1. Dọn dẹp timer cũ
     if (mobileTimerInterval) clearInterval(mobileTimerInterval);
@@ -8564,13 +8386,7 @@ function syncToCustomerDisplay(state, overrideData = {}) {
     // Gửi lên Firebase
     db.ref('session_display').set(payload);
 }
-    // --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH ---
-// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (LOGIC THÔNG MINH) ---
-// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (ĐÃ FIX LỖI KHÔNG HIỆN TÊN) ---
-// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (BẢN UPDATE: PC & MOBILE) ---
-// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (BẢN FINAL: GỘP CẢ 2 LOGIC) ---
-// --- LẮNG NGHE INPUT TỪ MÀN HÌNH KHÁCH (BẢN FIX: CHỐNG DUPLICATE) ---
-function listenToClientInput() {
+    function listenToClientInput() {
     // 1. QUAN TRỌNG: Ngắt kết nối các listener cũ để tránh bị nhân đôi lệnh
     db.ref('client_input').off();
 
