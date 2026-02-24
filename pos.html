@@ -8023,77 +8023,7 @@ function filterHistoryMobile(keyword) {
     );
     renderHistoryMobile(filtered);
 }
-    // --- [MỚI] HÀM XỬ LÝ GỌI MÓN TỪ MOBILE (TỰ ĐIỀN SĐT) ---
-// --- [FIX] MOBILE ORDER (RESET SẠCH SẼ) ---
-function handleMobileBedOrder(bookingId) {
-    const booking = globalAllBookings.find(b => b.id === bookingId);
-    if (!booking) return console.error("Không tìm thấy booking ID:", bookingId);
-
-    activeOrderingBedId = booking.bedId || "WAITING"; 
-    pendingBedOrder = booking; 
-
-    _doHandleMobileBedOrder(booking);
-}
-
-function _doHandleMobileBedOrder(booking) {
-    var statusLabel = document.getElementById('sdt-status');
-
-    if (sdtInput) {
-        sdtInput.value = ""; // Xóa cũ
-        if (statusLabel) statusLabel.innerText = "";
-
-        if (booking.phone) {
-            sdtInput.value = booking.phone;
-            if (typeof checkSdtLive === 'function') checkSdtLive(); 
-            
-            // >>> CHÈN THÊM DÒNG NÀY <<<
-            // Quét nợ ngay khi bấm vào gọi món
-            scanAndAddDebt(booking.phone);
-            // ---------------------------
-        }
-    }
-
-    // Tự động thêm món tiền giờ (nếu có logic này)
-    if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
-
-    // >>> CHÈN ĐOẠN GỬI TÍN HIỆU BED VÀO ĐÂY (GIỐNG HỆT Ở TRÊN) <<<
-    const maskedPhone = booking.phone && booking.phone.length > 4 
-        ? "******" + booking.phone.slice(-4) : "Khách lẻ";
-        
-    db.ref('session_display').set({
-        state: 'bed_welcome',
-        customerName: booking.name,
-        maskedPhone: maskedPhone,
-        startTime: booking.start,
-        endTime: booking.end,
-        orderType: 'bed'
-    });
-    // -----------------------------------------------------------
-
-    switchView('menu');
-
-    // Hiển thị Banner thông báo (Giữ nguyên)
-    setTimeout(function() {
-        var cartInfo = document.getElementById('cart-bed-info');
-        var headerContainer = document.querySelector('#sidebar-cart .flex.justify-between');
-        if (!cartInfo && headerContainer) {
-            cartInfo = document.createElement('div');
-            cartInfo.id = 'cart-bed-info';
-            headerContainer.parentNode.insertBefore(cartInfo, headerContainer.nextSibling);
-        }
-        if (cartInfo) {
-            var guestName = booking.name || "Khách hàng";
-            cartInfo.className = "text-[11px] font-black uppercase mb-2 pl-1 mt-1 animate-pulse";
-            if (booking.bedId && booking.bedId != "WAITING") {
-                cartInfo.innerText = `🟢 ĐANG GỌI: BED 0${booking.bedId} - ${guestName}`;
-                cartInfo.style.color = "#006241";
-            } else {
-                cartInfo.innerText = `🟠 ĐANG GỌI: KHÁCH CHỜ - ${guestName}`;
-                cartInfo.style.color = "#d97706";
-            }
-        }
-    }, 100);
-}
+    // --- [FIXED] HÀM GỌI MÓN MOBILE - đã gộp vào hàm chính ở trên, bản này bỏ trống ---
     // --- [CORE] HÀM QUÉT VÀ HỦY ĐƠN TRỄ (DÙNG CHUNG) ---
 // Giúp Mobile tự động hủy đơn Waiting quá 50p mà không cần mở PC
 function runAutoCancelScan(list) {
