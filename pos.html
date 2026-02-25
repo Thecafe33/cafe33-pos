@@ -1259,7 +1259,8 @@ input, button, select, textarea { font-size: 1rem; }
         
         <div class="px-6 mb-8 mt-2">
             <div class="bg-slate-100 p-1.5 rounded-full flex items-center">
-                <button onclick="switchRevTime('week')" id="tab-rev-week" class="flex-1 py-2.5 rounded-full text-[11px] font-black bg-[#065F46] text-white shadow-sm transition-all">TUẦN</button>
+                <button onclick="switchRevTime('day')" id="tab-rev-day" class="flex-1 py-2.5 rounded-full text-[11px] font-black bg-[#065F46] text-white shadow-sm transition-all">HÔM NAY</button>
+                <button onclick="switchRevTime('week')" id="tab-rev-week" class="flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all">TUẦN</button>
                 <button onclick="switchRevTime('month')" id="tab-rev-month" class="flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all">THÁNG</button>
                 <button onclick="switchRevTime('year')" id="tab-rev-year" class="flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all">NĂM</button>
             </div>
@@ -3237,7 +3238,7 @@ function selectBill(idx) {
 // --- HÀM MỞ TAB DOANH THU (PHIÊN BẢN AN TOÀN) ---
 // --- HÀM MỞ TAB DOANH THU (KHÔNG NHÁY MÀN HÌNH TRẮNG) ---
 function openRevenue(mode) {
-    if (!mode) mode = 'week';
+    if (!mode) mode = 'day';
 
     // 1. KIỂM TRA XEM ĐANG Ở ĐÂU
     // Nếu tab view-history đang hiện VÀ nút revenue đang active -> Tức là đang chuyển chế độ
@@ -3332,6 +3333,13 @@ function calculateStats(orders, mode, customStart, customEnd) {
         labels = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12'];
         chartData = [0,0,0,0,0,0,0,0,0,0,0,0];
         groupType = 'month';
+    }
+    else if (mode === 'day') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        labels = ['0h','2h','4h','6h','8h','10h','12h','14h','16h','18h','20h','22h'];
+        chartData = [0,0,0,0,0,0,0,0,0,0,0,0];
+        groupType = 'hour2';
     } 
     else if (mode === 'custom') {
         if (!customStart || !customEnd) return null;
@@ -3427,6 +3435,7 @@ function calculateStats(orders, mode, customStart, customEnd) {
             if (groupType === 'month') idx = d.getMonth();
             else if (mode === 'month') idx = d.getDate() - 1;
             else if (mode === 'week') idx = (d.getDay() + 6) % 7;
+            else if (mode === 'day' || groupType === 'hour2') idx = Math.floor(d.getHours() / 2);
             else if (mode === 'custom' && labels.length <= 31) {
                 var timeDiff = d.getTime() - startTime.getTime();
                 idx = Math.floor(timeDiff / (1000 * 3600 * 24));
@@ -3475,6 +3484,7 @@ function renderRevenueDashboard(data, mode) {
         
         <div class="flex flex-row items-center justify-between gap-2 z-10 relative">
             <div class="flex bg-white p-1 rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-gray-100 shrink-0">
+                <button onclick="openRevenue('day')" class="px-5 py-2 text-[10px] uppercase transition-all duration-300 ${mode==='day'?activeBtn:inactiveBtn}">Hôm nay</button>
                 <button onclick="openRevenue('week')" class="px-5 py-2 text-[10px] uppercase transition-all duration-300 ${mode==='week'?activeBtn:inactiveBtn}">Tuần</button>
                 <button onclick="openRevenue('month')" class="px-5 py-2 text-[10px] uppercase transition-all duration-300 ${mode==='month'?activeBtn:inactiveBtn}">Tháng</button>
                 <button onclick="openRevenue('year')" class="px-5 py-2 text-[10px] uppercase transition-all duration-300 ${mode==='year'?activeBtn:inactiveBtn}">Năm</button>
@@ -6929,7 +6939,7 @@ function closeMobileBedDetail() {
          // =========================================================
 // MOBILE REVENUE LOGIC
 // =========================================================
-let currentRevMode = 'week';
+let currentRevMode = 'day';
 
 function openRevenueMobile() {
     // 1. [QUAN TRỌNG] Ẩn tuyệt đối thanh Bottom Bar Thanh Toán
@@ -7073,7 +7083,7 @@ let customSelectedItems = null; // null = Auto Top 10
 // 1. Hàm vẽ UI Top 10 (Phiên bản mới nhất)
 function updateRevenueItemsUI(data) {
     // Cập nhật nhãn thời gian
-    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
+    const labelMap = {'day': 'Hôm nay', 'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
     let finalLabel = currentRevLabelOverride || labelMap[currentRevMode] || 'Chi tiết';
     const labelEl = document.getElementById('mob-chart-label');
     if(labelEl) labelEl.innerText = finalLabel;
@@ -7168,6 +7178,7 @@ function calculateTopItems(orders, mode, customStart, customEnd) {
     if (mode === 'week') { var day = now.getDay() || 7; startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0); endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999); } 
     else if (mode === 'month') { startTime = new Date(now.getFullYear(), now.getMonth(), 1); endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999); }
     else if (mode === 'year') { startTime = new Date(now.getFullYear(), 0, 1); endTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999); }
+    else if (mode === 'day') { startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0); endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999); }
     else { if(!customStart || !customEnd) return { topItems: [], totalRev: 0 }; startTime = new Date(customStart); startTime.setHours(0,0,0,0); endTime = new Date(customEnd); endTime.setHours(23,59,59,999); }
 
     let itemMap = {}; let totalRevenue = 0; 
@@ -7269,6 +7280,7 @@ function calculateGroupRevenue(orders, mode, customStart, customEnd) {
     if (mode === 'week') { var day = now.getDay() || 7; startTime = new Date(now); startTime.setDate(now.getDate() - day + 1); startTime.setHours(0,0,0,0); endTime = new Date(startTime); endTime.setDate(startTime.getDate() + 6); endTime.setHours(23,59,59,999); }
     else if (mode === 'month') { startTime = new Date(now.getFullYear(), now.getMonth(), 1); endTime = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999); }
     else if (mode === 'year') { startTime = new Date(now.getFullYear(), 0, 1); endTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999); }
+    else if (mode === 'day') { startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0); endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999); }
     else { if(!customStart || !customEnd) return { groups: [], totalRev: 0 }; startTime = new Date(customStart); startTime.setHours(0,0,0,0); endTime = new Date(customEnd); endTime.setHours(23,59,59,999); }
 
     let groupMap = {}; let totalRevenue = 0;
@@ -7454,6 +7466,9 @@ function calculateGroupRevenue(orders, mode, customStart, customEnd) {
     } else if (mode === 'year') {
         startTime = new Date(now.getFullYear(), 0, 1);
         endTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else if (mode === 'day') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     } else { 
         if(!customStart || !customEnd) return { groups: [], totalRev: 0 };
         startTime = new Date(customStart); startTime.setHours(0,0,0,0);
@@ -7522,7 +7537,7 @@ function calculateGroupRevenue(orders, mode, customStart, customEnd) {
 }
 function updateRevenueGroupsUI(data) {
     // --- [FIX START] CẬP NHẬT LABEL THỜI GIAN ---
-    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
+    const labelMap = {'day': 'Hôm nay', 'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
     // Lấy tên từ biến Override (nếu có chọn từ menu) hoặc lấy theo mode mặc định
     let finalLabel = currentRevLabelOverride || labelMap[currentRevMode] || 'Chi tiết';
     
@@ -7674,7 +7689,7 @@ function updateRevenueUIMobile(stats, mode) {
     const totalRev = stats.drinkTotal + stats.snackTotal;
     document.getElementById('mob-chart-total').innerText = totalRev.toLocaleString() + ' ₫';
     
-    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
+    const labelMap = {'day': 'Hôm nay', 'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
     let finalLabel = currentRevLabelOverride || labelMap[mode] || 'Chi tiết';
     const labelEl = document.getElementById('mob-chart-label');
     if(labelEl) labelEl.innerText = finalLabel;
@@ -7719,7 +7734,7 @@ function submitDateFilter() {
     currentRevMode = 'custom';
 
     // Reset style các nút tab (để người dùng biết đang ở mode Custom)
-    ['week', 'month', 'year'].forEach(m => {
+    ['day', 'week', 'month', 'year'].forEach(m => {
         const btn = document.getElementById(`tab-rev-${m}`);
         if(btn) btn.className = "flex-1 py-2.5 rounded-full text-[11px] font-bold text-slate-400 transition-all";
     });
@@ -7732,8 +7747,9 @@ function switchRevTime(mode) {
     currentRevLabelOverride = null; // [FIX] Reset tên tùy chỉnh khi bấm nút Tab thường
 
     // Update active tab style
-    ['week', 'month', 'year'].forEach(m => {
+    ['day', 'week', 'month', 'year'].forEach(m => {
         const btn = document.getElementById(`tab-rev-${m}`);
+        if (!btn) return;
         if(m === mode) {
             btn.className = "flex-1 py-2.5 rounded-full text-[11px] font-black bg-[#065F46] text-white shadow-sm transition-all";
         } else {
@@ -7804,6 +7820,9 @@ function calculateBedStats(bookings, mode, customStart, customEnd) {
     } else if (mode === 'year') {
         startTime = new Date(now.getFullYear(), 0, 1);
         endTime = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    } else if (mode === 'day') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        endTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     } else { 
         if(!customStart || !customEnd) return null;
         startTime = new Date(customStart); startTime.setHours(0,0,0,0);
@@ -7877,7 +7896,7 @@ function calculateBedStats(bookings, mode, customStart, customEnd) {
 function updateRevenueBedUI(stats) {
     if(!stats) return;
     // >>> CHÈN ĐOẠN NÀY VÀO ĐÂY <<<
-    const labelMap = {'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
+    const labelMap = {'day': 'Hôm nay', 'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
     let finalLabel = currentRevLabelOverride || labelMap[currentRevMode] || 'Chi tiết';
     const labelEl = document.getElementById('mob-chart-label');
     if(labelEl) labelEl.innerText = finalLabel;
