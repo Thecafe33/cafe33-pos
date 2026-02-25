@@ -1268,28 +1268,28 @@ input, button, select, textarea { font-size: 1rem; }
 
         <div id="mob-revenue-summary-cards" class="grid grid-cols-2 gap-4 px-4 mb-6">
     
-    <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
+    <div id="mob-filter-drink" onclick="setChartFilter('drink')" class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center cursor-pointer active:scale-95 transition-all ring-[#006241]">
         <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Tổng nước</p>
         <div id="mob-rev-total" class="text-[#065F46] font-black tracking-tighter leading-none flex flex-col items-center">
             0 <span class="text-[10px] opacity-60">₫</span>
         </div>
     </div>
 
-    <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
+    <div id="mob-filter-snack" onclick="setChartFilter('snack')" class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center cursor-pointer active:scale-95 transition-all ring-[#D97706]">
         <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Ăn vặt</p>
         <div id="mob-rev-snack" class="text-[#D97706] font-black tracking-tighter leading-none flex flex-col items-center">
             0 <span class="text-[10px] opacity-60">₫</span>
         </div>
     </div>
 
-    <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
+    <div id="mob-filter-transfer" onclick="setChartFilter('transfer')" class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center cursor-pointer active:scale-95 transition-all ring-[#0369a1]">
         <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Chuyển khoản</p>
         <div id="mob-rev-transfer" class="text-[#0369a1] font-black tracking-tighter leading-none flex flex-col items-center">
             0 <span class="text-[10px] opacity-60">₫</span>
         </div>
     </div>
 
-    <div class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center">
+    <div id="mob-filter-cash" onclick="setChartFilter('cash')" class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center cursor-pointer active:scale-95 transition-all ring-[#16a34a]">
         <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Tiền mặt</p>
         <div id="mob-rev-cash" class="text-[#16a34a] font-black tracking-tighter leading-none flex flex-col items-center">
             0 <span class="text-[10px] opacity-60">₫</span>
@@ -3360,7 +3360,11 @@ function calculateStats(orders, mode, customStart, customEnd) {
         }
     }
 
-    var stats = { drinkTotal: 0, snackTotal: 0, transferTotal: 0, cashTotal: 0, labels: labels, chartData: chartData, dailyList: {}, today: 0, yesterday: 0 };
+    var drinkChartData  = chartData.map(() => 0);
+    var snackChartData   = chartData.map(() => 0);
+    var transferChartData= chartData.map(() => 0);
+    var cashChartData    = chartData.map(() => 0);
+    var stats = { drinkTotal: 0, snackTotal: 0, transferTotal: 0, cashTotal: 0, labels: labels, chartData: chartData, drinkChartData, snackChartData, transferChartData, cashChartData, dailyList: {}, today: 0, yesterday: 0 };
     
     var todayStr = now.toLocaleDateString('en-GB');
     var yest = new Date(now); yest.setDate(now.getDate() - 1); 
@@ -3379,6 +3383,7 @@ function calculateStats(orders, mode, customStart, customEnd) {
         if (d >= startTime && d <= endTime) {
             
             // === LOGIC TÁCH TIỀN MỚI (Dùng itemsArray chuẩn hơn) ===
+            var orderDrink = 0; var orderSnack = 0;
             
             // Hàm xử lý từng món lẻ
             const processSingleItem = (name, qty, itemPrice) => {
@@ -3393,8 +3398,10 @@ function calculateStats(orders, mode, customStart, customEnd) {
 
                 if (type.includes('ăn vặt') || type.includes('đồ ăn') || type.includes('snack')) {
                     stats.snackTotal += subTotal;
+                    orderSnack += subTotal;
                 } else {
                     stats.drinkTotal += subTotal;
+                    orderDrink += subTotal;
                 }
             };
 
@@ -3443,6 +3450,15 @@ function calculateStats(orders, mode, customStart, customEnd) {
 
             if (idx >= 0 && idx < chartData.length) {
                 chartData[idx] += amount;
+                // Cộng riêng theo loại món
+                drinkChartData[idx]    += orderDrink;
+                snackChartData[idx]    += orderSnack;
+                // Cộng riêng theo PTTT
+                if (orderMethod.includes('chuyển khoản') || orderMethod.includes('chuyen khoan') || orderMethod.includes('bank') || orderMethod.includes('transfer')) {
+                    transferChartData[idx] += amount;
+                } else {
+                    cashChartData[idx] += amount;
+                }
             }
         }
     });
@@ -3510,12 +3526,12 @@ function renderRevenueDashboard(data, mode) {
 
         <div class="grid grid-cols-3 gap-3 text-left z-0 relative">
             
-            <div class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
+            <div id="pc-filter-drink" onclick="setChartFilter('drink')" class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center cursor-pointer hover:shadow-md active:scale-95 transition-all ring-[#006241]">
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng nước</p>
                 <p class="brand-font text-xl text-[#006241]">${data.drinkTotal.toLocaleString()}</p>
             </div>
             
-            <div class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
+            <div id="pc-filter-snack" onclick="setChartFilter('snack')" class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center cursor-pointer hover:shadow-md active:scale-95 transition-all ring-[#D97706]">
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ăn vặt</p>
                 <p class="brand-font text-xl text-amber-500">${data.snackTotal.toLocaleString()}</p>
             </div>
@@ -3530,11 +3546,11 @@ function renderRevenueDashboard(data, mode) {
         </div>
 
         <div class="grid grid-cols-2 gap-3 text-left z-0 relative">
-            <div class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
+            <div id="pc-filter-transfer" onclick="setChartFilter('transfer')" class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center cursor-pointer hover:shadow-md active:scale-95 transition-all ring-[#0369a1]">
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Chuyển khoản</p>
                 <p class="brand-font text-xl text-[#0369a1]">${data.transferTotal.toLocaleString()}</p>
             </div>
-            <div class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
+            <div id="pc-filter-cash" onclick="setChartFilter('cash')" class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center cursor-pointer hover:shadow-md active:scale-95 transition-all ring-[#16a34a]">
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tiền mặt</p>
                 <p class="brand-font text-xl text-[#16a34a]">${data.cashTotal.toLocaleString()}</p>
             </div>
@@ -3545,18 +3561,130 @@ function renderRevenueDashboard(data, mode) {
         </div>
     </div>`;
 
+    // Cache stats & apply current filter
+    lastStatsCache = data;
+    currentChartFilter = 'total';
+    updateFilterCardStyles('total');
     setTimeout(() => {
-        renderChart(data.labels, data.chartData, mode);
+        renderChart(data.labels, data.chartData, mode, '#006241');
     }, 200);
 }
-function renderChart(labels, chartData, type) { 
+function renderChart(labels, chartData, type, color) {
+    color = color || '#006241';
     const ctx = document.getElementById('revenueChart').getContext('2d'); 
     if (myChart) myChart.destroy(); 
     myChart = new Chart(ctx, { 
         type: 'bar', plugins: [ChartDataLabels], 
-        data: { labels, datasets: [{ data: chartData, backgroundColor: '#006241', borderRadius: 6 }] }, 
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', formatter: (v) => v != 0 ? (v/1000).toFixed(0) + 'k': '', font: { weight: 'bold', size: 9 }, color: '#006241'} }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 8} } } } } 
+        data: { labels, datasets: [{ data: chartData, backgroundColor: color + 'CC', borderRadius: 6, hoverBackgroundColor: color }] }, 
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', formatter: (v) => v != 0 ? (v/1000).toFixed(0) + 'k': '', font: { weight: 'bold', size: 9 }, color: color} }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { weight: 'bold', size: 8} } } } } 
     }); 
+}
+
+// =====================================================================
+// 📊 CHART FILTER - Lọc biểu đồ theo loại (tổng / nước / ăn vặt / CK / tiền mặt)
+// =====================================================================
+const CHART_FILTER_CONFIG = {
+    total:    { key: 'chartData',       color: '#006241', label: 'Tổng thu'       },
+    drink:    { key: 'drinkChartData',  color: '#006241', label: 'Tổng nước'      },
+    snack:    { key: 'snackChartData',  color: '#D97706', label: 'Ăn vặt'         },
+    transfer: { key: 'transferChartData',color:'#0369a1', label: 'Chuyển khoản'   },
+    cash:     { key: 'cashChartData',   color: '#16a34a', label: 'Tiền mặt'       },
+};
+
+function setChartFilter(type) {
+    // Bấm lại ô đang active -> reset về tổng
+    if (currentChartFilter === type) type = 'total';
+    currentChartFilter = type;
+    // PC
+    applyPCChartFilter(type);
+    // Mobile
+    applyMobileChartFilter(type);
+    // Update active style
+    updateFilterCardStyles(type);
+}
+
+function applyPCChartFilter(type) {
+    if (!lastStatsCache) return;
+    const cfg = CHART_FILTER_CONFIG[type] || CHART_FILTER_CONFIG.total;
+    const data = lastStatsCache[cfg.key] || lastStatsCache.chartData;
+    renderChart(lastStatsCache.labels, data, currentRevMode, cfg.color);
+}
+
+function applyMobileChartFilter(type) {
+    if (!lastStatsCache) return;
+    const cfg = CHART_FILTER_CONFIG[type] || CHART_FILTER_CONFIG.total;
+    const data = lastStatsCache[cfg.key] || lastStatsCache.chartData;
+    renderMobileChartBars(lastStatsCache.labels, data, cfg.color);
+
+    // Cập nhật tổng dưới chart theo filter
+    const total = (data || []).reduce((a, b) => a + b, 0);
+    const totalEl = document.getElementById('mob-chart-total');
+    if (totalEl) totalEl.innerText = total.toLocaleString() + ' ₫';
+}
+
+function renderMobileChartBars(labels, data, color) {
+    const chartBox = document.getElementById('mob-rev-chart-bars');
+    if (!chartBox) return;
+    const maxVal = Math.max(...data, 1);
+    let isScrollMode = labels.length > 12;
+    let barsHtml = '';
+    labels.forEach((lbl, index) => {
+        const val = data[index] || 0;
+        let heightPct = 0;
+        if (val > 0) { heightPct = Math.round((val / maxVal) * 100); if (heightPct < 15) heightPct = 15; }
+        const isMax = val === maxVal && val > 0;
+        let labelVal = '';
+        if (val >= 1000000) labelVal = (val/1000000).toFixed(1) + 'tr';
+        else if (val > 0) labelVal = (val/1000).toFixed(0) + 'k';
+        let colClass = isScrollMode ? 'min-w-[40px] flex-shrink-0' : 'flex-1';
+        const barColor = isMax ? color : (color + '66');
+        barsHtml += `
+        <div class="${colClass} flex flex-col items-center group h-full justify-end relative">
+            <div class="w-full relative flex flex-col justify-end items-center h-full">
+                ${val > 0 ? `<div class="mb-1 text-[9px] font-black text-slate-500 bg-white/90 backdrop-blur px-1.5 py-0.5 rounded-md shadow-sm border border-slate-100 z-10 whitespace-nowrap">${labelVal}</div>` : ''}
+                <div class="w-3 sm:w-5 rounded-t-lg transition-all duration-500 ease-out" style="height:${heightPct}%;background-color:${barColor};"></div>
+            </div>
+            <span class="mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate w-full text-center">${lbl}</span>
+        </div>`;
+    });
+    chartBox.innerHTML = barsHtml;
+}
+
+function updateFilterCardStyles(activeType) {
+    const configs = {
+        'total':    { pcId: null, mobId: null  },
+        'drink':    { pcId: 'pc-filter-drink',    mobId: 'mob-filter-drink'    },
+        'snack':    { pcId: 'pc-filter-snack',    mobId: 'mob-filter-snack'    },
+        'transfer': { pcId: 'pc-filter-transfer', mobId: 'mob-filter-transfer' },
+        'cash':     { pcId: 'pc-filter-cash',     mobId: 'mob-filter-cash'     },
+    };
+    // Reset tất cả
+    Object.values(configs).forEach(cfg => {
+        [cfg.pcId, cfg.mobId].filter(Boolean).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('ring-2', 'ring-offset-1', 'scale-[1.03]', 'shadow-md');
+                el.style.opacity = '1';
+            }
+        });
+    });
+    // Active ô đang chọn
+    const active = configs[activeType];
+    if (active) {
+        [active.pcId, active.mobId].filter(Boolean).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('ring-2', 'ring-offset-1', 'scale-[1.03]', 'shadow-md');
+        });
+        // Mờ các ô còn lại (không phải total và không phải active)
+        Object.entries(configs).forEach(([type, cfg]) => {
+            if (type !== 'total' && type !== activeType) {
+                [cfg.pcId, cfg.mobId].filter(Boolean).forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.style.opacity = '0.45';
+                });
+            }
+        });
+    }
 }
 
 // =========================================================
@@ -6972,6 +7100,8 @@ function openRevenueMobile() {
 }
     // --- MODULE: SMART TIME DROPDOWN ---
 let currentRevLabelOverride = null; // Biến lưu tên nhãn tùy chỉnh (Tuần trước, Tháng trước...)
+let currentChartFilter = 'total'; // 'total' | 'drink' | 'snack' | 'transfer' | 'cash'
+let lastStatsCache = null; // Lưu stats mới nhất để filter lại không cần re-fetch
 
 function toggleSmartTimeDropdown() {
     const dd = document.getElementById('smart-time-dropdown');
@@ -7645,45 +7775,11 @@ function updateRevenueUIMobile(stats, mode) {
         <span class="text-xs font-bold opacity-60">₫</span>
     `;
     
-    // 2. Vẽ biểu đồ (Giữ nguyên logic vẽ cột)
-    const chartBox = document.getElementById('mob-rev-chart-bars');
-    const labels = stats.labels; 
-    const data = stats.chartData;
-    const maxVal = Math.max(...data, 1); 
-
-    let isScrollMode = labels.length > 12;
-
-    let barsHtml = '';
-    labels.forEach((lbl, index) => {
-        const val = data[index] || 0;
-        let heightPct = 0;
-        if (val > 0) {
-            heightPct = Math.round((val / maxVal) * 100);
-            if (heightPct < 15) heightPct = 15; 
-        }
-        
-        const isMax = val === maxVal && val > 0;
-        let labelVal = "";
-        if (val >= 1000000) labelVal = (val/1000000).toFixed(1) + "tr";
-        else if (val > 0) labelVal = (val/1000).toFixed(0) + "k";
-
-        let colClass = isScrollMode ? "min-w-[40px] flex-shrink-0" : "flex-1";
-
-        barsHtml += `
-        <div class="${colClass} flex flex-col items-center group h-full justify-end relative">
-            <div class="w-full relative flex flex-col justify-end items-center h-full">
-                ${val > 0 ? `
-                <div class="mb-1 text-[9px] font-black text-slate-500 bg-white/90 backdrop-blur px-1.5 py-0.5 rounded-md shadow-sm border border-slate-100 z-10 whitespace-nowrap">
-                    ${labelVal}
-                </div>` : ''}
-                <div class="w-3 sm:w-5 rounded-t-lg transition-all duration-1000 ease-out ${isMax ? 'bg-[#006241]' : 'bg-[#006241]/40'}" 
-                     style="height: ${heightPct}%;">
-                </div>
-            </div>
-            <span class="mt-2 text-[9px] font-bold text-gray-400 uppercase tracking-wider truncate w-full text-center">${lbl}</span>
-        </div>`;
-    });
-    chartBox.innerHTML = barsHtml;
+    // 2. Cache stats & reset filter, rồi vẽ biểu đồ
+    lastStatsCache = stats;
+    currentChartFilter = 'total';
+    updateFilterCardStyles('total');
+    renderMobileChartBars(stats.labels, stats.chartData, '#006241');
 
     // 3. Cập nhật TỔNG CỘNG ở dưới đáy biểu đồ
     const totalRev = stats.drinkTotal + stats.snackTotal;
