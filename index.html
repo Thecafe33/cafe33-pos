@@ -43,7 +43,27 @@
     .modal-enter { opacity: 0; transform: scale(0.9); }
     .modal-show { opacity: 1; transform: scale(1); }
 
-    ::-webkit-scrollbar { width: 4px; }
+    /* --- CSS BOOKING SUCCESS & WELCOME MODAL --- */
+  .bs-enter { opacity: 0; transform: scale(0.88) translateY(20px); }
+  .bs-show  { opacity: 1; transform: scale(1) translateY(0); }
+  .bs-card  { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+  
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(40px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .welcome-animate { animation: slideUp 0.45s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
+
+  @keyframes pulse-ring {
+    0%   { transform: scale(1); opacity: 0.4; }
+    100% { transform: scale(1.6); opacity: 0; }
+  }
+  .pulse-ring::after {
+    content: ''; position: absolute; inset: 0; border-radius: 9999px;
+    background: rgba(0,98,65,0.3);
+    animation: pulse-ring 1.5s ease-out infinite;
+  }
+
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 10px; }
   </style>
@@ -1064,7 +1084,7 @@ function handleBooking() {
                         createdAt: new Date().toISOString()
                     }, () => {
                         clearTimeout(safetyTimer); loading.classList.add('hidden');
-                        showAppModal("Thành công", `Đã chốt lịch: <b>${startVal} - ${endVal}</b>.<br>Hẹn gặp bạn nhé!`, '✅', () => {
+                        showBookingSuccessModal(startVal, endVal, () => {
                             document.getElementById('book-date').value = "";
                             showTab('user');
                         });
@@ -1085,6 +1105,23 @@ function handleBooking() {
 // =============================================================
 // UI GỢI Ý - THÔNG MINH THEO SỐ LƯỢNG
 // =============================================================
+
+// --- MODAL ĐẶT BED THÀNH CÔNG (CÓ ẢNH ĐẬU XE) ---
+function showBookingSuccessModal(startVal, endVal, cb) {
+    const overlay = document.getElementById('booking-success-overlay');
+    document.getElementById('bs-time').innerHTML = `${startVal} – ${endVal}`;
+    overlay.classList.remove('hidden');
+    setTimeout(() => {
+        overlay.querySelector('.bs-card').classList.remove('bs-enter');
+        overlay.querySelector('.bs-card').classList.add('bs-show');
+    }, 10);
+    document.getElementById('bs-confirm-btn').onclick = () => {
+        overlay.classList.add('hidden');
+        overlay.querySelector('.bs-card').classList.remove('bs-show');
+        overlay.querySelector('.bs-card').classList.add('bs-enter');
+        if (cb) cb();
+    };
+}
 
 function showSuggestionUI(suggestions) {
     let title = ""; let html = ""; let icon = "";
@@ -1818,5 +1855,126 @@ window.handleLogout = function() {
         </div>
     </div>
 </div>
+<!-- ===== MODAL ĐẶT THÀNH CÔNG (CÓ ẢNH ĐẬU XE) ===== -->
+<div id="booking-success-overlay" class="fixed inset-0 z-[150] hidden flex items-end justify-center p-4" style="background: rgba(0,0,0,0.55); backdrop-filter: blur(12px);">
+  <div class="bs-card bs-enter w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.35)] bg-white mb-4">
+    <!-- Header xanh -->
+    <div class="bg-gradient-to-br from-[#006241] to-[#004d33] px-8 pt-8 pb-10 text-center relative overflow-hidden">
+      <div class="absolute -top-6 -right-6 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+      <div class="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
+      <div class="relative inline-flex items-center justify-center w-16 h-16 bg-white/15 rounded-full mb-3 pulse-ring">
+        <span class="text-3xl">✅</span>
+      </div>
+      <h2 class="brand-font text-white text-2xl font-black mb-1">Đặt thành công!</h2>
+      <p class="text-white/70 text-xs font-bold uppercase tracking-widest">The cafe 33 · Cafe in Bed</p>
+      <div class="mt-4 bg-white/15 backdrop-blur-sm rounded-2xl px-6 py-3 inline-block border border-white/20">
+        <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-0.5">Khung giờ đặt</p>
+        <p id="bs-time" class="text-white font-black text-xl brand-font">--:-- – --:--</p>
+      </div>
+    </div>
+
+    <!-- Cảnh báo nhớ đúng giờ -->
+    <div class="px-6 pt-5 pb-2">
+      <div class="flex items-center gap-3 bg-amber-50 rounded-2xl px-4 py-3 border border-amber-100">
+        <span class="text-xl">⏰</span>
+        <p class="text-amber-700 text-xs font-bold leading-snug">Nhớ đi đúng giờ nhé! Sau <b>15 phút</b> không có mặt, lịch có thể bị hủy.</p>
+      </div>
+    </div>
+
+    <!-- Ảnh hướng dẫn đậu xe -->
+    <div class="px-6 pt-4 pb-2">
+      <div class="rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm">
+        <div class="bg-gray-50 px-4 py-2.5 flex items-center gap-2 border-b border-gray-100">
+          <span class="text-sm">🅿️</span>
+          <p class="text-[11px] font-black text-[#1e3932] uppercase tracking-wider">Hướng dẫn vị trí đậu xe cho khách cafe in bed</p>
+        </div>
+        <img 
+          src="https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/%C4%90%E1%BB%81%20m%E1%BB%A5c_20260225_161744_0000.png?alt=media&token=c7ecb95d-6449-4724-b9dd-345683c71bad" 
+          alt="Hướng dẫn đậu xe"
+          class="w-full object-cover"
+          onclick="document.getElementById('zoomed-img').src=this.src; document.getElementById('image-overlay').classList.remove('hidden');"
+          style="cursor:zoom-in;"
+        >
+        <div class="bg-gray-50 px-4 py-2 text-center">
+          <p class="text-[10px] text-gray-400 font-bold">Nhấn ảnh để xem rõ hơn 🔍</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nút xác nhận -->
+    <div class="px-6 py-5">
+      <button id="bs-confirm-btn" class="w-full py-4 bg-gradient-to-r from-[#006241] to-[#004d33] text-white font-black rounded-2xl text-sm uppercase tracking-widest shadow-lg active:scale-95 transition-all">
+        Đã hiểu, hẹn gặp bạn! 🎉
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== WELCOME POPUP (ẢNH ĐẬU XE KHI MỞ APP) ===== -->
+<div id="welcome-popup" class="fixed inset-0 z-[180] hidden items-end justify-center p-4" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(14px);">
+  <div class="welcome-animate w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.4)] bg-white mb-4">
+    <!-- Header -->
+    <div class="bg-gradient-to-br from-[#1e3932] to-[#006241] px-8 py-5 flex items-center justify-between">
+      <div>
+        <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">The cafe 33</p>
+        <h3 class="brand-font text-white text-lg font-black leading-tight mt-0.5">Hướng dẫn vị trí<br>đậu xe · Cafe in Bed</h3>
+      </div>
+      <button 
+        onclick="document.getElementById('welcome-popup').classList.add('hidden'); document.getElementById('welcome-popup').style.display='none';"
+        class="w-9 h-9 bg-white/15 text-white rounded-full flex items-center justify-center text-lg font-bold border border-white/20 active:scale-90 transition-all backdrop-blur-sm hover:bg-white/25"
+        style="font-size:18px; line-height:1;"
+      >&times;</button>
+    </div>
+
+    <!-- Ảnh -->
+    <div class="relative">
+      <img 
+        src="https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/%C4%90%E1%BB%81%20m%E1%BB%A5c_20260225_161744_0000.png?alt=media&token=c7ecb95d-6449-4724-b9dd-345683c71bad" 
+        alt="Hướng dẫn đậu xe"
+        class="w-full object-cover"
+        onclick="document.getElementById('zoomed-img').src=this.src; document.getElementById('image-overlay').classList.remove('hidden');"
+        style="cursor:zoom-in;"
+      >
+      <div class="absolute bottom-0 left-0 right-0 py-2 text-center" style="background: linear-gradient(to top, rgba(0,0,0,0.4), transparent)">
+        <p class="text-white text-[10px] font-bold">Nhấn ảnh để phóng to 🔍</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-5 flex items-center gap-3">
+      <div class="flex-1 bg-green-50 rounded-2xl px-4 py-3 border border-green-100">
+        <p class="text-[#006241] text-xs font-bold">🅿️ Vui lòng đậu xe đúng vị trí để tránh ùn tắc khu vực quán nhé!</p>
+      </div>
+      <button 
+        onclick="document.getElementById('welcome-popup').classList.add('hidden'); document.getElementById('welcome-popup').style.display='none';"
+        class="flex-shrink-0 w-12 h-12 bg-[#006241] rounded-2xl flex items-center justify-center text-white text-lg shadow-lg active:scale-90 transition-all"
+      >✓</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Hiện welcome popup khi vào app (chỉ 1 lần mỗi session)
+(function() {
+    function showWelcomePopup() {
+        const popup = document.getElementById('welcome-popup');
+        if (popup) {
+            popup.classList.remove('hidden');
+            popup.style.display = 'flex';
+        }
+    }
+    // Override showDashboard để hook welcome popup
+    const waitForDashboard = setInterval(function() {
+        if (typeof window.showDashboard === 'function') {
+            clearInterval(waitForDashboard);
+            const _orig = window.showDashboard;
+            window.showDashboard = function() {
+                _orig.apply(this, arguments);
+                setTimeout(showWelcomePopup, 700);
+            };
+        }
+    }, 50);
+})();
+</script>
 </body>
 </html>
