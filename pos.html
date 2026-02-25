@@ -5570,6 +5570,79 @@ function calculateAndSaveCheckout(booking, realTimeStr) {
 
 // Hàm processCheckoutFirebase cũ có thể xóa hoặc để đó không dùng tới nữa
 
+// =====================================================================
+// 🛏️ TỰ ĐỘNG TÍNH GIỜ & THÊM MÓN BED VÀO GIỎ HÀNG
+// Logic: 4 giờ đầu → '1h bed' (15k), từ giờ thứ 5 → '1h bed từ h5' (20k)
+// =====================================================================
+function autoAddBedItems(booking) {
+    if (!booking) return;
+
+    // --- Tính số giờ từ booking ---
+    var totalHours = 0;
+
+    // Ưu tiên tính từ start/end nếu có
+    if (booking.start && booking.end) {
+        try {
+            var ps = booking.start.split(':');
+            var pe = booking.end.split(':');
+            var startMins = parseInt(ps[0]) * 60 + parseInt(ps[1]);
+            var endMins   = parseInt(pe[0]) * 60 + parseInt(pe[1]);
+            var diffMins  = endMins - startMins;
+            if (diffMins <= 0) diffMins += 24 * 60; // qua nửa đêm
+            totalHours = Math.ceil(diffMins / 60); // làm tròn lên
+        } catch(e) { totalHours = 0; }
+    }
+
+    // Fallback: dùng trường duration (phút) nếu không tính được từ giờ
+    if (totalHours <= 0 && booking.duration) {
+        totalHours = Math.ceil(parseInt(booking.duration) / 60);
+    }
+
+    if (totalHours <= 0) {
+        console.warn('[autoAddBedItems] Không tính được số giờ cho booking:', booking);
+        return;
+    }
+
+    console.log(`[autoAddBedItems] Khách: ${booking.name} | Tổng giờ: ${totalHours}h`);
+
+    // --- Xóa các món bed cũ trong giỏ (nếu gọi lại) ---
+    cart = cart.filter(i => {
+        var n = (i.name || '').toLowerCase();
+        return n !== '1h bed' && n !== '1h bed từ h5';
+    });
+
+    // --- Thêm đúng số lượng từng loại ---
+    // 4 giờ đầu: '1h bed', từ giờ thứ 5 trở đi: '1h bed từ h5'
+    var hoursNormal = Math.min(totalHours, 4);   // tối đa 4 giờ loại bình thường
+    var hoursExtra  = Math.max(0, totalHours - 4); // số giờ từ h5 trở đi
+
+    var addItem = function(name) {
+        var item = menu.find(function(m) {
+            return m.name.toLowerCase() === name.toLowerCase();
+        });
+        if (!item) {
+            console.warn('[autoAddBedItems] Không tìm thấy món "' + name + '" trong menu!');
+            return;
+        }
+        var price = (item.priceM > 0) ? item.priceM : item.priceL;
+        var ex = cart.find(function(c) { return c.name === item.name && c.size === 'M'; });
+        if (ex) ex.qty++;
+        else cart.push({ name: item.name, size: 'M', price: price, qty: 1 });
+    };
+
+    for (var i = 0; i < hoursNormal; i++) addItem('1h bed');
+    for (var j = 0; j < hoursExtra;  j++) addItem('1h bed từ h5');
+
+    renderCart();
+
+    // Thông báo nhỏ
+    var msg = totalHours <= 4
+        ? `Đã thêm ${totalHours} × 1h Bed`
+        : `Đã thêm 4 × 1h Bed + ${hoursExtra} × 1h Bed (h5+)`;
+    console.log('[autoAddBedItems]', msg);
+    if (typeof showToast === 'function') showToast('🛏️ ' + msg);
+}
+
 // Hàm phụ: Tìm món trong menu và ném vào giỏ
 function autoAddMenuItemToCart(itemName) {
     // Tìm món trong mảng menu toàn cục
