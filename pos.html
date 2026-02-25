@@ -1374,12 +1374,12 @@ input, button, select, textarea { font-size: 1rem; }
         <p id="sdt-status" class="text-[8px] font-black uppercase mb-1 text-center min-h-[12px]"></p>
     </div>
 
-    <!-- ===== PHIẾU QUÀ KHÁCH HÀNG ===== -->
-    <div id="gift-panel" class="hidden mb-3">
-        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3">
-            <div class="flex items-center justify-between mb-2">
+    <!-- PHIẾU QUÀ CHƯA DÙNG -->
+    <div id="gift-panel" class="hidden mb-2">
+        <div class="bg-amber-50 border border-amber-200 rounded-2xl p-2.5">
+            <div class="flex items-center justify-between mb-1.5">
                 <p class="text-[9px] font-black text-amber-700 uppercase tracking-wider">🎁 Phiếu quà chưa dùng</p>
-                <button onclick="document.getElementById('gift-panel').classList.add('hidden')" class="w-5 h-5 bg-amber-200 rounded-full flex items-center justify-center text-amber-700 text-[10px] font-black hover:bg-amber-300 transition">✕</button>
+                <button onclick="document.getElementById('gift-panel').classList.add('hidden')" class="w-5 h-5 bg-amber-200 rounded-full text-amber-700 text-[10px] font-black">✕</button>
             </div>
             <div id="gift-panel-list" class="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar"></div>
         </div>
@@ -2838,7 +2838,7 @@ function quickPaid(v) {
     document.getElementById('cash-paid').value = v.toLocaleString('en-US'); 
     calcChange(); 
 }
-function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart();updateCartPadding(); resetVoucherState();// >>> THÊM DÒNG NÀY <<<
+function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart();updateCartPadding();// >>> THÊM DÒNG NÀY <<<
     syncToCustomerDisplay('idle');  }
 
 // =========================================================
@@ -5089,11 +5089,8 @@ renderCustomerSuggestions(sdt, 'pc');
         // Gọi hàm quét nợ (chờ 500ms để nhập xong hãy báo)
         if(window.debtTimeout) clearTimeout(window.debtTimeout);
         window.debtTimeout = setTimeout(() => scanAndAddDebt(sdt), 500);
-
-        // Quét phiếu quà chưa dùng
         if(window.giftTimeout) clearTimeout(window.giftTimeout);
         window.giftTimeout = setTimeout(() => scanGiftVouchers(sdt), 600);
-
        syncToCustomerDisplay('welcome');
         // ---------------------------
     } else {
@@ -6364,13 +6361,12 @@ function saveOrderToFirebase(method) {
             console.log("✅ Đã lưu đơn thành công!");
             
             // --- DỌN DẸP GIAO DIỆN CHUNG (Common Cleanup) ---
-            markVoucherUsed(); // Đánh dấu phiếu quà đã sử dụng
             cart = [];
             renderCart();
             document.getElementById('kh-sdt').value = "";
             const pcStatusLabel = document.getElementById('sdt-status');
             if (pcStatusLabel) pcStatusLabel.innerText = "";
-            resetVoucherState();
+            giftVoucherMarkUsedAndReset();
             if(document.getElementById('qr-modal')) document.getElementById('qr-modal').classList.add('hidden');
 
             // ============================================================
@@ -8765,136 +8761,6 @@ function confirmMoveBed(newBedId) {
     });
 }
     // --- HÀM QUÉT VÀ XỬ LÝ NỢ CŨ (AUTO DEBT CHECK) ---
-}
-
-// ================================================================
-// 🎁 LOGIC PHIẾU QUÀ (GIFT VOUCHER) - POS SIDE
-// ================================================================
-
-// Biến lưu key voucher đang được áp dụng vào bill hiện tại
-let appliedVoucherKey = null;
-let appliedVoucherPhone = null;
-
-// Quét phiếu quà khi nhập SĐT
-function scanGiftVouchers(phone) {
-    const panel = document.getElementById('gift-panel');
-    const list = document.getElementById('gift-panel-list');
-    if (!panel || !list) return;
-
-    if (!phone || phone.length < 9) {
-        panel.classList.add('hidden');
-        return;
-    }
-
-    db.ref('customers/' + phone + '/myGifts').once('value', snap => {
-        const now = Date.now();
-        const EXPIRE_DAYS = 30;
-        const gifts = [];
-
-        snap.forEach(child => {
-            const g = { key: child.key, ...child.val() };
-            if (g.used) return; // Bỏ qua đã dùng
-
-            // Kiểm tra hết hạn (30 ngày)
-            if (g.redeemedAt) {
-                const diff = (now - new Date(g.redeemedAt).getTime()) / (1000 * 60 * 60 * 24);
-                if (diff > EXPIRE_DAYS) {
-                    // Tự động đánh dấu hết hạn
-                    db.ref('customers/' + phone + '/myGifts/' + g.key).update({ used: true, usedAt: 'expired' });
-                    return;
-                }
-            }
-            gifts.push(g);
-        });
-
-        if (gifts.length === 0) {
-            panel.classList.add('hidden');
-            return;
-        }
-
-        panel.classList.remove('hidden');
-        list.innerHTML = gifts.map(g => {
-            // Tính số ngày còn lại
-            let daysLeft = '—';
-            let daysClass = 'text-amber-600';
-            if (g.redeemedAt) {
-                const diff = Math.floor((now - new Date(g.redeemedAt).getTime()) / (1000 * 60 * 60 * 24));
-                const left = EXPIRE_DAYS - diff;
-                daysLeft = left + ' ngày';
-                if (left <= 3) daysClass = 'text-red-500';
-            }
-
-            return `
-            <div class="bg-white rounded-xl p-2.5 border border-amber-100 flex items-center justify-between gap-2">
-                <div class="flex-1 min-w-0">
-                    <p class="font-black text-[11px] text-[#1e3932] truncate">${g.name}</p>
-                    <p class="font-mono text-[9px] text-[#006241] font-bold">${g.code}</p>
-                    <p class="text-[9px] ${daysClass} font-bold">Còn ${daysLeft}</p>
-                </div>
-                <button onclick="applyVoucherToCart('${phone}', '${g.key}', '${g.name}', '${g.code}')"
-                    class="flex-shrink-0 bg-[#006241] text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-wide active:scale-95 transition-all whitespace-nowrap">
-                    + Bill
-                </button>
-            </div>`;
-        }).join('');
-    });
-}
-
-// Thêm voucher vào giỏ hàng
-function applyVoucherToCart(phone, voucherKey, giftName, giftCode) {
-    if (appliedVoucherKey) {
-        // Xoá voucher cũ khỏi giỏ nếu đang có
-        const idx = cart.findIndex(i => i._voucherKey);
-        if (idx > -1) cart.splice(idx, 1);
-    }
-
-    // Thêm vào cart với giá 0 (quà tặng, không thu tiền)
-    cart.push({
-        name: `🎁 Quà: ${giftName}`,
-        size: giftCode,
-        price: 0,
-        qty: 1,
-        _voucherKey: voucherKey,
-        _voucherPhone: phone
-    });
-
-    appliedVoucherKey = voucherKey;
-    appliedVoucherPhone = phone;
-
-    renderCart();
-
-    // Cập nhật label trong panel
-    const listEl = document.getElementById('gift-panel-list');
-    if (listEl) {
-        const btn = listEl.querySelector(`button[onclick*="${voucherKey}"]`);
-        if (btn) {
-            btn.innerText = '✓ Đã thêm';
-            btn.disabled = true;
-            btn.className = 'flex-shrink-0 bg-green-100 text-green-600 text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase tracking-wide whitespace-nowrap';
-        }
-    }
-}
-
-// Đánh dấu voucher đã sử dụng sau khi thanh toán xong
-function markVoucherUsed() {
-    if (!appliedVoucherKey || !appliedVoucherPhone) return;
-    const now = new Date().toISOString();
-    db.ref('customers/' + appliedVoucherPhone + '/myGifts/' + appliedVoucherKey).update({
-        used: true,
-        usedAt: now
-    });
-    appliedVoucherKey = null;
-    appliedVoucherPhone = null;
-}
-
-// Reset voucher state khi xóa đơn / reset POS
-function resetVoucherState() {
-    appliedVoucherKey = null;
-    appliedVoucherPhone = null;
-    const panel = document.getElementById('gift-panel');
-    if (panel) panel.classList.add('hidden');
-}
-
 function scanAndAddDebt(phone, onlyAlert = false) {
     if (!phone || phone.length < 3) return;
     
@@ -9119,12 +8985,93 @@ function resetPhoneInput() {
         if (typeof syncToCustomerDisplay === 'function') {
             syncToCustomerDisplay('cart', { customerName: "Khách lẻ", customerPoints: 0 });
         }
-
-        // 5. Ẩn panel phiếu quà
-        resetVoucherState();
     }
 }
 document.addEventListener('DOMContentLoaded', updateCartPadding);
+
+// ============================================================
+// 🎁 GIFT VOUCHER — POS LOGIC
+// ============================================================
+var _giftVoucherKey = null;
+var _giftVoucherPhone = null;
+
+function scanGiftVouchers(phone) {
+    var panel = document.getElementById('gift-panel');
+    var list  = document.getElementById('gift-panel-list');
+    if (!panel || !list || !phone || phone.length < 9) {
+        if (panel) panel.classList.add('hidden');
+        return;
+    }
+    db.ref('customers/' + phone + '/myGifts').once('value', function(snap) {
+        var now = Date.now();
+        var EXPIRE = 30 * 24 * 60 * 60 * 1000; // 30 ngày ms
+        var gifts = [];
+        snap.forEach(function(child) {
+            var g = child.val();
+            g._key = child.key;
+            if (g.used) return;
+            if (g.redeemedAt) {
+                var age = now - new Date(g.redeemedAt).getTime();
+                if (age > EXPIRE) {
+                    db.ref('customers/' + phone + '/myGifts/' + g._key).update({ used: true, usedAt: 'expired' });
+                    return;
+                }
+                var daysLeft = Math.max(0, Math.floor((EXPIRE - age) / 86400000));
+                g._daysLeft = daysLeft;
+            }
+            gifts.push(g);
+        });
+        if (gifts.length === 0) { panel.classList.add('hidden'); return; }
+        panel.classList.remove('hidden');
+        list.innerHTML = '';
+        gifts.forEach(function(g) {
+            var daysColor = (g._daysLeft !== undefined && g._daysLeft <= 3) ? '#ef4444' : '#b45309';
+            var daysText  = g._daysLeft !== undefined ? ('Còn ' + g._daysLeft + ' ngày') : '';
+            var safeName = (g.name || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+            var safeCode = (g.code || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+            var row = document.createElement('div');
+            row.className = 'bg-white rounded-xl p-2 border border-amber-100 flex items-center justify-between gap-2';
+            row.innerHTML =
+                '<div class="flex-1 min-w-0">' +
+                    '<p class="font-black text-[11px] text-gray-800 truncate">' + safeName + '</p>' +
+                    '<p class="font-mono text-[9px] text-green-700 font-bold">' + safeCode + '</p>' +
+                    (daysText ? '<p class="text-[9px] font-bold" style="color:' + daysColor + '">' + daysText + '</p>' : '') +
+                '</div>' +
+                '<button class="bg-green-700 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase active:scale-95">+ Bill</button>';
+            row.querySelector('button').addEventListener('click', function() {
+                giftVoucherAddToCart(phone, g._key, g.name, g.code);
+                this.innerText = '✓ Đã thêm';
+                this.disabled = true;
+                this.className = 'bg-green-100 text-green-700 text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase';
+            });
+            list.appendChild(row);
+        });
+    });
+}
+
+function giftVoucherAddToCart(phone, key, name, code) {
+    // Xóa voucher cũ nếu đã thêm trước đó
+    if (_giftVoucherKey) {
+        for (var i = cart.length - 1; i >= 0; i--) {
+            if (cart[i]._vKey) { cart.splice(i, 1); break; }
+        }
+    }
+    _giftVoucherKey   = key;
+    _giftVoucherPhone = phone;
+    cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
+    renderCart();
+}
+
+function giftVoucherMarkUsedAndReset() {
+    if (_giftVoucherKey && _giftVoucherPhone) {
+        db.ref('customers/' + _giftVoucherPhone + '/myGifts/' + _giftVoucherKey)
+          .update({ used: true, usedAt: new Date().toISOString() });
+    }
+    _giftVoucherKey   = null;
+    _giftVoucherPhone = null;
+    var panel = document.getElementById('gift-panel');
+    if (panel) panel.classList.add('hidden');
+}
 
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
