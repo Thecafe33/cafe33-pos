@@ -2838,8 +2838,15 @@ function quickPaid(v) {
     document.getElementById('cash-paid').value = v.toLocaleString('en-US'); 
     calcChange(); 
 }
-function clearFullOrder() { if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!"); cart = []; renderCart();updateCartPadding();// >>> THÊM DÒNG NÀY <<<
-    syncToCustomerDisplay('idle');  }
+function clearFullOrder() {
+    if(pendingBedOrder) return alert("Đang trong quy trình thanh toán Bed!");
+    cart = [];
+    renderCart();
+    updateCartPadding();
+    resetDebtState();
+    giftVoucherMarkUsedAndReset(true); // true = chỉ reset UI, không mark used
+    syncToCustomerDisplay('idle');
+}
 
 // =========================================================
 // 6. LỊCH SỬ & DOANH THU (ĐÃ SỬA LỖI HIỂN THỊ)
@@ -6366,7 +6373,8 @@ function saveOrderToFirebase(method) {
             document.getElementById('kh-sdt').value = "";
             const pcStatusLabel = document.getElementById('sdt-status');
             if (pcStatusLabel) pcStatusLabel.innerText = "";
-            giftVoucherMarkUsedAndReset();
+            clearDebtAfterPayment();       // ✅ Xóa nợ Firebase sau thanh toán
+            giftVoucherMarkUsedAndReset(); // ✅ Đánh dấu voucher đã dùng
             if(document.getElementById('qr-modal')) document.getElementById('qr-modal').classList.add('hidden');
 
             // ============================================================
@@ -8761,40 +8769,44 @@ function confirmMoveBed(newBedId) {
     });
 }
     // --- HÀM QUÉT VÀ XỬ LÝ NỢ CŨ (AUTO DEBT CHECK) ---
+// Track phí hủy đang pending trong bill (chưa thanh toán)
+var _pendingDebtPhone = null;
+var _pendingDebtAdded = false;
+
 function scanAndAddDebt(phone, onlyAlert = false) {
     if (!phone || phone.length < 3) return;
-    
     let key = normalizePhone(phone);
     let cust = customerMap[key];
-
-    // Chỉ xử lý nếu có nợ > 0
     if (cust && cust.pendingFee > 0) {
         let fee = cust.pendingFee;
         let reason = cust.pendingFeeReason || "Phí chưa thanh toán";
-
-        // 1. Hiển thị cảnh báo
         if (typeof showAppModal === 'function') {
-            showAppModal("⚠️ CẢNH BÁO NỢ CŨ", 
-                `Khách <b>${cust.name}</b> đang nợ: <b class="text-red-500">${fee.toLocaleString()}đ</b><br>Lý do: ${reason}<br>${onlyAlert ? "Vui lòng thu tiền!" : "Hệ thống sẽ tự động thêm vào bill."}`, 
+            showAppModal("⚠️ CẢNH BÁO NỢ CŨ",
+                `Khách <b>${cust.name}</b> đang nợ: <b class="text-red-500">${fee.toLocaleString()}đ</b><br>Lý do: ${reason}<br>${onlyAlert ? "Vui lòng thu tiền!" : "Hệ thống sẽ tự động thêm vào bill."}`,
                 "💰");
         } else {
-            alert(`⚠️ CẢNH BÁO: Khách ${cust.name} đang nợ ${fee.toLocaleString()}đ\nLý do: ${reason}`);
+            alert("CẢNH BÁO: Khách " + cust.name + " đang nợ " + fee.toLocaleString() + "đ");
         }
-
-        // 2. Nếu đang ở chế độ gọi món (không phải chỉ xem lịch), tự động thêm vào giỏ
         if (!onlyAlert) {
-            // Thêm vào giỏ hàng (giả lập món ăn)
-            addToCart(`Nợ cũ: ${reason}`, "Phí", fee);
-            
-            // Xóa nợ trên Firebase ngay để tránh add 2 lần nếu refresh
-            // (Nếu Tiên sinh muốn chắc chắn hơn thì có thể đợi lúc thanh toán mới xóa, 
-            // nhưng cách này tiện cho thu ngân nhất)
-            db.ref('customers/' + key).update({
-                pendingFee: 0,
-                pendingFeeReason: null
-            });
+            addToCart("Nợ cũ: " + reason, "Phí", fee);
+            // ✅ KHÔNG xóa Firebase ngay — chỉ xóa sau khi thanh toán xong
+            _pendingDebtPhone = key;
+            _pendingDebtAdded = true;
         }
     }
+}
+
+function clearDebtAfterPayment() {
+    if (_pendingDebtPhone && _pendingDebtAdded) {
+        db.ref('customers/' + _pendingDebtPhone).update({ pendingFee: 0, pendingFeeReason: null });
+    }
+    _pendingDebtPhone = null;
+    _pendingDebtAdded = false;
+}
+
+function resetDebtState() {
+    _pendingDebtPhone = null;
+    _pendingDebtAdded = false;
 }
     // --- HÀM ĐỒNG BỘ MÀN HÌNH KHÁCH (CUSTOMER DISPLAY BRIDGE) ---
 function syncToCustomerDisplay(state, overrideData = {}) {
@@ -9062,8 +9074,9 @@ function giftVoucherAddToCart(phone, key, name, code) {
     renderCart();
 }
 
-function giftVoucherMarkUsedAndReset() {
-    if (_giftVoucherKey && _giftVoucherPhone) {
+function giftVoucherMarkUsedAndReset(resetOnly) {
+    // resetOnly=true: chỉ reset UI (khi xóa giỏ), không mark used trên Firebase
+    if (!resetOnly && _giftVoucherKey && _giftVoucherPhone) {
         db.ref('customers/' + _giftVoucherPhone + '/myGifts/' + _giftVoucherKey)
           .update({ used: true, usedAt: new Date().toISOString() });
     }
@@ -9071,6 +9084,8 @@ function giftVoucherMarkUsedAndReset() {
     _giftVoucherPhone = null;
     var panel = document.getElementById('gift-panel');
     if (panel) panel.classList.add('hidden');
+    var list = document.getElementById('gift-panel-list');
+    if (list) list.innerHTML = '';
 }
 
 </script>
