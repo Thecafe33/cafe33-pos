@@ -32,7 +32,7 @@ input, button, select, textarea { font-size: 1rem; }
 .brand-font { font-family: 'League Spartan', sans-serif; }
 .sb-green { background-color: #006241; }
 .tab-active { background-color: #006241 !important; color: white !important; font-weight: 900; }
-.category-tab { padding: 7px 20px; font-size: 0.82rem; font-weight: 800; border-radius: 12px; border: 2px solid transparent; white-space: nowrap; min-width: 90px; text-align: center; }
+.category-tab { padding: 6px 16px; font-size: 0.85rem; font-weight: 800; border-radius: 12px; border: 2px solid #f3f4f6; white-space: nowrap; }
 #loading-overlay { display: flex; position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
 .capitalize-first { text-transform: lowercase; display: inline-block; } .capitalize-first::first-letter { text-transform: uppercase; }
 .history-item-active { border-color: #006241 !important; background-color: #f0fdf4 !important; }
@@ -877,8 +877,8 @@ input, button, select, textarea { font-size: 1rem; }
 </div>
    <div id="view-menu" class="flex-1 flex flex-col overflow-hidden relative bg-[#F2F2F7]">
 
-    <div id="category-bar" class="hidden md:flex px-6 py-3 border-b border-gray-100 bg-white gap-2 shrink-0 justify-center">
-        <div id="tabs-container" class="flex gap-2 justify-center"></div>
+    <div id="category-bar" class="hidden md:flex px-6 py-2 border-b border-gray-50 bg-gray-50/30 gap-2 overflow-x-auto shrink-0">
+        <div id="tabs-container" class="flex gap-2"></div>
     </div>
 
     <div class="md:hidden absolute top-4 right-4 z-50 flex flex-col items-end">
@@ -1355,7 +1355,7 @@ input, button, select, textarea { font-size: 1rem; }
     <div class="md:hidden w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-3 cursor-pointer" onclick="toggleCartExpand()"></div>
 
     <div class="hidden md:flex justify-between items-center mb-3">
-        <h2 class="brand-font text-lg uppercase" id="sidebar-cart-title">Đơn hàng</h2>
+        <h2 class="brand-font text-lg uppercase">Đơn hàng</h2>
         <button id="btn-clear-all" onclick="clearFullOrder()" class="bg-red-50 text-red-500 text-[9px] font-black px-3 py-1.5 rounded-xl uppercase">Xóa</button>
     </div>
 
@@ -1384,6 +1384,7 @@ input, button, select, textarea { font-size: 1rem; }
             </div>
         </div>
         <button id="sidebar-pay-btn" onclick="switchView('payment')" class="w-full py-4 sb-green text-white font-black rounded-xl uppercase shadow-xl active:scale-95 transition-all">Thanh toán</button>
+        <button id="sidebar-back-btn" onclick="switchView('menu')" class="hidden w-full py-3 bg-gray-100 text-gray-500 font-black rounded-xl uppercase text-sm active:scale-95 transition-all mt-1">← Quay lại menu</button>
     </div>
 </div>
 
@@ -2154,10 +2155,10 @@ function renderTabs() {
     if (!menu || menu.length === 0) return;
     const cats = ["Tất cả", ...new Set(menu.map(m => m.type))];
 
-    // 1. Render cho PC (Căn giữa, kích thước bằng nhau)
+    // 1. Render cho Tablet (Giữ nguyên)
     const containerPC = document.getElementById('tabs-container');
     if(containerPC) {
-        containerPC.innerHTML = cats.map(c => `<button onclick="filterTab('${c}')" class="category-tab ${c === currentTab? 'tab-active': 'bg-white text-gray-400'} capitalize-first transition-all min-w-[90px] text-center">${c}</button>`).join('');
+        containerPC.innerHTML = cats.map(c => `<button onclick="filterTab('${c}')" class="category-tab ${c === currentTab? 'tab-active': 'bg-white text-gray-400'} capitalize-first transition-all">${c}</button>`).join('');
     }
 
     // 2. Render cho Mobile (Dropdown kiểu mới)
@@ -2465,6 +2466,7 @@ function renderMenu() {
     ).join('');
 }
 function handleItemClick(name, pM, pL) { 
+    if(isPaymentMode) return; 
     const vM = Number(pM), vL = Number(pL);
     
     // Nếu món có 2 size -> Mở Popup
@@ -2520,16 +2522,16 @@ function renderCart() {
     // 1. Render cho Sidebar Desktop
     list.innerHTML = cart.map((i, idx) => {
         currentTotal += i.price * i.qty;
-        const lineTotal = (i.price * i.qty).toLocaleString() + 'đ';
-        return `<div class="bg-gray-50 p-3 rounded-xl flex justify-between items-center shadow-sm border border-white mb-1.5">
+        const sizeLabel = i.size ? `<span class="text-[10px] font-black text-white bg-[#006241] px-1.5 py-[1px] rounded ml-1 uppercase">${i.size.toUpperCase()}</span>` : '';
+        return `<div class="bg-gray-50 p-2.5 rounded-xl flex justify-between items-center shadow-sm border border-white text-xs mb-1">
             <div class="flex-1 pr-2 text-left">
-                <p class="font-black text-[#1e3932] uppercase text-sm leading-tight">${i.name} <span class="text-[#006241] font-extrabold">(${i.size.toUpperCase()})</span></p>
-                <p class="text-xs font-bold text-gray-400 mt-0.5">${i.price.toLocaleString()}đ × ${i.qty} = <span class="text-[#006241]">${lineTotal}</span></p>
+                <p class="font-black text-[#006241] truncate capitalize-first text-sm leading-tight">${i.name}${sizeLabel}</p>
+                <p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>
             </div>
-            <div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-gray-100 shrink-0">
-                <button onclick="updateQty(${idx}, -1)" class="w-7 h-7 flex items-center justify-center font-black text-gray-400 text-xl hover:text-red-500 transition-colors">−</button>
-                <span class="font-black text-[#006241] text-sm w-6 text-center">${i.qty}</span>
-                <button onclick="updateQty(${idx}, 1)" class="w-7 h-7 flex items-center justify-center font-black text-[#006241] text-xl hover:text-green-700 transition-colors">+</button>
+            <div class="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-gray-100">
+                <button onclick="updateQty(${idx}, -1)" class="w-6 h-6 flex items-center justify-center font-black text-gray-300 text-lg">-</button>
+                <span class="font-black text-[#006241] text-[11px] w-5 text-center">${i.qty}</span>
+                <button onclick="updateQty(${idx}, 1)" class="w-6 h-6 flex items-center justify-center font-black text-[#006241] text-lg">+</button>
             </div>
         </div>`;
     }).join('');
@@ -2554,27 +2556,26 @@ function renderCart() {
 syncToCustomerDisplay('cart');
     updateSuggestions(); // Cập nhật các nút gợi ý tiền (50k, 100k...)
 
-    // Nếu đang ở màn thanh toán PC, tự động cập nhật ô tiền & tiền thừa
+    // Ẩn/hiện nút thanh toán tùy theo mode
+    var payBtn = document.getElementById('sidebar-pay-btn');
+    var backBtn = document.getElementById('sidebar-back-btn');
+    if (payBtn) payBtn.classList.toggle('hidden', isPaymentMode);
+    if (backBtn) backBtn.classList.toggle('hidden', !isPaymentMode);
+
+    // Nếu đang ở payment mode (PC), tự động cập nhật ô "Khách đưa"
     if (isPaymentMode && window.innerWidth > 768) {
-        const cashInput = document.getElementById('cash-paid');
-        if (cashInput) cashInput.value = currentTotal.toLocaleString('en-US');
-        if (typeof calcChange === 'function') calcChange();
+        var cashPaidInput = document.getElementById('cash-paid');
+        if (cashPaidInput) {
+            cashPaidInput.value = currentTotal.toLocaleString('en-US');
+        }
+        calcChange();
     }
 }
 
 function updateQty(idx, d) { 
-    // Cho phép thay đổi số lượng ngay cả khi đang ở màn hình thanh toán
     cart[idx].qty += d; 
     if (cart[idx].qty <= 0) cart.splice(idx, 1); 
-    renderCart();
-    // Nếu đang ở màn thanh toán PC, cập nhật lại ô nhập tiền
-    if (isPaymentMode) {
-        const cashInput = document.getElementById('cash-paid');
-        if (cashInput) {
-            cashInput.value = currentTotal.toLocaleString('en-US');
-        }
-        if (typeof calcChange === 'function') calcChange();
-    }
+    renderCart(); 
 }
 
 // =========================================================
@@ -3542,6 +3543,14 @@ function switchView(v) {
     isPaymentMode = (v === 'payment');
     var isMobile = window.innerWidth <= 768;
 
+    // Sync nút thanh toán/quay lại cho PC sidebar
+    if (!isMobile) {
+        var _payBtn = document.getElementById('sidebar-pay-btn');
+        var _backBtn = document.getElementById('sidebar-back-btn');
+        if (_payBtn) _payBtn.classList.toggle('hidden', isPaymentMode);
+        if (_backBtn) _backBtn.classList.toggle('hidden', !isPaymentMode);
+    }
+
     // --- 2. QUẢN LÝ BOTTOM BAR (LOGIC TỐI ƯU) ---
     var mobBar = document.getElementById('mobile-bottom-bar');
     if (mobBar) {
@@ -3627,20 +3636,6 @@ function switchView(v) {
         else sidebarCart.classList.toggle('hidden', v !== 'menu' && v !== 'payment');
     }
 
-    // --- 8. ẨN/HIỆN NÚT THANH TOÁN & XÓA KHI Ở CHẾ ĐỘ THANH TOÁN ---
-    var payBtn = document.getElementById('sidebar-pay-btn');
-    var clearBtn = document.getElementById('btn-clear-all');
-    var cartTitle = document.getElementById('sidebar-cart-title');
-    if (v === 'payment') {
-        if (payBtn) payBtn.classList.add('hidden');
-        if (clearBtn) clearBtn.classList.add('hidden');
-        if (cartTitle) { cartTitle.innerText = 'Chi tiết đơn'; cartTitle.classList.add('text-[#006241]'); }
-    } else {
-        if (payBtn) payBtn.classList.remove('hidden');
-        if (clearBtn) clearBtn.classList.remove('hidden');
-        if (cartTitle) { cartTitle.innerText = 'Đơn hàng'; cartTitle.classList.remove('text-[#006241]'); }
-    }
-
     var catBar = document.getElementById('category-bar');
     if (catBar) catBar.classList.toggle('hidden', v !== 'menu');
     
@@ -3679,9 +3674,14 @@ if (v === 'payment') {
         if (mobStep2) mobStep2.classList.add('hidden');
     } 
     else {
-        // === LOGIC PC ===
+    // === LOGIC PC ===
         // TUYỆT ĐỐI KHÔNG GỌI HÀM ĐỒNG BỘ NÀO Ở ĐÂY!
         // Để yên cho ô kh-sdt giữ nguyên giá trị mà nhân viên vừa nhập/chọn.
+        // Cập nhật ẩn/hiện nút thanh toán / quay lại
+        var payBtnSw = document.getElementById('sidebar-pay-btn');
+        var backBtnSw = document.getElementById('sidebar-back-btn');
+        if (payBtnSw) payBtnSw.classList.add('hidden');
+        if (backBtnSw) backBtnSw.classList.remove('hidden');
     }
     
     // Reset phương thức về Tiền mặt mặc định
@@ -5526,21 +5526,12 @@ function calculateAndSaveCheckout(booking, realTimeStr) {
         db.ref('bedBookings/' + bookingId).update({
             status: 'đã xong',
             realEndTime: realTimeStr,
-            totalSpend: total
+            totalSpend: total // <--- QUAN TRỌNG: Lưu cái này để Báo cáo đọc được
         }, (err) => { 
             if(!err) {
-                // [FIX] Đóng bed detail mobile, về đúng giao diện
-                var detailScreen = document.getElementById('mob-bed-detail-screen');
-                if (detailScreen) detailScreen.classList.add('translate-x-full');
-                window.currentMobileBooking = null;
-                if (typeof mobileTimerInterval !== 'undefined' && mobileTimerInterval) {
-                    clearInterval(mobileTimerInterval); mobileTimerInterval = null;
-                }
-                if (window.innerWidth <= 768) {
-                    openBedManagerMobile();
-                } else {
-                    openBedManager();
-                }
+                openBedManager(); 
+                // Có thể show toast thông báo doanh thu session này
+                // alert(`Đã trả Bed. Doanh thu: ${total.toLocaleString()}đ`);
             }
             else {
                 alert("Lỗi: " + err.message);
@@ -8027,23 +8018,27 @@ function handleMobileBedOrder(bookingId) {
 }
 
 function _doHandleMobileBedOrder(booking) {
-    // [FIX] Khai báo sdtInput đúng cách (trước đây thiếu var → crash)
-    var sdtInput = document.getElementById('kh-sdt');
     var statusLabel = document.getElementById('sdt-status');
 
     if (sdtInput) {
-        sdtInput.value = "";
+        sdtInput.value = ""; // Xóa cũ
         if (statusLabel) statusLabel.innerText = "";
 
         if (booking.phone) {
             sdtInput.value = booking.phone;
-            if (typeof checkSdtLive === 'function') checkSdtLive();
-            if (typeof scanAndAddDebt === 'function') scanAndAddDebt(booking.phone);
+            if (typeof checkSdtLive === 'function') checkSdtLive(); 
+            
+            // >>> CHÈN THÊM DÒNG NÀY <<<
+            // Quét nợ ngay khi bấm vào gọi món
+            scanAndAddDebt(booking.phone);
+            // ---------------------------
         }
     }
 
+    // Tự động thêm món tiền giờ (nếu có logic này)
     if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
 
+    // >>> CHÈN ĐOẠN GỬI TÍN HIỆU BED VÀO ĐÂY (GIỐNG HỆT Ở TRÊN) <<<
     const maskedPhone = booking.phone && booking.phone.length > 4 
         ? "******" + booking.phone.slice(-4) : "Khách lẻ";
         
@@ -8055,18 +8050,7 @@ function _doHandleMobileBedOrder(booking) {
         endTime: booking.end,
         orderType: 'bed'
     });
-
-    // [FIX] Đóng bed detail + bed mobile view trước khi chuyển sang menu
-    var detailScreen = document.getElementById('mob-bed-detail-screen');
-    if (detailScreen) detailScreen.classList.add('translate-x-full');
-    if (typeof mobileTimerInterval !== 'undefined' && mobileTimerInterval) {
-        clearInterval(mobileTimerInterval);
-        mobileTimerInterval = null;
-    }
-    var bedMobileView = document.getElementById('view-bed-mobile');
-    if (bedMobileView) bedMobileView.classList.add('hidden');
-    var mobBar = document.getElementById('mobile-bottom-bar');
-    if (mobBar) { mobBar.classList.remove('hidden'); mobBar.classList.add('flex'); }
+    // -----------------------------------------------------------
 
     switchView('menu');
 
