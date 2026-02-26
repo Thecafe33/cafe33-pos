@@ -856,7 +856,7 @@ input, button, select, textarea { font-size: 1rem; }
             Quản lý Bed
         </button>
         <button id="btn-nav-discount" onclick="openDiscountManager()" class="bg-gray-100 text-gray-400 px-6 py-3 rounded-2xl text-[11px] font-black uppercase hover:bg-gray-200 active:scale-95 transition-all tracking-widest">
-            Quà Tặng
+            🎁 Quà Tặng
         </button>
     </div>
   <div id="bed-dynamic-island" class="hidden absolute left-[55%] -translate-x-1/2 flex items-center bg-[#1e3932] rounded-full py-1.5 px-5 gap-3 border border-white/10 shadow-2xl z-50 animate-slide-up min-w-[320px]">
@@ -1079,12 +1079,12 @@ input, button, select, textarea { font-size: 1rem; }
                 <!-- CỘT TRÁI: Danh sách quà -->
                 <div style="width:52%;display:flex;flex-direction:column;background:white;border-radius:28px;box-shadow:0 2px 24px rgba(0,0,0,0.07);overflow:hidden;min-height:0;">
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
-                        <span style="font-weight:900;font-size:1rem;color:#111827;">Quà tặng & Mã giảm</span>
+                        <span style="font-weight:900;font-size:1rem;color:#111827;">🎁 Quà tặng & Mã giảm</span>
                         <span id="discount-count" style="font-weight:900;font-size:0.7rem;color:#006241;background:#F0FDF4;padding:4px 12px;border-radius:999px;">0</span>
                     </div>
                     <div id="discount-list" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;" class="custom-scrollbar">
                         <div style="display:flex;flex-direction:column;align-items:center;padding:48px 0;opacity:0.4;">
-                            <span style="font-size:2.5rem;margin-bottom:8px;"></span>
+                            <span style="font-size:2.5rem;margin-bottom:8px;">🎁</span>
                             <p style="font-size:0.875rem;font-weight:700;color:#9ca3af;">Đang tải...</p>
                         </div>
                     </div>
@@ -4319,6 +4319,16 @@ const sortedPCList = [...currentBedList].map((item, idx) => ({...item, originalI
                 <span>${timeDisplay}</span>
                 ${b.totalSpend ? `<span class="bg-black/10 px-1.5 rounded text-[9px]">${Number(b.totalSpend).toLocaleString()}đ</span>` : ''}
             </div>
+            ${_hasActivePreorder(b)
+                ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:${isSelected?'rgba(255,255,255,0.2)':'#fef9c3'};border:1px solid ${isSelected?'rgba(255,255,255,0.3)':'#fde047'};border-radius:8px;padding:3px 8px;">
+                    <span style="font-size:0.6rem;font-weight:900;color:${isSelected?'white':'#854d0e'};">🍜 PRE-ORDER · ${_countPreorderQty(b.preorder)} món</span>
+                  </div>`
+                : (b.preorder && b.preorder.status === 'loaded'
+                    ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:${isSelected?'rgba(255,255,255,0.15)':'#f0fdf4'};border:1px solid ${isSelected?'rgba(255,255,255,0.25)':'#86efac'};border-radius:8px;padding:3px 8px;">
+                        <span style="font-size:0.6rem;font-weight:900;color:${isSelected?'white':'#166534'};">✅ Pre-order đã load</span>
+                      </div>`
+                    : '')
+            }
         </div>`;
     }).join('');
 }
@@ -4816,10 +4826,33 @@ function setupActionButtons(bookingId, data, hasBed, btnOrder, btnCheckout, btnC
             document.getElementById('modal-cancel-reason').classList.remove('hidden');
         };
     }
-    // Order
+    // Order — đổi thành Pre-order nếu khách đã đặt món trước
     if (btnOrder) {
-        btnOrder.innerHTML = "<span>☕ Gọi Món</span>";
-        btnOrder.onclick = function() { showBedDetail(data.bedId); };
+        var hasPreorder = _hasActivePreorder(data);
+
+        if (hasPreorder) {
+            var poQty = _countPreorderQty(data.preorder);
+            btnOrder.innerHTML = '<span style="display:flex;align-items:center;gap:5px;">🍜 Pre-order <span style="background:rgba(255,255,255,0.35);border-radius:6px;padding:1px 7px;font-size:0.72rem;">' + poQty + ' món</span></span>';
+            btnOrder.style.background = 'linear-gradient(135deg,#b45309,#d97706)';
+            btnOrder.style.color = 'white';
+            btnOrder.onclick = function() {
+                // Điền SĐT
+                var sdtEl = document.getElementById('kh-sdt');
+                if (sdtEl && data.phone) { sdtEl.value = data.phone; if (typeof checkSdtLive==='function') checkSdtLive(); }
+                if (data.phone) scanAndAddDebt(data.phone);
+                // Thêm phí bed
+                if (typeof autoAddBedItems === 'function') autoAddBedItems(data);
+                // Thêm món preorder
+                loadPreorderToCart(bookingId);
+                // Về màn hình order
+                switchView('menu');
+            };
+        } else {
+            btnOrder.innerHTML = "<span>☕ Gọi Món</span>";
+            btnOrder.style.background = '';
+            btnOrder.style.color = '';
+            btnOrder.onclick = function() { showBedDetail(data.bedId); };
+        }
     }
     // Checkout
     if (btnCheckout) {
@@ -4941,6 +4974,12 @@ function _doShowBedDetail(booking, bedId) {
 
     // 3. Tự động thêm món tiền giờ (Giữ nguyên)
     if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
+
+    // 4. Load preorder nếu khách đã gọi món trước
+    var _preorderKey = booking.key || booking.id;
+    if (_preorderKey && _hasActivePreorder(booking)) {
+        loadPreorderToCart(_preorderKey);
+    }
 
     // >>> [CODE MỚI] GỬI TÍN HIỆU "CHÀO MỪNG BED" SANG MÀN HÌNH KHÁCH <<<
     if (booking) {
@@ -5930,6 +5969,69 @@ function calculateAndSaveCheckout(booking, realTimeStr) {
 // 🛏️ TỰ ĐỘNG TÍNH GIỜ & THÊM MÓN BED VÀO GIỎ HÀNG
 // Logic: 4 giờ đầu → '1h bed' (15k), từ giờ thứ 5 → '1h bed từ h5' (20k)
 // =====================================================================
+// ══════════════════════════════════════════════════════
+// PREORDER: Load items khách đặt trước vào cart POS
+// ══════════════════════════════════════════════════════
+// Helper: normalize preorder items từ Firebase (array hoặc object)
+function _getPreorderItems(preorder) {
+    if (!preorder || !preorder.items) return [];
+    if (Array.isArray(preorder.items)) return preorder.items.filter(Boolean);
+    return Object.values(preorder.items).filter(Boolean);
+}
+function _hasActivePreorder(booking) {
+    if (!booking || !booking.preorder) return false;
+    if (booking.preorder.status === 'loaded') return false;
+    return _getPreorderItems(booking.preorder).length > 0;
+}
+function _countPreorderQty(preorder) {
+    return _getPreorderItems(preorder).reduce(function(s,i){ return s+(parseInt(i.qty)||1); }, 0);
+}
+
+function loadPreorderToCart(bookingKey) {
+    if (!bookingKey) return;
+    db.ref('bedBookings/' + bookingKey + '/preorder').once('value', function(snap) {
+        var preorder = snap.val();
+        if (!preorder || !preorder.items) return;
+
+        var items = _getPreorderItems(preorder);
+        if (!items.length) return;
+
+        var totalAdded = 0;
+        items.forEach(function(item) {
+            if (!item || !item.name) return;
+
+            // Lấy giá chính xác từ menu hiện tại (ưu tiên priceM)
+            var menuItem = menu.find(function(m) {
+                return m.name.toLowerCase() === item.name.toLowerCase();
+            });
+            var price = menuItem
+                ? (menuItem.priceM > 0 ? menuItem.priceM : menuItem.priceL)
+                : (item.price || 0);
+            var qty = parseInt(item.qty) || 1;
+            var size = item.size || 'M';
+
+            // Merge nếu đã có trong giỏ (tránh trùng với món bed-fee)
+            var existing = cart.find(function(ci) {
+                return ci.name === item.name && ci.size === size;
+            });
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                cart.push({ name: item.name, size: size, price: price, qty: qty, _preorder: true });
+            }
+            totalAdded += qty;
+        });
+
+        renderCart();
+        db.ref('bedBookings/' + bookingKey + '/preorder/status').set('loaded');
+
+        if (totalAdded > 0 && typeof showToast === 'function') {
+            showToast('🍜 Đã thêm ' + totalAdded + ' món pre-order vào giỏ!');
+        }
+    });
+}
+
+
 function autoAddBedItems(booking) {
     if (!booking) return;
 
@@ -7208,7 +7310,13 @@ function renderDetailContentMobile(b) {
                 </button>
             </div>
             <div class="flex gap-3">
-                <button onclick="handleMobileBedOrder('${b.id}')" class="flex-1 h-14 bg-white border-2 border-[#006241] rounded-[20px] text-[#006241] font-black text-[14px] shadow-sm transition-all active:scale-95 uppercase">GỌI MÓN</button>
+                <button onclick="handleMobileBedOrder('${b.id}')"
+                    class="flex-1 h-14 rounded-[20px] font-black text-[14px] shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                    style="${_hasActivePreorder(b) ? 'background:linear-gradient(135deg,#b45309,#d97706);color:white;border:none;' : 'background:white;border:2px solid #006241;color:#006241;'}">
+                    ${_hasActivePreorder(b)
+                        ? '🍜 PRE-ORDER (' + _countPreorderQty(b.preorder) + ' món)'
+                        : 'GỌI MÓN'}
+                </button>
                 <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" class="flex-1 h-14 bg-[#006241] rounded-[20px] text-white font-black text-[14px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">XẾP BED</button>
             </div>
         </div>`;
@@ -7217,9 +7325,12 @@ function renderDetailContentMobile(b) {
         btnHtml = `
         <div class="fixed bottom-0 left-0 right-0 p-5 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
             <div class="flex gap-3">
-                <button onclick="handleMobileBedOrder('${b.id}')" 
-                    class="flex-1 h-14 bg-white border-2 border-[#006241] rounded-[20px] text-[#006241] font-black text-[14px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center">
-                    GỌI MÓN
+                <button onclick="handleMobileBedOrder('${b.id}')"
+                    class="flex-1 h-14 rounded-[20px] font-black text-[14px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center gap-2"
+                    style="${_hasActivePreorder(b) ? 'background:linear-gradient(135deg,#b45309,#d97706);color:white;border:none;' : 'background:white;border:2px solid #006241;color:#006241;'}">
+                    ${_hasActivePreorder(b)
+                        ? '🍜 PRE-ORDER (' + _countPreorderQty(b.preorder) + ' món)'
+                        : 'GỌI MÓN'}
                 </button>
                 <button onclick="handleBedCheckout(window.currentMobileBooking)" 
                     class="flex-[1.5] h-14 bg-[#006241] rounded-[20px] text-white font-black text-[14px] shadow-xl shadow-emerald-900/20 uppercase active:scale-95 transition-transform flex items-center justify-center">
@@ -8471,8 +8582,14 @@ function _doHandleMobileBedOrder(booking) {
         }
     }
 
-    // Tự động thêm món tiền giờ (nếu có logic này)
+    // Tự động thêm món tiền giờ
     if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
+
+    // Load preorder nếu khách đã đặt món trước
+    var _mobileKey = booking.key || booking.id;
+    if (_mobileKey && _hasActivePreorder(booking)) {
+        loadPreorderToCart(_mobileKey);
+    }
 
     // >>> CHÈN ĐOẠN GỬI TÍN HIỆU BED VÀO ĐÂY (GIỐNG HỆT Ở TRÊN) <<<
     const maskedPhone = booking.phone && booking.phone.length > 4 
@@ -9544,7 +9661,7 @@ function discountFormLoad(key, d) {
     _dfActive = d.active !== false;
     dfSetType(_dfType);
     dfRenderActiveToggle();
-    document.getElementById('discount-form-title').innerText = 'Chỉnh sửa';
+    document.getElementById('discount-form-title').innerText = '✏️ Chỉnh sửa';
     document.getElementById('df-delete-btn').style.display = 'block';
 }
 
@@ -10402,4 +10519,3 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
-
