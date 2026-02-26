@@ -1132,7 +1132,7 @@ input, button, select, textarea { font-size: 1rem; }
                         <div>
                             <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:8px;">Mã khuyến mãi</label>
                             <input id="df-code" type="text" placeholder="MICY5K" maxlength="20"
-                                style="width:100%;padding:16px 20px;border-radius:18px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:2rem;font-weight:900;color:#006241;letter-spacing:0.1em;text-transform:uppercase;font-family:'SF Mono',monospace;box-sizing:border-box;transition:border-color 0.2s;"
+                                style="width:100%;padding:16px 20px;border-radius:18px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:2rem;font-weight:900;color:#006241;letter-spacing:0.1em;text-transform:uppercase;font-family:monospace;box-sizing:border-box;transition:border-color 0.2s;"
                                 oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
                                 onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
                         </div>
@@ -9445,6 +9445,232 @@ function giftVoucherMarkUsedAndReset(resetOnly) {
     if (list) list.innerHTML = '';
 }
 
+
+
+// ============================================================
+// 🏷️ QUẢN LÝ MÃ GIẢM GIÁ — ADMIN UI
+// ============================================================
+var _dfType = 'item';      // Loại mã đang chọn trong form
+var _dfActive = true;      // Trạng thái active trong form
+
+function openDiscountManager() {
+    switchView('discount');
+    var btn = document.getElementById('btn-nav-discount');
+    if (btn) btn.className = 'sb-green text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tab-active';
+    renderDiscountList();
+}
+
+function renderDiscountList() {
+    var listEl = document.getElementById('discount-list');
+    var countEl = document.getElementById('discount-count');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 0;opacity:0.35;"><span style="font-size:2rem;margin-bottom:8px;">⏳</span><p style="font-size:0.8rem;font-weight:700;color:#9ca3af;">Đang tải...</p></div>';
+
+    db.ref('discountCodes').once('value', function(snap) {
+        var data = snap.val() || {};
+        var keys = Object.keys(data);
+        if (countEl) countEl.innerText = keys.length + ' mã';
+
+        if (keys.length === 0) {
+            listEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 0;opacity:0.4;"><span style="font-size:3rem;margin-bottom:12px;">🏷</span><p style="font-size:0.9rem;font-weight:800;color:#6b7280;margin-bottom:4px;">Chưa có mã nào</p><p style="font-size:0.75rem;color:#9ca3af;">Tạo mã đầu tiên ở bên phải →</p></div>';
+            return;
+        }
+
+        listEl.innerHTML = '';
+        var typeLabels = { item: '📦 Theo món', order: '🧾 Toàn đơn', percent: '% Phần trăm' };
+        var typeBg    = { item: '#EDE9FE', order: '#DBEAFE', percent: '#FEF3C7' };
+        var typeClr   = { item: '#7C3AED', order: '#1D4ED8', percent: '#D97706' };
+
+        keys.forEach(function(k) {
+            var d = data[k];
+            var valueText = d.type === 'percent'
+                ? ('−' + d.value + '%')
+                : ('−' + Number(d.value || 0).toLocaleString() + 'đ');
+            var isOff = d.active === false;
+
+            var row = document.createElement('div');
+            row.style.cssText = [
+                'background:' + (isOff ? '#FAFAFA' : 'white'),
+                'border-radius:20px',
+                'padding:16px 18px',
+                'border:2px solid ' + (isOff ? '#f3f4f6' : '#f9fafb'),
+                'cursor:pointer',
+                'transition:all 0.18s',
+                'opacity:' + (isOff ? '0.55' : '1'),
+                'box-shadow:0 1px 6px rgba(0,0,0,0.04)'
+            ].join(';');
+            row.onmouseover = function() { this.style.borderColor = '#006241'; this.style.boxShadow = '0 4px 16px rgba(0,98,65,0.12)'; };
+            row.onmouseout  = function() { this.style.borderColor = isOff ? '#f3f4f6' : '#f9fafb'; this.style.boxShadow = '0 1px 6px rgba(0,0,0,0.04)'; };
+
+            var typeLbl = typeLabels[d.type] || d.type;
+            var tBg = typeBg[d.type] || '#f3f4f6';
+            var tClr = typeClr[d.type] || '#374151';
+            var statusHtml = isOff
+                ? '<span style="font-size:0.6rem;font-weight:900;background:#FEE2E2;color:#EF4444;padding:2px 8px;border-radius:999px;">TẮT</span>'
+                : '<span style="font-size:0.6rem;font-weight:900;background:#D1FAE5;color:#059669;padding:2px 8px;border-radius:999px;">BẬT</span>';
+
+            row.innerHTML =
+                '<div style="display:flex;align-items:flex-start;gap:12px;">' +
+                    '<div style="flex:1;min-width:0;">' +
+                        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">' +
+                            '<span style="font-family:monospace;font-weight:900;font-size:1.1rem;color:#006241;letter-spacing:0.05em;">' + (d.code || k) + '</span>' +
+                            '<span style="font-size:0.6rem;font-weight:800;background:' + tBg + ';color:' + tClr + ';padding:2px 8px;border-radius:999px;">' + typeLbl + '</span>' +
+                            statusHtml +
+                        '</div>' +
+                        '<p style="font-size:0.875rem;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 6px 0;">' + (d.label || '') + '</p>' +
+                        (d.targetItem ? '<p style="font-size:0.7rem;color:#9ca3af;margin:0 0 4px 0;">📦 Áp cho: <b style="color:#6b7280;">' + d.targetItem + '</b></p>' : '') +
+                        '<div style="display:flex;align-items:center;gap:10px;">' +
+                            '<span style="font-size:0.85rem;font-weight:900;color:#EF4444;">' + valueText + '</span>' +
+                            '<span style="font-size:0.7rem;color:#9ca3af;">· Đã dùng: ' + (d.usedCount || 0) + (d.usageLimit > 0 ? '/' + d.usageLimit : '') + ' lần</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<span style="font-size:1.2rem;opacity:0.3;align-self:center;">›</span>' +
+                '</div>';
+
+            row.addEventListener('click', function() { discountFormLoad(k, d); });
+            listEl.appendChild(row);
+        });
+    });
+}
+
+function discountFormLoad(key, d) {
+    document.getElementById('df-editing-key').value = key;
+    document.getElementById('df-code').value = d.code || key;
+    document.getElementById('df-label').value = d.label || '';
+    document.getElementById('df-target').value = d.targetItem || '';
+    document.getElementById('df-value').value = d.value || '';
+    document.getElementById('df-limit').value = d.usageLimit || 0;
+
+    _dfType = d.type || 'item';
+    _dfActive = d.active !== false;
+
+    dfSetType(_dfType);
+    dfRenderActiveToggle();
+
+    document.getElementById('discount-form-title').innerText = 'Chỉnh sửa mã';
+    document.getElementById('df-delete-btn').classList.remove('hidden');
+}
+
+function discountFormClear() {
+    document.getElementById('df-editing-key').value = '';
+    document.getElementById('df-code').value = '';
+    document.getElementById('df-label').value = '';
+    document.getElementById('df-target').value = '';
+    document.getElementById('df-value').value = '';
+    document.getElementById('df-limit').value = '0';
+    _dfType = 'item'; _dfActive = true;
+    dfSetType('item');
+    dfRenderActiveToggle();
+    document.getElementById('discount-form-title').innerText = 'Thêm mã mới';
+    document.getElementById('df-delete-btn').classList.add('hidden');
+}
+
+function dfSetType(type) {
+    _dfType = type;
+    var icons = { item: '📦 Theo món', order: '🧾 Toàn đơn', percent: '% Phần trăm' };
+    ['item','order','percent'].forEach(function(t) {
+        var btn = document.getElementById('df-type-' + t);
+        if (!btn) return;
+        btn.innerHTML = icons[t];
+        if (t === type) {
+            btn.style.background = '#006241';
+            btn.style.color = 'white';
+            btn.style.boxShadow = '0 2px 10px rgba(0,98,65,0.35)';
+            btn.style.fontWeight = '900';
+        } else {
+            btn.style.background = 'transparent';
+            btn.style.color = '#9ca3af';
+            btn.style.boxShadow = 'none';
+            btn.style.fontWeight = '800';
+        }
+    });
+    var targetRow = document.getElementById('df-target-row');
+    if (targetRow) targetRow.style.display = (type === 'item') ? 'block' : 'none';
+    var valLabel = document.getElementById('df-value-label');
+    if (valLabel) valLabel.innerText = (type === 'percent') ? 'Phần trăm giảm (%)' : 'Số tiền giảm (đ)';
+    var valInput = document.getElementById('df-value');
+    if (valInput) valInput.placeholder = (type === 'percent') ? '10' : '5000';
+}
+
+function dfToggleActive() {
+    _dfActive = !_dfActive;
+    dfRenderActiveToggle();
+}
+function dfRenderActiveToggle() {
+    var btn = document.getElementById('df-active-toggle');
+    if (!btn) return;
+    if (_dfActive) {
+        btn.style.background = '#006241';
+        btn.innerHTML = '<span style="position:absolute;top:3px;right:3px;width:24px;height:24px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.2);transition:all 0.2s;"></span>';
+    } else {
+        btn.style.background = '#d1d5db';
+        btn.innerHTML = '<span style="position:absolute;top:3px;left:3px;width:24px;height:24px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.2);transition:all 0.2s;"></span>';
+    }
+}
+
+function discountFormSave() {
+    var code = (document.getElementById('df-code').value || '').trim().toUpperCase();
+    var label = (document.getElementById('df-label').value || '').trim();
+    var target = (document.getElementById('df-target').value || '').trim().toLowerCase();
+    var value = parseFloat(document.getElementById('df-value').value) || 0;
+    var limit = parseInt(document.getElementById('df-limit').value) || 0;
+    var editKey = document.getElementById('df-editing-key').value;
+
+    if (!code) return alert('Vui lòng nhập mã!');
+    if (!label) return alert('Vui lòng nhập tên hiển thị!');
+    if (value <= 0) return alert('Giá trị giảm phải lớn hơn 0!');
+    if (_dfType === 'item' && !target) return alert('Vui lòng nhập tên món áp dụng!');
+
+    var record = {
+        code: code,
+        label: label,
+        type: _dfType,
+        value: value,
+        active: _dfActive,
+        usageLimit: limit,
+        usedCount: 0
+    };
+    if (_dfType === 'item') record.targetItem = target;
+
+    var isNew = !editKey;
+    var ref = isNew ? db.ref('discountCodes').push() : db.ref('discountCodes/' + editKey);
+
+    if (!isNew) {
+        // Giữ lại usedCount cũ khi sửa
+        db.ref('discountCodes/' + editKey + '/usedCount').once('value', function(snap) {
+            record.usedCount = snap.val() || 0;
+            ref.set(record, function(err) {
+                if (err) return alert('Lỗi: ' + err.message);
+                showAppModal('Đã lưu', 'Mã <b>' + code + '</b> đã được cập nhật!', '✅');
+                discountFormClear();
+                renderDiscountList();
+                // Reload cache
+                _discountCache[editKey] = record;
+            });
+        });
+    } else {
+        ref.set(record, function(err) {
+            if (err) return alert('Lỗi: ' + err.message);
+            showAppModal('Đã tạo', 'Mã <b>' + code + '</b> đã được tạo!', '🏷️');
+            discountFormClear();
+            renderDiscountList();
+        });
+    }
+}
+
+function discountFormDelete() {
+    var editKey = document.getElementById('df-editing-key').value;
+    var code = document.getElementById('df-code').value;
+    if (!editKey) return;
+    if (!confirm('Xóa mã "' + code + '"? Hành động này không thể hoàn tác.')) return;
+    db.ref('discountCodes/' + editKey).remove(function(err) {
+        if (err) return alert('Lỗi: ' + err.message);
+        showAppModal('Đã xóa', 'Mã <b>' + code + '</b> đã bị xóa!', '🗑️');
+        discountFormClear();
+        renderDiscountList();
+        delete _discountCache[editKey];
+    });
+}
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
     <div class="bg-white/95 backdrop-blur-2xl w-full max-w-[340px] rounded-[35px] shadow-[0_30px_70px_rgba(0,0,0,0.3)] text-center border border-white/60 p-8 transform scale-100 transition-all">
@@ -9989,231 +10215,6 @@ function giftVoucherMarkUsedAndReset(resetOnly) {
 </div>
 <!-- ===== END MODAL AUTO-STOP BED ===== -->
 
-
-// ============================================================
-// 🏷️ QUẢN LÝ MÃ GIẢM GIÁ — ADMIN UI
-// ============================================================
-var _dfType = 'item';      // Loại mã đang chọn trong form
-var _dfActive = true;      // Trạng thái active trong form
-
-function openDiscountManager() {
-    switchView('discount');
-    var btn = document.getElementById('btn-nav-discount');
-    if (btn) btn.className = 'sb-green text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tab-active';
-    renderDiscountList();
-}
-
-function renderDiscountList() {
-    var listEl = document.getElementById('discount-list');
-    var countEl = document.getElementById('discount-count');
-    if (!listEl) return;
-    listEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 0;opacity:0.35;"><span style="font-size:2rem;margin-bottom:8px;">⏳</span><p style="font-size:0.8rem;font-weight:700;color:#9ca3af;">Đang tải...</p></div>';
-
-    db.ref('discountCodes').once('value', function(snap) {
-        var data = snap.val() || {};
-        var keys = Object.keys(data);
-        if (countEl) countEl.innerText = keys.length + ' mã';
-
-        if (keys.length === 0) {
-            listEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 0;opacity:0.4;"><span style="font-size:3rem;margin-bottom:12px;">🏷</span><p style="font-size:0.9rem;font-weight:800;color:#6b7280;margin-bottom:4px;">Chưa có mã nào</p><p style="font-size:0.75rem;color:#9ca3af;">Tạo mã đầu tiên ở bên phải →</p></div>';
-            return;
-        }
-
-        listEl.innerHTML = '';
-        var typeLabels = { item: '📦 Theo món', order: '🧾 Toàn đơn', percent: '% Phần trăm' };
-        var typeBg    = { item: '#EDE9FE', order: '#DBEAFE', percent: '#FEF3C7' };
-        var typeClr   = { item: '#7C3AED', order: '#1D4ED8', percent: '#D97706' };
-
-        keys.forEach(function(k) {
-            var d = data[k];
-            var valueText = d.type === 'percent'
-                ? ('−' + d.value + '%')
-                : ('−' + Number(d.value || 0).toLocaleString() + 'đ');
-            var isOff = d.active === false;
-
-            var row = document.createElement('div');
-            row.style.cssText = [
-                'background:' + (isOff ? '#FAFAFA' : 'white'),
-                'border-radius:20px',
-                'padding:16px 18px',
-                'border:2px solid ' + (isOff ? '#f3f4f6' : '#f9fafb'),
-                'cursor:pointer',
-                'transition:all 0.18s',
-                'opacity:' + (isOff ? '0.55' : '1'),
-                'box-shadow:0 1px 6px rgba(0,0,0,0.04)'
-            ].join(';');
-            row.onmouseover = function() { this.style.borderColor = '#006241'; this.style.boxShadow = '0 4px 16px rgba(0,98,65,0.12)'; };
-            row.onmouseout  = function() { this.style.borderColor = isOff ? '#f3f4f6' : '#f9fafb'; this.style.boxShadow = '0 1px 6px rgba(0,0,0,0.04)'; };
-
-            var typeLbl = typeLabels[d.type] || d.type;
-            var tBg = typeBg[d.type] || '#f3f4f6';
-            var tClr = typeClr[d.type] || '#374151';
-            var statusHtml = isOff
-                ? '<span style="font-size:0.6rem;font-weight:900;background:#FEE2E2;color:#EF4444;padding:2px 8px;border-radius:999px;">TẮT</span>'
-                : '<span style="font-size:0.6rem;font-weight:900;background:#D1FAE5;color:#059669;padding:2px 8px;border-radius:999px;">BẬT</span>';
-
-            row.innerHTML =
-                '<div style="display:flex;align-items:flex-start;gap:12px;">' +
-                    '<div style="flex:1;min-width:0;">' +
-                        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">' +
-                            '<span style="font-family:'SF Mono',monospace;font-weight:900;font-size:1.1rem;color:#006241;letter-spacing:0.05em;">' + (d.code || k) + '</span>' +
-                            '<span style="font-size:0.6rem;font-weight:800;background:' + tBg + ';color:' + tClr + ';padding:2px 8px;border-radius:999px;">' + typeLbl + '</span>' +
-                            statusHtml +
-                        '</div>' +
-                        '<p style="font-size:0.875rem;font-weight:600;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 6px 0;">' + (d.label || '') + '</p>' +
-                        (d.targetItem ? '<p style="font-size:0.7rem;color:#9ca3af;margin:0 0 4px 0;">📦 Áp cho: <b style="color:#6b7280;">' + d.targetItem + '</b></p>' : '') +
-                        '<div style="display:flex;align-items:center;gap:10px;">' +
-                            '<span style="font-size:0.85rem;font-weight:900;color:#EF4444;">' + valueText + '</span>' +
-                            '<span style="font-size:0.7rem;color:#9ca3af;">· Đã dùng: ' + (d.usedCount || 0) + (d.usageLimit > 0 ? '/' + d.usageLimit : '') + ' lần</span>' +
-                        '</div>' +
-                    '</div>' +
-                    '<span style="font-size:1.2rem;opacity:0.3;align-self:center;">›</span>' +
-                '</div>';
-
-            row.addEventListener('click', function() { discountFormLoad(k, d); });
-            listEl.appendChild(row);
-        });
-    });
-}
-
-function discountFormLoad(key, d) {
-    document.getElementById('df-editing-key').value = key;
-    document.getElementById('df-code').value = d.code || key;
-    document.getElementById('df-label').value = d.label || '';
-    document.getElementById('df-target').value = d.targetItem || '';
-    document.getElementById('df-value').value = d.value || '';
-    document.getElementById('df-limit').value = d.usageLimit || 0;
-
-    _dfType = d.type || 'item';
-    _dfActive = d.active !== false;
-
-    dfSetType(_dfType);
-    dfRenderActiveToggle();
-
-    document.getElementById('discount-form-title').innerText = 'Chỉnh sửa mã';
-    document.getElementById('df-delete-btn').classList.remove('hidden');
-}
-
-function discountFormClear() {
-    document.getElementById('df-editing-key').value = '';
-    document.getElementById('df-code').value = '';
-    document.getElementById('df-label').value = '';
-    document.getElementById('df-target').value = '';
-    document.getElementById('df-value').value = '';
-    document.getElementById('df-limit').value = '0';
-    _dfType = 'item'; _dfActive = true;
-    dfSetType('item');
-    dfRenderActiveToggle();
-    document.getElementById('discount-form-title').innerText = 'Thêm mã mới';
-    document.getElementById('df-delete-btn').classList.add('hidden');
-}
-
-function dfSetType(type) {
-    _dfType = type;
-    var icons = { item: '📦 Theo món', order: '🧾 Toàn đơn', percent: '% Phần trăm' };
-    ['item','order','percent'].forEach(function(t) {
-        var btn = document.getElementById('df-type-' + t);
-        if (!btn) return;
-        btn.innerHTML = icons[t];
-        if (t === type) {
-            btn.style.background = '#006241';
-            btn.style.color = 'white';
-            btn.style.boxShadow = '0 2px 10px rgba(0,98,65,0.35)';
-            btn.style.fontWeight = '900';
-        } else {
-            btn.style.background = 'transparent';
-            btn.style.color = '#9ca3af';
-            btn.style.boxShadow = 'none';
-            btn.style.fontWeight = '800';
-        }
-    });
-    var targetRow = document.getElementById('df-target-row');
-    if (targetRow) targetRow.style.display = (type === 'item') ? 'block' : 'none';
-    var valLabel = document.getElementById('df-value-label');
-    if (valLabel) valLabel.innerText = (type === 'percent') ? 'Phần trăm giảm (%)' : 'Số tiền giảm (đ)';
-    var valInput = document.getElementById('df-value');
-    if (valInput) valInput.placeholder = (type === 'percent') ? '10' : '5000';
-}
-
-function dfToggleActive() {
-    _dfActive = !_dfActive;
-    dfRenderActiveToggle();
-}
-function dfRenderActiveToggle() {
-    var btn = document.getElementById('df-active-toggle');
-    if (!btn) return;
-    if (_dfActive) {
-        btn.style.background = '#006241';
-        btn.innerHTML = '<span style="position:absolute;top:3px;right:3px;width:24px;height:24px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.2);transition:all 0.2s;"></span>';
-    } else {
-        btn.style.background = '#d1d5db';
-        btn.innerHTML = '<span style="position:absolute;top:3px;left:3px;width:24px;height:24px;background:white;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,0.2);transition:all 0.2s;"></span>';
-    }
-}
-
-function discountFormSave() {
-    var code = (document.getElementById('df-code').value || '').trim().toUpperCase();
-    var label = (document.getElementById('df-label').value || '').trim();
-    var target = (document.getElementById('df-target').value || '').trim().toLowerCase();
-    var value = parseFloat(document.getElementById('df-value').value) || 0;
-    var limit = parseInt(document.getElementById('df-limit').value) || 0;
-    var editKey = document.getElementById('df-editing-key').value;
-
-    if (!code) return alert('Vui lòng nhập mã!');
-    if (!label) return alert('Vui lòng nhập tên hiển thị!');
-    if (value <= 0) return alert('Giá trị giảm phải lớn hơn 0!');
-    if (_dfType === 'item' && !target) return alert('Vui lòng nhập tên món áp dụng!');
-
-    var record = {
-        code: code,
-        label: label,
-        type: _dfType,
-        value: value,
-        active: _dfActive,
-        usageLimit: limit,
-        usedCount: 0
-    };
-    if (_dfType === 'item') record.targetItem = target;
-
-    var isNew = !editKey;
-    var ref = isNew ? db.ref('discountCodes').push() : db.ref('discountCodes/' + editKey);
-
-    if (!isNew) {
-        // Giữ lại usedCount cũ khi sửa
-        db.ref('discountCodes/' + editKey + '/usedCount').once('value', function(snap) {
-            record.usedCount = snap.val() || 0;
-            ref.set(record, function(err) {
-                if (err) return alert('Lỗi: ' + err.message);
-                showAppModal('Đã lưu', 'Mã <b>' + code + '</b> đã được cập nhật!', '✅');
-                discountFormClear();
-                renderDiscountList();
-                // Reload cache
-                _discountCache[editKey] = record;
-            });
-        });
-    } else {
-        ref.set(record, function(err) {
-            if (err) return alert('Lỗi: ' + err.message);
-            showAppModal('Đã tạo', 'Mã <b>' + code + '</b> đã được tạo!', '🏷️');
-            discountFormClear();
-            renderDiscountList();
-        });
-    }
-}
-
-function discountFormDelete() {
-    var editKey = document.getElementById('df-editing-key').value;
-    var code = document.getElementById('df-code').value;
-    if (!editKey) return;
-    if (!confirm('Xóa mã "' + code + '"? Hành động này không thể hoàn tác.')) return;
-    db.ref('discountCodes/' + editKey).remove(function(err) {
-        if (err) return alert('Lỗi: ' + err.message);
-        showAppModal('Đã xóa', 'Mã <b>' + code + '</b> đã bị xóa!', '🗑️');
-        discountFormClear();
-        renderDiscountList();
-        delete _discountCache[editKey];
-    });
-}
 
     <script>
 // --- [MOBILE GESTURE FIX] XỬ LÝ VUỐT BACK TRÊN ĐIỆN THOẠI ---
