@@ -2709,7 +2709,7 @@ function renderCart() {
 
         // Nhãn phụ dưới tên
         let subLabel = '';
-        if (isGift)     subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">🎁 Phiếu quà · ${i.size}${i._discountTarget ? ' · ' + i._discountTarget : ''}</p>`;
+        if (isGift)     subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">🎁 ${i._discountTarget ? i._discountTarget : 'Phiếu quà'} · ${i.size}</p>`;
         else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
         else            subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
 
@@ -9527,26 +9527,7 @@ function scanGiftVouchers(phone) {
 }
 
 function giftVoucherAddToCart(phone, key, name, code) {
-    // Tìm thông tin reward trong cache (theo code hoặc key)
-    var rewardData = null;
-    var rewardKey  = null;
-    // Ưu tiên tìm theo key trực tiếp
-    if (_discountCache[key]) {
-        rewardData = _discountCache[key];
-        rewardKey  = key;
-    } else {
-        // Tìm theo code
-        var codeUpper = (code || '').toUpperCase();
-        Object.keys(_discountCache).forEach(function(k) {
-            if (!rewardData && _discountCache[k].code &&
-                _discountCache[k].code.toUpperCase() === codeUpper) {
-                rewardData = _discountCache[k];
-                rewardKey  = k;
-            }
-        });
-    }
-
-    // Xóa voucher cũ nếu đã thêm trước đó
+    // Xóa voucher quà cũ nếu đã thêm trước đó
     if (_giftVoucherKey) {
         for (var i = cart.length - 1; i >= 0; i--) {
             if (cart[i]._vKey) { cart.splice(i, 1); break; }
@@ -9555,81 +9536,69 @@ function giftVoucherAddToCart(phone, key, name, code) {
     _giftVoucherKey   = key;
     _giftVoucherPhone = phone;
 
-    // Nếu có thông tin reward, tính giảm giá đúng loại
-    if (rewardData) {
+    // ✅ Tìm reward theo CODE trong _discountCache (key trong myGifts ≠ key trong rewards)
+    var rewardData = null;
+    var codeUpper = (code || '').toUpperCase().trim();
+    Object.keys(_discountCache).forEach(function(k) {
+        if (rewardData) return;
+        var r = _discountCache[k];
+        if (r.code && r.code.toUpperCase().trim() === codeUpper) {
+            rewardData = r; rewardData._fbKey = k;
+        }
+    });
+
+    function buildAndAddItem(r) {
         var discountAmt = 0;
         var targetLabel = '';
-
-        if (rewardData.type === 'item') {
-            // Giảm theo món cụ thể
-            var target = (rewardData.targetItem || '').toLowerCase().trim();
+        if (r.type === 'item') {
+            var target = (r.targetItem || '').toLowerCase().trim();
             var matchItem = null;
             cart.forEach(function(ci) {
-                if (!matchItem && !ci._vKey && !ci._discountId) {
+                if (!matchItem && !ci._vKey && !ci._discountId)
                     if (ci.name.toLowerCase().indexOf(target) !== -1) matchItem = ci;
-                }
             });
             if (matchItem) {
-                discountAmt = rewardData.value || 0;
+                discountAmt = r.value || 0;
                 targetLabel = matchItem.name;
             } else {
-                // Món không có trong giỏ — thêm note nhưng không giảm
-                discountAmt = 0;
-                targetLabel = rewardData.targetItem || '';
+                cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
+                renderCart();
+                if (typeof showAppModal === 'function')
+                    showAppModal('Lưu ý!', 'Quà <b>' + name + '</b> áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó vào giỏ trước!', '⚠️');
+                return;
             }
-        } else if (rewardData.type === 'percent') {
-            discountAmt = Math.round(currentTotal * (rewardData.value || 0) / 100);
+        } else if (r.type === 'percent') {
+            discountAmt = Math.round(currentTotal * (r.value || 0) / 100);
             targetLabel = 'Toàn đơn';
         } else {
-            // type === 'order': giảm cố định toàn đơn
-            discountAmt = rewardData.value || 0;
+            discountAmt = r.value || 0;
             targetLabel = 'Toàn đơn';
         }
-
         if (discountAmt > 0) {
-            cart.push({
-                name: '🎁 ' + (rewardData.label || name),
-                size: code,
-                price: -discountAmt,
-                qty: 1,
-                _vKey: key,
-                _discountTarget: targetLabel
-            });
+            cart.push({ name: '🎁 ' + (r.label || name), size: code, price: -discountAmt, qty: 1, _vKey: key, _discountTarget: targetLabel });
         } else {
-            // Không tính được giảm (vd: món chưa có trong giỏ) — thêm dạng thông báo
             cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
-            if (rewardData.type === 'item') {
-                showAppModal && showAppModal('Lưu ý!', 'Quà <b>' + name + '</b> giảm cho món <b>' + (rewardData.targetItem || '') + '</b> — món này chưa có trong giỏ, hãy thêm món trước!', '⚠️');
-            }
         }
-    } else {
-        // Không tìm thấy reward data — fallback: thêm 0đ như cũ và thử lấy từ Firebase
-        cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
-        // Thử tải từ Firebase theo key
-        db.ref('rewards/' + key).once('value', function(snap) {
-            var r = snap.val();
-            if (!r) return;
-            _discountCache[key] = r;
-            // Thay thế item vừa thêm bằng item có giảm giá
-            for (var i = cart.length - 1; i >= 0; i--) {
-                if (cart[i]._vKey === key && cart[i].price === 0) {
-                    var amt = 0;
-                    if (r.type === 'percent')      amt = Math.round(currentTotal * (r.value||0) / 100);
-                    else if (r.type === 'order')   amt = r.value || 0;
-                    else if (r.type === 'item')    amt = r.value || 0;
-                    if (amt > 0) {
-                        cart[i].price = -amt;
-                        cart[i].name  = '🎁 ' + (r.label || name);
-                        cart[i]._discountTarget = r.type === 'item' ? (r.targetItem||'') : 'Toàn đơn';
-                    }
-                    break;
-                }
-            }
-            renderCart();
-        });
+        renderCart();
     }
 
-    renderCart();
+    if (rewardData) {
+        buildAndAddItem(rewardData);
+    } else {
+        // Cache chưa có → load từ Firebase theo code
+        db.ref('rewards').orderByChild('code').equalTo(code).once('value', function(snap) {
+            var found = null, foundKey = null;
+            snap.forEach(function(child) { if (!found) { found = child.val(); foundKey = child.key; } });
+            if (found) {
+                _discountCache[foundKey] = found;
+                found._fbKey = foundKey;
+                buildAndAddItem(found);
+            } else {
+                cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
+                renderCart();
+            }
+        });
+    }
 }
 
 function giftVoucherMarkUsedAndReset(resetOnly) {
