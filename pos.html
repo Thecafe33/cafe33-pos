@@ -2709,13 +2709,13 @@ function renderCart() {
 
         // Nhãn phụ dưới tên
         let subLabel = '';
-        if (isGift && i._giftLabel) {
-            // Món đã giảm giá trực tiếp: hiển giá gốc gạch ngang + giá mới
-            const origPriceStr = i._originalPrice > 0 ? `<span class="line-through text-gray-300 mr-1">${i._originalPrice.toLocaleString()}đ</span>` : '';
-            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">${origPriceStr}Quà · ${i._giftLabel}</p>`;
+        if (isGift && i._giftType === 'item') {
+            const origStr = i._originalPrice ? `<span class="line-through text-gray-300 mr-1">${i._originalPrice.toLocaleString()}đ</span>` : '';
+            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">${origStr}Quà · ${i._giftLabel||i.size}</p>`;
         } else if (isGift) {
-            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">Phiếu quà · ${i.size}</p>`;
-        } else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
+            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">Quà · ${i._giftLabel||i.size}</p>`;
+        }
+        else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
         else            subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
 
         const priceColor = isSpecial ? 'text-blue-600' : 'text-[#006241]';
@@ -9532,24 +9532,31 @@ function scanGiftVouchers(phone) {
 }
 
 function giftVoucherResetOld() {
-    // Xóa ảnh hưởng của gift cũ: ghớp lại món đã tách + xóa giảm giá
     if (!_giftVoucherKey) return;
-    // Tìm món có _vKey (món đã được giảm giá trực tiếp)
     for (var i = cart.length - 1; i >= 0; i--) {
         var ci = cart[i];
         if (ci._vKey === _giftVoucherKey) {
-            // Khôi phục giá gốc
-            ci.price = ci._originalPrice;
-            ci.qty += (ci._splitQty || 0);
-            ci.name = ci._originalName || ci.name;
-            delete ci._vKey; delete ci._originalPrice; delete ci._splitQty; delete ci._originalName; delete ci._giftLabel;
+            if (ci._giftType === 'item') {
+                // Khôi phục giá gốc và ghỗp qty nếu có tách
+                ci.price = ci._originalPrice;
+                ci.name  = ci._originalName || ci.name;
+                // Nếu có món gốc phía trước (đã giảm qty): ghỗp lại
+                if (i > 0 && cart[i-1].name === ci._originalName && !cart[i-1]._vKey) {
+                    cart[i-1].qty += 1;
+                    cart.splice(i, 1);
+                } else {
+                    delete ci._vKey; delete ci._originalPrice; delete ci._originalName; delete ci._giftType; delete ci._giftLabel;
+                }
+            } else {
+                // percent/order: xóa dòng giảm
+                cart.splice(i, 1);
+            }
             break;
         }
     }
 }
 
 function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
-    // Reset gift cũ
     giftVoucherResetOld();
     _giftVoucherKey   = key;
     _giftVoucherPhone = phone;
@@ -9557,82 +9564,65 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
     function applyReward(r) {
         if (!r) { renderCart(); return; }
 
-        var discountAmt = 0;
-        var targetIdx   = -1;
-
         if (r.type === 'item') {
+            // Giảm thẳng vào món
             var target = (r.targetItem || '').toLowerCase().trim();
+            var targetIdx = -1;
             cart.forEach(function(ci, idx) {
                 if (targetIdx < 0 && !ci._vKey && !ci._discountId)
                     if (ci.name.toLowerCase().indexOf(target) !== -1) targetIdx = idx;
             });
             if (targetIdx < 0) {
+                _giftVoucherKey = null; _giftVoucherPhone = null;
                 renderCart();
                 if (typeof showAppModal === 'function')
-                    showAppModal('Lưu ý!', 'Quà <b>' + name + '</b> áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó trước!', '⚠️');
+                    showAppModal('Lưu ý!', 'Quà áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó trước!', '⚠️');
                 return;
             }
-            discountAmt = r.value || 0;
-
             var item = cart[targetIdx];
             var origPrice = item.price;
             var origName  = item.name;
-            var newPrice  = Math.max(0, origPrice - discountAmt);
-
+            var newPrice  = Math.max(0, origPrice - (r.value || 0));
             if (item.qty > 1) {
-                // Tách 1 món ra riêng với giá đã giảm
                 item.qty -= 1;
-                var splitItem = {
-                    name: origName,
-                    size: item.size,
-                    price: newPrice,
-                    qty: 1,
-                    _vKey: key,
-                    _originalPrice: origPrice,
-                    _originalName: origName,
-                    _splitQty: 0,
-                    _giftLabel: code
-                };
-                cart.splice(targetIdx + 1, 0, splitItem);
+                cart.splice(targetIdx + 1, 0, {
+                    name: origName, size: item.size, price: newPrice, qty: 1,
+                    _vKey: key, _giftType: 'item', _giftLabel: code,
+                    _originalPrice: origPrice, _originalName: origName
+                });
             } else {
-                // Chỉ có 1 món, giảm giá trực tiếp
-                item._vKey = key;
-                item._originalPrice = origPrice;
-                item._originalName  = origName;
-                item._splitQty = 0;
-                item._giftLabel = code;
                 item.price = newPrice;
+                item._vKey = key; item._giftType = 'item'; item._giftLabel = code;
+                item._originalPrice = origPrice; item._originalName = origName;
             }
+            renderCart();
 
-        } else if (r.type === 'percent') {
-            // % toàn đơn: giảm đều mỗi món
-            discountAmt = Math.round(currentTotal * (r.value || 0) / 100);
-            // Thêm dòng giảm — vẫn dùng item âm nhưng không có icon
-            cart.push({
-                name: 'Giảm ' + (r.label || name) + ' – ' + r.value + '%',
-                size: code,
-                price: -discountAmt,
-                qty: 1,
-                _vKey: key,
-                _originalPrice: -discountAmt,
-                _splitQty: 0,
-                _giftLabel: code
-            });
         } else {
-            // order: giảm cố định toàn đơn
-            discountAmt = r.value || 0;
+            // percent hoặc order: tính toàn đơn
+            // Phải tính lại currentTotal từ cart trước
+            var subtotal = 0;
+            cart.forEach(function(ci) { subtotal += ci.price * ci.qty; });
+
+            var discountAmt = 0;
+            if (r.type === 'percent') {
+                discountAmt = Math.round(subtotal * (r.value || 0) / 100);
+            } else {
+                discountAmt = r.value || 0;
+            }
+            if (discountAmt <= 0) { renderCart(); return; }
+
             cart.push({
-                name: 'Giảm ' + (r.label || name),
+                name: (r.label || name) + (r.type === 'percent' ? ' – ' + r.value + '%' : ''),
                 size: code,
                 price: -discountAmt,
                 qty: 1,
                 _vKey: key,
-                _originalPrice: -discountAmt,
-                _splitQty: 0,
-                _giftLabel: code
+                _giftType: r.type,
+                _giftLabel: code,
+                _originalPrice: -discountAmt
             });
+            renderCart();
         }
-        renderCart();
     }
 
     if (rewardKey) {
@@ -9669,12 +9659,10 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
 }
 
 function giftVoucherMarkUsedAndReset(resetOnly) {
-    // resetOnly=true: chỉ reset UI (khi xóa giỏ), không mark used trên Firebase
     if (!resetOnly && _giftVoucherKey && _giftVoucherPhone) {
         db.ref('customers/' + _giftVoucherPhone + '/myGifts/' + _giftVoucherKey)
           .update({ used: true, usedAt: new Date().toISOString() });
     }
-    // Khôi phục món đã giảm giá trực tiếp (nếu có)
     giftVoucherResetOld();
     _giftVoucherKey   = null;
     _giftVoucherPhone = null;
