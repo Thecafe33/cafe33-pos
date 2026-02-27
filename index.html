@@ -1435,18 +1435,8 @@ function openMyGifts() {
 
     db.ref('customers/' + curPhone + '/myGifts').once('value', snap => {
         const gifts = [];
-        snap.forEach(c => { const v = c.val(); if(v) gifts.push(Object.assign({}, v, { _key: c.key })); });
+        snap.forEach(c => gifts.push({ key: c.key, ...c.val() }));
         gifts.sort((a,b) => (b.redeemedAt||'').localeCompare(a.redeemedAt||''));
-
-        // DEBUG rõ ràng trên màn hình
-        var debugLines = ['Tổng keys: ' + Object.keys(snap.val()||{}).length + ' | gifts.length: ' + gifts.length];
-        gifts.forEach((g,i) => debugLines.push('['+i+'] ' + (g.name||'?') + ' | used:' + g.used + ' | val null?:' + (snap.val()==null)));
-        // Đồng thời debug từng child
-        var rawDebug = [];
-        snap.forEach(c => rawDebug.push(c.key + ':' + (c.val()?'ok':'NULL')));
-        list.innerHTML = `<div style="background:#fff3cd;border:2px solid orange;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;word-break:break-all">`
-            + debugLines.join('<br>') + '<br>Raw: ' + rawDebug.join(' | ')
-            + `</div>`;
 
         if (gifts.length === 0) {
             list.innerHTML = '<div class="text-center py-12"><p class="text-4xl mb-3">🎁</p><p class="text-gray-400 font-bold text-sm">Bạn chưa đổi quà nào</p><p class="text-gray-300 text-xs mt-1">Tích điểm rồi đổi quà ngay nhé!</p></div>';
@@ -2107,55 +2097,44 @@ window.handleLogout = function() {
 
 <div id="booking-success-overlay" class="fixed inset-0 z-[150] hidden flex items-center justify-center p-4" style="background: rgba(0,0,0,0.55); backdrop-filter: blur(12px);">
   <div class="bs-card bs-enter w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.35)] bg-white">
-    <!-- Header xanh -->
-    <div class="bg-gradient-to-br from-[#006241] to-[#004d33] px-8 pt-8 pb-10 text-center relative overflow-hidden">
+    <!-- Header xanh (thu gọn, bỏ dấu check) -->
+    <div class="bg-gradient-to-br from-[#006241] to-[#004d33] px-6 pt-6 pb-6 text-center relative overflow-hidden">
       <div class="absolute -top-6 -right-6 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
       <div class="absolute -bottom-8 -left-8 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
-      <div class="relative inline-flex items-center justify-center w-16 h-16 bg-white/15 rounded-full mb-3 pulse-ring">
-        <span class="text-3xl">✅</span>
-      </div>
-      <h2 class="brand-font text-white text-2xl font-black mb-1">Đặt thành công!</h2>
-      <p class="text-white/70 text-xs font-bold uppercase tracking-widest">The cafe 33 · Cafe in Bed</p>
-      <div class="mt-4 bg-white/15 backdrop-blur-sm rounded-2xl px-6 py-3 inline-block border border-white/20">
+      <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-1">The cafe 33 · Cafe in Bed</p>
+      <h2 class="brand-font text-white text-2xl font-black mb-3">Đặt thành công!</h2>
+      <div class="bg-white/15 backdrop-blur-sm rounded-2xl px-6 py-3 inline-block border border-white/20">
         <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest mb-0.5">Khung giờ đặt</p>
         <p id="bs-time" class="text-white font-black text-xl brand-font">--:-- – --:--</p>
       </div>
     </div>
 
-    <!-- Cảnh báo nhớ đúng giờ -->
-    <div class="px-6 pt-5 pb-2">
+    <!-- Cảnh báo 30 phút + ảnh đậu xe + nút -->
+    <div class="px-5 pt-4 pb-5 flex flex-col gap-3">
       <div class="flex items-center gap-3 bg-amber-50 rounded-2xl px-4 py-3 border border-amber-100">
-        <span class="text-xl">⏰</span>
-        <p class="text-amber-700 text-xs font-bold leading-snug">Nhớ đi đúng giờ nhé! Sau <b>15 phút</b> không có mặt, lịch có thể bị hủy.</p>
+        <span class="text-lg">⏰</span>
+        <p class="text-amber-700 text-xs font-bold leading-snug">Nhớ đi đúng giờ nhé! Sau <b>30 phút</b> không có mặt, lịch sẽ tự động hủy.</p>
       </div>
-    </div>
 
-    <!-- Ảnh hướng dẫn đậu xe -->
-    <div class="px-6 pt-4 pb-2">
-      <div class="rounded-[1.5rem] overflow-hidden border border-gray-100 shadow-sm">
-        <div class="bg-gray-50 px-4 py-2.5 flex items-center gap-2 border-b border-gray-100">
-          <span class="text-sm">🅿️</span>
-          <p class="text-[11px] font-black text-[#1e3932] uppercase tracking-wider">Hướng dẫn vị trí đậu xe cho khách cafe in bed</p>
+      <!-- Ảnh đậu xe thu gọn -->
+      <div class="rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+        <div class="bg-gray-50 px-3 py-2 flex items-center gap-2 border-b border-gray-100">
+          <span class="text-xs">🅿️</span>
+          <p class="text-[10px] font-black text-[#1e3932] uppercase tracking-wider">Vị trí đậu xe Cafe in Bed</p>
         </div>
-        <img 
-          src="https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/%C4%90%E1%BB%81%20m%E1%BB%A5c_20260225_161744_0000.png?alt=media&token=c7ecb95d-6449-4724-b9dd-345683c71bad" 
+        <img
+          src="https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/%C4%90%E1%BB%81%20m%E1%BB%A5c_20260225_161744_0000.png?alt=media&token=c7ecb95d-6449-4724-b9dd-345683c71bad"
           alt="Hướng dẫn đậu xe"
-          class="w-full object-cover"
+          class="w-full object-cover max-h-50"
           onclick="document.getElementById('zoomed-img').src=this.src; document.getElementById('image-overlay').classList.remove('hidden');"
           style="cursor:zoom-in;"
         >
-        <div class="bg-gray-50 px-4 py-2 text-center">
-          <p class="text-[10px] text-gray-400 font-bold">Nhấn ảnh để xem rõ hơn 🔍</p>
-        </div>
       </div>
-    </div>
 
-    <!-- Nút pre-order + confirm -->
-    <div class="px-6 pt-2 pb-6 flex flex-col gap-3">
-      <button id="bs-preorder-btn" class="w-full py-4 font-black rounded-2xl text-sm uppercase tracking-widest shadow-lg active:scale-95 transition-all text-white" style="background:linear-gradient(135deg,#006241,#00a867);">
+      <button id="bs-preorder-btn" class="w-full py-3.5 font-black rounded-2xl text-sm uppercase tracking-widest shadow-lg active:scale-95 transition-all text-white" style="background:linear-gradient(135deg,#006241,#00a867);">
         Gọi món trước (Pre-order)
       </button>
-      <button id="bs-confirm-btn" class="w-full py-3 bg-gray-100 text-gray-500 font-black rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all">
+      <button id="bs-confirm-btn" class="w-full py-2.5 bg-gray-100 text-gray-500 font-black rounded-2xl text-xs uppercase tracking-widest active:scale-95 transition-all">
         Để sau · Hẹn gặp bạn!
       </button>
     </div>
@@ -2252,7 +2231,7 @@ window.handleLogout = function() {
           <button onclick="poClose()"
             class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 font-bold text-base active:scale-90 transition-all">&times;</button>
         </div>
-        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Giúp order nhanh hơn</p>
+        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Nhân viên chuẩn bị sẵn khi bạn đến</p>
         <!-- Search -->
         <input id="po-search" type="text" placeholder="Tìm tên món..."
           oninput="poFilterMenu(this.value)"
@@ -2709,7 +2688,7 @@ function poConfirm(){
         setTimeout(function(){
             if (typeof showAppModal==='function'){
                 showAppModal('Pre-order thành công!',
-                    'Đã lưu <b>'+total+' món</b>.<br><span style="font-size:0.8rem;color:#555;font-weight:500;">Nhớ đến đúng giờ nhé</span>',
+                    'Đã lưu <b>'+total+' món</b>.<br><span style="font-size:0.8rem;color:#555;font-weight:500;">Nhân viên sẽ chuẩn bị sẵn khi bạn đến!</span>',
                     '🎉');
             }
             showTab('user');
@@ -2720,4 +2699,3 @@ function poConfirm(){
 
 </body>
 </html>
-
