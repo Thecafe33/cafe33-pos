@@ -1283,7 +1283,7 @@ function loadRewards() {
         }
         
         // Lưu cache để dùng khi mở modal chi tiết
-        _cachedGiftList = Object.values(rewards);
+        _cachedGiftList = Object.keys(rewards).map(k => Object.assign({}, rewards[k], { _rewardKey: k }));
 
         _cachedGiftList.forEach((item, index) => {
             list.innerHTML += `
@@ -1314,7 +1314,7 @@ function openGiftDetail(index) {
     if (userData.points >= item.cost) {
         btn.disabled = false; btn.innerHTML = 'XÁC NHẬN ĐỔI NGAY';
         btn.className = "w-full py-4 rounded-2xl bg-[#006241] text-white font-bold text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-transform";
-        btn.onclick = () => { document.getElementById('gift-detail-modal').classList.add('hidden'); redeemGift(item.name, item.cost); };
+        btn.onclick = () => { document.getElementById('gift-detail-modal').classList.add('hidden'); redeemGift(item.name, item.cost, item._rewardKey); };
         prog.className = "h-full bg-[#006241] rounded-full transition-all duration-500";
         msg.classList.add('hidden');
     } else {
@@ -1326,7 +1326,7 @@ function openGiftDetail(index) {
     document.getElementById('gift-detail-modal').classList.remove('hidden');
 }
 
-function redeemGift(name, cost) {
+function redeemGift(name, cost, rewardKey) {
     if(!confirm(`Đổi "${name}" với ${cost} điểm?`)) return;
     const np = (userData.points || 0) - cost;
     if(np < 0) return alert("Lỗi điểm");
@@ -1349,6 +1349,7 @@ function redeemGift(name, cost) {
         date: dateStr,
         time: timeStr,
         code: voucherCode,
+        rewardKey: rewardKey || null,
         used: false,
         redeemedAt: now.toISOString()
     };
