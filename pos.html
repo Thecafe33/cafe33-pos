@@ -2709,7 +2709,7 @@ function renderCart() {
 
         // Nhãn phụ dưới tên
         let subLabel = '';
-        if (isGift)     subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">🎁 ${i._discountTarget ? i._discountTarget : 'Phiếu quà'} · ${i.size}</p>`;
+        if (isGift)     subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">🎁 Phiếu quà · ${i.size}</p>`;
         else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
         else            subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
 
@@ -9479,54 +9479,76 @@ function scanGiftVouchers(phone) {
         if (panel) panel.classList.add('hidden');
         return;
     }
-    db.ref('customers/' + phone + '/myGifts').once('value', function(snap) {
-        var now = Date.now();
-        var EXPIRE = 30 * 24 * 60 * 60 * 1000; // 30 ngày ms
-        var gifts = [];
-        snap.forEach(function(child) {
-            var g = child.val();
-            g._key = child.key;
-            if (g.used) return;
-            if (g.redeemedAt) {
-                var age = now - new Date(g.redeemedAt).getTime();
-                if (age > EXPIRE) {
-                    db.ref('customers/' + phone + '/myGifts/' + g._key).update({ used: true, usedAt: 'expired' });
-                    return;
-                }
-                var daysLeft = Math.max(0, Math.floor((EXPIRE - age) / 86400000));
-                g._daysLeft = daysLeft;
-            }
-            gifts.push(g);
+    // Load rewards và myGifts song song, rồi ghép data
+    db.ref('rewards').once('value', function(rewardsSnap) {
+        var rewardsAll = rewardsSnap.val() || {};
+        // Build lookup: code → {key, ...rewardData}
+        var rewardByCode = {};
+        Object.keys(rewardsAll).forEach(function(k) {
+            var r = rewardsAll[k];
+            if (r.code) rewardByCode[r.code.toUpperCase().trim()] = Object.assign({}, r, {_fbKey: k});
         });
-        if (gifts.length === 0) { panel.classList.add('hidden'); return; }
-        panel.classList.remove('hidden');
-        list.innerHTML = '';
-        gifts.forEach(function(g) {
-            var daysColor = (g._daysLeft !== undefined && g._daysLeft <= 3) ? '#ef4444' : '#b45309';
-            var daysText  = g._daysLeft !== undefined ? ('Còn ' + g._daysLeft + ' ngày') : '';
-            var safeName = (g.name || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-            var safeCode = (g.code || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
-            var row = document.createElement('div');
-            row.className = 'bg-white rounded-xl p-2 border border-amber-100 flex items-center justify-between gap-2';
-            row.innerHTML =
-                '<div class="flex-1 min-w-0">' +
-                    '<p class="font-black text-[11px] text-gray-800 truncate">' + safeName + '</p>' +
-                    '<p class="font-mono text-[9px] text-green-700 font-bold">' + safeCode + '</p>' +
-                    (daysText ? '<p class="text-[9px] font-bold" style="color:' + daysColor + '">' + daysText + '</p>' : '') +
-                '</div>' +
-                '<button class="bg-green-700 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase active:scale-95">+ Bill</button>';
-            row.querySelector('button').addEventListener('click', function() {
-                giftVoucherAddToCart(phone, g._key, g.name, g.code);
-                this.innerText = '✓ Đã thêm';
-                this.disabled = true;
-                this.className = 'bg-green-100 text-green-700 text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase';
+
+        db.ref('customers/' + phone + '/myGifts').once('value', function(snap) {
+            var now = Date.now();
+            var EXPIRE = 30 * 24 * 60 * 60 * 1000;
+            var gifts = [];
+            snap.forEach(function(child) {
+                var g = child.val();
+                g._key = child.key;
+                if (g.used) return;
+                if (g.redeemedAt) {
+                    var age = now - new Date(g.redeemedAt).getTime();
+                    if (age > EXPIRE) {
+                        db.ref('customers/' + phone + '/myGifts/' + g._key).update({ used: true, usedAt: 'expired' });
+                        return;
+                    }
+                    g._daysLeft = Math.max(0, Math.floor((EXPIRE - age) / 86400000));
+                }
+                // Gắn reward data vào gift
+                var codeUp = (g.code || '').toUpperCase().trim();
+                g._rewardData = rewardByCode[codeUp] || null;
+                gifts.push(g);
             });
-            list.appendChild(row);
+            if (gifts.length === 0) { panel.classList.add('hidden'); return; }
+            panel.classList.remove('hidden');
+            list.innerHTML = '';
+            gifts.forEach(function(g) {
+                var daysColor = (g._daysLeft !== undefined && g._daysLeft <= 3) ? '#ef4444' : '#b45309';
+                var daysText  = g._daysLeft !== undefined ? ('Còn ' + g._daysLeft + ' ngày') : '';
+                var safeName = (g.name || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+                var safeCode = (g.code || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+                // Hiển thị thêm mô tả giảm giá
+                var r = g._rewardData;
+                var discDesc = '';
+                if (r) {
+                    if (r.type === 'percent') discDesc = '−' + r.value + '% toàn đơn';
+                    else if (r.type === 'order') discDesc = '−' + Number(r.value).toLocaleString() + 'đ toàn đơn';
+                    else if (r.type === 'item') discDesc = '−' + Number(r.value).toLocaleString() + 'đ · ' + (r.targetItem || '');
+                }
+                var row = document.createElement('div');
+                row.className = 'bg-white rounded-xl p-2 border border-amber-100 flex items-center justify-between gap-2';
+                row.innerHTML =
+                    '<div class="flex-1 min-w-0">' +
+                        '<p class="font-black text-[11px] text-gray-800 truncate">' + safeName + '</p>' +
+                        '<p class="font-mono text-[9px] text-green-700 font-bold">' + safeCode + '</p>' +
+                        (discDesc ? '<p class="text-[9px] font-bold text-blue-600">' + discDesc + '</p>' : '') +
+                        (daysText ? '<p class="text-[9px] font-bold" style="color:' + daysColor + '">' + daysText + '</p>' : '') +
+                    '</div>' +
+                    '<button class="bg-green-700 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase active:scale-95">+ Bill</button>';
+                row.querySelector('button').addEventListener('click', function() {
+                    giftVoucherAddToCart(phone, g._key, g.name, g.code, g._rewardData);
+                    this.innerText = '✓ Đã thêm';
+                    this.disabled = true;
+                    this.className = 'bg-green-100 text-green-700 text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase';
+                });
+                list.appendChild(row);
+            });
         });
     });
 }
 
-function giftVoucherAddToCart(phone, key, name, code) {
+function giftVoucherAddToCart(phone, key, name, code, rewardData) {
     // Xóa voucher quà cũ nếu đã thêm trước đó
     if (_giftVoucherKey) {
         for (var i = cart.length - 1; i >= 0; i--) {
@@ -9536,20 +9558,14 @@ function giftVoucherAddToCart(phone, key, name, code) {
     _giftVoucherKey   = key;
     _giftVoucherPhone = phone;
 
-    // ✅ Tìm reward theo CODE trong _discountCache (key trong myGifts ≠ key trong rewards)
-    var rewardData = null;
-    var codeUpper = (code || '').toUpperCase().trim();
-    Object.keys(_discountCache).forEach(function(k) {
-        if (rewardData) return;
-        var r = _discountCache[k];
-        if (r.code && r.code.toUpperCase().trim() === codeUpper) {
-            rewardData = r; rewardData._fbKey = k;
-        }
-    });
-
-    function buildAndAddItem(r) {
+    function applyReward(r) {
         var discountAmt = 0;
         var targetLabel = '';
+        if (!r) {
+            cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
+            renderCart();
+            return;
+        }
         if (r.type === 'item') {
             var target = (r.targetItem || '').toLowerCase().trim();
             var matchItem = null;
@@ -9557,16 +9573,15 @@ function giftVoucherAddToCart(phone, key, name, code) {
                 if (!matchItem && !ci._vKey && !ci._discountId)
                     if (ci.name.toLowerCase().indexOf(target) !== -1) matchItem = ci;
             });
-            if (matchItem) {
-                discountAmt = r.value || 0;
-                targetLabel = matchItem.name;
-            } else {
+            if (!matchItem) {
                 cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
                 renderCart();
                 if (typeof showAppModal === 'function')
                     showAppModal('Lưu ý!', 'Quà <b>' + name + '</b> áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó vào giỏ trước!', '⚠️');
                 return;
             }
+            discountAmt = r.value || 0;
+            targetLabel = matchItem.name;
         } else if (r.type === 'percent') {
             discountAmt = Math.round(currentTotal * (r.value || 0) / 100);
             targetLabel = 'Toàn đơn';
@@ -9574,30 +9589,41 @@ function giftVoucherAddToCart(phone, key, name, code) {
             discountAmt = r.value || 0;
             targetLabel = 'Toàn đơn';
         }
-        if (discountAmt > 0) {
-            cart.push({ name: '🎁 ' + (r.label || name), size: code, price: -discountAmt, qty: 1, _vKey: key, _discountTarget: targetLabel });
-        } else {
-            cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
-        }
+        cart.push({
+            name: '🎁 ' + (r.label || r.name || name),
+            size: code,
+            price: discountAmt > 0 ? -discountAmt : 0,
+            qty: 1,
+            _vKey: key,
+            _discountTarget: targetLabel
+        });
         renderCart();
     }
 
     if (rewardData) {
-        buildAndAddItem(rewardData);
+        applyReward(rewardData);
     } else {
-        // Cache chưa có → load từ Firebase theo code
-        db.ref('rewards').orderByChild('code').equalTo(code).once('value', function(snap) {
-            var found = null, foundKey = null;
-            snap.forEach(function(child) { if (!found) { found = child.val(); foundKey = child.key; } });
-            if (found) {
-                _discountCache[foundKey] = found;
-                found._fbKey = foundKey;
-                buildAndAddItem(found);
-            } else {
-                cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
-                renderCart();
-            }
+        // Fallback: tìm trong cache theo code
+        var codeUpper = (code || '').toUpperCase().trim();
+        var found = null;
+        Object.keys(_discountCache).forEach(function(k) {
+            if (!found && _discountCache[k].code &&
+                _discountCache[k].code.toUpperCase().trim() === codeUpper)
+                found = _discountCache[k];
         });
+        if (found) {
+            applyReward(found);
+        } else {
+            // Fallback cuối: query Firebase trực tiếp
+            db.ref('rewards').once('value', function(snap) {
+                var r2 = null;
+                snap.forEach(function(child) {
+                    var v = child.val();
+                    if (!r2 && v.code && v.code.toUpperCase().trim() === codeUpper) r2 = v;
+                });
+                applyReward(r2);
+            });
+        }
     }
 }
 
