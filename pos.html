@@ -852,11 +852,11 @@ input, button, select, textarea { font-size: 1rem; }
         <button id="btn-nav-history" onclick="openHistory()" class="bg-gray-100 text-gray-400 px-6 py-3 rounded-2xl text-[11px] font-black uppercase hover:bg-gray-200 active:scale-95 transition-all tracking-widest">
             Lịch sử
         </button>
-        <button id="btn-nav-bed" onclick="openBedManager()" class="bg-gray-100 text-gray-400 px-6 py-3 rounded-2xl text-[11px] font-black uppercase hover:bg-gray-200 active:scale-95 transition-all tracking-widest">
-            Quản lý Bed
-        </button>
         <button id="btn-nav-discount" onclick="openDiscountManager()" class="bg-gray-100 text-gray-400 px-6 py-3 rounded-2xl text-[11px] font-black uppercase hover:bg-gray-200 active:scale-95 transition-all tracking-widest">
             Quà Tặng
+        </button>
+        <button id="btn-nav-bed" onclick="openBedManager()" class="bg-gray-100 text-gray-400 px-6 py-3 rounded-2xl text-[11px] font-black uppercase hover:bg-gray-200 active:scale-95 transition-all tracking-widest">
+            Cafe in Bed
         </button>
     </div>
   <div id="bed-dynamic-island" class="hidden absolute left-[55%] -translate-x-1/2 flex items-center bg-[#1e3932] rounded-full py-1.5 px-5 gap-3 border border-white/10 shadow-2xl z-50 animate-slide-up min-w-[320px]">
@@ -1543,26 +1543,15 @@ input, button, select, textarea { font-size: 1rem; }
     <div id="cart-list" class="flex-1 overflow-y-auto space-y-1.5 mb-3 pr-1 text-left custom-scrollbar transition-all"></div>
 
     <div id="cart-bottom-bar" class="bg-gray-50 p-4 rounded-2xl space-y-3 shadow-inner text-left mt-auto">
-        <!-- Gift order discount row -->
-        <div id="gift-order-discount-row" class="hidden"></div>
         <div class="flex justify-between items-end" onclick="toggleCartExpand()">
-            <span class="font-bold text-gray-400 text-[10px] uppercase text-left mb-1">Tổng bill
-                <button id="gift-order-remove-btn" onclick="event.stopPropagation();giftVoucherMarkUsedAndReset(true);renderCart();" class="hidden ml-1 text-red-400 text-[9px] font-black align-middle">✕</button>
-            </span>
+            <span class="font-bold text-gray-400 text-[10px] uppercase text-left mb-1">Tổng bill</span>
             <div class="flex items-center gap-2">
                 <span class="md:hidden text-[#006241] text-xs animate-bounce">▲</span>
                 <span id="total-price" class="text-3xl font-black text-[#006241]">0</span>
             </div>
         </div>
-        <!-- Ô nhập mã giảm giá -->
-        <div class="flex gap-2 mt-1">
-            <input type="text" id="discount-code-input" placeholder="Nhập mã giảm giá..." 
-                   class="flex-1 px-3 py-2 bg-white border-2 border-gray-100 rounded-xl text-[11px] font-bold outline-none focus:border-[#006241] transition-all uppercase placeholder:normal-case placeholder:font-normal"
-                   oninput="this.value=this.value.toUpperCase()"
-                   onkeydown="if(event.key==='Enter') applyDiscountCode()">
-            <button onclick="applyDiscountCode()" class="px-3 py-2 bg-[#006241] text-white text-[10px] font-black rounded-xl active:scale-95 transition-all whitespace-nowrap">Áp mã</button>
-        </div>
-        <p id="discount-status" class="text-[9px] font-bold text-center mt-1 min-h-[12px]"></p>
+        <!-- Ô nhập mã đã ẩn -->
+        <p id="discount-status" class="hidden"></p>
         <button id="sidebar-pay-btn" onclick="switchView('payment')" class="w-full py-4 sb-green text-white font-black rounded-xl uppercase shadow-xl active:scale-95 transition-all">Thanh toán</button>
         <button id="sidebar-back-btn" onclick="switchView('menu')" class="hidden w-full py-3 bg-gray-100 text-gray-500 font-black rounded-xl uppercase text-sm active:scale-95 transition-all mt-1">← Quay lại menu</button>
     </div>
@@ -2713,12 +2702,7 @@ function renderCart() {
 
         // Nhãn phụ dưới tên
         let subLabel = '';
-        if (isGift && i._giftType === 'item') {
-            const origStr = i._originalPrice ? `<span class="line-through text-gray-300 mr-1">${i._originalPrice.toLocaleString()}đ</span>` : '';
-            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">${origStr}Quà · ${i._giftLabel||i.size}</p>`;
-        } else if (isGift) {
-            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">Quà · ${i._giftLabel||i.size}</p>`;
-        }
+        if (isGift)     subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">🎁 Phiếu quà · ${i.size}</p>`;
         else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
         else            subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
 
@@ -2750,37 +2734,8 @@ function renderCart() {
         </div>`;
     }).join('');
 
-    // --- Áp dụng giảm order/percent vào total ---
-    var displayTotal = currentTotal;
-    if (_giftOrderDiscount) displayTotal = Math.max(0, currentTotal - _giftOrderDiscount.amt);
-
-    // Hiển thị phần giảm giá trong khung tổng bill
-    var discRow = document.getElementById('gift-order-discount-row');
-    if (discRow) {
-        if (_giftOrderDiscount) {
-            discRow.innerHTML = `
-                <div class="flex justify-between items-center text-[11px] font-bold pb-1 mb-1 border-b border-dashed border-gray-200">
-                    <span class="text-gray-400 truncate max-w-[160px]">${_giftOrderDiscount.label}</span>
-                    <span class="text-green-600 font-black">−${_giftOrderDiscount.amt.toLocaleString()}đ</span>
-                </div>
-                <div class="flex justify-between items-center text-[10px] text-gray-400 font-bold mb-1">
-                    <span>Giá gốc</span>
-                    <span class="line-through">${currentTotal.toLocaleString()}đ</span>
-                </div>`;
-            discRow.classList.remove('hidden');
-            // Nút xóa quà order
-            var rmBtn = document.getElementById('gift-order-remove-btn');
-            if (rmBtn) rmBtn.classList.remove('hidden');
-        } else {
-            discRow.innerHTML = '';
-            discRow.classList.add('hidden');
-            var rmBtn = document.getElementById('gift-order-remove-btn');
-            if (rmBtn) rmBtn.classList.add('hidden');
-        }
-    }
-
     // --- PHẦN FIX CHO MOBILE ---
-    const formattedTotal = displayTotal.toLocaleString() + 'đ';
+    const formattedTotal = currentTotal.toLocaleString() + 'đ';
     
     // Cập nhật cho PC (Sidebar)
     if(document.getElementById('total-price')) 
@@ -2789,8 +2744,6 @@ function renderCart() {
     // Cập nhật cho Bottom Bar Mobile (Viên thuốc nổi)
     if(document.getElementById('mob-bar-total')) 
         document.getElementById('mob-bar-total').innerText = formattedTotal;
-    // Đảm bảo currentTotal là giá cuối sau giảm để thanh toán đúng
-    if (_giftOrderDiscount) currentTotal = displayTotal;
 
     // Cập nhật cho các màn hình trong Payment Mobile Step 1 & 2
     if(document.getElementById('pay-total-display-1')) 
@@ -9511,7 +9464,6 @@ function resetDiscountState(noFirebase) {
 // ============================================================
 var _giftVoucherKey = null;
 var _giftVoucherPhone = null;
-var _giftOrderDiscount = null; // { amt, label, code } cho giảm % hoặc toàn đơn
 
 function scanGiftVouchers(phone) {
     var panel = document.getElementById('gift-panel');
@@ -9557,7 +9509,7 @@ function scanGiftVouchers(phone) {
                 '</div>' +
                 '<button class="bg-green-700 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase active:scale-95">+ Bill</button>';
             row.querySelector('button').addEventListener('click', function() {
-                giftVoucherAddToCart(phone, g._key, g.name, g.code, g.rewardKey || null);
+                giftVoucherAddToCart(phone, g._key, g.name, g.code);
                 this.innerText = '✓ Đã thêm';
                 this.disabled = true;
                 this.className = 'bg-green-100 text-green-700 text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase';
@@ -9567,131 +9519,27 @@ function scanGiftVouchers(phone) {
     });
 }
 
-function giftVoucherResetOld() {
-    if (!_giftVoucherKey) return;
-    // Xóa cart item nếu có (kiểu item)
-    for (var i = cart.length - 1; i >= 0; i--) {
-        var ci = cart[i];
-        if (ci._vKey === _giftVoucherKey) {
-            if (ci._giftType === 'item') {
-                ci.price = ci._originalPrice;
-                ci.name  = ci._originalName || ci.name;
-                if (i > 0 && cart[i-1].name === ci._originalName && !cart[i-1]._vKey) {
-                    cart[i-1].qty += 1;
-                    cart.splice(i, 1);
-                } else {
-                    delete ci._vKey; delete ci._originalPrice; delete ci._originalName;
-                    delete ci._giftType; delete ci._giftLabel;
-                }
-            } else {
-                cart.splice(i, 1);
-            }
-            break;
+function giftVoucherAddToCart(phone, key, name, code) {
+    // Xóa voucher cũ nếu đã thêm trước đó
+    if (_giftVoucherKey) {
+        for (var i = cart.length - 1; i >= 0; i--) {
+            if (cart[i]._vKey) { cart.splice(i, 1); break; }
         }
     }
-    // Xóa giảm order/percent
-    _giftOrderDiscount = null;
-}
-
-function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
-    giftVoucherResetOld();
     _giftVoucherKey   = key;
     _giftVoucherPhone = phone;
-
-    function applyReward(r) {
-        if (!r) { renderCart(); return; }
-
-        if (r.type === 'item') {
-            var target = (r.targetItem || '').toLowerCase().trim();
-            var targetIdx = -1;
-            cart.forEach(function(ci, idx) {
-                if (targetIdx < 0 && !ci._vKey && !ci._discountId)
-                    if (ci.name.toLowerCase().indexOf(target) !== -1) targetIdx = idx;
-            });
-            if (targetIdx < 0) {
-                _giftVoucherKey = null; _giftVoucherPhone = null;
-                renderCart();
-                if (typeof showAppModal === 'function')
-                    showAppModal('Lưu ý!', 'Quà áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó vào giỏ trước!', '⚠️');
-                return;
-            }
-            var item = cart[targetIdx];
-            var origPrice = item.price;
-            var origName  = item.name;
-            var newPrice  = Math.max(0, origPrice - (r.value || 0));
-            if (item.qty > 1) {
-                item.qty -= 1;
-                cart.splice(targetIdx + 1, 0, {
-                    name: origName, size: item.size, price: newPrice, qty: 1,
-                    _vKey: key, _giftType: 'item', _giftLabel: code,
-                    _originalPrice: origPrice, _originalName: origName
-                });
-            } else {
-                item.price = newPrice;
-                item._vKey = key; item._giftType = 'item'; item._giftLabel = code;
-                item._originalPrice = origPrice; item._originalName = origName;
-            }
-            renderCart();
-
-        } else {
-            // percent hoặc order: không thêm cart, hiển trong khung tổng bill
-            var subtotal = 0;
-            cart.forEach(function(ci) { subtotal += ci.price * ci.qty; });
-            var discountAmt = (r.type === 'percent')
-                ? Math.round(subtotal * (r.value || 0) / 100)
-                : (r.value || 0);
-            if (discountAmt <= 0) { renderCart(); return; }
-            _giftOrderDiscount = {
-                amt:   discountAmt,
-                label: (r.label || name) + (r.type === 'percent' ? ' – ' + r.value + '%' : ''),
-                code:  code
-            };
-            renderCart();
-        }
-    }
-
-    if (rewardKey) {
-        if (_discountCache[rewardKey]) {
-            applyReward(_discountCache[rewardKey]);
-        } else {
-            db.ref('rewards/' + rewardKey).once('value', function(snap) {
-                var r = snap.val();
-                if (r) _discountCache[rewardKey] = r;
-                applyReward(r);
-            });
-        }
-    } else {
-        var codeUp = (code || '').toUpperCase().trim();
-        var found = null;
-        Object.keys(_discountCache).forEach(function(k) {
-            if (!found && _discountCache[k].code &&
-                _discountCache[k].code.toUpperCase().trim() === codeUp)
-                found = _discountCache[k];
-        });
-        if (found) {
-            applyReward(found);
-        } else {
-            db.ref('rewards').once('value', function(snap) {
-                var r2 = null;
-                snap.forEach(function(child) {
-                    var v = child.val();
-                    if (!r2 && v.code && v.code.toUpperCase().trim() === codeUp) r2 = v;
-                });
-                applyReward(r2);
-            });
-        }
-    }
+    cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
+    renderCart();
 }
 
 function giftVoucherMarkUsedAndReset(resetOnly) {
+    // resetOnly=true: chỉ reset UI (khi xóa giỏ), không mark used trên Firebase
     if (!resetOnly && _giftVoucherKey && _giftVoucherPhone) {
         db.ref('customers/' + _giftVoucherPhone + '/myGifts/' + _giftVoucherKey)
           .update({ used: true, usedAt: new Date().toISOString() });
     }
-    giftVoucherResetOld();
     _giftVoucherKey   = null;
     _giftVoucherPhone = null;
-    _giftOrderDiscount = null;
     var panel = document.getElementById('gift-panel');
     if (panel) panel.classList.add('hidden');
     var list = document.getElementById('gift-panel-list');
