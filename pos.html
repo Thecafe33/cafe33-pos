@@ -2709,8 +2709,13 @@ function renderCart() {
 
         // Nhãn phụ dưới tên
         let subLabel = '';
-        if (isGift)     subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">🎁 Phiếu quà · ${i.size}</p>`;
-        else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
+        if (isGift && i._giftLabel) {
+            // Món đã giảm giá trực tiếp: hiển giá gốc gạch ngang + giá mới
+            const origPriceStr = i._originalPrice > 0 ? `<span class="line-through text-gray-300 mr-1">${i._originalPrice.toLocaleString()}đ</span>` : '';
+            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">${origPriceStr}Quà · ${i._giftLabel}</p>`;
+        } else if (isGift) {
+            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">Phiếu quà · ${i.size}</p>`;
+        } else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
         else            subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
 
         const priceColor = isSpecial ? 'text-blue-600' : 'text-[#006241]';
@@ -9526,59 +9531,110 @@ function scanGiftVouchers(phone) {
     });
 }
 
-function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
-    // Xóa voucher quà cũ nếu đã thêm trước
-    if (_giftVoucherKey) {
-        for (var i = cart.length - 1; i >= 0; i--) {
-            if (cart[i]._vKey) { cart.splice(i, 1); break; }
+function giftVoucherResetOld() {
+    // Xóa ảnh hưởng của gift cũ: ghớp lại món đã tách + xóa giảm giá
+    if (!_giftVoucherKey) return;
+    // Tìm món có _vKey (món đã được giảm giá trực tiếp)
+    for (var i = cart.length - 1; i >= 0; i--) {
+        var ci = cart[i];
+        if (ci._vKey === _giftVoucherKey) {
+            // Khôi phục giá gốc
+            ci.price = ci._originalPrice;
+            ci.qty += (ci._splitQty || 0);
+            ci.name = ci._originalName || ci.name;
+            delete ci._vKey; delete ci._originalPrice; delete ci._splitQty; delete ci._originalName; delete ci._giftLabel;
+            break;
         }
     }
+}
+
+function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
+    // Reset gift cũ
+    giftVoucherResetOld();
     _giftVoucherKey   = key;
     _giftVoucherPhone = phone;
 
     function applyReward(r) {
-        if (!r) {
-            cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
-            renderCart();
-            return;
-        }
+        if (!r) { renderCart(); return; }
+
         var discountAmt = 0;
-        var targetLabel = '';
+        var targetIdx   = -1;
+
         if (r.type === 'item') {
             var target = (r.targetItem || '').toLowerCase().trim();
-            var matchItem = null;
-            cart.forEach(function(ci) {
-                if (!matchItem && !ci._vKey && !ci._discountId)
-                    if (ci.name.toLowerCase().indexOf(target) !== -1) matchItem = ci;
+            cart.forEach(function(ci, idx) {
+                if (targetIdx < 0 && !ci._vKey && !ci._discountId)
+                    if (ci.name.toLowerCase().indexOf(target) !== -1) targetIdx = idx;
             });
-            if (!matchItem) {
-                cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
+            if (targetIdx < 0) {
                 renderCart();
                 if (typeof showAppModal === 'function')
-                    showAppModal('Lưu ý!', 'Quà <b>' + name + '</b> áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó vào giỏ trước!', '⚠️');
+                    showAppModal('Lưu ý!', 'Quà <b>' + name + '</b> áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó trước!', '⚠️');
                 return;
             }
             discountAmt = r.value || 0;
-            targetLabel = matchItem.name;
+
+            var item = cart[targetIdx];
+            var origPrice = item.price;
+            var origName  = item.name;
+            var newPrice  = Math.max(0, origPrice - discountAmt);
+
+            if (item.qty > 1) {
+                // Tách 1 món ra riêng với giá đã giảm
+                item.qty -= 1;
+                var splitItem = {
+                    name: origName,
+                    size: item.size,
+                    price: newPrice,
+                    qty: 1,
+                    _vKey: key,
+                    _originalPrice: origPrice,
+                    _originalName: origName,
+                    _splitQty: 0,
+                    _giftLabel: code
+                };
+                cart.splice(targetIdx + 1, 0, splitItem);
+            } else {
+                // Chỉ có 1 món, giảm giá trực tiếp
+                item._vKey = key;
+                item._originalPrice = origPrice;
+                item._originalName  = origName;
+                item._splitQty = 0;
+                item._giftLabel = code;
+                item.price = newPrice;
+            }
+
         } else if (r.type === 'percent') {
+            // % toàn đơn: giảm đều mỗi món
             discountAmt = Math.round(currentTotal * (r.value || 0) / 100);
-            targetLabel = 'Toàn đơn';
+            // Thêm dòng giảm — vẫn dùng item âm nhưng không có icon
+            cart.push({
+                name: 'Giảm ' + (r.label || name) + ' – ' + r.value + '%',
+                size: code,
+                price: -discountAmt,
+                qty: 1,
+                _vKey: key,
+                _originalPrice: -discountAmt,
+                _splitQty: 0,
+                _giftLabel: code
+            });
         } else {
+            // order: giảm cố định toàn đơn
             discountAmt = r.value || 0;
-            targetLabel = 'Toàn đơn';
+            cart.push({
+                name: 'Giảm ' + (r.label || name),
+                size: code,
+                price: -discountAmt,
+                qty: 1,
+                _vKey: key,
+                _originalPrice: -discountAmt,
+                _splitQty: 0,
+                _giftLabel: code
+            });
         }
-        cart.push({
-            name: '🎁 ' + (r.label || r.name || name),
-            size: code,
-            price: discountAmt > 0 ? -discountAmt : 0,
-            qty: 1,
-            _vKey: key,
-            _discountTarget: targetLabel
-        });
         renderCart();
     }
 
-    // rewardKey được lưu trong myGifts khi khách đổi quà (index.html đã fix)
     if (rewardKey) {
         if (_discountCache[rewardKey]) {
             applyReward(_discountCache[rewardKey]);
@@ -9590,9 +9646,8 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
             });
         }
     } else {
-        // Fallback cho gift cũ chưa có rewardKey: tìm theo code trong cache
-        var found = null;
         var codeUp = (code || '').toUpperCase().trim();
+        var found = null;
         Object.keys(_discountCache).forEach(function(k) {
             if (!found && _discountCache[k].code &&
                 _discountCache[k].code.toUpperCase().trim() === codeUp)
@@ -9619,6 +9674,8 @@ function giftVoucherMarkUsedAndReset(resetOnly) {
         db.ref('customers/' + _giftVoucherPhone + '/myGifts/' + _giftVoucherKey)
           .update({ used: true, usedAt: new Date().toISOString() });
     }
+    // Khôi phục món đã giảm giá trực tiếp (nếu có)
+    giftVoucherResetOld();
     _giftVoucherKey   = null;
     _giftVoucherPhone = null;
     var panel = document.getElementById('gift-panel');
