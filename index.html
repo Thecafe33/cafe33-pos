@@ -1283,7 +1283,7 @@ function loadRewards() {
         }
         
         // Lưu cache để dùng khi mở modal chi tiết
-        _cachedGiftList = Object.keys(rewards).map(k => Object.assign({}, rewards[k], { _rewardKey: k }));
+        _cachedGiftList = Object.values(rewards);
 
         _cachedGiftList.forEach((item, index) => {
             list.innerHTML += `
@@ -1314,7 +1314,7 @@ function openGiftDetail(index) {
     if (userData.points >= item.cost) {
         btn.disabled = false; btn.innerHTML = 'XÁC NHẬN ĐỔI NGAY';
         btn.className = "w-full py-4 rounded-2xl bg-[#006241] text-white font-bold text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-transform";
-        btn.onclick = () => { document.getElementById('gift-detail-modal').classList.add('hidden'); redeemGift(item.name, item.cost, item._rewardKey); };
+        btn.onclick = () => { document.getElementById('gift-detail-modal').classList.add('hidden'); redeemGift(item.name, item.cost); };
         prog.className = "h-full bg-[#006241] rounded-full transition-all duration-500";
         msg.classList.add('hidden');
     } else {
@@ -1326,7 +1326,7 @@ function openGiftDetail(index) {
     document.getElementById('gift-detail-modal').classList.remove('hidden');
 }
 
-function redeemGift(name, cost, rewardKey) {
+function redeemGift(name, cost) {
     if(!confirm(`Đổi "${name}" với ${cost} điểm?`)) return;
     const np = (userData.points || 0) - cost;
     if(np < 0) return alert("Lỗi điểm");
@@ -1349,7 +1349,6 @@ function redeemGift(name, cost, rewardKey) {
         date: dateStr,
         time: timeStr,
         code: voucherCode,
-        rewardKey: rewardKey || null,
         used: false,
         redeemedAt: now.toISOString()
     };
@@ -1436,20 +1435,25 @@ function openMyGifts() {
 
     db.ref('customers/' + curPhone + '/myGifts').once('value', snap => {
         const gifts = [];
-        snap.forEach(c => gifts.push({ key: c.key, ...c.val() }));
+        snap.forEach(c => { const v = c.val(); if(v) gifts.push(Object.assign({}, v, { _key: c.key })); });
         gifts.sort((a,b) => (b.redeemedAt||'').localeCompare(a.redeemedAt||''));
-        const activeGifts = gifts.filter(g => !g.used);
+
+        // DEBUG rõ ràng trên màn hình
+        var debugLines = ['Tổng keys: ' + Object.keys(snap.val()||{}).length + ' | gifts.length: ' + gifts.length];
+        gifts.forEach((g,i) => debugLines.push('['+i+'] ' + (g.name||'?') + ' | used:' + g.used + ' | val null?:' + (snap.val()==null)));
+        // Đồng thời debug từng child
+        var rawDebug = [];
+        snap.forEach(c => rawDebug.push(c.key + ':' + (c.val()?'ok':'NULL')));
+        list.innerHTML = `<div style="background:#fff3cd;border:2px solid orange;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;word-break:break-all">`
+            + debugLines.join('<br>') + '<br>Raw: ' + rawDebug.join(' | ')
+            + `</div>`;
 
         if (gifts.length === 0) {
             list.innerHTML = '<div class="text-center py-12"><p class="text-4xl mb-3">🎁</p><p class="text-gray-400 font-bold text-sm">Bạn chưa đổi quà nào</p><p class="text-gray-300 text-xs mt-1">Tích điểm rồi đổi quà ngay nhé!</p></div>';
             return;
         }
 
-        if (activeGifts.length === 0) {
-            list.innerHTML = '<div class="text-center py-12"><p class="text-4xl mb-3">🎁</p><p class="text-gray-400 font-bold text-sm">Ấy! Quà nào cũng đã được dùng hết rồi</p><p class="text-gray-300 text-xs mt-1">Tiếp tục tích điểm để đổi quà mới nhé!</p></div>';
-            return;
-        }
-        list.innerHTML = activeGifts.map(g => `
+        list.innerHTML = gifts.map(g => `
             <div class="bg-white rounded-[1.75rem] p-5 border ${g.used ? 'border-gray-100 opacity-60' : 'border-green-100 shadow-sm'} mb-3 relative overflow-hidden">
                 ${g.used ? '<div class="absolute top-3 right-3 bg-gray-200 text-gray-500 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider">Đã dùng</div>' : '<div class="absolute top-3 right-3 bg-green-50 text-green-700 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider border border-green-200">Chưa dùng</div>'}
                 <p class="font-black text-[#1e3932] text-base mb-1 pr-20">${g.name}</p>
@@ -2705,7 +2709,7 @@ function poConfirm(){
         setTimeout(function(){
             if (typeof showAppModal==='function'){
                 showAppModal('Pre-order thành công!',
-                    'Đã lưu <b>'+total+' món</b>.<br><span style="font-size:0.8rem;color:#555;font-weight:500;">Đến đúng giờ nhé keo</span>',
+                    'Đã lưu <b>'+total+' món</b>.<br><span style="font-size:0.8rem;color:#555;font-weight:500;">Nhân viên sẽ chuẩn bị sẵn khi bạn đến!</span>',
                     '🎉');
             }
             showTab('user');
