@@ -1543,8 +1543,12 @@ input, button, select, textarea { font-size: 1rem; }
     <div id="cart-list" class="flex-1 overflow-y-auto space-y-1.5 mb-3 pr-1 text-left custom-scrollbar transition-all"></div>
 
     <div id="cart-bottom-bar" class="bg-gray-50 p-4 rounded-2xl space-y-3 shadow-inner text-left mt-auto">
+        <!-- Gift order discount row -->
+        <div id="gift-order-discount-row" class="hidden"></div>
         <div class="flex justify-between items-end" onclick="toggleCartExpand()">
-            <span class="font-bold text-gray-400 text-[10px] uppercase text-left mb-1">Tổng bill</span>
+            <span class="font-bold text-gray-400 text-[10px] uppercase text-left mb-1">Tổng bill
+                <button id="gift-order-remove-btn" onclick="event.stopPropagation();giftVoucherMarkUsedAndReset(true);renderCart();" class="hidden ml-1 text-red-400 text-[9px] font-black align-middle">✕</button>
+            </span>
             <div class="flex items-center gap-2">
                 <span class="md:hidden text-[#006241] text-xs animate-bounce">▲</span>
                 <span id="total-price" class="text-3xl font-black text-[#006241]">0</span>
@@ -2746,8 +2750,37 @@ function renderCart() {
         </div>`;
     }).join('');
 
+    // --- Áp dụng giảm order/percent vào total ---
+    var displayTotal = currentTotal;
+    if (_giftOrderDiscount) displayTotal = Math.max(0, currentTotal - _giftOrderDiscount.amt);
+
+    // Hiển thị phần giảm giá trong khung tổng bill
+    var discRow = document.getElementById('gift-order-discount-row');
+    if (discRow) {
+        if (_giftOrderDiscount) {
+            discRow.innerHTML = `
+                <div class="flex justify-between items-center text-[11px] font-bold pb-1 mb-1 border-b border-dashed border-gray-200">
+                    <span class="text-gray-400 truncate max-w-[160px]">${_giftOrderDiscount.label}</span>
+                    <span class="text-green-600 font-black">−${_giftOrderDiscount.amt.toLocaleString()}đ</span>
+                </div>
+                <div class="flex justify-between items-center text-[10px] text-gray-400 font-bold mb-1">
+                    <span>Giá gốc</span>
+                    <span class="line-through">${currentTotal.toLocaleString()}đ</span>
+                </div>`;
+            discRow.classList.remove('hidden');
+            // Nút xóa quà order
+            var rmBtn = document.getElementById('gift-order-remove-btn');
+            if (rmBtn) rmBtn.classList.remove('hidden');
+        } else {
+            discRow.innerHTML = '';
+            discRow.classList.add('hidden');
+            var rmBtn = document.getElementById('gift-order-remove-btn');
+            if (rmBtn) rmBtn.classList.add('hidden');
+        }
+    }
+
     // --- PHẦN FIX CHO MOBILE ---
-    const formattedTotal = currentTotal.toLocaleString() + 'đ';
+    const formattedTotal = displayTotal.toLocaleString() + 'đ';
     
     // Cập nhật cho PC (Sidebar)
     if(document.getElementById('total-price')) 
@@ -2756,6 +2789,8 @@ function renderCart() {
     // Cập nhật cho Bottom Bar Mobile (Viên thuốc nổi)
     if(document.getElementById('mob-bar-total')) 
         document.getElementById('mob-bar-total').innerText = formattedTotal;
+    // Đảm bảo currentTotal là giá cuối sau giảm để thanh toán đúng
+    if (_giftOrderDiscount) currentTotal = displayTotal;
 
     // Cập nhật cho các màn hình trong Payment Mobile Step 1 & 2
     if(document.getElementById('pay-total-display-1')) 
@@ -9476,6 +9511,7 @@ function resetDiscountState(noFirebase) {
 // ============================================================
 var _giftVoucherKey = null;
 var _giftVoucherPhone = null;
+var _giftOrderDiscount = null; // { amt, label, code } cho giảm % hoặc toàn đơn
 
 function scanGiftVouchers(phone) {
     var panel = document.getElementById('gift-panel');
@@ -9533,27 +9569,28 @@ function scanGiftVouchers(phone) {
 
 function giftVoucherResetOld() {
     if (!_giftVoucherKey) return;
+    // Xóa cart item nếu có (kiểu item)
     for (var i = cart.length - 1; i >= 0; i--) {
         var ci = cart[i];
         if (ci._vKey === _giftVoucherKey) {
             if (ci._giftType === 'item') {
-                // Khôi phục giá gốc và ghỗp qty nếu có tách
                 ci.price = ci._originalPrice;
                 ci.name  = ci._originalName || ci.name;
-                // Nếu có món gốc phía trước (đã giảm qty): ghỗp lại
                 if (i > 0 && cart[i-1].name === ci._originalName && !cart[i-1]._vKey) {
                     cart[i-1].qty += 1;
                     cart.splice(i, 1);
                 } else {
-                    delete ci._vKey; delete ci._originalPrice; delete ci._originalName; delete ci._giftType; delete ci._giftLabel;
+                    delete ci._vKey; delete ci._originalPrice; delete ci._originalName;
+                    delete ci._giftType; delete ci._giftLabel;
                 }
             } else {
-                // percent/order: xóa dòng giảm
                 cart.splice(i, 1);
             }
             break;
         }
     }
+    // Xóa giảm order/percent
+    _giftOrderDiscount = null;
 }
 
 function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
@@ -9565,7 +9602,6 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
         if (!r) { renderCart(); return; }
 
         if (r.type === 'item') {
-            // Giảm thẳng vào món
             var target = (r.targetItem || '').toLowerCase().trim();
             var targetIdx = -1;
             cart.forEach(function(ci, idx) {
@@ -9576,7 +9612,7 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
                 _giftVoucherKey = null; _giftVoucherPhone = null;
                 renderCart();
                 if (typeof showAppModal === 'function')
-                    showAppModal('Lưu ý!', 'Quà áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó trước!', '⚠️');
+                    showAppModal('Lưu ý!', 'Quà áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó vào giỏ trước!', '⚠️');
                 return;
             }
             var item = cart[targetIdx];
@@ -9598,29 +9634,18 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
             renderCart();
 
         } else {
-            // percent hoặc order: tính toàn đơn
-            // Phải tính lại currentTotal từ cart trước
+            // percent hoặc order: không thêm cart, hiển trong khung tổng bill
             var subtotal = 0;
             cart.forEach(function(ci) { subtotal += ci.price * ci.qty; });
-
-            var discountAmt = 0;
-            if (r.type === 'percent') {
-                discountAmt = Math.round(subtotal * (r.value || 0) / 100);
-            } else {
-                discountAmt = r.value || 0;
-            }
+            var discountAmt = (r.type === 'percent')
+                ? Math.round(subtotal * (r.value || 0) / 100)
+                : (r.value || 0);
             if (discountAmt <= 0) { renderCart(); return; }
-
-            cart.push({
-                name: (r.label || name) + (r.type === 'percent' ? ' – ' + r.value + '%' : ''),
-                size: code,
-                price: -discountAmt,
-                qty: 1,
-                _vKey: key,
-                _giftType: r.type,
-                _giftLabel: code,
-                _originalPrice: -discountAmt
-            });
+            _giftOrderDiscount = {
+                amt:   discountAmt,
+                label: (r.label || name) + (r.type === 'percent' ? ' – ' + r.value + '%' : ''),
+                code:  code
+            };
             renderCart();
         }
     }
@@ -9666,6 +9691,7 @@ function giftVoucherMarkUsedAndReset(resetOnly) {
     giftVoucherResetOld();
     _giftVoucherKey   = null;
     _giftVoucherPhone = null;
+    _giftOrderDiscount = null;
     var panel = document.getElementById('gift-panel');
     if (panel) panel.classList.add('hidden');
     var list = document.getElementById('gift-panel-list');
