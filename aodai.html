@@ -1435,22 +1435,25 @@ function openMyGifts() {
 
     db.ref('customers/' + curPhone + '/myGifts').once('value', snap => {
         const gifts = [];
-        snap.forEach(c => gifts.push({ key: c.key, ...c.val() }));
+        snap.forEach(c => { const v = c.val(); if(v) gifts.push(Object.assign({}, v, { _key: c.key })); });
         gifts.sort((a,b) => (b.redeemedAt||'').localeCompare(a.redeemedAt||''));
 
-        // DEBUG: hiển thị raw data ngay trên màn hình
-        list.innerHTML = `<div style="background:#fff3cd;border:2px solid #ffc107;border-radius:12px;padding:12px;margin-bottom:12px;font-size:11px;word-break:break-all;">`
-            + `<b>Số quà từ Firebase: ${gifts.length}</b><br>`
-            + `<b>Raw keys:</b> ${Object.keys(snap.val()||{}).join(', ')}<br><br>`
-            + gifts.map((g,i) => `[${i+1}] <b>${g.name||'?'}</b> | used:${g.used} | code:${g.code||'?'}`).join('<br>')
+        // DEBUG rõ ràng trên màn hình
+        var debugLines = ['Tổng keys: ' + Object.keys(snap.val()||{}).length + ' | gifts.length: ' + gifts.length];
+        gifts.forEach((g,i) => debugLines.push('['+i+'] ' + (g.name||'?') + ' | used:' + g.used + ' | val null?:' + (snap.val()==null)));
+        // Đồng thời debug từng child
+        var rawDebug = [];
+        snap.forEach(c => rawDebug.push(c.key + ':' + (c.val()?'ok':'NULL')));
+        list.innerHTML = `<div style="background:#fff3cd;border:2px solid orange;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px;word-break:break-all">`
+            + debugLines.join('<br>') + '<br>Raw: ' + rawDebug.join(' | ')
             + `</div>`;
 
         if (gifts.length === 0) {
-            list.innerHTML += '<div class="text-center py-12"><p class="text-4xl mb-3">🎁</p><p class="text-gray-400 font-bold text-sm">Bạn chưa đổi quà nào</p></div>';
+            list.innerHTML = '<div class="text-center py-12"><p class="text-4xl mb-3">🎁</p><p class="text-gray-400 font-bold text-sm">Bạn chưa đổi quà nào</p><p class="text-gray-300 text-xs mt-1">Tích điểm rồi đổi quà ngay nhé!</p></div>';
             return;
         }
 
-        list.innerHTML += gifts.map(g => `
+        list.innerHTML = gifts.map(g => `
             <div class="bg-white rounded-[1.75rem] p-5 border ${g.used ? 'border-gray-100 opacity-60' : 'border-green-100 shadow-sm'} mb-3 relative overflow-hidden">
                 ${g.used ? '<div class="absolute top-3 right-3 bg-gray-200 text-gray-500 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider">Đã dùng</div>' : '<div class="absolute top-3 right-3 bg-green-50 text-green-700 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider border border-green-200">Chưa dùng</div>'}
                 <p class="font-black text-[#1e3932] text-base mb-1 pr-20">${g.name}</p>
