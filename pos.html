@@ -1336,6 +1336,10 @@ input, button, select, textarea { font-size: 1rem; }
             </div>
             <div class="w-[20%] flex flex-col gap-3">
                 <button onclick="openBookingModal()" class="w-full bg-[#006241] hover:bg-[#004f32] text-white py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1"><span class="text-xs uppercase tracking-wider">Đặt Mới</span></button>
+                <button onclick="openReputationModal()" id="btn-reputation" class="w-full py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1 relative" style="background:#c0392b; color:white;">
+                    <span class="text-xs uppercase tracking-wider font-black">Reputation</span>
+                    <span id="rep-alert-dot" class="hidden absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse border-2 border-white"></span>
+                </button>
                 <div class="flex-1 bg-white rounded-[20px] shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden"><h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3><div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div>
                     <button id="btn-store-status" onclick="handleStoreStatusClick()" class="w-full py-4 rounded-[20px] font-black text-xs uppercase shadow-md active:scale-95 transition-all mt-3 bg-white text-gray-400 border border-gray-100">
     Đang Hoạt Động
@@ -1543,6 +1547,7 @@ input, button, select, textarea { font-size: 1rem; }
     <div id="cart-list" class="flex-1 overflow-y-auto space-y-1.5 mb-3 pr-1 text-left custom-scrollbar transition-all"></div>
 
     <div id="cart-bottom-bar" class="bg-gray-50 p-4 rounded-2xl space-y-3 shadow-inner text-left mt-auto">
+        <div id="gift-order-discount-row" class="hidden"></div>
         <div class="flex justify-between items-end" onclick="toggleCartExpand()">
             <span class="font-bold text-gray-400 text-[10px] uppercase text-left mb-1">Tổng bill</span>
             <div class="flex items-center gap-2">
@@ -1550,7 +1555,6 @@ input, button, select, textarea { font-size: 1rem; }
                 <span id="total-price" class="text-3xl font-black text-[#006241]">0</span>
             </div>
         </div>
-        <!-- Ô nhập mã đã ẩn -->
         <p id="discount-status" class="hidden"></p>
         <button id="sidebar-pay-btn" onclick="switchView('payment')" class="w-full py-4 sb-green text-white font-black rounded-xl uppercase shadow-xl active:scale-95 transition-all">Thanh toán</button>
         <button id="sidebar-back-btn" onclick="switchView('menu')" class="hidden w-full py-3 bg-gray-100 text-gray-500 font-black rounded-xl uppercase text-sm active:scale-95 transition-all mt-1">← Quay lại menu</button>
@@ -2702,7 +2706,12 @@ function renderCart() {
 
         // Nhãn phụ dưới tên
         let subLabel = '';
-        if (isGift)     subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">🎁 Phiếu quà · ${i.size}</p>`;
+        if (isGift && i._giftType === 'item') {
+            const origStr = i._originalPrice ? `<span class="line-through text-gray-300 mr-1">${i._originalPrice.toLocaleString()}đ</span>` : '';
+            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">${origStr}Quà · ${i._giftLabel||i.size}</p>`;
+        } else if (isGift) {
+            subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">Quà · ${i._giftLabel||i.size}</p>`;
+        }
         else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
         else            subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
 
@@ -2734,8 +2743,19 @@ function renderCart() {
         </div>`;
     }).join('');
 
+    // --- Áp giảm order/percent vào total ---
+    var displayTotal = currentTotal;
+    if (_giftOrderDiscount) displayTotal = Math.max(0, currentTotal - _giftOrderDiscount.amt);
+    var discRow = document.getElementById('gift-order-discount-row');
+    if (discRow) {
+        if (_giftOrderDiscount) {
+            discRow.innerHTML = `<div class="flex justify-between items-center text-[11px] font-bold pb-1 mb-1 border-b border-dashed border-gray-200"><span class="text-gray-400 truncate max-w-[160px]">${_giftOrderDiscount.label}</span><span class="text-green-600 font-black">−${_giftOrderDiscount.amt.toLocaleString()}đ</span></div><div class="flex justify-between items-center text-[10px] text-gray-400 font-bold mb-1"><span>Giá gốc</span><span class="line-through">${currentTotal.toLocaleString()}đ</span></div>`;
+            discRow.classList.remove('hidden');
+        } else { discRow.innerHTML=''; discRow.classList.add('hidden'); }
+    }
+    if (_giftOrderDiscount) currentTotal = displayTotal;
     // --- PHẦN FIX CHO MOBILE ---
-    const formattedTotal = currentTotal.toLocaleString() + 'đ';
+    const formattedTotal = displayTotal.toLocaleString() + 'đ';
     
     // Cập nhật cho PC (Sidebar)
     if(document.getElementById('total-price')) 
@@ -4736,15 +4756,37 @@ function selectBedItem(index) {
                             </div>
                         </div>
 
-                        <div class="border-t border-dashed border-emerald-100 pt-2 flex justify-center">
+                        <div class="border-t border-dashed border-emerald-100 pt-2 flex justify-center gap-2">
                             <button onclick="copyBedNotification('${data.end}')" 
                                 class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 hover:bg-emerald-50 text-gray-500 hover:text-emerald-600 transition-all active:scale-95">
                                 <span class="material-symbols-outlined text-[16px]">content_copy</span>
                                 <span class="text-[10px] font-bold uppercase">Copy Thông báo kết thúc</span>
                             </button>
+                            <button onclick="sendWarning(this)" 
+                                class="warn-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 border border-amber-200 transition-all active:scale-95 relative"
+                                data-id="${bookingId}" data-name="${(data.name||'Khách hàng')}">
+                                <span class="material-symbols-outlined text-[16px]">warning</span>
+                                <span class="text-[10px] font-bold uppercase">Cảnh báo</span>
+                                <span class="warn-badge-pc hidden absolute -top-1.5 -right-1.5 text-[9px] font-black text-white rounded-full w-4 h-4 items-center justify-center bg-red-500"></span>
+                            </button>
                         </div>
                     </div>`;
                     infoDiv.classList.remove('hidden');
+                    // Load warning badge PC
+                    if (bookingId) {
+                        firebase.database().ref('bedWarnings/' + bookingId).once('value').then(snap => {
+                            const cnt = snap.val()?.count || 0;
+                            if (cnt > 0) {
+                                const badgeEl = infoDiv.querySelector('.warn-badge-pc');
+                                if (badgeEl) {
+                                    badgeEl.textContent = cnt;
+                                    badgeEl.classList.remove('hidden');
+                                    badgeEl.classList.add('flex');
+                                    badgeEl.style.backgroundColor = cnt >= 3 ? '#dc2626' : cnt === 2 ? '#f97316' : '#f59e0b';
+                                }
+                            }
+                        });
+                    }
                 }
              });
         }
@@ -7263,10 +7305,16 @@ function renderDetailContentMobile(b) {
     </div>
 
     ${isActive ? `
-    <div class="flex justify-center mt-2 pb-2">
+    <div class="flex justify-center gap-3 mt-2 pb-2">
         <button onclick="copyBedNotification('${b.end}')" 
             class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm active:scale-90 active:bg-[#006241] active:text-white transition-all">
             <span class="material-symbols-outlined text-[20px]">content_copy</span>
+        </button>
+        <button onclick="sendWarning(this)"
+            class="warn-mob-btn relative w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm active:scale-90 border border-amber-300 transition-all"
+            data-id="${b.id}" data-name="${b.name||'Khách hàng'}">
+            <span class="material-symbols-outlined text-[20px]">warning</span>
+            <span class="warn-mob-badge hidden absolute -top-1 -right-1 text-[9px] font-black text-white rounded-full w-4 h-4 items-center justify-center bg-red-500 leading-none"></span>
         </button>
     </div>
     ` : ''}
@@ -7380,6 +7428,22 @@ function renderDetailContentMobile(b) {
                 bEl.className = `${currentCountdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md transition-colors`;
             }
         }, 1000);
+    }
+
+    // --- 6. LOAD WARNING BADGE cho mobile ---
+    if (isActive && b.id) {
+        firebase.database().ref('bedWarnings/' + b.id).once('value').then(snap => {
+            const cnt = snap.val()?.count || 0;
+            if (cnt > 0) {
+                const badgeEls = document.querySelectorAll('.warn-mob-badge');
+                badgeEls.forEach(el => {
+                    el.textContent = cnt;
+                    el.classList.remove('hidden');
+                    el.classList.add('flex');
+                    el.style.backgroundColor = cnt >= 3 ? '#dc2626' : cnt === 2 ? '#f97316' : '#f59e0b';
+                });
+            }
+        });
     }
 }
 
@@ -8736,7 +8800,8 @@ function resetOrderingMode(isSilent = false) {
     const sdtStatus = document.getElementById('sdt-status');
     if (sdtStatus) sdtStatus.innerText = "";
 
-    // 5. Xóa toàn bộ giỏ hàng (thoát chế độ bed = hủy đơn đang gọi)
+    // 5. Xóa toàn bộ giỏ hàng + reset gift
+    giftVoucherMarkUsedAndReset(true);
     cart = [];
     renderCart();
 
@@ -8970,6 +9035,11 @@ function resumeStore() {
     db.ref('store_status').set({ isOff: false });
 }
     // --- HÀM COPY THÔNG BÁO BED (MỚI) ---
+// =========================================================
+// MODULE: CẢNH BÁO VI PHẠM BED (WARNING SYSTEM)
+// =========================================================
+// sendWarning: xem định nghĩa cuối file
+
 function copyBedNotification(endTime) {
     const text = `🌟 Chào bạn đến Cafe in Bed 🌟
 Thời gian sử dụng Bed của bạn kết thúc lúc ${endTime}.
@@ -9464,6 +9534,7 @@ function resetDiscountState(noFirebase) {
 // ============================================================
 var _giftVoucherKey = null;
 var _giftVoucherPhone = null;
+var _giftOrderDiscount = null;
 
 function scanGiftVouchers(phone) {
     var panel = document.getElementById('gift-panel');
@@ -9509,7 +9580,7 @@ function scanGiftVouchers(phone) {
                 '</div>' +
                 '<button class="bg-green-700 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase active:scale-95">+ Bill</button>';
             row.querySelector('button').addEventListener('click', function() {
-                giftVoucherAddToCart(phone, g._key, g.name, g.code);
+                giftVoucherAddToCart(phone, g._key, g.name, g.code, g.rewardKey || null);
                 this.innerText = '✓ Đã thêm';
                 this.disabled = true;
                 this.className = 'bg-green-100 text-green-700 text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase';
@@ -9519,27 +9590,101 @@ function scanGiftVouchers(phone) {
     });
 }
 
-function giftVoucherAddToCart(phone, key, name, code) {
-    // Xóa voucher cũ nếu đã thêm trước đó
-    if (_giftVoucherKey) {
-        for (var i = cart.length - 1; i >= 0; i--) {
-            if (cart[i]._vKey) { cart.splice(i, 1); break; }
+function giftVoucherResetOld() {
+    if (!_giftVoucherKey) return;
+    for (var i = cart.length - 1; i >= 0; i--) {
+        var ci = cart[i];
+        if (ci._vKey === _giftVoucherKey) {
+            if (ci._giftType === 'item') {
+                ci.price = ci._originalPrice;
+                ci.name  = ci._originalName || ci.name;
+                if (i > 0 && cart[i-1].name === ci._originalName && !cart[i-1]._vKey) {
+                    cart[i-1].qty += 1; cart.splice(i, 1);
+                } else {
+                    delete ci._vKey; delete ci._originalPrice; delete ci._originalName;
+                    delete ci._giftType; delete ci._giftLabel;
+                }
+            } else { cart.splice(i, 1); }
+            break;
         }
     }
+    _giftOrderDiscount = null;
+}
+
+function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
+    giftVoucherResetOld();
     _giftVoucherKey   = key;
     _giftVoucherPhone = phone;
-    cart.push({ name: '🎁 Quà: ' + name, size: code, price: 0, qty: 1, _vKey: key });
-    renderCart();
+
+    function applyReward(r) {
+        if (!r) { renderCart(); return; }
+        if (r.type === 'item') {
+            var target = (r.targetItem || '').toLowerCase().trim();
+            var targetIdx = -1;
+            cart.forEach(function(ci, idx) {
+                if (targetIdx < 0 && !ci._vKey && !ci._discountId)
+                    if (ci.name.toLowerCase().indexOf(target) !== -1) targetIdx = idx;
+            });
+            if (targetIdx < 0) {
+                _giftVoucherKey = null; _giftVoucherPhone = null; renderCart();
+                if (typeof showAppModal === 'function')
+                    showAppModal('Lưu ý!', 'Quà áp dụng cho món <b>' + (r.targetItem||'') + '</b> — hãy thêm món đó trước!', '⚠️');
+                return;
+            }
+            var item = cart[targetIdx];
+            var origPrice = item.price, origName = item.name;
+            var newPrice = Math.max(0, origPrice - (r.value || 0));
+            if (item.qty > 1) {
+                item.qty -= 1;
+                cart.splice(targetIdx + 1, 0, { name: origName, size: item.size, price: newPrice, qty: 1,
+                    _vKey: key, _giftType: 'item', _giftLabel: code, _originalPrice: origPrice, _originalName: origName });
+            } else {
+                item.price = newPrice; item._vKey = key; item._giftType = 'item';
+                item._giftLabel = code; item._originalPrice = origPrice; item._originalName = origName;
+            }
+            renderCart();
+        } else {
+            var subtotal = 0;
+            cart.forEach(function(ci) { subtotal += ci.price * ci.qty; });
+            var discountAmt = (r.type === 'percent')
+                ? Math.round(subtotal * (r.value || 0) / 100)
+                : (r.value || 0);
+            if (discountAmt <= 0) { renderCart(); return; }
+            _giftOrderDiscount = {
+                amt:   discountAmt,
+                label: (r.label || name) + (r.type === 'percent' ? ' – ' + r.value + '%' : ''),
+                code:  code
+            };
+            renderCart();
+        }
+    }
+
+    if (rewardKey) {
+        if (_discountCache[rewardKey]) { applyReward(_discountCache[rewardKey]); }
+        else { db.ref('rewards/' + rewardKey).once('value', function(snap) {
+            var r = snap.val(); if (r) _discountCache[rewardKey] = r; applyReward(r);
+        }); }
+    } else {
+        var codeUp = (code || '').toUpperCase().trim(), found = null;
+        Object.keys(_discountCache).forEach(function(k) {
+            if (!found && _discountCache[k].code && _discountCache[k].code.toUpperCase().trim() === codeUp) found = _discountCache[k];
+        });
+        if (found) { applyReward(found); }
+        else { db.ref('rewards').once('value', function(snap) {
+            var r2 = null;
+            snap.forEach(function(child) { var v = child.val(); if (!r2 && v.code && v.code.toUpperCase().trim() === codeUp) r2 = v; });
+            applyReward(r2);
+        }); }
+    }
 }
 
 function giftVoucherMarkUsedAndReset(resetOnly) {
-    // resetOnly=true: chỉ reset UI (khi xóa giỏ), không mark used trên Firebase
     if (!resetOnly && _giftVoucherKey && _giftVoucherPhone) {
         db.ref('customers/' + _giftVoucherPhone + '/myGifts/' + _giftVoucherKey)
           .update({ used: true, usedAt: new Date().toISOString() });
     }
-    _giftVoucherKey   = null;
-    _giftVoucherPhone = null;
+    giftVoucherResetOld();
+    _giftVoucherKey = null; _giftVoucherPhone = null; _giftOrderDiscount = null;
     var panel = document.getElementById('gift-panel');
     if (panel) panel.classList.add('hidden');
     var list = document.getElementById('gift-panel-list');
@@ -10509,6 +10654,514 @@ window.addEventListener('load', function() {
     history.replaceState({ view: 'menu' }, null, "");
 });
 
+
+// =========================================================
+// MODULE: REPUTATION SYSTEM
+// =========================================================
+
+// --- HẰNG SỐ ---
+const REP_DEFAULT = 100;
+const REP_MAX = 100;
+const REP_WARN_THRESHOLD = 60;
+
+// --- TÍNH ĐIỂM XẾP HẠNG ---
+function getRepTier(score) {
+    if (score >= 80) return { label: 'Tin tưởng', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' };
+    if (score >= 60) return { label: 'Chú ý',    color: '#ca8a04', bg: '#fefce8', border: '#fde68a' };
+    if (score >= 40) return { label: 'Rủi ro',   color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' };
+    return                 { label: 'Cấm',        color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+}
+
+// --- LẤY ĐIỂM TỪ FIREBASE (THEO PHONE) ---
+async function getRepScore(phone) {
+    const snap = await firebase.database().ref('reputation/' + normalizePhone(phone)).once('value');
+    const val = snap.val();
+    if (!val) return REP_DEFAULT;
+    return Math.max(0, Math.min(REP_MAX, val.score ?? REP_DEFAULT));
+}
+
+// --- CẬP NHẬT ĐIỂM ---
+async function updateRepScore(phone, name, delta, reason, bookingId) {
+    const normPhone = normalizePhone(phone);
+    const ref = firebase.database().ref('reputation/' + normPhone);
+    const snap = await ref.once('value');
+    const val = snap.val() || {};
+    const oldScore = Math.max(0, Math.min(REP_MAX, val.score ?? REP_DEFAULT));
+    const newScore = Math.max(0, Math.min(REP_MAX, oldScore + delta));
+    const histRef = ref.child('history').push();
+    const histEntry = {
+        date: new Date().toLocaleDateString('vi-VN'),
+        time: new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}),
+        delta: delta,
+        reason: reason,
+        bookingId: bookingId || '',
+        scoreBefore: oldScore,
+        scoreAfter: newScore
+    };
+    await ref.update({ score: newScore, name: name || val.name || 'Khách hàng', phone: normPhone });
+    await histRef.set(histEntry);
+    return newScore;
+}
+
+// --- HOOK: NÚT CẢNH BÁO (ĐÃ CÓ sendWarning) -> THÊM ĐIỂM TRƯỚC KHI GHI ---
+// sendWarning được định nghĩa đầy đủ ở cuối file
+
+// --- HOOK: CLEANING FEE -> TRỪ 3 ĐIỂM ---
+const _origSetCleaningFee = setCleaningFee;
+setCleaningFee = function(phone, amount, bookingId) {
+    // Tìm tên khách từ globalAllBookings
+    const booking = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).find(b => b.id === bookingId);
+    const guestName = booking ? (booking.name || 'Khách hàng') : 'Khách hàng';
+    updateRepScore(phone, guestName, -3, 'Bị tính phí vệ sinh', bookingId);
+    _origSetCleaningFee(phone, amount, bookingId);
+};
+
+// --- HOOK: CHECKOUT -> CỘNG +3 NẾU KHÔNG CÓ VI PHẠM ---
+const _origProcessCheckout = processCheckoutFirebase;
+processCheckoutFirebase = async function(booking) {
+    // Kiểm tra phiên này có vi phạm không
+    const phone = booking.phone;
+    const bookingId = booking.id || booking.key;
+    if (phone && bookingId) {
+        const snapWarn = await firebase.database().ref('bedWarnings/' + phone + '/' + bookingId).once('value');
+        const snapFee = await firebase.database().ref('bedBookings/' + bookingId + '/hasPenalty').once('value');
+        const hasViolation = snapWarn.exists() || snapFee.val() === true;
+        if (!hasViolation) {
+            updateRepScore(phone, booking.name || 'Khách hàng', +3, 'Hoàn thành không vi phạm', bookingId);
+        }
+    }
+    _origProcessCheckout(booking);
+};
+
+// =========================================================
+// MODULE: MODAL REPUTATION - UI
+// =========================================================
+
+let repCurrentTab = 'today';
+
+function openReputationModal() {
+    document.getElementById('modal-reputation').style.display = 'flex';
+    switchRepTab('today');
+}
+
+function closeReputationModal() {
+    document.getElementById('modal-reputation').style.display = 'none';
+}
+
+// Đóng khi click ngoài modal (chạy sau khi DOM đã load xong)
+window.addEventListener('DOMContentLoaded', function() {
+    var repModal = document.getElementById('modal-reputation');
+    if (repModal) {
+        repModal.addEventListener('click', function(e) {
+            if (e.target === this) closeReputationModal();
+        });
+    }
+});
+
+function switchRepTab(tab) {
+    repCurrentTab = tab;
+    // Pill style: reset all
+    document.querySelectorAll('.rep-tab').forEach(t => {
+        t.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
+        t.classList.add('text-gray-400');
+    });
+    // Set active
+    const active = document.getElementById('rep-tab-' + tab);
+    if (active) {
+        active.classList.remove('text-gray-400');
+        active.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
+    }
+    // Load content
+    const content = document.getElementById('rep-tab-content');
+    content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 text-base" style="min-height:200px;">Đang tải...</div>';
+    if (tab === 'today') loadRepToday();
+    else if (tab === 'all') loadRepAll();
+    else if (tab === 'rank') loadRepRank();
+}
+
+// ---- TAB 1: HÔM NAY ----
+async function loadRepToday() {
+    const content = document.getElementById('rep-tab-content');
+
+    // Lấy ngày hôm nay dạng YYYY-MM-DD để so sánh với Firebase
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    // Lấy từ Firebase bedBookings
+    const bookSnap = await firebase.database().ref('bedBookings').once('value');
+    const bookData = bookSnap.val() || {};
+
+    // Lọc booking hôm nay
+    const todayBookings = Object.values(bookData).filter(b => {
+        if (!b.date) return false;
+        return b.date.slice(0, 10) === todayStr;
+    });
+
+    // Fallback: nếu không có date, thử dùng globalAllBookings
+    const extra = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).filter(b => {
+        if (!b.date) return false;
+        return b.date.slice(0, 10) === todayStr;
+    });
+    // Merge, tránh trùng
+    const seenIds = new Set(todayBookings.map(b => b.id || b.key || ''));
+    extra.forEach(b => { if (!seenIds.has(b.id)) todayBookings.push(b); });
+
+    if (todayBookings.length === 0) {
+        content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 text-lg" style="min-height:200px;">Không có lịch đặt nào hôm nay.</div>';
+        return;
+    }
+
+    // Load điểm từng khách
+    const rows = await Promise.all(todayBookings.map(async b => {
+        const score = await getRepScore(b.phone || '');
+        return { ...b, repScore: score };
+    }));
+    rows.sort((a, b) => a.repScore - b.repScore);
+
+    let html = '<div class="divide-y divide-gray-100">';
+    rows.forEach(b => {
+        const tier = getRepTier(b.repScore);
+        const warning = b.repScore < REP_WARN_THRESHOLD ? `<span style="color:#ef4444; font-size:13px; font-weight:700; margin-left:8px;">Cảnh báo</span>` : '';
+        const phone = b.phone || '--';
+        const safePhone = normalizePhone(b.phone || '');
+        const safeName = (b.name||'Khách hàng').replace(/\/g,'\\').replace(/'/g,"\'");
+        html += `
+        <div class="px-10 py-6 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer" onclick="showRepDetail('${safePhone}', '${safeName}')">
+            <div>
+                <div style="display:flex; align-items:center; gap:4px;">
+                    <span style="font-size:18px; font-weight:800; color:#111;">${b.name || 'Khách hàng'}</span>
+                    ${warning}
+                </div>
+                <div style="font-size:14px; color:#9ca3af; margin-top:4px; font-family:monospace;">${phone} &nbsp;·&nbsp; Bed ${b.bedId || '--'}</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:16px;">
+                <div style="text-align:right;">
+                    <div style="font-size:30px; font-weight:900; color:${tier.color}; line-height:1;">${b.repScore}</div>
+                    <div style="font-size:13px; font-weight:700; color:${tier.color};">${tier.label}</div>
+                </div>
+                <div style="width:6px; height:40px; border-radius:99px; background:${tier.color};"></div>
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+    content.innerHTML = html;
+
+    // Cập nhật chấm đỏ trên nút
+    const hasRisk = rows.some(r => r.repScore < REP_WARN_THRESHOLD);
+    const dot = document.getElementById('rep-alert-dot');
+    if (dot) { hasRisk ? dot.classList.remove('hidden') : dot.classList.add('hidden'); }
+}
+
+// ---- TAB 2: TẤT CẢ KHÁCH ----
+let repAllCache = [];
+async function loadRepAll() {
+    const content = document.getElementById('rep-tab-content');
+
+    // Lấy dữ liệu: bedBookings (nguồn khách thực tế) + reputation (điểm)
+    const [bookSnap, repSnap] = await Promise.all([
+        firebase.database().ref('bedBookings').once('value'),
+        firebase.database().ref('reputation').once('value')
+    ]);
+
+    const bookData = bookSnap.val() || {};
+    const repData = repSnap.val() || {};
+
+    // Gom unique phone từ bedBookings
+    const phoneMap = {}; // phone -> {name}
+    Object.values(bookData).forEach(b => {
+        if (!b.phone) return;
+        const p = normalizePhone(b.phone);
+        if (!phoneMap[p]) phoneMap[p] = { name: b.name || 'Khách hàng' };
+    });
+
+    // Merge với reputation
+    const phoneSet = new Set([...Object.keys(phoneMap), ...Object.keys(repData)]);
+    repAllCache = [];
+    phoneSet.forEach(phone => {
+        const rep = repData[phone] || {};
+        const fromBook = phoneMap[phone] || {};
+        const score = Math.max(0, Math.min(REP_MAX, rep.score ?? REP_DEFAULT));
+        repAllCache.push({
+            phone,
+            name: rep.name || fromBook.name || 'Khách hàng',
+            score,
+            history: rep.history ? Object.values(rep.history) : []
+        });
+    });
+
+    repAllCache.sort((a, b) => a.score - b.score);
+    renderRepAllList(repAllCache, '');
+}
+
+function renderRepAllList(list, query) {
+    const content = document.getElementById('rep-tab-content');
+    const q = (query || '').trim().toLowerCase();
+    const filtered = q
+        ? list.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q))
+        : list;
+
+    let html = `
+    <div style="padding: 24px 40px 16px; position:sticky; top:0; background:white; z-index:10; border-bottom:1px solid #f3f4f6;">
+        <input type="text" id="rep-search-input" placeholder="Tìm theo tên hoặc số điện thoại..."
+            oninput="renderRepAllList(repAllCache, this.value)"
+            value="${query || ''}"
+            style="width:100%; padding:14px 18px; border-radius:14px; border:1.5px solid #e5e7eb; font-size:15px; font-weight:500; outline:none; background:#f9fafb; box-sizing:border-box; font-family:inherit;"
+            onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='#e5e7eb'">
+    </div>
+    <div>`;
+
+    if (filtered.length === 0) {
+        html += '<div style="padding:64px; text-align:center; color:#9ca3af; font-size:16px;">Không tìm thấy khách nào.</div>';
+    } else {
+        filtered.forEach(c => {
+            const tier = getRepTier(c.score);
+            const violations = c.history.filter(h => h.delta < 0).length;
+            const safeName = c.name.replace(/\/g,'\\').replace(/'/g,"\'");
+            html += `
+            <div style="padding:22px 40px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f9fafb; cursor:pointer; transition:background 0.15s;"
+                 onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'"
+                 onclick="showRepDetail('${c.phone}', '${safeName}')">
+                <div>
+                    <div style="font-size:18px; font-weight:800; color:#111;">${c.name}</div>
+                    <div style="font-size:14px; color:#9ca3af; margin-top:4px; font-family:monospace;">${c.phone} &nbsp;·&nbsp; ${violations} lần vi phạm</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <div style="text-align:right;">
+                        <div style="font-size:30px; font-weight:900; color:${tier.color}; line-height:1;">${c.score}</div>
+                        <div style="font-size:13px; font-weight:700; color:${tier.color};">${tier.label}</div>
+                    </div>
+                    <div style="width:6px; height:40px; border-radius:99px; background:${tier.color};"></div>
+                </div>
+            </div>`;
+        });
+    }
+    html += '</div>';
+    content.innerHTML = html;
+    const inp = document.getElementById('rep-search-input');
+    if (inp) { inp.focus(); if (query) inp.setSelectionRange(query.length, query.length); }
+}
+
+// ---- TAB 3: XẾP HẠNG ----
+async function loadRepRank() {
+    const content = document.getElementById('rep-tab-content');
+    const repSnap = await firebase.database().ref('reputation').once('value');
+    const repData = repSnap.val() || {};
+
+    const list = Object.values(repData).map(r => ({
+        name: r.name || 'Khách hàng',
+        phone: r.phone || '',
+        score: Math.max(0, Math.min(REP_MAX, r.score ?? REP_DEFAULT)),
+        history: r.history ? Object.values(r.history) : []
+    })).sort((a, b) => b.score - a.score);
+
+    if (list.length === 0) {
+        content.innerHTML = '<div class="py-16 text-center text-gray-400 text-sm">Chưa có dữ liệu.</div>';
+        return;
+    }
+
+    const rankColors = ['#f59e0b', '#9ca3af', '#d97706'];
+    let html = '<div>';
+    list.forEach((c, idx) => {
+        const tier = getRepTier(c.score);
+        const rankColor = idx < 3 ? rankColors[idx] : '#d1d5db';
+        const violations = c.history.filter(h => h.delta < 0).length;
+        const safeName = c.name.replace(/\/g,'\\').replace(/'/g,"\'");
+        html += `
+        <div style="padding:22px 40px; display:flex; align-items:center; gap:24px; border-bottom:1px solid #f9fafb; cursor:pointer; transition:background 0.15s;"
+             onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'"
+             onclick="showRepDetail('${c.phone}', '${safeName}')">
+            <div style="width:36px; text-align:center; font-size:20px; font-weight:900; color:${rankColor}; flex-shrink:0;">${idx+1}</div>
+            <div style="flex:1;">
+                <div style="font-size:18px; font-weight:800; color:#111;">${c.name}</div>
+                <div style="font-size:14px; color:#9ca3af; margin-top:4px; font-family:monospace;">${c.phone} &nbsp;·&nbsp; ${violations} vi phạm</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:16px;">
+                <div style="text-align:right;">
+                    <div style="font-size:30px; font-weight:900; color:${tier.color}; line-height:1;">${c.score}</div>
+                    <div style="font-size:13px; font-weight:700; color:${tier.color};">${tier.label}</div>
+                </div>
+                <div style="width:6px; height:40px; border-radius:99px; background:${tier.color};"></div>
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+    content.innerHTML = html;
+}
+
+// ---- MODAL CHI TIẾT KHÁCH ----
+async function showRepDetail(phone, name) {
+    const snap = await firebase.database().ref('reputation/' + phone).once('value');
+    const data = snap.val() || {};
+    const score = Math.max(0, Math.min(REP_MAX, data.score ?? REP_DEFAULT));
+    const tier = getRepTier(score);
+    const history = data.history ? Object.values(data.history).sort((a,b) => {
+        // Sort mới nhất lên đầu
+        return new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time);
+    }) : [];
+
+    const content = document.getElementById('rep-tab-content');
+    
+    const histRows = history.length === 0
+        ? '<div style="padding:48px; text-align:center; color:#9ca3af; font-size:16px;">Chưa có lịch sử điểm.</div>'
+        : history.map(h => {
+            const isPos = h.delta > 0;
+            const deltaStr = isPos ? `+${h.delta}` : `${h.delta}`;
+            const deltaColor = isPos ? '#16a34a' : '#dc2626';
+            return `
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 0; border-bottom:1px solid #f3f4f6;">
+                <div>
+                    <div style="font-size:16px; font-weight:700; color:#1f2937;">${h.reason || '--'}</div>
+                    <div style="font-size:13px; color:#9ca3af; margin-top:4px;">${h.date || ''} ${h.time || ''}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:20px; font-weight:900; color:${deltaColor};">${deltaStr} điểm</div>
+                    <div style="font-size:13px; color:#9ca3af;">${h.scoreBefore ?? '--'} → ${h.scoreAfter ?? '--'}</div>
+                </div>
+            </div>`;
+        }).join('');
+
+    content.innerHTML = `
+    <div style="padding:32px 40px;">
+        <button onclick="switchRepTab('${repCurrentTab}')" style="display:flex; align-items:center; gap:8px; font-size:15px; color:#9ca3af; font-weight:700; margin-bottom:28px; cursor:pointer; background:none; border:none; padding:0;" onmouseover="this.style.color='#374151'" onmouseout="this.style.color='#9ca3af'">
+            ← Quay lại
+        </button>
+
+        <!-- Score Card -->
+        <div style="border-radius:20px; padding:28px 32px; margin-bottom:28px; display:flex; align-items:center; justify-content:space-between; background:${tier.bg}; border:1.5px solid ${tier.border};">
+            <div>
+                <div style="font-size:20px; font-weight:900; color:#1f2937; margin-bottom:6px;">${name}</div>
+                <div style="font-size:15px; color:#9ca3af; font-family:monospace;">${phone}</div>
+                <div style="font-size:14px; font-weight:800; margin-top:14px; padding:6px 16px; border-radius:99px; display:inline-block; color:${tier.color}; background:white;">${tier.label}</div>
+            </div>
+            <div style="font-size:72px; font-weight:900; color:${tier.color}; line-height:1;">${score}</div>
+        </div>
+
+        <!-- History -->
+        <div style="font-size:13px; font-weight:900; color:#6b7280; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Lịch sử điểm</div>
+        <div>${histRows}</div>
+    </div>`;
+}
+
+// =========================================================
+// HÀM sendWarning VIẾT LẠI — LƯU THEO PHONE + TÍCH HỢP REP
+// =========================================================
+sendWarning = async function(elOrId, guestName) {
+    let bookingId, btn, phone;
+    if (typeof elOrId === 'string') {
+        bookingId = elOrId;
+    } else {
+        btn = elOrId;
+        bookingId = btn.dataset.id;
+        guestName = btn.dataset.name || 'Khách hàng';
+    }
+    if (!bookingId) return;
+
+    // Tìm phone từ globalAllBookings
+    const booking = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).find(b => b.id === bookingId);
+    phone = booking ? normalizePhone(booking.phone || '') : null;
+
+    const db = firebase.database();
+    // Lưu theo phone (nếu có) + bookingId
+    const warnKey = phone || bookingId;
+    const ref = db.ref('bedWarnings/' + warnKey + '/' + bookingId);
+
+    const snap = await ref.once('value');
+    const currentCount = snap.val()?.count || 0;
+    const newCount = currentCount + 1;
+
+    await ref.set({ count: newCount, guestName: guestName, lastWarning: new Date().toLocaleString('vi-VN'), bookingId: bookingId });
+
+    // Trừ điểm Reputation
+    if (phone && booking) {
+        const pointsDeducted = newCount === 1 ? -1 : newCount === 2 ? -2 : -3;
+        const reason = `Cảnh báo vi phạm cấp ${newCount}`;
+        await updateRepScore(booking.phone, guestName, pointsDeducted, reason, bookingId);
+    }
+
+    // Nội dung thông báo
+    let warningText = '';
+    if (newCount === 1) {
+        warningText = `⚠️ Thông báo từ 𝐓𝐡𝐞 𝐜𝐚𝐟𝐞 𝟑𝟑 ⚠️
+Hệ thống ghi nhận ${guestName} đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.
+Vui lòng sử dụng một cách văn minh và đúng quy định.
+⚠️ Trong trường hợp hệ thống ghi nhận thêm 02 nghi ngờ vi phạm,
+Bed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.
+🤖 Tin nhắn tự động bởi AI của The Cafe 33`;
+    } else if (newCount === 2) {
+        warningText = `⚠️ Thông báo từ 𝐓𝐡𝐞 𝐜𝐚𝐟𝐞 𝟑𝟑 ⚠️
+Hệ thống ghi nhận ${guestName} đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.
+Vui lòng sử dụng một cách văn minh và đúng quy định.
+⚠️ Trong trường hợp hệ thống ghi nhận thêm 01 nghi ngờ vi phạm,
+Bed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.
+🤖 Tin nhắn tự động bởi AI của The Cafe 33`;
+    } else {
+        warningText = `⚠️ Thông báo từ The Cafe 33 ⚠️
+Hệ thống ghi nhận dấu hiệu bất thường trong khu vực Bed.
+Vui lòng mở rèm Bed trong 30 giây để hệ thống AI tự động xác nhận.
+⏱️ Lưu ý: Nếu không mở rèm trong vòng 2 phút kể từ khi nhận thông báo, điện khu vực Bed sẽ tự động tắt và hệ thống sẽ thông báo đến quản lý để tiến hành kiểm tra.
+Xin cảm ơn và mong bạn thông cảm vì sự bất tiện.
+The Cafe 33 – Không gian văn minh, an toàn cho tất cả khách hàng. 🤖`;
+    }
+
+    try { await navigator.clipboard.writeText(warningText); }
+    catch(e) {
+        const ta = document.createElement('textarea');
+        ta.value = warningText;
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    }
+
+    // Refresh badge
+    const refreshBadge = (cnt) => {
+        const color = cnt >= 3 ? '#dc2626' : cnt === 2 ? '#f97316' : '#f59e0b';
+        document.querySelectorAll('.warn-mob-badge').forEach(el => {
+            el.textContent = cnt; el.classList.remove('hidden'); el.classList.add('flex'); el.style.backgroundColor = color;
+        });
+        document.querySelectorAll('.warn-badge-pc').forEach(el => {
+            el.textContent = cnt; el.classList.remove('hidden'); el.classList.add('flex'); el.style.backgroundColor = color;
+        });
+    };
+    refreshBadge(newCount);
+
+    const levelLabel = newCount === 1 ? 'Cảnh báo lần 1' : newCount === 2 ? 'Cảnh báo lần 2' : `Lần ${newCount} – Buộc dừng`;
+    const pointsDeducted = newCount === 1 ? 1 : newCount === 2 ? 2 : 3;
+    if (typeof showAppModal === 'function') {
+        showAppModal(
+            `Đã gửi cảnh báo lần ${newCount}`,
+            `Thông báo cấp ${Math.min(newCount,3)} cho <b>${guestName}</b> đã được sao chép.<br><span style="color:#9ca3af;font-size:12px;">${levelLabel} &nbsp;·&nbsp; Trừ ${pointsDeducted} điểm Reputation</span>`,
+            "⚠️"
+        );
+    }
+};
 </script>
+
+<!-- ===== MODAL REPUTATION ===== -->
+<div id="modal-reputation" class="fixed inset-0 z-[9990] items-center justify-center" style="display:none; background:rgba(0,0,0,0.55); padding: 32px;">
+  <div class="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden" style="height: 80vh;">
+    
+    <!-- Header -->
+    <div class="px-10 py-7 border-b border-gray-100 flex items-center justify-between shrink-0">
+      <div>
+        <h2 class="text-3xl font-black text-gray-900 tracking-tight">Reputation</h2>
+        <p class="text-base text-gray-400 font-medium mt-1">Đánh giá & lịch sử vi phạm khách hàng</p>
+      </div>
+      <button onclick="closeReputationModal()" class="w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-all text-xl font-bold leading-none">×</button>
+    </div>
+
+    <!-- Tabs - pill style, căn giữa -->
+    <div class="flex items-center justify-center px-10 py-5 shrink-0">
+      <div class="flex bg-gray-100 rounded-full p-1.5 gap-1">
+        <button onclick="switchRepTab('today')" id="rep-tab-today" class="rep-tab px-7 py-2.5 rounded-full text-base font-bold transition-all bg-white text-gray-900 shadow-sm">Hôm nay</button>
+        <button onclick="switchRepTab('all')" id="rep-tab-all" class="rep-tab px-7 py-2.5 rounded-full text-base font-bold transition-all text-gray-400 hover:text-gray-600">Tất cả khách</button>
+        <button onclick="switchRepTab('rank')" id="rep-tab-rank" class="rep-tab px-7 py-2.5 rounded-full text-base font-bold transition-all text-gray-400 hover:text-gray-600">Xếp hạng</button>
+      </div>
+    </div>
+
+    <!-- Tab Content - chiều cao còn lại, scroll bên trong -->
+    <div class="flex-1 overflow-y-auto" id="rep-tab-content" style="min-height:0;">
+      <div class="flex items-center justify-center h-full text-gray-400 text-base">Đang tải...</div>
+    </div>
+
+  </div>
+</div>
+<!-- ===== END MODAL REPUTATION ===== -->
 </body>
 </html>
