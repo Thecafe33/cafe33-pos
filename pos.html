@@ -4209,6 +4209,11 @@ function renderBedBookings(list) {
                                     cancelType: 'auto_timeout',
                                     note: 'Hủy tự động (Quá 50p)'
                                 });
+
+                                // Trừ 10 điểm Reputation do quá giờ không đến
+                                if (booking.phone) {
+                                    updateRepScore(booking.phone, booking.name || 'Khách hàng', -10, 'Lịch bị hủy do quá giờ', bookingId);
+                                }
                                 
                                 // Cập nhật hiển thị ngay lập tức
                                 booking.status = 'đã hủy';
@@ -4737,6 +4742,24 @@ function selectBedItem(index) {
         
         // Tính tiền tạm tính cho Active
         // Tính tiền tạm tính cho Active
+        // Load warning badge số lần cảnh báo
+        (function() {
+            var warnPhone = data.phone ? normalizePhone(data.phone) : null;
+            var warnKey = warnPhone || bookingId;
+            firebase.database().ref('bedWarnings/' + warnKey + '/' + bookingId).once('value').then(function(snap) {
+                var count = (snap.val() && snap.val().count) ? snap.val().count : 0;
+                if (count > 0) {
+                    var color = count >= 3 ? '#dc2626' : count === 2 ? '#f97316' : '#f59e0b';
+                    document.querySelectorAll('.warn-badge-pc, .warn-mob-badge').forEach(function(b) {
+                        b.textContent = count;
+                        b.style.display = 'flex';
+                        b.classList.remove('hidden');
+                        b.style.backgroundColor = color;
+                    });
+                }
+            });
+        })();
+
         if (data.phone) {
              calculateSessionSpend(data.phone, data.start, data.end).then(total => {
                 var infoDiv = document.getElementById('done-session-info');
@@ -4763,6 +4786,7 @@ function selectBedItem(index) {
                                 <span class="text-[10px] font-bold uppercase">Copy Thông báo kết thúc</span>
                             </button>
                             <button onclick="sendWarning(this)" data-id="${bookingId}" data-name="${data.name||'Khách hàng'}"
+                                id="warn-btn-pc-${bookingId}"
                                 class="warn-btn relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 transition-all active:scale-95">
                                 <span class="material-symbols-outlined text-[16px]">warning</span>
                                 <span class="text-[10px] font-bold uppercase">Cảnh báo</span>
@@ -5529,8 +5553,24 @@ function submitCancelBooking(type) {
     if (!bookingId) return;
 
     var reasonText = "";
-    if (type === 'customer') reasonText = "Khách báo hủy";
+    if (type === 'customer_self') reasonText = "Khách tự hủy qua app";
+    else if (type === 'customer') reasonText = "Khách báo hủy";
     else if (type === 'store') reasonText = "The cafe 33 hủy (System)";
+
+    // Tìm booking để lấy phone + name
+    var booking = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).find(function(b){ return b.id === bookingId; });
+    var phone = booking ? (booking.phone || null) : null;
+    var guestName = booking ? (booking.name || 'Khách hàng') : 'Khách hàng';
+
+    // Trừ điểm Reputation theo loại hủy
+    if (phone) {
+        if (type === 'customer_self') {
+            updateRepScore(phone, guestName, -2, 'Khách tự hủy lịch qua app', bookingId);
+        } else if (type === 'customer') {
+            updateRepScore(phone, guestName, -8, 'Khách báo hủy (quán ghi nhận)', bookingId);
+        }
+        // type === 'store': quán tự hủy -> không trừ điểm
+    }
 
     // Đóng modal
     document.getElementById('modal-cancel-reason').classList.add('hidden');
@@ -5539,12 +5579,12 @@ function submitCancelBooking(type) {
     // Cập nhật Firebase
     db.ref('bedBookings/' + bookingId).update({
         status: 'đã hủy',
-        cancelType: type, // Lưu loại: 'customer' hoặc 'store'
+        cancelType: type,
         note: reasonText
     }, (err) => {
         document.getElementById('loading-overlay').style.display = 'none';
         if (!err) {
-            openBedManager(); // Load lại danh sách
+            openBedManager();
         } else {
             alert("Lỗi: " + err.message);
         }
@@ -8685,6 +8725,10 @@ function runAutoCancelScan(list) {
                             cancelType: 'auto_timeout',
                             note: 'Hủy tự động (Quá 50p)'
                         });
+                        // Trừ 10 điểm Reputation do quá giờ không đến
+                        if (booking.phone) {
+                            updateRepScore(booking.phone, booking.name || 'Khách hàng', -10, 'Lịch bị hủy do quá giờ', bookingId);
+                        }
                     }
                 }
             }
@@ -10028,13 +10072,20 @@ function discountFormDelete() {
         <p class="text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-6">Vui lòng chọn lý do hủy</p>
 
         <div class="space-y-3 mb-6">
+            <button onclick="submitCancelBooking('customer_self')" 
+                class="w-full py-4 bg-white border border-gray-100 rounded-[20px] text-gray-700 font-bold text-xs uppercase shadow-sm active:scale-95 transition-all hover:border-amber-400 hover:text-amber-600 hover:shadow-md flex items-center justify-center gap-2">
+                <span>📱</span> Khách tự hủy qua app
+                <span class="text-[9px] text-amber-500 font-black">(-2đ Rep)</span>
+            </button>
             <button onclick="submitCancelBooking('customer')" 
-                class="w-full py-4 bg-white border border-gray-100 rounded-[20px] text-gray-700 font-bold text-xs uppercase shadow-sm active:scale-95 transition-all hover:border-[#006241] hover:text-[#006241] hover:shadow-md flex items-center justify-center gap-2">
-                <span>👤</span> Khách báo hủy
+                class="w-full py-4 bg-white border border-gray-100 rounded-[20px] text-gray-700 font-bold text-xs uppercase shadow-sm active:scale-95 transition-all hover:border-red-400 hover:text-red-500 hover:shadow-md flex items-center justify-center gap-2">
+                <span>👤</span> Khách báo hủy (quán ghi nhận)
+                <span class="text-[9px] text-red-400 font-black">(-8đ Rep)</span>
             </button>
             <button onclick="submitCancelBooking('store')" 
                 class="w-full py-4 bg-white border border-gray-100 rounded-[20px] text-gray-700 font-bold text-xs uppercase shadow-sm active:scale-95 transition-all hover:border-[#006241] hover:text-[#006241] hover:shadow-md flex items-center justify-center gap-2">
                 <span>🏪</span> Quán hủy (System)
+                <span class="text-[9px] text-gray-400 font-black">(0đ Rep)</span>
             </button>
         </div>
 
@@ -10701,29 +10752,43 @@ async function sendWarning(el) {
     var guestName = el.dataset.name || 'Khách hàng';
     if (!bookingId) return;
 
-    // Tìm phone
+    // Tìm phone từ globalAllBookings
     var booking = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).find(function(b){ return b.id === bookingId; });
     var phone = booking ? normalizePhone(booking.phone || '') : null;
+    var bedId = booking ? (booking.bedId || '?') : '?';
 
     var warnKey = phone || bookingId;
     var ref = firebase.database().ref('bedWarnings/' + warnKey + '/' + bookingId);
     var snap = await ref.once('value');
     var currentCount = (snap.val() && snap.val().count) ? snap.val().count : 0;
     var newCount = currentCount + 1;
+
+    // Lần 4 trở đi: hiện popup thông báo quản lý thay vì gửi thêm
+    if (newCount > 3) {
+        if (typeof showAppModal === 'function') {
+            showAppModal(
+                'Vượt mức cảnh báo',
+                'The Cafe 33 có quyền đến Bed ' + bedId + ' kiểm tra và mời <b>' + guestName + '</b> rời khỏi.<br><br>Bấm <b>Trả Bed</b> ở màn hình chi tiết để kết thúc lịch ngay lập tức.',
+                '🚨'
+            );
+        }
+        return;
+    }
+
     await ref.set({ count: newCount, guestName: guestName, lastWarning: new Date().toLocaleString('vi-VN') });
 
-    // Trừ điểm
+    // Trừ điểm Reputation
     if (phone) {
         var pts = newCount === 1 ? -1 : newCount === 2 ? -2 : -3;
         updateRepScore(phone, guestName, pts, 'Cảnh báo vi phạm cấp ' + newCount, bookingId);
     }
 
-    // Nội dung thông báo
+    // Nội dung thông báo theo cấp
     var warningText = '';
     if (newCount === 1) {
-        warningText = '⚠️ Thông báo từ \u{1D40C}\u{1D421}\u{1D41E} \u{1D41C}\u{1D41A}\u{1D41F}\u{1D41E} \u{1D7D9}\u{1D7D9} ⚠️\nHệ thống ghi nhận ' + guestName + ' đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.\nVui lòng sử dụng một cách văn minh và đúng quy định.\n⚠️ Trong trường hợp hệ thống ghi nhận thêm 02 nghi ngờ vi phạm,\nBed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.\n🤖 Tin nhắn tự động bởi AI của The Cafe 33';
+        warningText = '⚠️ Thông báo từ The cafe 33 ⚠️\nHệ thống ghi nhận ' + guestName + ' đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.\nVui lòng sử dụng một cách văn minh và đúng quy định.\n⚠️ Trong trường hợp hệ thống ghi nhận thêm 02 nghi ngờ vi phạm,\nBed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.\n🤖 Tin nhắn tự động bởi AI của The Cafe 33';
     } else if (newCount === 2) {
-        warningText = '⚠️ Thông báo từ \u{1D40C}\u{1D421}\u{1D41E} \u{1D41C}\u{1D41A}\u{1D41F}\u{1D41E} \u{1D7D9}\u{1D7D9} ⚠️\nHệ thống ghi nhận ' + guestName + ' đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.\nVui lòng sử dụng một cách văn minh và đúng quy định.\n⚠️ Trong trường hợp hệ thống ghi nhận thêm 01 nghi ngờ vi phạm,\nBed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.\n🤖 Tin nhắn tự động bởi AI của The Cafe 33';
+        warningText = '⚠️ Thông báo từ The cafe 33 ⚠️\nHệ thống ghi nhận ' + guestName + ' đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.\nVui lòng sử dụng một cách văn minh và đúng quy định.\n⚠️ Trong trường hợp hệ thống ghi nhận thêm 01 nghi ngờ vi phạm,\nBed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.\n🤖 Tin nhắn tự động bởi AI của The Cafe 33';
     } else {
         warningText = '⚠️ Thông báo từ The Cafe 33 ⚠️\nHệ thống ghi nhận dấu hiệu bất thường trong khu vực Bed.\nVui lòng mở rèm Bed trong 30 giây để hệ thống AI tự động xác nhận.\n⏱️ Lưu ý: Nếu không mở rèm trong vòng 2 phút kể từ khi nhận thông báo, điện khu vực Bed sẽ tự động tắt và hệ thống sẽ thông báo đến quản lý để tiến hành kiểm tra.\nXin cảm ơn và mong bạn thông cảm vì sự bất tiện.\nThe Cafe 33 – Không gian văn minh, an toàn cho tất cả khách hàng. 🤖';
     }
@@ -10745,10 +10810,11 @@ async function sendWarning(el) {
     var pts2 = newCount === 1 ? 1 : newCount === 2 ? 2 : 3;
     if (typeof showAppModal === 'function') {
         showAppModal('Đã gửi cảnh báo lần ' + newCount,
-            'Thông báo cấp ' + Math.min(newCount,3) + ' cho <b>' + guestName + '</b> đã được sao chép.<br><span style="color:#9ca3af;font-size:12px;">Trừ ' + pts2 + ' điểm Reputation</span>',
+            'Thông báo cấp ' + newCount + ' cho <b>' + guestName + '</b> đã được sao chép.<br><span style="color:#9ca3af;font-size:12px;">Trừ ' + pts2 + ' điểm Reputation</span>',
             '⚠️');
     }
 }
+
 
 // ---- MODAL UI ----
 var repCurrentTab = 'today';
