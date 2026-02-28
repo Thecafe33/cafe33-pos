@@ -10806,39 +10806,44 @@ function repRow(phone, name, score, sub, onClick) {
 
 async function loadRepToday() {
     var content = document.getElementById('rep-tab-content');
-    var todayStr = new Date().toISOString().slice(0,10);
     try {
-        var snap = await firebase.database().ref('bedBookings').once('value');
-        var data = snap.val() || {};
-        var list = Object.values(data).filter(function(b) { return b.date && b.date.slice(0,10) === todayStr; });
-        // fallback globalAllBookings
-        if (typeof globalAllBookings !== 'undefined') {
-            var seen = {};
-            list.forEach(function(b){ seen[b.id||''] = true; });
-            globalAllBookings.forEach(function(b) {
-                if (!seen[b.id] && b.date && b.date.slice(0,10) === todayStr) list.push(b);
-            });
-        }
+        // Date hôm nay dạng dd/mm/yyyy (đúng với format lưu trong Firebase)
+        var now = new Date();
+        var dd = String(now.getDate()).padStart(2,'0');
+        var mm = String(now.getMonth()+1).padStart(2,'0');
+        var yyyy = now.getFullYear();
+        var todayDDMMYYYY = dd + '/' + mm + '/' + yyyy;
+
+        // Dùng globalAllBookings (đã được chuẩn hóa với displayDate)
+        var allBookings = (typeof globalAllBookings !== 'undefined') ? globalAllBookings : [];
+        var list = allBookings.filter(function(b) {
+            var d = b.displayDate || b.date || '';
+            return d === todayDDMMYYYY;
+        });
+
         if (list.length === 0) {
             content.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#9ca3af;font-size:16px;">Không có lịch đặt nào hôm nay.</div>';
             return;
         }
+
         var rows = await Promise.all(list.map(async function(b) {
             var s = await getRepScore(b.phone || '');
             return Object.assign({}, b, {repScore: s});
         }));
         rows.sort(function(a,b){ return a.repScore - b.repScore; });
+
         var html = '<div>';
         rows.forEach(function(b) {
             var warn = b.repScore < REP_WARN_THRESHOLD ? ' <span style="color:#ef4444;font-weight:700;font-size:13px;">· Cảnh báo</span>' : '';
-            var safeName = (b.name||'Khách hàng').replace(/'/g,"\\'");
+            var safeName = (b.name||'Khách hàng').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
             var safePhone = normalizePhone(b.phone||'');
-            html += repRow(safePhone, (b.name||'Khách hàng') + warn, b.repScore,
-                (b.phone||'--') + ' · Bed ' + (b.bedId||'--'),
-                "showRepDetail('" + safePhone + "','" + safeName + "')");
+            var sub = (b.phone||'--') + ' &nbsp;·&nbsp; Bed ' + (b.bedId||'--');
+            html += repRow(safePhone, (b.name||'Khách hàng') + warn, b.repScore, sub,
+                "showRepDetail('" + safePhone + "','" + safeName + "','" + b.id + "')");
         });
         html += '</div>';
         content.innerHTML = html;
+
         var hasRisk = rows.some(function(r){ return r.repScore < REP_WARN_THRESHOLD; });
         var dot = document.getElementById('rep-alert-dot');
         if (dot) { dot.style.display = hasRisk ? 'block' : 'none'; }
@@ -10895,13 +10900,16 @@ function renderRepAllList(query) {
         filtered.forEach(function(c) {
             var viols = c.history.filter(function(h){ return h.delta < 0; }).length;
             var safeName = c.name.replace(/'/g,"\\'");
-            html += repRow(c.phone, c.name, c.score, c.phone + ' · ' + viols + ' vi phạm', "showRepDetail('" + c.phone + "','" + safeName + "')");
+            html += repRow(c.phone, c.name, c.score, c.phone + ' · ' + viols + ' vi phạm', "showRepDetail('" + c.phone + "','" + safeName + "','')");
         });
     }
     html += '</div>';
     content.innerHTML = html;
-    var inp = document.getElementById('rep-search-input');
-    if (inp) { inp.focus(); if (query) inp.setSelectionRange(query.length, query.length); }
+    // Chỉ focus nếu đang gõ (query đã có), không focus khi mới mở tab
+    if (query) {
+        var inp = document.getElementById('rep-search-input');
+        if (inp) { inp.focus(); inp.setSelectionRange(query.length, query.length); }
+    }
 }
 
 async function loadRepRank() {
@@ -10923,7 +10931,7 @@ async function loadRepRank() {
             var viols = c.history.filter(function(h){ return h.delta < 0; }).length;
             var safeName = c.name.replace(/'/g,"\\'");
             var rankColor = idx < 3 ? rankColors[idx] : '#d1d5db';
-            html += '<div onclick="showRepDetail(\'' + c.phone + '\',\'' + safeName + '\')" style="padding:20px 40px;display:flex;align-items:center;gap:24px;border-bottom:1px solid #f9fafb;cursor:pointer;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'">'
+            html += '<div onclick="showRepDetail(\'' + c.phone + '\',\'' + safeName + '\',\'\')" style="padding:20px 40px;display:flex;align-items:center;gap:24px;border-bottom:1px solid #f9fafb;cursor:pointer;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'">'
                 + '<div style="width:32px;text-align:center;font-size:20px;font-weight:900;color:' + rankColor + ';flex-shrink:0;">' + (idx+1) + '</div>'
                 + '<div style="flex:1;"><div style="font-size:18px;font-weight:800;color:#111;">' + c.name + '</div>'
                 + '<div style="font-size:14px;color:#9ca3af;margin-top:4px;font-family:monospace;">' + c.phone + ' · ' + viols + ' vi phạm</div></div>'
@@ -10939,7 +10947,7 @@ async function loadRepRank() {
     }
 }
 
-async function showRepDetail(phone, name) {
+async function showRepDetail(phone, name, bookingId) {
     var content = document.getElementById('rep-tab-content');
     content.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#9ca3af;font-size:16px;">Đang tải...</div>';
     try {
@@ -10948,6 +10956,31 @@ async function showRepDetail(phone, name) {
         var score = Math.max(0, Math.min(REP_MAX, data.score != null ? data.score : REP_DEFAULT));
         var tier = getRepTier(score);
         var history = data.history ? Object.values(data.history).sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); }) : [];
+
+        // Tìm thông tin người đi cùng từ booking gần nhất hoặc bookingId cụ thể
+        var allBookings = (typeof globalAllBookings !== 'undefined') ? globalAllBookings : [];
+        var targetBooking = null;
+        if (bookingId) {
+            targetBooking = allBookings.find(function(b){ return b.id === bookingId; });
+        }
+        if (!targetBooking) {
+            // Lấy booking gần nhất của phone này
+            var phoneBookings = allBookings.filter(function(b){ return normalizePhone(b.phone||'') === phone; });
+            if (phoneBookings.length > 0) targetBooking = phoneBookings[phoneBookings.length - 1];
+        }
+        var compName = targetBooking ? (targetBooking.compName || '') : '';
+        var compPhone = targetBooking ? (targetBooking.compPhone || '') : '';
+
+        // Card thông tin người đi cùng
+        var compHtml = '';
+        if (compName || compPhone) {
+            compHtml = '<div style="margin-top:10px;padding:14px 18px;background:white;border-radius:12px;border:1px solid #e5e7eb;">'
+                + '<div style="font-size:12px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">Người đi cùng</div>'
+                + '<div style="font-size:16px;font-weight:700;color:#1f2937;">' + (compName||'--') + '</div>'
+                + '<div style="font-size:14px;color:#9ca3af;font-family:monospace;margin-top:2px;">' + (compPhone||'--') + '</div>'
+                + '</div>';
+        }
+
         var histHtml = history.length === 0
             ? '<div style="padding:48px;text-align:center;color:#9ca3af;font-size:16px;">Chưa có lịch sử điểm.</div>'
             : history.map(function(h) {
@@ -10960,14 +10993,18 @@ async function showRepDetail(phone, name) {
                     + '<div style="text-align:right;"><div style="font-size:22px;font-weight:900;color:' + dColor + ';">' + dStr + ' điểm</div>'
                     + '<div style="font-size:13px;color:#9ca3af;">' + (h.scoreBefore!=null?h.scoreBefore:'--') + ' → ' + (h.scoreAfter!=null?h.scoreAfter:'--') + '</div></div></div>';
             }).join('');
+
         var prevTab = repCurrentTab;
         content.innerHTML = '<div style="padding:28px 40px;">'
             + '<button onclick="switchRepTab(\'' + prevTab + '\')" style="display:flex;align-items:center;gap:8px;font-size:15px;color:#9ca3af;font-weight:700;margin-bottom:24px;cursor:pointer;background:none;border:none;padding:0;">← Quay lại</button>'
-            + '<div style="border-radius:20px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;background:' + tier.bg + ';border:1.5px solid ' + tier.border + ';">'
+            + '<div style="border-radius:20px;padding:28px 32px;margin-bottom:24px;background:' + tier.bg + ';border:1.5px solid ' + tier.border + ';">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;">'
             + '<div><div style="font-size:22px;font-weight:900;color:#1f2937;">' + name + '</div>'
             + '<div style="font-size:15px;color:#9ca3af;font-family:monospace;margin-top:6px;">' + phone + '</div>'
             + '<div style="font-size:14px;font-weight:800;margin-top:14px;padding:6px 16px;border-radius:99px;display:inline-block;color:' + tier.color + ';background:white;">' + tier.label + '</div></div>'
             + '<div style="font-size:72px;font-weight:900;color:' + tier.color + ';line-height:1;">' + score + '</div></div>'
+            + compHtml
+            + '</div>'
             + '<div style="font-size:13px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Lịch sử điểm</div>'
             + histHtml + '</div>';
     } catch(e) {
