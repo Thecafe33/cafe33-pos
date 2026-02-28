@@ -1336,9 +1336,9 @@ input, button, select, textarea { font-size: 1rem; }
             </div>
             <div class="w-[20%] flex flex-col gap-3">
                 <button onclick="openBookingModal()" class="w-full bg-[#006241] hover:bg-[#004f32] text-white py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1"><span class="text-xs uppercase tracking-wider">Đặt Mới</span></button>
-                <button onclick="openReputationModal()" id="btn-reputation" class="w-full py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1 relative" style="background:#c0392b; color:white;">
+                <button onclick="openReputationModal()" id="btn-reputation" class="w-full py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1 relative" style="background:#9b2335; color:white;">
                     <span class="text-xs uppercase tracking-wider font-black">Reputation</span>
-                    <span id="rep-alert-dot" class="hidden absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse border-2 border-white"></span>
+                    <span id="rep-alert-dot" class="hidden absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-yellow-300 animate-pulse"></span>
                 </button>
                 <div class="flex-1 bg-white rounded-[20px] shadow-sm border border-gray-100 p-3 flex flex-col overflow-hidden"><h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 text-center">Live Map</h3><div class="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar" id="vertical-map-container"></div>
                     <button id="btn-store-status" onclick="handleStoreStatusClick()" class="w-full py-4 rounded-[20px] font-black text-xs uppercase shadow-md active:scale-95 transition-all mt-3 bg-white text-gray-400 border border-gray-100">
@@ -4762,31 +4762,15 @@ function selectBedItem(index) {
                                 <span class="material-symbols-outlined text-[16px]">content_copy</span>
                                 <span class="text-[10px] font-bold uppercase">Copy Thông báo kết thúc</span>
                             </button>
-                            <button onclick="sendWarning(this)" 
-                                class="warn-btn flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-700 border border-amber-200 transition-all active:scale-95 relative"
-                                data-id="${bookingId}" data-name="${(data.name||'Khách hàng')}">
+                            <button onclick="sendWarning(this)" data-id="${bookingId}" data-name="${data.name||'Khách hàng'}"
+                                class="warn-btn relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 transition-all active:scale-95">
                                 <span class="material-symbols-outlined text-[16px]">warning</span>
                                 <span class="text-[10px] font-bold uppercase">Cảnh báo</span>
-                                <span class="warn-badge-pc hidden absolute -top-1.5 -right-1.5 text-[9px] font-black text-white rounded-full w-4 h-4 items-center justify-center bg-red-500"></span>
+                                <span class="warn-badge-pc hidden absolute -top-1.5 -right-1.5 text-[9px] font-black text-white rounded-full w-4 h-4 flex items-center justify-center bg-red-500"></span>
                             </button>
                         </div>
                     </div>`;
                     infoDiv.classList.remove('hidden');
-                    // Load warning badge PC
-                    if (bookingId) {
-                        firebase.database().ref('bedWarnings/' + bookingId).once('value').then(snap => {
-                            const cnt = snap.val()?.count || 0;
-                            if (cnt > 0) {
-                                const badgeEl = infoDiv.querySelector('.warn-badge-pc');
-                                if (badgeEl) {
-                                    badgeEl.textContent = cnt;
-                                    badgeEl.classList.remove('hidden');
-                                    badgeEl.classList.add('flex');
-                                    badgeEl.style.backgroundColor = cnt >= 3 ? '#dc2626' : cnt === 2 ? '#f97316' : '#f59e0b';
-                                }
-                            }
-                        });
-                    }
                 }
              });
         }
@@ -7310,11 +7294,10 @@ function renderDetailContentMobile(b) {
             class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm active:scale-90 active:bg-[#006241] active:text-white transition-all">
             <span class="material-symbols-outlined text-[20px]">content_copy</span>
         </button>
-        <button onclick="sendWarning(this)"
-            class="warn-mob-btn relative w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm active:scale-90 border border-amber-300 transition-all"
-            data-id="${b.id}" data-name="${b.name||'Khách hàng'}">
+        <button onclick="sendWarning(this)" data-id="${b.id}" data-name="${b.name||'Khách hàng'}"
+            class="warn-mob-btn relative w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm active:scale-90 border border-amber-300 transition-all">
             <span class="material-symbols-outlined text-[20px]">warning</span>
-            <span class="warn-mob-badge hidden absolute -top-1 -right-1 text-[9px] font-black text-white rounded-full w-4 h-4 items-center justify-center bg-red-500 leading-none"></span>
+            <span class="warn-mob-badge hidden absolute -top-1 -right-1 text-[9px] font-black text-white rounded-full w-4 h-4 flex items-center justify-center bg-red-500"></span>
         </button>
     </div>
     ` : ''}
@@ -7428,22 +7411,6 @@ function renderDetailContentMobile(b) {
                 bEl.className = `${currentCountdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md transition-colors`;
             }
         }, 1000);
-    }
-
-    // --- 6. LOAD WARNING BADGE cho mobile ---
-    if (isActive && b.id) {
-        firebase.database().ref('bedWarnings/' + b.id).once('value').then(snap => {
-            const cnt = snap.val()?.count || 0;
-            if (cnt > 0) {
-                const badgeEls = document.querySelectorAll('.warn-mob-badge');
-                badgeEls.forEach(el => {
-                    el.textContent = cnt;
-                    el.classList.remove('hidden');
-                    el.classList.add('flex');
-                    el.style.backgroundColor = cnt >= 3 ? '#dc2626' : cnt === 2 ? '#f97316' : '#f59e0b';
-                });
-            }
-        });
     }
 }
 
@@ -9035,11 +9002,6 @@ function resumeStore() {
     db.ref('store_status').set({ isOff: false });
 }
     // --- HÀM COPY THÔNG BÁO BED (MỚI) ---
-// =========================================================
-// MODULE: CẢNH BÁO VI PHẠM BED (WARNING SYSTEM)
-// =========================================================
-// sendWarning: xem định nghĩa cuối file
-
 function copyBedNotification(endTime) {
     const text = `🌟 Chào bạn đến Cafe in Bed 🌟
 Thời gian sử dụng Bed của bạn kết thúc lúc ${endTime}.
@@ -10656,508 +10618,392 @@ window.addEventListener('load', function() {
 
 
 // =========================================================
-// MODULE: REPUTATION SYSTEM
+// REPUTATION SYSTEM - toàn bộ logic
 // =========================================================
-
-// --- HẰNG SỐ ---
 const REP_DEFAULT = 100;
 const REP_MAX = 100;
 const REP_WARN_THRESHOLD = 60;
 
-// --- TÍNH ĐIỂM XẾP HẠNG ---
 function getRepTier(score) {
     if (score >= 80) return { label: 'Tin tưởng', color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0' };
     if (score >= 60) return { label: 'Chú ý',    color: '#ca8a04', bg: '#fefce8', border: '#fde68a' };
     if (score >= 40) return { label: 'Rủi ro',   color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' };
-    return                 { label: 'Cấm',        color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
+    return             { label: 'Cấm',            color: '#dc2626', bg: '#fef2f2', border: '#fecaca' };
 }
 
-// --- LẤY ĐIỂM TỪ FIREBASE (THEO PHONE) ---
 async function getRepScore(phone) {
-    const snap = await firebase.database().ref('reputation/' + normalizePhone(phone)).once('value');
-    const val = snap.val();
-    if (!val) return REP_DEFAULT;
-    return Math.max(0, Math.min(REP_MAX, val.score ?? REP_DEFAULT));
+    if (!phone) return REP_DEFAULT;
+    try {
+        const snap = await firebase.database().ref('reputation/' + normalizePhone(phone)).once('value');
+        const val = snap.val();
+        if (!val) return REP_DEFAULT;
+        return Math.max(0, Math.min(REP_MAX, val.score != null ? val.score : REP_DEFAULT));
+    } catch(e) { return REP_DEFAULT; }
 }
 
-// --- CẬP NHẬT ĐIỂM ---
 async function updateRepScore(phone, name, delta, reason, bookingId) {
-    const normPhone = normalizePhone(phone);
-    const ref = firebase.database().ref('reputation/' + normPhone);
-    const snap = await ref.once('value');
-    const val = snap.val() || {};
-    const oldScore = Math.max(0, Math.min(REP_MAX, val.score ?? REP_DEFAULT));
-    const newScore = Math.max(0, Math.min(REP_MAX, oldScore + delta));
-    const histRef = ref.child('history').push();
-    const histEntry = {
-        date: new Date().toLocaleDateString('vi-VN'),
-        time: new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}),
-        delta: delta,
-        reason: reason,
-        bookingId: bookingId || '',
-        scoreBefore: oldScore,
-        scoreAfter: newScore
-    };
-    await ref.update({ score: newScore, name: name || val.name || 'Khách hàng', phone: normPhone });
-    await histRef.set(histEntry);
-    return newScore;
+    if (!phone) return;
+    try {
+        const normPhone = normalizePhone(phone);
+        const ref = firebase.database().ref('reputation/' + normPhone);
+        const snap = await ref.once('value');
+        const val = snap.val() || {};
+        const oldScore = Math.max(0, Math.min(REP_MAX, val.score != null ? val.score : REP_DEFAULT));
+        const newScore = Math.max(0, Math.min(REP_MAX, oldScore + delta));
+        await ref.update({ score: newScore, name: name || val.name || 'Khách hàng', phone: normPhone });
+        await ref.child('history').push({
+            date: new Date().toLocaleDateString('vi-VN'),
+            time: new Date().toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'}),
+            delta: delta, reason: reason,
+            bookingId: bookingId || '',
+            scoreBefore: oldScore, scoreAfter: newScore
+        });
+    } catch(e) { console.error('updateRepScore error:', e); }
 }
 
-// --- HOOK: NÚT CẢNH BÁO (ĐÃ CÓ sendWarning) -> THÊM ĐIỂM TRƯỚC KHI GHI ---
-// sendWarning được định nghĩa đầy đủ ở cuối file
+// Hook setCleaningFee - trừ 3 điểm (wrap an toàn)
+(function() {
+    if (typeof setCleaningFee !== 'function') return;
+    const _orig = setCleaningFee;
+    setCleaningFee = function(phone, amount, bookingId) {
+        try {
+            const booking = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).find(function(b){ return b.id === bookingId; });
+            const guestName = booking ? (booking.name || 'Khách hàng') : 'Khách hàng';
+            updateRepScore(phone, guestName, -3, 'Bị tính phí vệ sinh', bookingId);
+        } catch(e) {}
+        _orig(phone, amount, bookingId);
+    };
+})();
 
-// --- HOOK: CLEANING FEE -> TRỪ 3 ĐIỂM ---
-const _origSetCleaningFee = setCleaningFee;
-setCleaningFee = function(phone, amount, bookingId) {
-    // Tìm tên khách từ globalAllBookings
-    const booking = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).find(b => b.id === bookingId);
-    const guestName = booking ? (booking.name || 'Khách hàng') : 'Khách hàng';
-    updateRepScore(phone, guestName, -3, 'Bị tính phí vệ sinh', bookingId);
-    _origSetCleaningFee(phone, amount, bookingId);
-};
+// Hook processCheckoutFirebase - cộng +3 nếu không vi phạm (wrap an toàn)
+(function() {
+    if (typeof processCheckoutFirebase !== 'function') return;
+    const _orig = processCheckoutFirebase;
+    processCheckoutFirebase = async function(booking) {
+        try {
+            const phone = booking.phone;
+            const bookingId = booking.id || booking.key;
+            if (phone && bookingId) {
+                const snapWarn = await firebase.database().ref('bedWarnings/' + normalizePhone(phone) + '/' + bookingId).once('value');
+                const snapFee = await firebase.database().ref('bedBookings/' + bookingId + '/hasPenalty').once('value');
+                if (!snapWarn.exists() && snapFee.val() !== true) {
+                    updateRepScore(phone, booking.name || 'Khách hàng', +3, 'Hoàn thành không vi phạm', bookingId);
+                }
+            }
+        } catch(e) {}
+        _orig(booking);
+    };
+})();
 
-// --- HOOK: CHECKOUT -> CỘNG +3 NẾU KHÔNG CÓ VI PHẠM ---
-const _origProcessCheckout = processCheckoutFirebase;
-processCheckoutFirebase = async function(booking) {
-    // Kiểm tra phiên này có vi phạm không
-    const phone = booking.phone;
-    const bookingId = booking.id || booking.key;
-    if (phone && bookingId) {
-        const snapWarn = await firebase.database().ref('bedWarnings/' + phone + '/' + bookingId).once('value');
-        const snapFee = await firebase.database().ref('bedBookings/' + bookingId + '/hasPenalty').once('value');
-        const hasViolation = snapWarn.exists() || snapFee.val() === true;
-        if (!hasViolation) {
-            updateRepScore(phone, booking.name || 'Khách hàng', +3, 'Hoàn thành không vi phạm', bookingId);
-        }
+// ---- sendWarning ----
+async function sendWarning(el) {
+    var bookingId = el.dataset.id;
+    var guestName = el.dataset.name || 'Khách hàng';
+    if (!bookingId) return;
+
+    // Tìm phone
+    var booking = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).find(function(b){ return b.id === bookingId; });
+    var phone = booking ? normalizePhone(booking.phone || '') : null;
+
+    var warnKey = phone || bookingId;
+    var ref = firebase.database().ref('bedWarnings/' + warnKey + '/' + bookingId);
+    var snap = await ref.once('value');
+    var currentCount = (snap.val() && snap.val().count) ? snap.val().count : 0;
+    var newCount = currentCount + 1;
+    await ref.set({ count: newCount, guestName: guestName, lastWarning: new Date().toLocaleString('vi-VN') });
+
+    // Trừ điểm
+    if (phone) {
+        var pts = newCount === 1 ? -1 : newCount === 2 ? -2 : -3;
+        updateRepScore(phone, guestName, pts, 'Cảnh báo vi phạm cấp ' + newCount, bookingId);
     }
-    _origProcessCheckout(booking);
-};
 
-// =========================================================
-// MODULE: MODAL REPUTATION - UI
-// =========================================================
+    // Nội dung thông báo
+    var warningText = '';
+    if (newCount === 1) {
+        warningText = '⚠️ Thông báo từ \u{1D40C}\u{1D421}\u{1D41E} \u{1D41C}\u{1D41A}\u{1D41F}\u{1D41E} \u{1D7D9}\u{1D7D9} ⚠️\nHệ thống ghi nhận ' + guestName + ' đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.\nVui lòng sử dụng một cách văn minh và đúng quy định.\n⚠️ Trong trường hợp hệ thống ghi nhận thêm 02 nghi ngờ vi phạm,\nBed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.\n🤖 Tin nhắn tự động bởi AI của The Cafe 33';
+    } else if (newCount === 2) {
+        warningText = '⚠️ Thông báo từ \u{1D40C}\u{1D421}\u{1D41E} \u{1D41C}\u{1D41A}\u{1D41F}\u{1D41E} \u{1D7D9}\u{1D7D9} ⚠️\nHệ thống ghi nhận ' + guestName + ' đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.\nVui lòng sử dụng một cách văn minh và đúng quy định.\n⚠️ Trong trường hợp hệ thống ghi nhận thêm 01 nghi ngờ vi phạm,\nBed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.\n🤖 Tin nhắn tự động bởi AI của The Cafe 33';
+    } else {
+        warningText = '⚠️ Thông báo từ The Cafe 33 ⚠️\nHệ thống ghi nhận dấu hiệu bất thường trong khu vực Bed.\nVui lòng mở rèm Bed trong 30 giây để hệ thống AI tự động xác nhận.\n⏱️ Lưu ý: Nếu không mở rèm trong vòng 2 phút kể từ khi nhận thông báo, điện khu vực Bed sẽ tự động tắt và hệ thống sẽ thông báo đến quản lý để tiến hành kiểm tra.\nXin cảm ơn và mong bạn thông cảm vì sự bất tiện.\nThe Cafe 33 – Không gian văn minh, an toàn cho tất cả khách hàng. 🤖';
+    }
 
-let repCurrentTab = 'today';
+    // Copy clipboard
+    try { await navigator.clipboard.writeText(warningText); }
+    catch(e) {
+        var ta = document.createElement('textarea');
+        ta.value = warningText; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+    }
+
+    // Refresh badge
+    var color = newCount >= 3 ? '#dc2626' : newCount === 2 ? '#f97316' : '#f59e0b';
+    document.querySelectorAll('.warn-mob-badge, .warn-badge-pc').forEach(function(b) {
+        b.textContent = newCount; b.style.display = 'flex'; b.classList.remove('hidden'); b.style.backgroundColor = color;
+    });
+
+    var pts2 = newCount === 1 ? 1 : newCount === 2 ? 2 : 3;
+    if (typeof showAppModal === 'function') {
+        showAppModal('Đã gửi cảnh báo lần ' + newCount,
+            'Thông báo cấp ' + Math.min(newCount,3) + ' cho <b>' + guestName + '</b> đã được sao chép.<br><span style="color:#9ca3af;font-size:12px;">Trừ ' + pts2 + ' điểm Reputation</span>',
+            '⚠️');
+    }
+}
+
+// ---- MODAL UI ----
+var repCurrentTab = 'today';
+var repAllCache = [];
 
 function openReputationModal() {
-    document.getElementById('modal-reputation').style.display = 'flex';
+    var m = document.getElementById('modal-reputation');
+    if (!m) { alert('Lỗi: không tìm thấy modal reputation!'); return; }
+    if (!m._listenerAdded) {
+        m.addEventListener('click', function(e) { if (e.target === m) closeReputationModal(); });
+        m._listenerAdded = true;
+    }
+    m.style.display = 'flex';
     switchRepTab('today');
 }
 
 function closeReputationModal() {
-    document.getElementById('modal-reputation').style.display = 'none';
+    var m = document.getElementById('modal-reputation');
+    if (m) m.style.display = 'none';
 }
-
-// Đóng khi click ngoài modal (chạy sau khi DOM đã load xong)
-window.addEventListener('DOMContentLoaded', function() {
-    var repModal = document.getElementById('modal-reputation');
-    if (repModal) {
-        repModal.addEventListener('click', function(e) {
-            if (e.target === this) closeReputationModal();
-        });
-    }
-});
 
 function switchRepTab(tab) {
     repCurrentTab = tab;
-    // Pill style: reset all
-    document.querySelectorAll('.rep-tab').forEach(t => {
-        t.classList.remove('bg-white', 'text-gray-900', 'shadow-sm');
-        t.classList.add('text-gray-400');
+    ['today','all','rank'].forEach(function(t) {
+        var btn = document.getElementById('rep-tab-' + t);
+        if (!btn) return;
+        if (t === tab) {
+            btn.style.background = 'white';
+            btn.style.color = '#111';
+            btn.style.boxShadow = '0 1px 4px rgba(0,0,0,0.1)';
+        } else {
+            btn.style.background = 'transparent';
+            btn.style.color = '#9ca3af';
+            btn.style.boxShadow = 'none';
+        }
     });
-    // Set active
-    const active = document.getElementById('rep-tab-' + tab);
-    if (active) {
-        active.classList.remove('text-gray-400');
-        active.classList.add('bg-white', 'text-gray-900', 'shadow-sm');
-    }
-    // Load content
-    const content = document.getElementById('rep-tab-content');
-    content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 text-base" style="min-height:200px;">Đang tải...</div>';
+    var content = document.getElementById('rep-tab-content');
+    if (content) content.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#9ca3af;font-size:16px;">Đang tải...</div>';
     if (tab === 'today') loadRepToday();
     else if (tab === 'all') loadRepAll();
-    else if (tab === 'rank') loadRepRank();
+    else loadRepRank();
 }
 
-// ---- TAB 1: HÔM NAY ----
+function repRow(phone, name, score, sub, onClick) {
+    var tier = getRepTier(score);
+    return '<div onclick="' + onClick + '" style="padding:20px 40px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f9fafb;cursor:pointer;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'">'
+        + '<div><div style="font-size:18px;font-weight:800;color:#111;">' + name + '</div>'
+        + '<div style="font-size:14px;color:#9ca3af;margin-top:4px;font-family:monospace;">' + sub + '</div></div>'
+        + '<div style="display:flex;align-items:center;gap:14px;">'
+        + '<div style="text-align:right;"><div style="font-size:32px;font-weight:900;color:' + tier.color + ';line-height:1;">' + score + '</div>'
+        + '<div style="font-size:13px;font-weight:700;color:' + tier.color + ';">' + tier.label + '</div></div>'
+        + '<div style="width:6px;height:40px;border-radius:99px;background:' + tier.color + ';"></div>'
+        + '</div></div>';
+}
+
 async function loadRepToday() {
-    const content = document.getElementById('rep-tab-content');
-
-    // Lấy ngày hôm nay dạng YYYY-MM-DD để so sánh với Firebase
-    const todayStr = new Date().toISOString().slice(0, 10);
-
-    // Lấy từ Firebase bedBookings
-    const bookSnap = await firebase.database().ref('bedBookings').once('value');
-    const bookData = bookSnap.val() || {};
-
-    // Lọc booking hôm nay
-    const todayBookings = Object.values(bookData).filter(b => {
-        if (!b.date) return false;
-        return b.date.slice(0, 10) === todayStr;
-    });
-
-    // Fallback: nếu không có date, thử dùng globalAllBookings
-    const extra = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).filter(b => {
-        if (!b.date) return false;
-        return b.date.slice(0, 10) === todayStr;
-    });
-    // Merge, tránh trùng
-    const seenIds = new Set(todayBookings.map(b => b.id || b.key || ''));
-    extra.forEach(b => { if (!seenIds.has(b.id)) todayBookings.push(b); });
-
-    if (todayBookings.length === 0) {
-        content.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400 text-lg" style="min-height:200px;">Không có lịch đặt nào hôm nay.</div>';
-        return;
+    var content = document.getElementById('rep-tab-content');
+    var todayStr = new Date().toISOString().slice(0,10);
+    try {
+        var snap = await firebase.database().ref('bedBookings').once('value');
+        var data = snap.val() || {};
+        var list = Object.values(data).filter(function(b) { return b.date && b.date.slice(0,10) === todayStr; });
+        // fallback globalAllBookings
+        if (typeof globalAllBookings !== 'undefined') {
+            var seen = {};
+            list.forEach(function(b){ seen[b.id||''] = true; });
+            globalAllBookings.forEach(function(b) {
+                if (!seen[b.id] && b.date && b.date.slice(0,10) === todayStr) list.push(b);
+            });
+        }
+        if (list.length === 0) {
+            content.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#9ca3af;font-size:16px;">Không có lịch đặt nào hôm nay.</div>';
+            return;
+        }
+        var rows = await Promise.all(list.map(async function(b) {
+            var s = await getRepScore(b.phone || '');
+            return Object.assign({}, b, {repScore: s});
+        }));
+        rows.sort(function(a,b){ return a.repScore - b.repScore; });
+        var html = '<div>';
+        rows.forEach(function(b) {
+            var warn = b.repScore < REP_WARN_THRESHOLD ? ' <span style="color:#ef4444;font-weight:700;font-size:13px;">· Cảnh báo</span>' : '';
+            var safeName = (b.name||'Khách hàng').replace(/'/g,"\\'");
+            var safePhone = normalizePhone(b.phone||'');
+            html += repRow(safePhone, (b.name||'Khách hàng') + warn, b.repScore,
+                (b.phone||'--') + ' · Bed ' + (b.bedId||'--'),
+                "showRepDetail('" + safePhone + "','" + safeName + "')");
+        });
+        html += '</div>';
+        content.innerHTML = html;
+        var hasRisk = rows.some(function(r){ return r.repScore < REP_WARN_THRESHOLD; });
+        var dot = document.getElementById('rep-alert-dot');
+        if (dot) { dot.style.display = hasRisk ? 'block' : 'none'; }
+    } catch(e) {
+        content.innerHTML = '<div style="padding:40px;color:#ef4444;">Lỗi tải dữ liệu: ' + e.message + '</div>';
     }
-
-    // Load điểm từng khách
-    const rows = await Promise.all(todayBookings.map(async b => {
-        const score = await getRepScore(b.phone || '');
-        return { ...b, repScore: score };
-    }));
-    rows.sort((a, b) => a.repScore - b.repScore);
-
-    let html = '<div class="divide-y divide-gray-100">';
-    rows.forEach(b => {
-        const tier = getRepTier(b.repScore);
-        const warning = b.repScore < REP_WARN_THRESHOLD ? `<span style="color:#ef4444; font-size:13px; font-weight:700; margin-left:8px;">Cảnh báo</span>` : '';
-        const phone = b.phone || '--';
-        const safePhone = normalizePhone(b.phone || '');
-        const safeName = (b.name||'Khách hàng').replace(/\/g,'\\').replace(/'/g,"\'");
-        html += `
-        <div class="px-10 py-6 flex items-center justify-between hover:bg-gray-50 transition-colors cursor-pointer" onclick="showRepDetail('${safePhone}', '${safeName}')">
-            <div>
-                <div style="display:flex; align-items:center; gap:4px;">
-                    <span style="font-size:18px; font-weight:800; color:#111;">${b.name || 'Khách hàng'}</span>
-                    ${warning}
-                </div>
-                <div style="font-size:14px; color:#9ca3af; margin-top:4px; font-family:monospace;">${phone} &nbsp;·&nbsp; Bed ${b.bedId || '--'}</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:16px;">
-                <div style="text-align:right;">
-                    <div style="font-size:30px; font-weight:900; color:${tier.color}; line-height:1;">${b.repScore}</div>
-                    <div style="font-size:13px; font-weight:700; color:${tier.color};">${tier.label}</div>
-                </div>
-                <div style="width:6px; height:40px; border-radius:99px; background:${tier.color};"></div>
-            </div>
-        </div>`;
-    });
-    html += '</div>';
-    content.innerHTML = html;
-
-    // Cập nhật chấm đỏ trên nút
-    const hasRisk = rows.some(r => r.repScore < REP_WARN_THRESHOLD);
-    const dot = document.getElementById('rep-alert-dot');
-    if (dot) { hasRisk ? dot.classList.remove('hidden') : dot.classList.add('hidden'); }
 }
 
-// ---- TAB 2: TẤT CẢ KHÁCH ----
-let repAllCache = [];
 async function loadRepAll() {
-    const content = document.getElementById('rep-tab-content');
-
-    // Lấy dữ liệu: bedBookings (nguồn khách thực tế) + reputation (điểm)
-    const [bookSnap, repSnap] = await Promise.all([
-        firebase.database().ref('bedBookings').once('value'),
-        firebase.database().ref('reputation').once('value')
-    ]);
-
-    const bookData = bookSnap.val() || {};
-    const repData = repSnap.val() || {};
-
-    // Gom unique phone từ bedBookings
-    const phoneMap = {}; // phone -> {name}
-    Object.values(bookData).forEach(b => {
-        if (!b.phone) return;
-        const p = normalizePhone(b.phone);
-        if (!phoneMap[p]) phoneMap[p] = { name: b.name || 'Khách hàng' };
-    });
-
-    // Merge với reputation
-    const phoneSet = new Set([...Object.keys(phoneMap), ...Object.keys(repData)]);
-    repAllCache = [];
-    phoneSet.forEach(phone => {
-        const rep = repData[phone] || {};
-        const fromBook = phoneMap[phone] || {};
-        const score = Math.max(0, Math.min(REP_MAX, rep.score ?? REP_DEFAULT));
-        repAllCache.push({
-            phone,
-            name: rep.name || fromBook.name || 'Khách hàng',
-            score,
-            history: rep.history ? Object.values(rep.history) : []
+    var content = document.getElementById('rep-tab-content');
+    try {
+        var results = await Promise.all([
+            firebase.database().ref('bedBookings').once('value'),
+            firebase.database().ref('reputation').once('value')
+        ]);
+        var bookData = results[0].val() || {};
+        var repData = results[1].val() || {};
+        var phoneMap = {};
+        Object.values(bookData).forEach(function(b) {
+            if (!b.phone) return;
+            var p = normalizePhone(b.phone);
+            if (!phoneMap[p]) phoneMap[p] = b.name || 'Khách hàng';
         });
-    });
-
-    repAllCache.sort((a, b) => a.score - b.score);
-    renderRepAllList(repAllCache, '');
+        var allPhones = {};
+        Object.keys(phoneMap).forEach(function(p){ allPhones[p] = true; });
+        Object.keys(repData).forEach(function(p){ allPhones[p] = true; });
+        repAllCache = Object.keys(allPhones).map(function(phone) {
+            var rep = repData[phone] || {};
+            var score = Math.max(0, Math.min(REP_MAX, rep.score != null ? rep.score : REP_DEFAULT));
+            var hist = rep.history ? Object.values(rep.history) : [];
+            return { phone: phone, name: rep.name || phoneMap[phone] || 'Khách hàng', score: score, history: hist };
+        });
+        repAllCache.sort(function(a,b){ return a.score - b.score; });
+        renderRepAllList('');
+    } catch(e) {
+        content.innerHTML = '<div style="padding:40px;color:#ef4444;">Lỗi: ' + e.message + '</div>';
+    }
 }
 
-function renderRepAllList(list, query) {
-    const content = document.getElementById('rep-tab-content');
-    const q = (query || '').trim().toLowerCase();
-    const filtered = q
-        ? list.filter(c => c.name.toLowerCase().includes(q) || c.phone.includes(q))
-        : list;
-
-    let html = `
-    <div style="padding: 24px 40px 16px; position:sticky; top:0; background:white; z-index:10; border-bottom:1px solid #f3f4f6;">
-        <input type="text" id="rep-search-input" placeholder="Tìm theo tên hoặc số điện thoại..."
-            oninput="renderRepAllList(repAllCache, this.value)"
-            value="${query || ''}"
-            style="width:100%; padding:14px 18px; border-radius:14px; border:1.5px solid #e5e7eb; font-size:15px; font-weight:500; outline:none; background:#f9fafb; box-sizing:border-box; font-family:inherit;"
-            onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='#e5e7eb'">
-    </div>
-    <div>`;
-
+function renderRepAllList(query) {
+    var content = document.getElementById('rep-tab-content');
+    var q = (query||'').toLowerCase().trim();
+    var filtered = q ? repAllCache.filter(function(c){
+        return c.name.toLowerCase().indexOf(q) !== -1 || c.phone.indexOf(q) !== -1;
+    }) : repAllCache;
+    var html = '<div style="padding:20px 40px 14px;position:sticky;top:0;background:white;z-index:10;border-bottom:1px solid #f3f4f6;">'
+        + '<input id="rep-search-input" type="text" placeholder="Tìm theo tên hoặc số điện thoại..." value="' + (query||'') + '" '
+        + 'oninput="renderRepAllList(this.value)" '
+        + 'style="width:100%;padding:14px 18px;border-radius:14px;border:1.5px solid #e5e7eb;font-size:15px;font-weight:500;outline:none;background:#f9fafb;box-sizing:border-box;font-family:inherit;">'
+        + '</div><div>';
     if (filtered.length === 0) {
-        html += '<div style="padding:64px; text-align:center; color:#9ca3af; font-size:16px;">Không tìm thấy khách nào.</div>';
+        html += '<div style="padding:48px;text-align:center;color:#9ca3af;font-size:16px;">Không tìm thấy khách nào.</div>';
     } else {
-        filtered.forEach(c => {
-            const tier = getRepTier(c.score);
-            const violations = c.history.filter(h => h.delta < 0).length;
-            const safeName = c.name.replace(/\/g,'\\').replace(/'/g,"\'");
-            html += `
-            <div style="padding:22px 40px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f9fafb; cursor:pointer; transition:background 0.15s;"
-                 onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'"
-                 onclick="showRepDetail('${c.phone}', '${safeName}')">
-                <div>
-                    <div style="font-size:18px; font-weight:800; color:#111;">${c.name}</div>
-                    <div style="font-size:14px; color:#9ca3af; margin-top:4px; font-family:monospace;">${c.phone} &nbsp;·&nbsp; ${violations} lần vi phạm</div>
-                </div>
-                <div style="display:flex; align-items:center; gap:16px;">
-                    <div style="text-align:right;">
-                        <div style="font-size:30px; font-weight:900; color:${tier.color}; line-height:1;">${c.score}</div>
-                        <div style="font-size:13px; font-weight:700; color:${tier.color};">${tier.label}</div>
-                    </div>
-                    <div style="width:6px; height:40px; border-radius:99px; background:${tier.color};"></div>
-                </div>
-            </div>`;
+        filtered.forEach(function(c) {
+            var viols = c.history.filter(function(h){ return h.delta < 0; }).length;
+            var safeName = c.name.replace(/'/g,"\\'");
+            html += repRow(c.phone, c.name, c.score, c.phone + ' · ' + viols + ' vi phạm', "showRepDetail('" + c.phone + "','" + safeName + "')");
         });
     }
     html += '</div>';
     content.innerHTML = html;
-    const inp = document.getElementById('rep-search-input');
+    var inp = document.getElementById('rep-search-input');
     if (inp) { inp.focus(); if (query) inp.setSelectionRange(query.length, query.length); }
 }
 
-// ---- TAB 3: XẾP HẠNG ----
 async function loadRepRank() {
-    const content = document.getElementById('rep-tab-content');
-    const repSnap = await firebase.database().ref('reputation').once('value');
-    const repData = repSnap.val() || {};
-
-    const list = Object.values(repData).map(r => ({
-        name: r.name || 'Khách hàng',
-        phone: r.phone || '',
-        score: Math.max(0, Math.min(REP_MAX, r.score ?? REP_DEFAULT)),
-        history: r.history ? Object.values(r.history) : []
-    })).sort((a, b) => b.score - a.score);
-
-    if (list.length === 0) {
-        content.innerHTML = '<div class="py-16 text-center text-gray-400 text-sm">Chưa có dữ liệu.</div>';
-        return;
+    var content = document.getElementById('rep-tab-content');
+    try {
+        var snap = await firebase.database().ref('reputation').once('value');
+        var repData = snap.val() || {};
+        var list = Object.values(repData).map(function(r) {
+            return { name: r.name||'Khách hàng', phone: r.phone||'', score: Math.max(0,Math.min(REP_MAX,r.score!=null?r.score:REP_DEFAULT)), history: r.history?Object.values(r.history):[] };
+        }).sort(function(a,b){ return b.score - a.score; });
+        if (list.length === 0) {
+            content.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#9ca3af;font-size:16px;">Chưa có dữ liệu.</div>';
+            return;
+        }
+        var rankColors = ['#f59e0b','#9ca3af','#d97706'];
+        var html = '<div>';
+        list.forEach(function(c, idx) {
+            var tier = getRepTier(c.score);
+            var viols = c.history.filter(function(h){ return h.delta < 0; }).length;
+            var safeName = c.name.replace(/'/g,"\\'");
+            var rankColor = idx < 3 ? rankColors[idx] : '#d1d5db';
+            html += '<div onclick="showRepDetail(\'' + c.phone + '\',\'' + safeName + '\')" style="padding:20px 40px;display:flex;align-items:center;gap:24px;border-bottom:1px solid #f9fafb;cursor:pointer;" onmouseover="this.style.background=\'#f9fafb\'" onmouseout="this.style.background=\'white\'">'
+                + '<div style="width:32px;text-align:center;font-size:20px;font-weight:900;color:' + rankColor + ';flex-shrink:0;">' + (idx+1) + '</div>'
+                + '<div style="flex:1;"><div style="font-size:18px;font-weight:800;color:#111;">' + c.name + '</div>'
+                + '<div style="font-size:14px;color:#9ca3af;margin-top:4px;font-family:monospace;">' + c.phone + ' · ' + viols + ' vi phạm</div></div>'
+                + '<div style="display:flex;align-items:center;gap:14px;"><div style="text-align:right;">'
+                + '<div style="font-size:32px;font-weight:900;color:' + tier.color + ';line-height:1;">' + c.score + '</div>'
+                + '<div style="font-size:13px;font-weight:700;color:' + tier.color + ';">' + tier.label + '</div></div>'
+                + '<div style="width:6px;height:40px;border-radius:99px;background:' + tier.color + ';"></div></div></div>';
+        });
+        html += '</div>';
+        content.innerHTML = html;
+    } catch(e) {
+        content.innerHTML = '<div style="padding:40px;color:#ef4444;">Lỗi: ' + e.message + '</div>';
     }
-
-    const rankColors = ['#f59e0b', '#9ca3af', '#d97706'];
-    let html = '<div>';
-    list.forEach((c, idx) => {
-        const tier = getRepTier(c.score);
-        const rankColor = idx < 3 ? rankColors[idx] : '#d1d5db';
-        const violations = c.history.filter(h => h.delta < 0).length;
-        const safeName = c.name.replace(/\/g,'\\').replace(/'/g,"\'");
-        html += `
-        <div style="padding:22px 40px; display:flex; align-items:center; gap:24px; border-bottom:1px solid #f9fafb; cursor:pointer; transition:background 0.15s;"
-             onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'"
-             onclick="showRepDetail('${c.phone}', '${safeName}')">
-            <div style="width:36px; text-align:center; font-size:20px; font-weight:900; color:${rankColor}; flex-shrink:0;">${idx+1}</div>
-            <div style="flex:1;">
-                <div style="font-size:18px; font-weight:800; color:#111;">${c.name}</div>
-                <div style="font-size:14px; color:#9ca3af; margin-top:4px; font-family:monospace;">${c.phone} &nbsp;·&nbsp; ${violations} vi phạm</div>
-            </div>
-            <div style="display:flex; align-items:center; gap:16px;">
-                <div style="text-align:right;">
-                    <div style="font-size:30px; font-weight:900; color:${tier.color}; line-height:1;">${c.score}</div>
-                    <div style="font-size:13px; font-weight:700; color:${tier.color};">${tier.label}</div>
-                </div>
-                <div style="width:6px; height:40px; border-radius:99px; background:${tier.color};"></div>
-            </div>
-        </div>`;
-    });
-    html += '</div>';
-    content.innerHTML = html;
 }
 
-// ---- MODAL CHI TIẾT KHÁCH ----
 async function showRepDetail(phone, name) {
-    const snap = await firebase.database().ref('reputation/' + phone).once('value');
-    const data = snap.val() || {};
-    const score = Math.max(0, Math.min(REP_MAX, data.score ?? REP_DEFAULT));
-    const tier = getRepTier(score);
-    const history = data.history ? Object.values(data.history).sort((a,b) => {
-        // Sort mới nhất lên đầu
-        return new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time);
-    }) : [];
-
-    const content = document.getElementById('rep-tab-content');
-    
-    const histRows = history.length === 0
-        ? '<div style="padding:48px; text-align:center; color:#9ca3af; font-size:16px;">Chưa có lịch sử điểm.</div>'
-        : history.map(h => {
-            const isPos = h.delta > 0;
-            const deltaStr = isPos ? `+${h.delta}` : `${h.delta}`;
-            const deltaColor = isPos ? '#16a34a' : '#dc2626';
-            return `
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 0; border-bottom:1px solid #f3f4f6;">
-                <div>
-                    <div style="font-size:16px; font-weight:700; color:#1f2937;">${h.reason || '--'}</div>
-                    <div style="font-size:13px; color:#9ca3af; margin-top:4px;">${h.date || ''} ${h.time || ''}</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-size:20px; font-weight:900; color:${deltaColor};">${deltaStr} điểm</div>
-                    <div style="font-size:13px; color:#9ca3af;">${h.scoreBefore ?? '--'} → ${h.scoreAfter ?? '--'}</div>
-                </div>
-            </div>`;
-        }).join('');
-
-    content.innerHTML = `
-    <div style="padding:32px 40px;">
-        <button onclick="switchRepTab('${repCurrentTab}')" style="display:flex; align-items:center; gap:8px; font-size:15px; color:#9ca3af; font-weight:700; margin-bottom:28px; cursor:pointer; background:none; border:none; padding:0;" onmouseover="this.style.color='#374151'" onmouseout="this.style.color='#9ca3af'">
-            ← Quay lại
-        </button>
-
-        <!-- Score Card -->
-        <div style="border-radius:20px; padding:28px 32px; margin-bottom:28px; display:flex; align-items:center; justify-content:space-between; background:${tier.bg}; border:1.5px solid ${tier.border};">
-            <div>
-                <div style="font-size:20px; font-weight:900; color:#1f2937; margin-bottom:6px;">${name}</div>
-                <div style="font-size:15px; color:#9ca3af; font-family:monospace;">${phone}</div>
-                <div style="font-size:14px; font-weight:800; margin-top:14px; padding:6px 16px; border-radius:99px; display:inline-block; color:${tier.color}; background:white;">${tier.label}</div>
-            </div>
-            <div style="font-size:72px; font-weight:900; color:${tier.color}; line-height:1;">${score}</div>
-        </div>
-
-        <!-- History -->
-        <div style="font-size:13px; font-weight:900; color:#6b7280; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:12px;">Lịch sử điểm</div>
-        <div>${histRows}</div>
-    </div>`;
+    var content = document.getElementById('rep-tab-content');
+    content.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:#9ca3af;font-size:16px;">Đang tải...</div>';
+    try {
+        var snap = await firebase.database().ref('reputation/' + phone).once('value');
+        var data = snap.val() || {};
+        var score = Math.max(0, Math.min(REP_MAX, data.score != null ? data.score : REP_DEFAULT));
+        var tier = getRepTier(score);
+        var history = data.history ? Object.values(data.history).sort(function(a,b){ return (b.date+b.time).localeCompare(a.date+a.time); }) : [];
+        var histHtml = history.length === 0
+            ? '<div style="padding:48px;text-align:center;color:#9ca3af;font-size:16px;">Chưa có lịch sử điểm.</div>'
+            : history.map(function(h) {
+                var isPos = h.delta > 0;
+                var dStr = isPos ? '+' + h.delta : '' + h.delta;
+                var dColor = isPos ? '#16a34a' : '#dc2626';
+                return '<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid #f3f4f6;">'
+                    + '<div><div style="font-size:16px;font-weight:700;color:#1f2937;">' + (h.reason||'--') + '</div>'
+                    + '<div style="font-size:13px;color:#9ca3af;margin-top:4px;">' + (h.date||'') + ' ' + (h.time||'') + '</div></div>'
+                    + '<div style="text-align:right;"><div style="font-size:22px;font-weight:900;color:' + dColor + ';">' + dStr + ' điểm</div>'
+                    + '<div style="font-size:13px;color:#9ca3af;">' + (h.scoreBefore!=null?h.scoreBefore:'--') + ' → ' + (h.scoreAfter!=null?h.scoreAfter:'--') + '</div></div></div>';
+            }).join('');
+        var prevTab = repCurrentTab;
+        content.innerHTML = '<div style="padding:28px 40px;">'
+            + '<button onclick="switchRepTab(\'' + prevTab + '\')" style="display:flex;align-items:center;gap:8px;font-size:15px;color:#9ca3af;font-weight:700;margin-bottom:24px;cursor:pointer;background:none;border:none;padding:0;">← Quay lại</button>'
+            + '<div style="border-radius:20px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;background:' + tier.bg + ';border:1.5px solid ' + tier.border + ';">'
+            + '<div><div style="font-size:22px;font-weight:900;color:#1f2937;">' + name + '</div>'
+            + '<div style="font-size:15px;color:#9ca3af;font-family:monospace;margin-top:6px;">' + phone + '</div>'
+            + '<div style="font-size:14px;font-weight:800;margin-top:14px;padding:6px 16px;border-radius:99px;display:inline-block;color:' + tier.color + ';background:white;">' + tier.label + '</div></div>'
+            + '<div style="font-size:72px;font-weight:900;color:' + tier.color + ';line-height:1;">' + score + '</div></div>'
+            + '<div style="font-size:13px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">Lịch sử điểm</div>'
+            + histHtml + '</div>';
+    } catch(e) {
+        content.innerHTML = '<div style="padding:40px;color:#ef4444;">Lỗi: ' + e.message + '</div>';
+    }
 }
 
-// =========================================================
-// HÀM sendWarning VIẾT LẠI — LƯU THEO PHONE + TÍCH HỢP REP
-// =========================================================
-sendWarning = async function(elOrId, guestName) {
-    let bookingId, btn, phone;
-    if (typeof elOrId === 'string') {
-        bookingId = elOrId;
-    } else {
-        btn = elOrId;
-        bookingId = btn.dataset.id;
-        guestName = btn.dataset.name || 'Khách hàng';
-    }
-    if (!bookingId) return;
+// Click ngoài modal để đóng - gắn vào trong openReputationModal
 
-    // Tìm phone từ globalAllBookings
-    const booking = (typeof globalAllBookings !== 'undefined' ? globalAllBookings : []).find(b => b.id === bookingId);
-    phone = booking ? normalizePhone(booking.phone || '') : null;
-
-    const db = firebase.database();
-    // Lưu theo phone (nếu có) + bookingId
-    const warnKey = phone || bookingId;
-    const ref = db.ref('bedWarnings/' + warnKey + '/' + bookingId);
-
-    const snap = await ref.once('value');
-    const currentCount = snap.val()?.count || 0;
-    const newCount = currentCount + 1;
-
-    await ref.set({ count: newCount, guestName: guestName, lastWarning: new Date().toLocaleString('vi-VN'), bookingId: bookingId });
-
-    // Trừ điểm Reputation
-    if (phone && booking) {
-        const pointsDeducted = newCount === 1 ? -1 : newCount === 2 ? -2 : -3;
-        const reason = `Cảnh báo vi phạm cấp ${newCount}`;
-        await updateRepScore(booking.phone, guestName, pointsDeducted, reason, bookingId);
-    }
-
-    // Nội dung thông báo
-    let warningText = '';
-    if (newCount === 1) {
-        warningText = `⚠️ Thông báo từ 𝐓𝐡𝐞 𝐜𝐚𝐟𝐞 𝟑𝟑 ⚠️
-Hệ thống ghi nhận ${guestName} đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.
-Vui lòng sử dụng một cách văn minh và đúng quy định.
-⚠️ Trong trường hợp hệ thống ghi nhận thêm 02 nghi ngờ vi phạm,
-Bed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.
-🤖 Tin nhắn tự động bởi AI của The Cafe 33`;
-    } else if (newCount === 2) {
-        warningText = `⚠️ Thông báo từ 𝐓𝐡𝐞 𝐜𝐚𝐟𝐞 𝟑𝟑 ⚠️
-Hệ thống ghi nhận ${guestName} đang gây ồn và có dấu hiệu vi phạm nội quy khi sử dụng Bed.
-Vui lòng sử dụng một cách văn minh và đúng quy định.
-⚠️ Trong trường hợp hệ thống ghi nhận thêm 01 nghi ngờ vi phạm,
-Bed của bạn sẽ bị buộc dừng ngay lập tức, bạn phải rời khỏi khu vực Bed và không được hoàn lại chi phí của thời gian sử dụng còn lại.
-🤖 Tin nhắn tự động bởi AI của The Cafe 33`;
-    } else {
-        warningText = `⚠️ Thông báo từ The Cafe 33 ⚠️
-Hệ thống ghi nhận dấu hiệu bất thường trong khu vực Bed.
-Vui lòng mở rèm Bed trong 30 giây để hệ thống AI tự động xác nhận.
-⏱️ Lưu ý: Nếu không mở rèm trong vòng 2 phút kể từ khi nhận thông báo, điện khu vực Bed sẽ tự động tắt và hệ thống sẽ thông báo đến quản lý để tiến hành kiểm tra.
-Xin cảm ơn và mong bạn thông cảm vì sự bất tiện.
-The Cafe 33 – Không gian văn minh, an toàn cho tất cả khách hàng. 🤖`;
-    }
-
-    try { await navigator.clipboard.writeText(warningText); }
-    catch(e) {
-        const ta = document.createElement('textarea');
-        ta.value = warningText;
-        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    }
-
-    // Refresh badge
-    const refreshBadge = (cnt) => {
-        const color = cnt >= 3 ? '#dc2626' : cnt === 2 ? '#f97316' : '#f59e0b';
-        document.querySelectorAll('.warn-mob-badge').forEach(el => {
-            el.textContent = cnt; el.classList.remove('hidden'); el.classList.add('flex'); el.style.backgroundColor = color;
-        });
-        document.querySelectorAll('.warn-badge-pc').forEach(el => {
-            el.textContent = cnt; el.classList.remove('hidden'); el.classList.add('flex'); el.style.backgroundColor = color;
-        });
-    };
-    refreshBadge(newCount);
-
-    const levelLabel = newCount === 1 ? 'Cảnh báo lần 1' : newCount === 2 ? 'Cảnh báo lần 2' : `Lần ${newCount} – Buộc dừng`;
-    const pointsDeducted = newCount === 1 ? 1 : newCount === 2 ? 2 : 3;
-    if (typeof showAppModal === 'function') {
-        showAppModal(
-            `Đã gửi cảnh báo lần ${newCount}`,
-            `Thông báo cấp ${Math.min(newCount,3)} cho <b>${guestName}</b> đã được sao chép.<br><span style="color:#9ca3af;font-size:12px;">${levelLabel} &nbsp;·&nbsp; Trừ ${pointsDeducted} điểm Reputation</span>`,
-            "⚠️"
-        );
-    }
-};
 </script>
 
 <!-- ===== MODAL REPUTATION ===== -->
-<div id="modal-reputation" class="fixed inset-0 z-[9990] items-center justify-center" style="display:none; background:rgba(0,0,0,0.55); padding: 32px;">
-  <div class="bg-white rounded-[32px] shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden" style="height: 80vh;">
-    
+<div id="modal-reputation" style="display:none; position:fixed; inset:0; z-index:9990; background:rgba(0,0,0,0.55); align-items:center; justify-content:center; padding:32px;">
+  <div style="background:white; border-radius:32px; box-shadow:0 25px 60px rgba(0,0,0,0.25); width:100%; max-width:860px; height:80vh; display:flex; flex-direction:column; overflow:hidden;">
+
     <!-- Header -->
-    <div class="px-10 py-7 border-b border-gray-100 flex items-center justify-between shrink-0">
+    <div style="padding:28px 40px; border-bottom:1px solid #f3f4f6; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
       <div>
-        <h2 class="text-3xl font-black text-gray-900 tracking-tight">Reputation</h2>
-        <p class="text-base text-gray-400 font-medium mt-1">Đánh giá & lịch sử vi phạm khách hàng</p>
+        <div style="font-size:28px; font-weight:900; color:#111; letter-spacing:-0.5px;">Reputation</div>
+        <div style="font-size:15px; color:#9ca3af; margin-top:4px;">Đánh giá & lịch sử vi phạm khách hàng</div>
       </div>
-      <button onclick="closeReputationModal()" class="w-11 h-11 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-all text-xl font-bold leading-none">×</button>
+      <button onclick="closeReputationModal()" style="width:40px; height:40px; border-radius:50%; background:#f3f4f6; border:none; cursor:pointer; font-size:20px; font-weight:700; color:#6b7280; display:flex; align-items:center; justify-content:center;">×</button>
     </div>
 
-    <!-- Tabs - pill style, căn giữa -->
-    <div class="flex items-center justify-center px-10 py-5 shrink-0">
-      <div class="flex bg-gray-100 rounded-full p-1.5 gap-1">
-        <button onclick="switchRepTab('today')" id="rep-tab-today" class="rep-tab px-7 py-2.5 rounded-full text-base font-bold transition-all bg-white text-gray-900 shadow-sm">Hôm nay</button>
-        <button onclick="switchRepTab('all')" id="rep-tab-all" class="rep-tab px-7 py-2.5 rounded-full text-base font-bold transition-all text-gray-400 hover:text-gray-600">Tất cả khách</button>
-        <button onclick="switchRepTab('rank')" id="rep-tab-rank" class="rep-tab px-7 py-2.5 rounded-full text-base font-bold transition-all text-gray-400 hover:text-gray-600">Xếp hạng</button>
+    <!-- Tabs pill -->
+    <div style="display:flex; justify-content:center; padding:20px 40px 0; flex-shrink:0;">
+      <div style="display:flex; background:#f3f4f6; border-radius:99px; padding:6px; gap:4px;">
+        <button id="rep-tab-today" onclick="switchRepTab('today')" style="padding:10px 28px; border-radius:99px; border:none; cursor:pointer; font-size:15px; font-weight:700; background:white; color:#111; box-shadow:0 1px 4px rgba(0,0,0,0.1);">Hôm nay</button>
+        <button id="rep-tab-all" onclick="switchRepTab('all')" style="padding:10px 28px; border-radius:99px; border:none; cursor:pointer; font-size:15px; font-weight:700; background:transparent; color:#9ca3af;">Tất cả khách</button>
+        <button id="rep-tab-rank" onclick="switchRepTab('rank')" style="padding:10px 28px; border-radius:99px; border:none; cursor:pointer; font-size:15px; font-weight:700; background:transparent; color:#9ca3af;">Xếp hạng</button>
       </div>
     </div>
 
-    <!-- Tab Content - chiều cao còn lại, scroll bên trong -->
-    <div class="flex-1 overflow-y-auto" id="rep-tab-content" style="min-height:0;">
-      <div class="flex items-center justify-center h-full text-gray-400 text-base">Đang tải...</div>
+    <!-- Content -->
+    <div id="rep-tab-content" style="flex:1; overflow-y:auto; min-height:0; margin-top:16px;">
+      <div style="display:flex; align-items:center; justify-content:center; height:100%; color:#9ca3af; font-size:16px;">Đang tải...</div>
     </div>
 
   </div>
