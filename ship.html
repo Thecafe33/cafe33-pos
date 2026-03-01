@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Đặt hàng giao tận nơi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=League+Spartan:wght@700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
@@ -42,6 +42,7 @@
    RESET & BASE
    ============================================= */
 *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { overflow: hidden; height: 100%; }
 html, body {
   margin: 0; padding: 0; height: 100%;
   overscroll-behavior: none;
@@ -49,9 +50,10 @@ html, body {
 }
 body {
   font-family: 'Nunito', sans-serif;
-  background: var(--bg);
+  background: #ffffff;
   color: var(--text);
   overflow-x: hidden;
+  overflow-y: auto;
 }
 input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 ::-webkit-scrollbar { width: 3px; }
@@ -65,8 +67,21 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 .brand-border { border-color: var(--brand) !important; }
 .brand-light-bg { background: var(--brand-light); }
 
-.screen { display: none; min-height: 100dvh; flex-direction: column; }
-.screen.active { display: flex; }
+.screen { 
+  display: none; 
+  width: 100%;
+  min-height: 100dvh; 
+  flex-direction: column;
+  position: relative;
+}
+.screen.active { 
+  display: flex;
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 1;
+}
 
 .btn-primary {
   width: 100%; padding: 16px;
@@ -126,7 +141,7 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 /* Bottom sheet */
 .sheet-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-  z-index: 200; display: none; align-items: flex-end;
+  z-index: 9000; display: none; align-items: flex-end;
   backdrop-filter: blur(4px);
   animation: backdropIn 0.3s ease;
 }
@@ -184,88 +199,249 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* =============================================
-   SCREEN 1: WELCOME / NHẬP THÔNG TIN
+   SCREEN 1: WELCOME — NỀN TRẮNG, 2 CARD NHỎ CHÉO
    ============================================= */
 #screen-welcome {
-  background: var(--brand);
-  justify-content: space-between;
-}
-.welcome-top {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 60px 32px 32px;
-  text-align: center;
-}
-.welcome-logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 3rem; font-weight: 800;
-  color: white; line-height: 1.1; margin-bottom: 8px;
-}
-.welcome-sub {
-  font-size: 0.85rem; font-weight: 700;
-  color: rgba(255,255,255,0.65);
-  text-transform: uppercase; letter-spacing: 0.12em;
-}
-.welcome-card {
-  background: var(--bg); border-radius: 32px 32px 0 0;
-  padding: 32px 24px 48px;
-}
-.welcome-card h2 {
-  font-size: 1.5rem; font-weight: 900;
-  color: var(--text); margin: 0 0 6px;
-}
-.welcome-card p {
-  font-size: 0.875rem; color: var(--sub);
-  font-weight: 600; margin: 0 0 24px;
-}
-.returning-banner {
-  display: flex; align-items: center; gap: 14px;
-  background: var(--brand-light); border-radius: 16px;
-  padding: 14px 18px; margin-bottom: 16px; cursor: pointer;
-  transition: opacity 0.2s;
-}
-.returning-banner:active { opacity: 0.8; }
-.returning-avatar {
-  width: 44px; height: 44px; border-radius: 50%;
-  background: var(--brand); display: flex; align-items: center;
-  justify-content: center; color: white; font-size: 1.2rem; font-weight: 900;
-  flex-shrink: 0;
+  background: #ffffff;
+  overflow: hidden;
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
+/* Vùng card trên — đủ cao cho card đứng */
+.ws-cards-zone {
+  position: relative;
+  height: 300px;
+  flex-shrink: 0;
+  margin: 48px auto 0;
+  width: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Card đứng chung */
+.ws-card {
+  position: absolute;
+  width: 160px;
+  height: 240px;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 18px 16px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.22);
+  will-change: transform;
+}
+
+.ws-card-xolifa {
+  background: linear-gradient(160deg, #8B3A12 0%, #C26A2E 60%, #e08040 100%);
+  transform: rotate(-5deg) translate(-28px, 6px);
+  z-index: 3;
+}
+.ws-card-cafe33 {
+  background: linear-gradient(160deg, #003828 0%, #006241 60%, #009058 100%);
+  transform: rotate(5deg) translate(28px, -6px);
+  z-index: 2;
+}
+
+/* Text trên card */
+.ws-card-logo-xolifa {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.4rem; color: white;
+  letter-spacing: 0.14em; line-height: 1;
+}
+.ws-card-logo-cafe33 {
+  font-family: 'League Spartan', sans-serif;
+  font-weight: 800; font-size: 1.4rem;
+  color: white; letter-spacing: -0.01em; line-height: 1.15;
+}
+
+/* Animations */
+@keyframes wsCardXolifa {
+  from { opacity: 0; transform: rotate(-10deg) translate(-80px, 40px) scale(0.8); }
+  to   { opacity: 1; transform: rotate(-5deg) translate(-28px, 6px) scale(1); }
+}
+@keyframes wsCardCafe33 {
+  from { opacity: 0; transform: rotate(10deg) translate(80px, -40px) scale(0.8); }
+  to   { opacity: 1; transform: rotate(5deg) translate(28px, -6px) scale(1); }
+}
+.ws-card-xolifa.ws-enter { animation: wsCardXolifa 0.7s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+.ws-card-cafe33.ws-enter { animation: wsCardCafe33 0.7s cubic-bezier(0.16,1,0.3,1) 0.18s both; }
+
+/* Form dưới — nền trắng, đơn giản */
+.welcome-form-card {
+  flex: 1;
+  padding: 28px 22px 48px;
+  background: #ffffff;
+}
+.welcome-form-card h2 {
+  font-family: 'League Spartan', sans-serif;
+  font-size: 1.6rem; font-weight: 800;
+  color: #111; margin: 0 0 4px;
+  letter-spacing: -0.02em;
+}
+.welcome-form-card > p {
+  font-size: 0.85rem; color: #9ca3af;
+  font-weight: 600; margin: 0 0 22px;
+}
+
+/* Returning banner — trắng bình thường */
+.returning-banner {
+  display: flex; align-items: center; gap: 12px;
+  background: #f8fffe; border-radius: 16px;
+  padding: 12px 14px; margin-bottom: 16px; cursor: pointer;
+  border: 1.5px solid #d1fae5;
+  transition: background 0.2s;
+}
+.returning-banner:active { background: #ecfdf5; }
+.returning-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: #006241; display: flex; align-items: center;
+  justify-content: center; color: white; font-size: 1rem; font-weight: 900;
+  flex-shrink: 0;
+}
+.returning-banner .ret-name { font-weight:900; font-size:0.9rem; color:#111; }
+.returning-banner .ret-phone { font-size:0.75rem; color:#6b7280; font-weight:600; }
+.returning-banner .ret-arrow { font-size:0.78rem; font-weight:800; color:#006241; }
+
 /* =============================================
-   SCREEN 2: CHỌN CHI NHÁNH
+   SCREEN 2: CHỌN CHI NHÁNH — NỀN TRẮNG, 2 CARD ANIMATION
    ============================================= */
 #screen-store {
-  background: var(--bg); padding-top: env(safe-area-inset-top);
-}
-.store-card {
-  border-radius: 24px; overflow: hidden;
-  margin-bottom: 16px; cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
-.store-card:active { transform: scale(0.98); }
-.store-card.disabled { opacity: 0.5; pointer-events: none; }
-.store-banner {
-  height: 120px; display: flex; align-items: center;
-  justify-content: center; font-size: 2.5rem; position: relative;
+  background: #f8f9fa;
   overflow: hidden;
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
-.store-banner::after {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.4));
+
+.store-header {
+  position: relative; z-index: 10;
+  padding: 56px 24px 16px;
+  text-align: center;
+  background: #f8f9fa;
 }
-.store-info { background: white; padding: 16px 20px; }
-.store-name { font-size: 1.1rem; font-weight: 900; margin-bottom: 4px; }
-.store-addr { font-size: 0.8rem; color: #9ca3af; font-weight: 600; }
-.store-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-.store-hours { font-size: 0.78rem; color: #6b7280; font-weight: 700; }
-.store-status {
-  font-size: 0.72rem; font-weight: 900; padding: 4px 12px;
+.store-header h2 {
+  font-family: 'League Spartan', sans-serif;
+  font-size: 1.5rem; font-weight: 800;
+  color: #111; letter-spacing: -0.02em;
+  margin: 0 0 4px;
+}
+.store-header p {
+  font-size: 0.78rem; font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase; letter-spacing: 0.1em;
+}
+
+.store-cards-area {
+  position: relative; z-index: 10;
+  flex: 1; display: flex; flex-direction: column;
+  align-items: stretch; justify-content: center;
+  padding: 12px 18px 48px;
+  gap: 0;
+}
+
+/* Card chi nhánh — ngang, đứng, chồng chéo */
+.store-pick-card {
+  border-radius: 26px;
+  padding: 22px 20px;
+  cursor: pointer; position: relative; overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+  user-select: none;
+  opacity: 0;
+  transition: box-shadow 0.25s;
+}
+.store-pick-card:not(.disabled):active { opacity: 0.92; }
+.store-pick-card.disabled { opacity: 0.38 !important; pointer-events: none; }
+
+.spc-cafe33 {
+  background: linear-gradient(135deg, #004030 0%, #006241 50%, #009060 100%);
+  transform: rotate(-1.5deg);
+  z-index: 1;
+  margin-bottom: -22px;
+}
+.spc-xolifa {
+  background: linear-gradient(135deg, #7a3010 0%, #C26A2E 50%, #de7e38 100%);
+  transform: rotate(1.5deg);
+  z-index: 2;
+}
+
+/* Shine */
+.spc-shine {
+  position: absolute; top: -50%; right: -10%;
+  width: 55%; padding-bottom: 120%;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.09);
+  pointer-events: none;
+}
+/* Edge */
+.spc-edge {
+  position: absolute; inset: 0; border-radius: 26px;
+  border: 1px solid rgba(255,255,255,0.2);
+  pointer-events: none;
+}
+
+.spc-name-cafe33 {
+  font-family: 'League Spartan', sans-serif;
+  font-weight: 800; font-size: 1.9rem;
+  color: white; letter-spacing: -0.02em;
+  line-height: 1; margin-bottom: 5px;
+}
+.spc-name-xolifa {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.5rem; color: white;
+  letter-spacing: 0.12em; line-height: 1; margin-bottom: 5px;
+}
+.spc-addr {
+  font-size: 0.76rem; font-weight: 600;
+  color: rgba(255,255,255,0.68); margin-bottom: 14px;
+}
+.spc-footer {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.spc-hours { font-size: 0.74rem; font-weight: 700; color: rgba(255,255,255,0.65); }
+.spc-status {
+  font-size: 0.7rem; font-weight: 900; padding: 5px 14px;
   border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em;
 }
-.store-status.open { background: #dcfce7; color: #16a34a; }
-.store-status.closed { background: #fee2e2; color: #dc2626; }
+.spc-status.open  { background: rgba(255,255,255,0.2); color: white; }
+.spc-status.closed { background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.45); }
+
+/* Entrance animations — screen 2 */
+@keyframes enterCafe33 {
+  from { opacity: 0; transform: rotate(-5deg) translateX(-60px) scale(0.9); }
+  to   { opacity: 1; transform: rotate(-1.5deg) translateX(0) scale(1); }
+}
+@keyframes enterXolifa {
+  from { opacity: 0; transform: rotate(5deg) translateX(60px) scale(0.9); }
+  to   { opacity: 1; transform: rotate(1.5deg) translateX(0) scale(1); }
+}
+.spc-cafe33.entering { animation: enterCafe33 0.65s cubic-bezier(0.16,1,0.3,1) both; }
+.spc-xolifa.entering { animation: enterXolifa 0.65s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
+
+/* Card tap */
+@keyframes cardTap {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(0.96); }
+  100% { transform: scale(1.04); opacity: 0; }
+}
+.store-pick-card.tapping { animation: cardTap 0.4s cubic-bezier(0.4,0,0.2,1) forwards !important; }
+
+/* Back button — light style */
+.light-back-btn {
+  position: absolute; top: 16px; left: 16px; z-index: 20;
+  width: 40px; height: 40px; border-radius: 14px;
+  background: #f3f4f6; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; color: #374151;
+  transition: background 0.2s;
+}
+.light-back-btn:active { background: #e5e7eb; }
 
 /* =============================================
    SCREEN 3: MENU
@@ -420,7 +596,7 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 /* =============================================
    SCREEN 5: BẢN ĐỒ
    ============================================= */
-#screen-map { background: var(--bg); position: relative; }
+#screen-map { background: var(--bg); overflow: hidden; }
 #map-container {
   position: absolute; inset: 0; z-index: 0;
 }
@@ -508,7 +684,7 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 .success-icon { font-size: 4rem; margin-bottom: 20px; animation: bounceIn 0.6s cubic-bezier(0.34,1.6,0.64,1); }
 @keyframes bounceIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .success-order-id { font-size: 0.8rem; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
-.success-title { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 800; color: var(--brand); margin-bottom: 10px; }
+.success-title { font-family: 'League Spartan', sans-serif; font-size: 2rem; font-weight: 800; color: var(--brand); margin-bottom: 10px; }
 .success-sub { font-size: 0.9rem; color: #6b7280; font-weight: 600; line-height: 1.7; margin-bottom: 32px; }
 
 /* Header chung */
@@ -542,7 +718,7 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 
 /* Upsell popup */
 #upsell-popup {
-  position: fixed; bottom: 110px; left: 16px; right: 16px; z-index: 150;
+  position: fixed; bottom: 110px; left: 16px; right: 16px; z-index: 9500;
   background: white; border-radius: 20px;
   padding: 16px 18px; box-shadow: 0 12px 40px rgba(0,0,0,0.15);
   display: none; align-items: center; gap: 14px;
@@ -593,33 +769,46 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
      SCREEN 1: NHẬP THÔNG TIN KHÁCH
      ============================================= -->
 <div id="screen-welcome" class="screen active">
-  <div class="welcome-top">
-    <div id="w-logo" class="welcome-logo">The Cafe 33</div>
-    <div class="welcome-sub">Giao hàng tận nơi</div>
+
+  <!-- 2 card đứng chéo nhau ở vùng trên -->
+  <div class="ws-cards-zone">
+    <!-- XOLIFA — trên, nghiêng trái, z cao hơn -->
+    <div class="ws-card ws-card-xolifa ws-enter">
+      <div class="ws-card-logo-xolifa">XOLIFA</div>
+    </div>
+    <!-- The Cafe 33 — sau, nghiêng phải -->
+    <div class="ws-card ws-card-cafe33 ws-enter">
+      <div class="ws-card-logo-cafe33">The cafe 33</div>
+    </div>
   </div>
-  <div class="welcome-card">
+
+  <!-- Liquid glass form — dính đáy màn hình -->
+  <div class="welcome-form-card">
+
+    <!-- Returning user banner -->
     <div id="returning-user" class="returning-banner hidden" onclick="continueAsReturning()">
       <div class="returning-avatar" id="returning-avatar">?</div>
       <div style="flex:1">
-        <div style="font-weight:900;font-size:0.95rem" id="returning-name">Khách hàng</div>
-        <div style="font-size:0.78rem;color:var(--sub);font-weight:600" id="returning-phone">0xx xxx xxxx</div>
+        <div class="ret-name" id="returning-name">Khách hàng</div>
+        <div class="ret-phone" id="returning-phone">0xx xxx xxxx</div>
       </div>
-      <div style="font-size:0.78rem;font-weight:800;color:var(--brand)">Tiếp tục →</div>
+      <div class="ret-arrow">Tiếp tục →</div>
     </div>
-    <h2 id="w-title">Xin chào!</h2>
-    <p id="w-sub">Nhập thông tin để bắt đầu đặt hàng</p>
+
+    <h2>Xin chào! 👋</h2>
+    <p>Nhập thông tin để đặt hàng giao tận nơi</p>
+
     <div class="input-wrap">
       <label>Họ và tên</label>
       <input type="text" id="inp-name" placeholder="Ví dụ: Nguyễn Văn A" autocomplete="name">
     </div>
-    <div class="input-wrap">
+    <div class="input-wrap" style="margin-bottom:18px">
       <label>Số điện thoại</label>
       <input type="tel" id="inp-phone" placeholder="090..." inputmode="numeric" autocomplete="tel">
     </div>
-    <button class="btn-primary" onclick="submitInfo()">
-      <span id="btn-info-text">Tiếp tục</span>
+    <button class="btn-primary" onclick="submitInfo()" id="btn-submit-info">
+      Tiếp tục →
     </button>
-    <div style="height:10px"></div>
   </div>
 </div>
 
@@ -627,18 +816,15 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
      SCREEN 2: CHỌN CHI NHÁNH
      ============================================= -->
 <div id="screen-store" class="screen">
-  <div class="page-header">
-    <button class="back-btn" onclick="goBack('screen-welcome')">←</button>
-    <span class="page-title">Chọn chi nhánh</span>
+  <button class="light-back-btn" onclick="goBack('screen-welcome')">←</button>
+
+  <div class="store-header">
+    <h2>Chọn chi nhánh</h2>
+    <p>Bạn muốn đặt từ đâu?</p>
   </div>
-  <div class="steps">
-    <div class="step done"></div>
-    <div class="step active"></div>
-    <div class="step"></div>
-    <div class="step"></div>
-  </div>
-  <div style="padding:20px 16px" class="pb-cart" id="store-list">
-    <!-- Render từ JS -->
+
+  <div class="store-cards-area" id="store-cards-area">
+    <!-- Render từ JS với animation -->
   </div>
 </div>
 
@@ -1017,6 +1203,12 @@ const storage = firebase.storage();
 window.addEventListener('load', () => {
   loadSavedCustomer();
   loadShipConfig();
+  // Trigger card entrance animation
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.ws-enter').forEach(el => {
+      el.style.animationPlayState = 'running';
+    });
+  });
 });
 
 function normalizePhone(p) {
@@ -1081,92 +1273,163 @@ function submitInfo() {
   if (name.length < 2) { showToast('Vui lòng nhập tên đầy đủ'); return; }
   if (phone.length < 9) { showToast('Số điện thoại không hợp lệ'); return; }
 
-  const btn = document.getElementById('btn-info-text');
+  const btn = document.getElementById('btn-submit-info');
   btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
 
-  // Tìm khách trong cả 2 node
+  // Lưu ngay, không cần chờ Firebase để tránh load mãi
+  const customer = { name, phone, source: 'ship' };
+  state.customer = customer;
+  localStorage.setItem('ship_customer', JSON.stringify(customer));
+
+  // Tạo/cập nhật customer_ship async (không block UI)
   Promise.all([
     db.ref('customers/' + phone).once('value'),
     db.ref('customer_ship/' + phone).once('value')
   ]).then(([snap1, snap2]) => {
-    const data = snap1.val() || snap2.val();
-    const customer = { name, phone, source: 'ship' };
-
-    if (!data) {
-      // Tạo mới trong customer_ship
+    if (!snap1.exists() && !snap2.exists()) {
       db.ref('customer_ship/' + phone).set({
         name, phone,
         joinDate: new Date().toISOString(),
         source: 'ship'
       });
     }
-
-    state.customer = customer;
-    localStorage.setItem('ship_customer', JSON.stringify(customer));
-    btn.textContent = 'Tiếp tục';
-    renderStores();
-    goTo('screen-store');
   }).catch(() => {
-    btn.textContent = 'Tiếp tục';
-    showToast('Lỗi kết nối, thử lại');
+    // Không block nếu lỗi mạng
   });
+
+  btn.innerHTML = 'Tiếp tục';
+  btn.disabled = false;
+  renderStores();
+  goTo('screen-store');
 }
 
 // ======================================================
-// SCREEN 2: CHỌN CHI NHÁNH
+// SCREEN 2: CHỌN CHI NHÁNH — ANIMATION CARDS
 // ======================================================
-function renderStores() {
-  // Lấy config giờ mở cửa từ DB nếu có
-  db.ref('shipConfig/stores').once('value', snap => {
-    const cfg = snap.val() || {};
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    let html = '';
-
-    Object.values(STORES).forEach(s => {
-      const storeCfg = cfg[s.id] || {};
-      const hours = storeCfg.hours || s.hours;
-      const isOpen = checkOpen(storeCfg.openTime || s.hours.split('–')[0].trim(),
-                               storeCfg.closeTime || s.hours.split('–')[1].trim(), nowMin);
-      const themeClass = s.id === 'xolifa' ? 'theme-xolifa' : '';
-      html += `
-        <div class="store-card ${!isOpen ? 'disabled' : ''}" onclick="selectStore('${s.id}')">
-          <div class="store-banner" style="background:${s.color}">
-            <div style="font-size:4rem;z-index:1">${s.emoji}</div>
-            <div style="position:absolute;bottom:10px;left:16px;z-index:5;color:white;font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:800">${s.name}</div>
-          </div>
-          <div class="store-info">
-            <div class="store-addr">📍 ${storeCfg.address || s.address}</div>
-            <div class="store-meta">
-              <div class="store-hours">⏰ ${hours}</div>
-              <div class="store-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Đang mở' : 'Đã đóng'}</div>
-            </div>
-          </div>
-        </div>`;
-    });
-    document.getElementById('store-list').innerHTML = html;
-  });
-}
-
 function checkOpen(openStr, closeStr, nowMin) {
   try {
-    const [oh, om] = openStr.split(':').map(Number);
-    const [ch, cm] = closeStr.split(':').map(Number);
+    const [oh, om] = (openStr || '07:00').split(':').map(Number);
+    const [ch, cm] = (closeStr || '22:00').split(':').map(Number);
     const openMin  = oh * 60 + (om || 0);
     const closeMin = ch * 60 + (cm || 0);
     return nowMin >= openMin && nowMin < closeMin;
   } catch(e) { return true; }
 }
 
+function renderStores() {
+  const area = document.getElementById('store-cards-area');
+  if (!area) return;
+
+  db.ref('shipConfig/stores').once('value', snap => {
+    const cfg = snap.val() || {};
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    const storeList = Object.values(STORES);
+    let html = '';
+
+    storeList.forEach((s, i) => {
+      const storeCfg = cfg[s.id] || {};
+      const hours = storeCfg.hours || s.hours;
+      const openT  = storeCfg.openTime  || s.hours.split('–')[0].trim();
+      const closeT = storeCfg.closeTime || s.hours.split('–')[1]?.trim() || '22:00';
+      const isOpen = checkOpen(openT, closeT, nowMin);
+      const addr   = storeCfg.address || s.address;
+
+      if (s.id === 'cafe33') {
+        html += `
+        <div class="store-pick-card spc-cafe33 ${!isOpen ? 'disabled' : ''}"
+             id="spc-cafe33"
+             onclick="selectStore('cafe33')">
+          <div class="spc-shine"></div>
+          
+          <div class="spc-name-cafe33">The cafe 33</div>
+          <div class="spc-addr">📍 ${addr}</div>
+          <div class="spc-footer">
+            <span class="spc-hours">⏰ ${hours}</span>
+            <span class="spc-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Đang mở' : 'Đã đóng'}</span>
+          </div>
+        </div>`;
+      } else {
+        html += `
+        <div class="store-pick-card spc-xolifa ${!isOpen ? 'disabled' : ''}"
+             id="spc-xolifa"
+             onclick="selectStore('xolifa')">
+          <div class="spc-shine"></div>
+          
+          <div class="spc-name-xolifa">XOLIFA</div>
+          <div class="spc-addr">📍 ${addr}</div>
+          <div class="spc-footer">
+            <span class="spc-hours">⏰ ${hours}</span>
+            <span class="spc-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Đang mở' : 'Đã đóng'}</span>
+          </div>
+        </div>`;
+      }
+    });
+
+    area.innerHTML = html;
+
+    // Trigger entrance animation sau 1 frame
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const c1 = document.getElementById('spc-cafe33');
+        const c2 = document.getElementById('spc-xolifa');
+        if (c1) c1.classList.add('entering');
+        if (c2) c2.classList.add('entering');
+      });
+    });
+  }).catch(() => {
+    // Nếu không có config, vẫn render với giá trị mặc định
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    let html = '';
+    Object.values(STORES).forEach(s => {
+      const isOpen = checkOpen(s.hours.split('–')[0].trim(), s.hours.split('–')[1]?.trim() || '22:00', nowMin);
+      if (s.id === 'cafe33') {
+        html += `<div class="store-pick-card spc-cafe33" id="spc-cafe33" onclick="selectStore('cafe33')">
+          <div class="spc-shine"></div><div class="spc-name-cafe33">The cafe 33</div>
+          <div class="spc-addr">📍 ${s.address}</div>
+          <div class="spc-footer"><span class="spc-hours">⏰ ${s.hours}</span>
+          <span class="spc-status ${isOpen?'open':'closed'}">${isOpen?'Đang mở':'Đã đóng'}</span></div>
+        </div>`;
+      } else {
+        html += `<div class="store-pick-card spc-xolifa" id="spc-xolifa" onclick="selectStore('xolifa')">
+          <div class="spc-shine"></div><div class="spc-name-xolifa">XOLIFA</div>
+          <div class="spc-addr">📍 ${s.address}</div>
+          <div class="spc-footer"><span class="spc-hours">⏰ ${s.hours}</span>
+          <span class="spc-status ${isOpen?'open':'closed'}">${isOpen?'Đang mở':'Đã đóng'}</span></div>
+        </div>`;
+      }
+    });
+    area.innerHTML = html;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      document.getElementById('spc-cafe33')?.classList.add('entering');
+      document.getElementById('spc-xolifa')?.classList.add('entering');
+    }));
+  });
+}
+
 function selectStore(storeId) {
+  // Animation tap trước khi chuyển màn hình
+  const cardEl = document.getElementById('spc-' + storeId);
+  if (cardEl) {
+    cardEl.classList.add('tapping');
+    setTimeout(() => {
+      _doSelectStore(storeId);
+    }, 400);
+  } else {
+    _doSelectStore(storeId);
+  }
+}
+
+function _doSelectStore(storeId) {
   state.store = STORES[storeId];
-  // Đổi theme
   if (storeId === 'xolifa') {
     document.body.classList.add('theme-xolifa');
   } else {
     document.body.classList.remove('theme-xolifa');
   }
-  // Load QR
   if (state.store.qrStorageRef) {
     storage.ref(state.store.qrStorageRef).getDownloadURL()
       .then(url => { state.qrUrl = url; document.getElementById('qr-img').src = url; })
