@@ -1203,10 +1203,10 @@ try {
 
 function dbRef(path) {
   if (!db) return {
-    once: () => Promise.resolve({ exists: () => false, val: () => null }),
-    set: () => Promise.resolve(),
-    update: () => Promise.resolve(),
-    on: () => {},
+    once: (evt, cb) => { if (cb) cb({ exists: () => false, val: () => null }); return Promise.resolve({ exists: () => false, val: () => null }); },
+    set: (val, cb) => { if (cb) cb(null); return Promise.resolve(); },
+    update: (val, cb) => { if (cb) cb(null); return Promise.resolve(); },
+    on: (evt, cb) => { if (cb) cb({ val: () => null }); },
     push: () => ({ key: 'local_' + Date.now() })
   };
   return db.ref(path);
@@ -1296,16 +1296,13 @@ function submitInfo() {
   state.customer = { name, phone, source: 'ship' };
   localStorage.setItem('ship_customer', JSON.stringify(state.customer));
 
-  // Tạo customer async ở nền — không block UI
+  // Lưu customer async ở nền — KHÔNG block UI, KHÔNG chờ Firebase
   if (db) {
-    Promise.all([
-      dbRef('customers/' + phone).once('value'),
-      dbRef('customer_ship/' + phone).once('value')
-    ]).then(([s1, s2]) => {
-      if (!s1.exists() && !s2.exists()) {
+    dbRef('customer_ship/' + phone).once('value', snap => {
+      if (!snap.exists()) {
         dbRef('customer_ship/' + phone).set({ name, phone, joinDate: new Date().toISOString(), source: 'ship' });
       }
-    }).catch(() => {});
+    });
   }
 
   // Chuyển màn hình ngay lập tức
