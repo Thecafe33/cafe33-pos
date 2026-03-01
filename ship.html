@@ -1331,23 +1331,9 @@ function checkOpen(openStr, closeStr, nowMin) {
 }
 
 function renderStores() {
-  const area = document.getElementById('store-cards-area');
-  if (!area) return;
-
-  // Hiện loading overlay — giống index.html
-  document.getElementById('loading-overlay').style.display='flex';
-
-  // Safety timer 3 giây — giống index.html: nếu Firebase không trả về thì vẫn render
-  const safetyTimer = setTimeout(() => {
-    document.getElementById('loading-overlay').style.display='none';
-    _renderStoreCards({});
-  }, 3000);
-
-  dbRef('shipConfig/stores').once('value', snap => {
-    clearTimeout(safetyTimer);
-    document.getElementById('loading-overlay').style.display='none';
-    _renderStoreCards(snap.val() || {});
-  });
+  // Render thẳng từ STORES config local — không cần gọi Firebase
+  // (giống index.html: chỉ gọi db khi thực sự cần, không phải để hiện UI cơ bản)
+  _renderStoreCards({});
 }
 
 function _renderStoreCards(cfg) {
@@ -1362,14 +1348,18 @@ function _renderStoreCards(cfg) {
   storeList.forEach(s => {
     const storeCfg = cfg[s.id] || {};
     const hours = storeCfg.hours || s.hours;
-    const openT  = storeCfg.openTime  || s.hours.split('–')[0].trim();
-    const closeT = storeCfg.closeTime || s.hours.split('–')[1]?.trim() || '22:00';
-    const isOpen = checkOpen(openT, closeT, nowMin);
+    // Dùng regex để tách giờ — tránh lỗi encoding dấu –
+    const timeParts = hours.match(/(\d{1,2}:\d{2})/g) || [];
+    const openT  = storeCfg.openTime  || timeParts[0] || '07:00';
+    const closeT = storeCfg.closeTime || timeParts[1] || '22:00';
+    // isOpen dùng để hiển thị badge, nhưng KHÔNG disabled card (để test được bất kỳ giờ nào)
+    // Nếu muốn khóa ngoài giờ, đổi dòng dưới lại thành: const canOrder = isOpen;
+    const canOrder = true;
     const addr   = storeCfg.address || s.address;
 
     if (s.id === 'cafe33') {
       html += `
-      <div class="store-pick-card spc-cafe33 ${!isOpen ? 'disabled' : ''}"
+      <div class="store-pick-card spc-cafe33 ${!canOrder ? 'disabled' : ''}"
            id="spc-cafe33"
            onclick="selectStore('cafe33')">
         <div class="spc-shine"></div>
@@ -1382,7 +1372,7 @@ function _renderStoreCards(cfg) {
       </div>`;
     } else {
       html += `
-      <div class="store-pick-card spc-xolifa ${!isOpen ? 'disabled' : ''}"
+      <div class="store-pick-card spc-xolifa ${!canOrder ? 'disabled' : ''}"
            id="spc-xolifa"
            onclick="selectStore('xolifa')">
         <div class="spc-shine"></div>
