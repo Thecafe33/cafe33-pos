@@ -12,7 +12,6 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
 <style>
 /* =============================================
    BIẾN MÀU — tự động đổi theo chi nhánh
@@ -52,8 +51,7 @@ body {
   font-family: 'Nunito', sans-serif;
   background: #ffffff;
   color: var(--text);
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 ::-webkit-scrollbar { width: 3px; }
@@ -1109,13 +1107,11 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 // FIREBASE CONFIG — dán config của bạn vào đây
 // ======================================================
 const FIREBASE_CONFIG = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "YOUR_DATABASE_URL",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain: "the-cafe-33.firebaseapp.com",
+  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "the-cafe-33",
+  storageBucket: "the-cafe-33.appspot.com"
 };
 // Google Maps API Key
 const MAPS_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
@@ -1191,11 +1187,26 @@ let state = {
 };
 
 // ======================================================
-// FIREBASE INIT
+// FIREBASE INIT — bọc try/catch để app không crash khi chưa có config
 // ======================================================
-if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-const db = firebase.database();
-const storage = firebase.storage();
+let db = null;
+try {
+  if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.database();
+} catch(e) {
+  console.warn('Firebase init lỗi:', e.message);
+}
+
+function dbRef(path) {
+  if (!db) return {
+    once: () => Promise.resolve({ exists: () => false, val: () => null }),
+    set: () => Promise.resolve(),
+    update: () => Promise.resolve(),
+    on: () => {},
+    push: () => ({ key: 'local_' + Date.now() })
+  };
+  return db.ref(path);
+}
 
 // ======================================================
 // INIT
@@ -1241,7 +1252,7 @@ function continueAsReturning() {
 }
 
 function loadShipConfig() {
-  db.ref('shipConfig').once('value', snap => {
+  dbRef('shipConfig').once('value', snap => {
     if (snap.exists()) {
       state.shipConfig = { ...DEFAULT_SHIP_CONFIG, ...snap.val() };
     }
@@ -1252,11 +1263,15 @@ function loadShipConfig() {
 // SCREEN NAVIGATION
 // ======================================================
 function goTo(screenId) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s => {
+    s.classList.remove('active', 'fade-in');
+  });
   const el = document.getElementById(screenId);
-  el.classList.add('active');
-  el.classList.add('fade-in');
-  window.scrollTo(0, 0);
+  if (el) {
+    el.classList.add('active');
+    el.scrollTop = 0;
+    requestAnimationFrame(() => el.classList.add('fade-in'));
+  }
 }
 
 function goBack(screenId) {
@@ -1273,33 +1288,23 @@ function submitInfo() {
   if (name.length < 2) { showToast('Vui lòng nhập tên đầy đủ'); return; }
   if (phone.length < 9) { showToast('Số điện thoại không hợp lệ'); return; }
 
-  const btn = document.getElementById('btn-submit-info');
-  btn.innerHTML = '<span class="spinner"></span>';
-  btn.disabled = true;
+  // Lưu ngay vào state + localStorage, KHÔNG chờ Firebase
+  state.customer = { name, phone, source: 'ship' };
+  localStorage.setItem('ship_customer', JSON.stringify(state.customer));
 
-  // Lưu ngay, không cần chờ Firebase để tránh load mãi
-  const customer = { name, phone, source: 'ship' };
-  state.customer = customer;
-  localStorage.setItem('ship_customer', JSON.stringify(customer));
+  // Tạo customer async ở nền — không block UI
+  if (db) {
+    Promise.all([
+      dbRef('customers/' + phone).once('value'),
+      dbRef('customer_ship/' + phone).once('value')
+    ]).then(([s1, s2]) => {
+      if (!s1.exists() && !s2.exists()) {
+        dbRef('customer_ship/' + phone).set({ name, phone, joinDate: new Date().toISOString(), source: 'ship' });
+      }
+    }).catch(() => {});
+  }
 
-  // Tạo/cập nhật customer_ship async (không block UI)
-  Promise.all([
-    db.ref('customers/' + phone).once('value'),
-    db.ref('customer_ship/' + phone).once('value')
-  ]).then(([snap1, snap2]) => {
-    if (!snap1.exists() && !snap2.exists()) {
-      db.ref('customer_ship/' + phone).set({
-        name, phone,
-        joinDate: new Date().toISOString(),
-        source: 'ship'
-      });
-    }
-  }).catch(() => {
-    // Không block nếu lỗi mạng
-  });
-
-  btn.innerHTML = 'Tiếp tục';
-  btn.disabled = false;
+  // Chuyển màn hình ngay lập tức
   renderStores();
   goTo('screen-store');
 }
@@ -1321,7 +1326,7 @@ function renderStores() {
   const area = document.getElementById('store-cards-area');
   if (!area) return;
 
-  db.ref('shipConfig/stores').once('value', snap => {
+  dbRef('shipConfig/stores').once('value', snap => {
     const cfg = snap.val() || {};
     const now = new Date();
     const nowMin = now.getHours() * 60 + now.getMinutes();
@@ -1431,9 +1436,7 @@ function _doSelectStore(storeId) {
     document.body.classList.remove('theme-xolifa');
   }
   if (state.store.qrStorageRef) {
-    storage.ref(state.store.qrStorageRef).getDownloadURL()
-      .then(url => { state.qrUrl = url; document.getElementById('qr-img').src = url; })
-      .catch(() => {});
+    // QR storage: thêm sau khi có appId đầy đủ
   }
   loadMenu();
   goTo('screen-menu');
@@ -1444,7 +1447,7 @@ function _doSelectStore(storeId) {
 // ======================================================
 function loadMenu() {
   const node = state.store.menuNode;
-  db.ref(node).once('value', snap => {
+  dbRef(node).once('value', snap => {
     const raw = snap.val() || {};
     const items = [];
     const cats  = new Set(['all']);
@@ -1865,7 +1868,7 @@ function applyVoucher() {
   msg.style.display = 'none';
   if (!code) return;
 
-  db.ref('coupons').once('value', snap => {
+  dbRef('coupons').once('value', snap => {
     const all = snap.val();
     if (!all) { showVoucherMsg('Mã không hợp lệ'); return; }
     let found = null;
@@ -2046,7 +2049,7 @@ function placeOrder() {
   const discount = state.voucher ? state.voucher.discount : 0;
   const total    = Math.max(0, sub - discount + state.shipFee);
 
-  const orderId  = db.ref('shipOrders').push().key;
+  const orderId  = dbRef('shipOrders').push().key;
   const order = {
     id: orderId,
     customer: state.customer,
@@ -2064,7 +2067,7 @@ function placeOrder() {
     updatedAt: new Date().toISOString(),
   };
 
-  db.ref('shipOrders/' + orderId).set(order, err => {
+  dbRef('shipOrders/' + orderId).set(order, err => {
     if (err) {
       btn.innerHTML = 'Đặt hàng ngay 🚀';
       btn.disabled = false;
@@ -2074,7 +2077,7 @@ function placeOrder() {
 
     // Cập nhật lastOrder cho customer_ship
     if (state.customer?.phone) {
-      db.ref('customer_ship/' + state.customer.phone).update({
+      dbRef('customer_ship/' + state.customer.phone).update({
         lastOrder: new Date().toISOString(),
         name: state.customer.name,
         phone: state.customer.phone,
@@ -2111,7 +2114,7 @@ function showSuccess(orderId, order) {
     </div>`).join('');
 
   // Realtime status update
-  db.ref('shipOrders/' + orderId + '/status').on('value', snap => {
+  dbRef('shipOrders/' + orderId + '/status').on('value', snap => {
     const status = snap.val();
     const stepIdx = steps.findIndex(s => s.key === status);
     const rows = document.getElementById('status-tracker')?.querySelectorAll('div');
