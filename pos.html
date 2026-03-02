@@ -2699,10 +2699,13 @@ function renderCart() {
         const isDiscount = !!i._discountId;
         const isSpecial  = isGift || isDiscount;
 
-        // Nhãn size — ẩn nếu là quà/giảm giá (size chứa mã, không cần hiện)
-        const sizeLabel = (!isSpecial && i.size)
+        // Phí đặc biệt (vệ sinh, nợ cũ - size = 'Phí')
+        const isFee = (i.size === 'Phí');
+
+        // Nhãn size — ẩn nếu là quà/giảm giá hoặc phí đặc biệt
+        const sizeLabel = (!isSpecial && !isFee && i.size)
             ? `<span class="text-[10px] font-black text-white bg-[#006241] px-1.5 py-[1px] rounded ml-1 uppercase">${i.size.toUpperCase()}</span>`
-            : '';
+            : (isFee ? `<span class="text-[10px] font-black text-white bg-red-500 px-1.5 py-[1px] rounded ml-1">Phí</span>` : '');
 
         // Nhãn phụ dưới tên
         let subLabel = '';
@@ -2713,7 +2716,8 @@ function renderCart() {
             subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">Quà · ${i._giftLabel||i.size}</p>`;
         }
         else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
-        else            subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
+        else if (isFee)      subLabel = `<p class="text-red-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ</p>`;
+        else                 subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
 
         const priceColor = isSpecial ? 'text-blue-600' : 'text-[#006241]';
         const priceText  = isSpecial
@@ -9166,25 +9170,37 @@ function confirmMoveBed(newBedId) {
 var _pendingDebtPhone = null;
 var _pendingDebtAdded = false;
 
-function scanAndAddDebt(phone, onlyAlert = false) {
+function scanAndAddDebt(phone, onlyAlert) {
+    if (onlyAlert === undefined) onlyAlert = false;
     if (!phone || phone.length < 3) return;
-    let key = normalizePhone(phone);
-    let cust = customerMap[key];
+    var key = normalizePhone(phone);
+    var cust = customerMap[key];
     if (cust && cust.pendingFee > 0) {
-        let fee = cust.pendingFee;
-        let reason = cust.pendingFeeReason || "Phí chưa thanh toán";
-        if (typeof showAppModal === 'function') {
+        var fee = cust.pendingFee;
+        var reason = cust.pendingFeeReason || "Phí chưa thanh toán";
+
+        if (!onlyAlert) {
+            // Chống trùng: nếu đã add cho đúng phone rồi thì bỏ qua
+            if (_pendingDebtAdded && _pendingDebtPhone === key) {
+                showAppModal("⚠️ CẢNH BÁO NỢ CŨ",
+                    "Khách <b>" + cust.name + "</b> đang nợ: <b class=\"text-red-500\">" + fee.toLocaleString() + "đ</b><br>Lý do: " + reason + "<br>Đã tự động thêm vào bill.",
+                    "💰");
+                return;
+            }
+            // Xóa món phí cũ trong cart rồi add lại
+            cart = cart.filter(function(i) { return !(i.name && i.name.indexOf("Nợ cũ:") === 0); });
+            cart.push({ name: "Nợ cũ: " + reason, size: "Phí", price: fee, qty: 1 });
+            renderCart();
+            _pendingDebtPhone = key;
+            _pendingDebtAdded = true;
+        }
+
+        if (typeof showAppModal === "function") {
             showAppModal("⚠️ CẢNH BÁO NỢ CŨ",
-                `Khách <b>${cust.name}</b> đang nợ: <b class="text-red-500">${fee.toLocaleString()}đ</b><br>Lý do: ${reason}<br>${onlyAlert ? "Vui lòng thu tiền!" : "Hệ thống sẽ tự động thêm vào bill."}`,
+                "Khách <b>" + cust.name + "</b> đang nợ: <b class=\"text-red-500\">" + fee.toLocaleString() + "đ</b><br>Lý do: " + reason + "<br>" + (onlyAlert ? "Vui lòng thu tiền!" : "Đã tự động thêm vào bill."),
                 "💰");
         } else {
             alert("CẢNH BÁO: Khách " + cust.name + " đang nợ " + fee.toLocaleString() + "đ");
-        }
-        if (!onlyAlert) {
-            addToCart("Nợ cũ: " + reason, "Phí", fee);
-            // ✅ KHÔNG xóa Firebase ngay — chỉ xóa sau khi thanh toán xong
-            _pendingDebtPhone = key;
-            _pendingDebtAdded = true;
         }
     }
 }
