@@ -2699,13 +2699,10 @@ function renderCart() {
         const isDiscount = !!i._discountId;
         const isSpecial  = isGift || isDiscount;
 
-        // Phí đặc biệt (vệ sinh, nợ cũ - size = 'Phí')
-        const isFee = (i.size === 'Phí');
-
-        // Nhãn size — ẩn nếu là quà/giảm giá hoặc phí đặc biệt
-        const sizeLabel = (!isSpecial && !isFee && i.size)
+        // Nhãn size — ẩn nếu là quà/giảm giá (size chứa mã, không cần hiện)
+        const sizeLabel = (!isSpecial && i.size)
             ? `<span class="text-[10px] font-black text-white bg-[#006241] px-1.5 py-[1px] rounded ml-1 uppercase">${i.size.toUpperCase()}</span>`
-            : (isFee ? `<span class="text-[10px] font-black text-white bg-red-500 px-1.5 py-[1px] rounded ml-1">Phí</span>` : '');
+            : '';
 
         // Nhãn phụ dưới tên
         let subLabel = '';
@@ -2716,8 +2713,7 @@ function renderCart() {
             subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">Quà · ${i._giftLabel||i.size}</p>`;
         }
         else if (isDiscount) subLabel = `<p class="text-[9px] font-bold text-blue-500 mt-0.5">🏷 Mã: ${i._discountCode || ''} · ${i._discountTarget ? i._discountTarget : 'Toàn đơn'}</p>`;
-        else if (isFee)      subLabel = `<p class="text-red-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ</p>`;
-        else                 subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
+        else            subLabel = `<p class="text-gray-400 font-bold text-[10px] mt-0.5">${(i.price).toLocaleString()}đ / ly</p>`;
 
         const priceColor = isSpecial ? 'text-blue-600' : 'text-[#006241]';
         const priceText  = isSpecial
@@ -3381,54 +3377,67 @@ function selectBill(idx) {
     const h = historyData[idx];
     if (!h) return;
 
-    const items = h.items.split(',');
     let tQty = 0;
     
     // Kiểm tra xem đơn đã hoàn chưa (Tiền âm = đã hoàn)
     const isAlreadyRefund = h.total < 0;
 
     // 3. Xử lý danh sách món ăn
-    // --- ĐÂY LÀ DÒNG BẠN ĐANG BỊ THIẾU ---
-    const itemsHtml = items.map((item, i) => { 
-    // -------------------------------------
-        const raw = item.trim();
-        const lastX = raw.lastIndexOf('x');
-        if (lastX === -1) return '';
+    // Ưu tiên dùng itemsArray (có đủ price gốc), fallback về parse text
+    let normalizedItems = [];
+    if (h.itemsArray && Array.isArray(h.itemsArray) && h.itemsArray.length > 0) {
+        normalizedItems = h.itemsArray.map(it => ({
+            nameOnly: it.name || '',
+            sizePart: (it.size === 'Phí' || it.size === 'phi' || it.size === 'PHÍ') ? 'Phí' : (it.size || ''),
+            qty: it.qty || 1,
+            uP: it.price || 0,
+            isFee: (it.size === 'Phí' || it.size === 'phi' || it.size === 'PHÍ')
+        }));
+    } else {
+        const items = (h.items || '').split(',');
+        normalizedItems = items.map(item => {
+            const raw = item.trim();
+            const lastX = raw.lastIndexOf('x');
+            if (lastX === -1) return null;
+            const namePartFull = raw.substring(0, lastX).trim();
+            const qty = parseInt(raw.substring(lastX + 1)) || 1;
+            let nameOnly = namePartFull, sizePart = '';
+            if (namePartFull.includes('(')) {
+                const lb = namePartFull.lastIndexOf('(');
+                nameOnly = namePartFull.substring(0, lb).trim();
+                sizePart = namePartFull.substring(lb + 1, namePartFull.lastIndexOf(')'));
+            }
+            const m = menu.find(mi => mi.name.toLowerCase() === nameOnly.toLowerCase());
+            const uP = m ? (sizePart === 'L' ? m.priceL : m.priceM) : 0;
+            return { nameOnly, sizePart, qty, uP, isFee: false };
+        }).filter(Boolean);
+    }
 
-        const namePartFull = raw.substring(0, lastX).trim();
-        const qty = parseInt(raw.substring(lastX + 1)) || 1;
+    const itemsHtml = normalizedItems.map((it, i) => {
+        const { nameOnly, sizePart, qty, uP, isFee } = it;
         tQty += qty;
-
-        let nameOnly = namePartFull, sizePart = "";
-        if (namePartFull.includes('(')) {
-            const lb = namePartFull.lastIndexOf('(');
-            nameOnly = namePartFull.substring(0, lb).trim();
-            sizePart = namePartFull.substring(lb + 1, namePartFull.lastIndexOf(')'));
-        }
-
-        const m = menu.find(mi => mi.name.toLowerCase() === nameOnly.toLowerCase());
-        const uP = m ? (sizePart === 'L' ? m.priceL : m.priceM) : 0;
         const subTotal = uP * qty;
-        
-        // Tính điểm
+        const m = menu.find(mi => mi.name.toLowerCase() === nameOnly.toLowerCase());
         const pts = (m && m.type === 'ăn vặt') ? Math.floor((subTotal/100)*0.4) : Math.floor(subTotal/100);
-        
         const itData = JSON.stringify({ name: nameOnly, size: sizePart, qty, subTotal, itemPoints: pts });
 
-        // Render dòng sản phẩm
+        const sizeTag = isFee
+            ? `<span class="text-red-500 font-black text-[12px] ml-1">[Phí]</span>`
+            : (sizePart ? `<span class="text-green-500 font-black text-[12px] ml-1">[${sizePart}]</span>` : '');
+
         return `<div id="refund-row-${i}" onclick='${isAlreadyRefund ? "" : `toggleRefundItem(${i}, ${itData})`}' class="receipt-line p-2 rounded-xl transition-all border-l-4 border-transparent ${isAlreadyRefund ? "opacity-50 text-left" : "cursor-pointer hover:bg-gray-50 text-left"}">
             <div class="flex-1 mr-4 text-left">
                 <div class="flex items-start gap-2 text-left">
                     <span class="font-black text-[#006241] text-lg text-left">${qty}x</span>
                     <div class="flex flex-col text-left">
-                        <span class="font-black text-[#006241] text-sm capitalize-first leading-tight text-left">${nameOnly} ${sizePart ? `<span class="text-green-500 font-black text-[12px] ml-1">[${sizePart}]</span>` : ""}</span>
+                        <span class="font-black text-[#006241] text-sm capitalize-first leading-tight text-left">${nameOnly} ${sizeTag}</span>
                         <span class="text-[9px] text-gray-400 font-bold italic text-left">Đơn giá: ${uP.toLocaleString()}</span>
                     </div>
                 </div>
             </div>
             <div class="text-right font-black text-[#006241] text-base pt-1 text-right">${subTotal.toLocaleString()}</div>
         </div>`;
-    }).join(''); // <--- Dấu } này bây giờ sẽ khớp với dấu { ở dòng items.map bên trên
+    }).join('');
 
     // 4. Hiển thị Panel Chi tiết
     document.getElementById('history-detail-empty').classList.add('hidden');
@@ -9170,37 +9179,25 @@ function confirmMoveBed(newBedId) {
 var _pendingDebtPhone = null;
 var _pendingDebtAdded = false;
 
-function scanAndAddDebt(phone, onlyAlert) {
-    if (onlyAlert === undefined) onlyAlert = false;
+function scanAndAddDebt(phone, onlyAlert = false) {
     if (!phone || phone.length < 3) return;
-    var key = normalizePhone(phone);
-    var cust = customerMap[key];
+    let key = normalizePhone(phone);
+    let cust = customerMap[key];
     if (cust && cust.pendingFee > 0) {
-        var fee = cust.pendingFee;
-        var reason = cust.pendingFeeReason || "Phí chưa thanh toán";
-
-        if (!onlyAlert) {
-            // Chống trùng: nếu đã add cho đúng phone rồi thì bỏ qua
-            if (_pendingDebtAdded && _pendingDebtPhone === key) {
-                showAppModal("⚠️ CẢNH BÁO NỢ CŨ",
-                    "Khách <b>" + cust.name + "</b> đang nợ: <b class=\"text-red-500\">" + fee.toLocaleString() + "đ</b><br>Lý do: " + reason + "<br>Đã tự động thêm vào bill.",
-                    "💰");
-                return;
-            }
-            // Xóa món phí cũ trong cart rồi add lại
-            cart = cart.filter(function(i) { return !(i.name && i.name.indexOf("Nợ cũ:") === 0); });
-            cart.push({ name: "Nợ cũ: " + reason, size: "Phí", price: fee, qty: 1 });
-            renderCart();
-            _pendingDebtPhone = key;
-            _pendingDebtAdded = true;
-        }
-
-        if (typeof showAppModal === "function") {
+        let fee = cust.pendingFee;
+        let reason = cust.pendingFeeReason || "Phí chưa thanh toán";
+        if (typeof showAppModal === 'function') {
             showAppModal("⚠️ CẢNH BÁO NỢ CŨ",
-                "Khách <b>" + cust.name + "</b> đang nợ: <b class=\"text-red-500\">" + fee.toLocaleString() + "đ</b><br>Lý do: " + reason + "<br>" + (onlyAlert ? "Vui lòng thu tiền!" : "Đã tự động thêm vào bill."),
+                `Khách <b>${cust.name}</b> đang nợ: <b class="text-red-500">${fee.toLocaleString()}đ</b><br>Lý do: ${reason}<br>${onlyAlert ? "Vui lòng thu tiền!" : "Hệ thống sẽ tự động thêm vào bill."}`,
                 "💰");
         } else {
             alert("CẢNH BÁO: Khách " + cust.name + " đang nợ " + fee.toLocaleString() + "đ");
+        }
+        if (!onlyAlert) {
+            addToCart("Nợ cũ: " + reason, "Phí", fee);
+            // ✅ KHÔNG xóa Firebase ngay — chỉ xóa sau khi thanh toán xong
+            _pendingDebtPhone = key;
+            _pendingDebtAdded = true;
         }
     }
 }
