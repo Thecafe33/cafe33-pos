@@ -315,7 +315,7 @@
           </div>
           <div>
             <p class="font-bold text-[#1e3932] text-sm uppercase tracking-wider">Lịch sử đặt Bed</p>
-            <p class="text-[10px] text-gray-400 font-bold">Xem lịch trình & Hủy lịch</p>
+            <p class="text-[10px] text-gray-400 font-bold">Xem lịch đặt, thay đổi giờ hoặc hủy lịch tại đây</p>
           </div>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
@@ -1726,27 +1726,66 @@ function openHistory() {
 
         // Vẽ danh sách lịch sử cũ
         if (_historyCache.length === 0) {
-            listDiv.innerHTML = '<div class="text-center text-gray-400 text-sm italic py-10">Chưa có lịch sử nào.</div>';
+            listDiv.innerHTML = '<div style="text-align:center;padding:40px 0;color:#9ca3af;font-size:13px;">Chưa có lịch sử nào.</div>';
         } else {
             _historyCache.forEach(h => {
-                if (todayBooking && h.key === todayBooking.key) return; // Bỏ qua cái đã hiện ở trên
+                if (todayBooking && h.key === todayBooking.key) return;
 
-                let clr = "text-gray-500 bg-gray-100"; let txt = h.status || "---";
-                if (txt.includes('xong')) { clr = "text-green-700 bg-green-50"; txt = "HOÀN THÀNH"; }
-                else if (txt.includes('hủy')) { clr = "text-red-500 bg-red-50"; txt = "ĐÃ HỦY"; }
+                const st = (h.status || '').toLowerCase();
+                const isDone     = st.includes('xong');
+                const isCancelled = st.includes('hủy');
+                const hasFeeUnpaid = h.hasPenalty === true && (h.penaltyAmount || 0) > 0;
+                const hasFeesPaid  = !h.hasPenalty && (h.penaltyAmount || 0) > 0; // đã xóa cờ nhưng vẫn có amt
 
-                let locationText = (h.status||"").includes('hủy') ? '<span class="text-red-400 font-bold">ĐÃ HỦY</span>' : (h.bedId ? "BED 0"+h.bedId : "Đang xếp...");
+                // Màu nền card theo penalty
+                let cardBg = '#fff';
+                let cardBorder = '1px solid #f3f4f6';
+                let cardShadow = '0 1px 4px rgba(0,0,0,0.05)';
+                if (hasFeeUnpaid) {
+                    cardBg = '#fff5f5'; cardBorder = '1px solid #fecaca'; cardShadow = '0 2px 8px rgba(220,38,38,0.08)';
+                }
 
-                listDiv.innerHTML += `
-                <div onclick="showHistoryDetail('${h.key}')" class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-2 relative mb-2 active:scale-95 transition-transform cursor-pointer">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-black text-gray-400 uppercase tracking-widest">📅 ${h.date}</span>
-                        <span class="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase ${clr}">${txt}</span>
+                // Status chip
+                let chipBg = '#f3f4f6', chipColor = '#6b7280', chipTxt = h.status || '---';
+                if (isDone)      { chipBg = '#f0fdf4'; chipColor = '#16a34a'; chipTxt = 'Hoàn thành'; }
+                if (isCancelled) { chipBg = '#fef2f2'; chipColor = '#ef4444'; chipTxt = 'Đã hủy'; }
+                if (!isDone && !isCancelled) { chipBg = '#fffbeb'; chipColor = '#d97706'; chipTxt = 'Đặt trước'; }
+
+                const bedTxt = isCancelled ? '' : (h.bedId ? 'Bed ' + h.bedId : 'Chờ xếp bed');
+
+                // Duration
+                let durTxt = '';
+                if (h.start && h.end) {
+                    const s = parseInt(h.start)*60 + parseInt(h.start.split(':')[1]);
+                    const e = parseInt(h.end)*60   + parseInt(h.end.split(':')[1]);
+                    const diff = Math.max(0, e - s);
+                    durTxt = Math.floor(diff/60) + 'g' + (diff%60 ? (diff%60)+'p' : '');
+                }
+
+                // Penalty badge
+                let penaltyBadge = '';
+                if (hasFeeUnpaid) {
+                    penaltyBadge = `<div style="display:flex;align-items:center;gap:5px;background:#fee2e2;border-radius:99px;padding:4px 10px;margin-top:8px;">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        <span style="font-size:10px;font-weight:900;color:#dc2626;">Phí vệ sinh ${(h.penaltyAmount||0).toLocaleString()}đ · Chưa thanh toán</span>
+                    </div>`;
+                }
+
+                listDiv.innerHTML += `<div onclick="showHistoryDetail('${h.key}')"
+                    style="background:${cardBg};border:${cardBorder};box-shadow:${cardShadow};border-radius:24px;padding:16px;margin-bottom:10px;cursor:pointer;transition:transform 0.1s;-webkit-tap-highlight-color:transparent;"
+                    ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                        <div>
+                            <p style="font-size:11px;font-weight:800;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 3px;">${h.date || ''}</p>
+                            <p style="font-size:20px;font-weight:900;color:#1e3932;margin:0;font-family:'League Spartan',sans-serif;line-height:1;">${h.start || '--'} – ${h.end || '--'}</p>
+                            ${bedTxt ? `<p style="font-size:11px;color:#6b7280;font-weight:600;margin:3px 0 0;">${bedTxt}${durTxt ? ' · ' + durTxt : ''}</p>` : ''}
+                        </div>
+                        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                            <span style="background:${chipBg};color:${chipColor};font-size:9px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;padding:4px 10px;border-radius:99px;">${chipTxt}</span>
+                            ${h.totalSpend ? `<span style="font-size:11px;font-weight:800;color:#006241;">${Number(h.totalSpend).toLocaleString()}đ</span>` : ''}
+                        </div>
                     </div>
-                    <div class="flex justify-between items-end">
-                        <div><p class="text-lg font-black text-[#1e3932] leading-none">${h.start} - ${h.end}</p><p class="text-[10px] text-gray-400 font-bold mt-1">Vị trí: <span class="text-gray-600">${locationText}</span></p></div>
-                        ${h.totalSpend ? `<span class="text-xs font-bold text-[#006241]">-${Number(h.totalSpend).toLocaleString()}đ</span>` : ''}
-                    </div>
+                    ${penaltyBadge}
                 </div>`;
             });
         }
@@ -1935,24 +1974,22 @@ function showHistoryDetail(key) {
         actionsEl.appendChild(btnC);
     }
 
-    // Vi phạm + phí — load từ Firebase
+    // Vi phạm + phí — đọc bedWarnings (rules: read=true) + bedBookings cho penalty
     const vsec = document.getElementById('dh-violation-section');
     vsec.innerHTML = '';
 
-    // curPhone = phone đăng nhập, chính xác nhất. Digits only = cách POS lưu key
     const warnKey = (curPhone || '').replace(/[^0-9]/g, '') || key;
 
     db.ref('bedBookings/' + key).once('value', function(bSnap) {
-        const bData     = bSnap.val() || {};
-        const hasFee    = bData.hasPenalty === true;
-        const feeAmt    = bData.penaltyAmount || 0;
+        const bData  = bSnap.val() || {};
+        const hasFee = bData.hasPenalty === true;
+        const feeAmt = bData.penaltyAmount || 0;
 
         db.ref('bedWarnings/' + warnKey + '/' + key).once('value', function(wSnap) {
             const wData     = wSnap.val();
-            const warnCount = (wData && wData.count) ? parseInt(wData.count) : 0;
+            const warnCount = wData ? parseInt(wData.count || 0) : 0;
             const lastWarn  = wData ? (wData.lastWarning || null) : null;
 
-            // Không có gì → ẩn hoàn toàn
             if (!warnCount && !hasFee && !feeAmt) { vsec.innerHTML = ''; return; }
 
             let html = '';
