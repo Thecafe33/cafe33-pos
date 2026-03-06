@@ -1732,20 +1732,13 @@ function openHistory() {
                 if (todayBooking && h.key === todayBooking.key) return;
 
                 const st = (h.status || '').toLowerCase();
-                const isDone     = st.includes('xong');
+                const isDone      = st.includes('xong');
                 const isCancelled = st.includes('hủy');
-                const hasFeeUnpaid = h.hasPenalty === true && (h.penaltyAmount || 0) > 0;
-                const hasFeesPaid  = !h.hasPenalty && (h.penaltyAmount || 0) > 0; // đã xóa cờ nhưng vẫn có amt
+                const hasFee      = h.hasPenalty === true && (h.penaltyAmount || 0) > 0;
 
-                // Màu nền card theo penalty
-                let cardBg = '#fff';
-                let cardBorder = '1px solid #f3f4f6';
-                let cardShadow = '0 1px 4px rgba(0,0,0,0.05)';
-                if (hasFeeUnpaid) {
-                    cardBg = '#fff5f5'; cardBorder = '1px solid #fecaca'; cardShadow = '0 2px 8px rgba(220,38,38,0.08)';
-                }
+                let cardBg = '#fff', cardBorder = '1px solid #f3f4f6', cardShadow = '0 1px 4px rgba(0,0,0,0.05)';
+                if (hasFee) { cardBg = '#fff8f0'; cardBorder = '1px solid #fed7aa'; cardShadow = '0 2px 8px rgba(234,88,12,0.08)'; }
 
-                // Status chip
                 let chipBg = '#f3f4f6', chipColor = '#6b7280', chipTxt = h.status || '---';
                 if (isDone)      { chipBg = '#f0fdf4'; chipColor = '#16a34a'; chipTxt = 'Hoàn thành'; }
                 if (isCancelled) { chipBg = '#fef2f2'; chipColor = '#ef4444'; chipTxt = 'Đã hủy'; }
@@ -1753,7 +1746,6 @@ function openHistory() {
 
                 const bedTxt = isCancelled ? '' : (h.bedId ? 'Bed ' + h.bedId : 'Chờ xếp bed');
 
-                // Duration
                 let durTxt = '';
                 if (h.start && h.end) {
                     const s = parseInt(h.start)*60 + parseInt(h.start.split(':')[1]);
@@ -1762,19 +1754,15 @@ function openHistory() {
                     durTxt = Math.floor(diff/60) + 'g' + (diff%60 ? (diff%60)+'p' : '');
                 }
 
-                // Penalty badge
-                let penaltyBadge = '';
-                if (hasFeeUnpaid) {
-                    penaltyBadge = `<div style="display:flex;align-items:center;gap:5px;background:#fee2e2;border-radius:99px;padding:4px 10px;margin-top:8px;">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        <span style="font-size:10px;font-weight:900;color:#dc2626;">Phí vệ sinh ${(h.penaltyAmount||0).toLocaleString()}đ · Chưa thanh toán</span>
-                    </div>`;
-                }
+                const penaltyBadge = hasFee ? `<div style="display:flex;align-items:center;gap:5px;background:#ffedd5;border-radius:99px;padding:4px 10px;margin-top:8px;width:fit-content;">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <span style="font-size:10px;font-weight:900;color:#ea580c;">Bị tính phí vệ sinh ${(h.penaltyAmount||0).toLocaleString()}đ</span>
+                </div>` : '';
 
                 listDiv.innerHTML += `<div onclick="showHistoryDetail('${h.key}')"
-                    style="background:${cardBg};border:${cardBorder};box-shadow:${cardShadow};border-radius:24px;padding:16px;margin-bottom:10px;cursor:pointer;transition:transform 0.1s;-webkit-tap-highlight-color:transparent;"
+                    style="background:${cardBg};border:${cardBorder};box-shadow:${cardShadow};border-radius:24px;padding:16px;margin-bottom:10px;cursor:pointer;-webkit-tap-highlight-color:transparent;"
                     ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px;">
                         <div>
                             <p style="font-size:11px;font-weight:800;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 3px;">${h.date || ''}</p>
                             <p style="font-size:20px;font-weight:900;color:#1e3932;margin:0;font-family:'League Spartan',sans-serif;line-height:1;">${h.start || '--'} – ${h.end || '--'}</p>
@@ -1974,7 +1962,7 @@ function showHistoryDetail(key) {
         actionsEl.appendChild(btnC);
     }
 
-    // Vi phạm + phí — đọc bedWarnings (rules: read=true) + bedBookings cho penalty
+    // Vi phạm + phí
     const vsec = document.getElementById('dh-violation-section');
     vsec.innerHTML = '';
 
@@ -2016,14 +2004,13 @@ function showHistoryDetail(key) {
             }
 
             if (hasFee || feeAmt > 0) {
-                const paid = !hasFee;
-                html += `<div style="background:${paid?'#f0fdf4':'#fef2f2'};border:1px solid ${paid?'#bbf7d0':'#fecaca'};border-radius:20px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
-                    <div>
-                        <p style="font-size:10px;font-weight:900;color:${paid?'#15803d':'#dc2626'};text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Phí vệ sinh</p>
-                        <p style="font-size:20px;font-weight:900;color:${paid?'#166534':'#991b1b'};margin:0;font-family:'League Spartan',sans-serif;">${feeAmt.toLocaleString()}đ</p>
+                html += `<div style="background:#fff8f0;border:1px solid #fed7aa;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:14px;">
+                    <div style="width:38px;height:38px;border-radius:12px;background:#ffedd5;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     </div>
-                    <div style="background:${paid?'#dcfce7':'#fee2e2'};border-radius:99px;padding:5px 14px;">
-                        <p style="font-size:10px;font-weight:900;color:${paid?'#16a34a':'#dc2626'};margin:0;">${paid?'Đã thanh toán':'Chưa thanh toán'}</p>
+                    <div>
+                        <p style="font-size:10px;font-weight:900;color:#ea580c;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 2px;">Phí vệ sinh</p>
+                        <p style="font-size:20px;font-weight:900;color:#9a3412;margin:0;font-family:'League Spartan',sans-serif;">${feeAmt.toLocaleString()}đ</p>
                     </div>
                 </div>`;
             }
