@@ -364,36 +364,22 @@
           <!-- Divider -->
           <div style="height:1px;background:rgba(120,80,20,0.12);margin:14px 20px 0;position:relative;z-index:1;"></div>
           <!-- Tasks -->
-          <div style="position:relative;z-index:1;padding:14px 20px 20px;display:flex;flex-direction:column;gap:16px;">
+          <div style="position:relative;z-index:1;padding:14px 20px 20px;">
             <div>
               <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;">
                 <div>
-                  <p style="font-size:10px;font-weight:700;color:rgba(120,80,20,0.5);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 2px;">Lịch đặt bed</p>
-                  <p style="font-size:13px;font-weight:700;color:rgba(61,31,0,0.8);margin:0;">Mỗi người 3 · Cặp đôi = 6</p>
+                  <p style="font-size:10px;font-weight:700;color:rgba(120,80,20,0.5);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 2px;">Lịch bed đã hoàn thành</p>
+                  <p style="font-size:13px;font-weight:700;color:rgba(61,31,0,0.8);margin:0;">9 lịch bed hoàn thành để nhận quà</p>
                 </div>
                 <div style="display:flex;align-items:baseline;gap:3px;">
                   <span id="m3-bed-txt-num" style="font-size:32px;font-weight:900;color:#3d1f00;font-family:'League Spartan',sans-serif;line-height:1;">—</span>
-                  <span style="font-size:13px;font-weight:700;color:rgba(61,31,0,0.3);">/ 6</span>
+                  <span style="font-size:13px;font-weight:700;color:rgba(61,31,0,0.3);">/ 9</span>
                 </div>
               </div>
               <div style="height:5px;background:rgba(120,80,20,0.12);border-radius:99px;overflow:hidden;">
                 <div id="m3-bed-bar" style="height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,#006241,#00a36c);transition:width 1s cubic-bezier(0.34,1.2,0.64,1);"></div>
               </div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;">
-                <div>
-                  <p style="font-size:10px;font-weight:700;color:rgba(120,80,20,0.5);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 2px;">Điểm tích trong kỳ</p>
-                  <p style="font-size:13px;font-weight:700;color:rgba(61,31,0,0.8);margin:0;">Tính từ thời điểm bắt đầu</p>
-                </div>
-                <div style="display:flex;align-items:baseline;gap:3px;">
-                  <span id="m3-pts-txt-num" style="font-size:32px;font-weight:900;color:#3d1f00;font-family:'League Spartan',sans-serif;line-height:1;">—</span>
-                  <span style="font-size:13px;font-weight:700;color:rgba(61,31,0,0.3);">/ 3.333</span>
-                </div>
-              </div>
-              <div style="height:5px;background:rgba(120,80,20,0.12);border-radius:99px;overflow:hidden;">
-                <div id="m3-pts-bar" style="height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,#d97706,#f59e0b);transition:width 1s cubic-bezier(0.34,1.2,0.64,1);"></div>
-              </div>
+              <p style="font-size:10px;color:rgba(120,80,20,0.45);font-weight:600;margin:6px 0 0;">Chỉ tính lịch đã checkout thành công</p>
             </div>
           </div>
         </div>
@@ -823,7 +809,6 @@ function showDashboard(phone) {
 
             if (bookCName) bookCName.value = cName;
             if (bookCPhone) bookCPhone.value = cPhone;
-            _updateMissionPoints(phone, userData.points || 0);
         }
     });
     loadRewards();
@@ -831,60 +816,50 @@ function showDashboard(phone) {
     showTab('user');
 }
 // ── NHIỆM VỤ THÁNG 3/2026 ──────────────────────────────────────
-var _m3SnapshotLoaded = false;
-var _m3StartPoints    = null;
-
-function _updateMissionPoints(phone, currentPoints) {
-    var S = new Date('2026-03-03T00:00:00+07:00'), E = new Date('2026-03-31T23:59:59+07:00'), now = new Date();
-    var block = document.getElementById('mission-march-block');
-    if (!block) return;
-    if (now < S || now > E) { block.style.display = 'none'; return; }
-    if (_m3SnapshotLoaded) { _renderMissionPts(currentPoints); return; }
-    db.ref('missionSnapshot/' + phone + '/march2026').once('value', function(snap) {
-        _m3SnapshotLoaded = true;
-        var data = snap.val();
-        if (data && typeof data.startPoints === 'number') {
-            _m3StartPoints = data.startPoints; _renderMissionPts(currentPoints);
-        } else {
-            db.ref('missionSnapshot/' + phone + '/march2026').set({ startPoints: currentPoints, snappedAt: new Date().toISOString(), phone: phone }, function(err) {
-                if (!err) { _m3StartPoints = currentPoints; _renderMissionPts(currentPoints); }
-            });
-        }
-    });
-}
-function _renderMissionPts(currentPoints) {
-    if (_m3StartPoints === null) return;
-    var pts = Math.max(0, currentPoints - _m3StartPoints);
-    var pct = Math.min(Math.round((pts / 3333) * 100), 100);
-    var el = document.getElementById('m3-pts-txt-num'), bar = document.getElementById('m3-pts-bar');
-    if (el) el.textContent = pts.toLocaleString();
-    if (bar) bar.style.width = pct + '%';
-    _updateMissionChip();
-}
 function _loadMissionBedCount(phone) {
-    var S = new Date('2026-03-03T00:00:00+07:00'), E = new Date('2026-03-31T23:59:59+07:00');
-    function parseD(d) { if (!d) return null; if (d.includes('/')) { var p=d.split('/'); return new Date(+p[2],+p[1]-1,+p[0]); } return new Date(d); }
+    var S = new Date('2026-03-03T00:00:00+07:00');
+    var E = new Date('2026-03-31T23:59:59+07:00');
+    function parseD(d) {
+        if (!d) return null;
+        if (d.includes('/')) { var p = d.split('/'); return new Date(+p[2], +p[1]-1, +p[0]); }
+        return new Date(d);
+    }
     db.ref('bedBookings').orderByChild('phone').equalTo(phone).once('value', function(snap) {
         var count = 0;
-        snap.forEach(function(c) { var v=c.val(); if(!v||(v.status||'').toLowerCase()==='đã hủy') return; var dt=parseD(v.date); if(dt&&dt>=S&&dt<=E) count++; });
-        var el = document.getElementById('m3-bed-txt-num'), bar = document.getElementById('m3-bed-bar');
-        if (el) el.textContent = String(count);
-        if (bar) bar.style.width = Math.min(Math.round((count/6)*100),100) + '%';
+        snap.forEach(function(c) {
+            var v = c.val();
+            if (!v) return;
+            // Chỉ tính lịch đã checkout thành công
+            if ((v.status||'').toLowerCase() !== 'đã xong') return;
+            var dt = parseD(v.date);
+            if (dt && dt >= S && dt <= E) count++;
+        });
+        var el  = document.getElementById('m3-bed-txt-num');
+        var bar = document.getElementById('m3-bed-bar');
+        if (el)  el.textContent  = String(count);
+        if (bar) bar.style.width = Math.min(Math.round(count / 9 * 100), 100) + '%';
         _updateMissionChip();
     });
 }
+
 function _updateMissionChip() {
-    var chip = document.getElementById('m3-chip'), bedEl = document.getElementById('m3-bed-txt-num'), ptsEl = document.getElementById('m3-pts-txt-num'), banner = document.getElementById('m3-complete-banner');
-    if (!chip || !bedEl || !ptsEl) return;
-    var bedDone = parseInt(bedEl.textContent||'0') >= 6;
-    var ptsDone = parseInt((ptsEl.textContent||'0').replace(/[^0-9]/g,'')) >= 3333;
-    if (bedDone && ptsDone) {
-        chip.textContent = 'Hoàn thành ✦'; chip.style.background = 'rgba(0,98,65,0.15)'; chip.style.borderColor = 'rgba(0,98,65,0.3)'; chip.style.color = '#006241';
+    var chip   = document.getElementById('m3-chip');
+    var bedEl  = document.getElementById('m3-bed-txt-num');
+    var banner = document.getElementById('m3-complete-banner');
+    if (!chip || !bedEl) return;
+    var count   = parseInt(bedEl.textContent || '0');
+    var bedDone = count >= 9;
+    if (bedDone) {
+        chip.textContent = 'Hoàn thành ✦';
+        chip.style.background = 'rgba(0,98,65,0.15)';
+        chip.style.borderColor = 'rgba(0,98,65,0.3)';
+        chip.style.color = '#006241';
         if (banner) banner.style.display = 'block';
     } else {
-        var any = bedEl.textContent !== '—' || ptsEl.textContent !== '—';
-        chip.textContent = any ? 'Đang thực hiện' : 'Chưa bắt đầu';
-        chip.style.background = 'rgba(120,80,20,0.1)'; chip.style.borderColor = 'rgba(120,80,20,0.2)'; chip.style.color = 'rgba(120,80,20,0.8)';
+        chip.textContent = count > 0 ? 'Đang thực hiện' : 'Chưa bắt đầu';
+        chip.style.background = 'rgba(120,80,20,0.1)';
+        chip.style.borderColor = 'rgba(120,80,20,0.2)';
+        chip.style.color = 'rgba(120,80,20,0.8)';
         if (banner) banner.style.display = 'none';
     }
 }
@@ -2855,7 +2830,7 @@ function poConfirm(){
         setTimeout(function(){
             if (typeof showAppModal==='function'){
                 showAppModal('Pre-order thành công!',
-                    'Đã lưu <b>'+total+' món</b>.<br><span style="font-size:0.8rem;color:#555;font-weight:500;">Nhớ đến đúng giờ nhé!</span>',
+                    'Đã lưu <b>'+total+' món</b>.<br><span style="font-size:0.8rem;color:#555;font-weight:500;">Nhân viên sẽ chuẩn bị sẵn khi bạn đến!</span>',
                     '🎉');
             }
             showTab('user');
