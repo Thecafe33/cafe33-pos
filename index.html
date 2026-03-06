@@ -1753,9 +1753,6 @@ function openHistory() {
     });
 }
 
-// Các hàm phụ trợ popup
-function closeHistoryDetail() { document.getElementById('detail-history-modal').classList.add('hidden'); }
-function toggleViolationDetail() { document.getElementById('violation-detail-box').classList.toggle('hidden'); }
 // --- HÀM HỦY LỊCH (CẬP NHẬT TRỰC TIẾP FIREBASE) ---//
 // --- HỖ TRỢ: phút còn lại đến giờ bắt đầu (dương = còn, âm = đã qua) ---
 function minutesUntilStart(booking) {
@@ -1873,78 +1870,169 @@ function showLateCancelModal(key, timeMsg) {
 // --- HÀM HIỆN CHI TIẾT LỊCH SỬ (AN TOÀN - KHÔNG BỊ ĐƠ) ---
 function showHistoryDetail(key) {
     const item = _historyCache.find(i => i.key === key);
-    if(!item) return;
+    if (!item) return;
 
-    const isCancelled = (item.status || "").includes('hủy');
-    
-    // 1. Điền thông tin cơ bản
-    document.getElementById('dh-date').innerText = item.date;
-    document.getElementById('dh-in').innerText = item.start;
-    document.getElementById('dh-out').innerText = item.end;
+    const modal = document.getElementById('detail-history-modal');
+    const isCancelled = (item.status || '').toLowerCase().includes('hủy');
+    const isDone      = (item.status || '').toLowerCase().includes('xong');
 
-    // 2. Xử lý Header Màu & Tên (Có kiểm tra lỗi để không bị treo)
+    // Header màu
     const header = document.getElementById('dh-header');
-    const bedLabel = document.getElementById('dh-bed');
-    const durationLabel = document.getElementById('dh-duration');
-
-    if (header) {
-        // Xóa màu cũ
-        header.classList.remove('from-[#006241]', 'to-[#1e3932]', 'from-red-500', 'to-red-800');
-
-        if (isCancelled) {
-            // STYLE HỦY: MÀU ĐỎ
-            header.classList.add('from-red-500', 'to-red-800');
-            bedLabel.innerText = "ĐÃ HỦY LỊCH";
-            durationLabel.innerText = "Chưa sử dụng";
-            durationLabel.className = "text-3xl font-black text-gray-400 brand-font mt-1";
-        } else {
-            // STYLE THƯỜNG: MÀU XANH
-            header.classList.add('from-[#006241]', 'to-[#1e3932]');
-            bedLabel.innerText = item.bedId ? "BED 0" + item.bedId : "CHƯA XẾP";
-            
-            // Tính giờ
-            const s = parseInt(item.start.split(':')[0])*60 + parseInt(item.start.split(':')[1]);
-            const e = parseInt(item.end.split(':')[0])*60 + parseInt(item.end.split(':')[1]);
-            let diff = e - s;
-            if(diff < 0) diff = 0;
-            const h = Math.floor(diff/60);
-            const m = diff % 60;
-            
-            durationLabel.innerText = `${h} giờ ${m} phút`;
-            durationLabel.className = "text-3xl font-black text-[#006241] brand-font mt-1";
-        }
-    }
-
-    // 3. Xử lý nút Vi Phạm
-    const badge = document.getElementById('violation-badge');
-    const vList = document.getElementById('violation-list');
-    vList.innerHTML = "";
-    
-    let errors = [];
-    if(item.violations && Array.isArray(item.violations)) errors = item.violations;
-    else if (item.note && (item.note.includes('ồn') || item.note.includes('vệ sinh') || item.note.includes('phạt'))) errors.push(item.note);
-    
-    if(errors.length > 0) {
-        badge.innerText = errors.length;
-        badge.classList.remove('hidden'); badge.classList.add('flex');
-        errors.forEach(err => { vList.innerHTML += `<li class="border-b border-gray-50 pb-1 last:border-0 last:pb-0">⚠️ ${err}</li>`; });
+    if (isCancelled) {
+        header.style.background = 'linear-gradient(135deg,#dc2626,#7f1d1d)';
+    } else if (isDone) {
+        header.style.background = 'linear-gradient(135deg,#1e3932,#006241)';
     } else {
-        badge.classList.add('hidden');
-        vList.innerHTML = `<li class="text-gray-400 italic">Không có vi phạm nào.</li>`;
+        header.style.background = 'linear-gradient(135deg,#006241,#003d28)';
     }
 
-    // 4. MỞ POPUP (Quan trọng nhất)
-    document.getElementById('violation-detail-box').classList.add('hidden');
-    document.getElementById('detail-history-modal').classList.remove('hidden');
-}
-function closeHistoryDetail() {
-    document.getElementById('detail-history-modal').classList.add('hidden');
+    // Bed + date
+    document.getElementById('dh-bed').textContent = item.bedId ? 'Bed ' + item.bedId : 'Cafe in Bed';
+    document.getElementById('dh-date').textContent = item.date || '';
+
+    // Status chip
+    const statusMap = {
+        'đã xong':   { text: 'Hoàn thành', color: '#4ade80' },
+        'đã hủy':    { text: 'Đã hủy',     color: '#f87171' },
+        'đang dùng': { text: 'Đang dùng',  color: '#fbbf24' },
+        'active':    { text: 'Đang dùng',  color: '#fbbf24' },
+    };
+    const st = Object.keys(statusMap).find(k => (item.status||'').toLowerCase().includes(k));
+    const chip = statusMap[st] || { text: item.status || 'Đặt trước', color: '#a3e635' };
+    document.getElementById('dh-status-dot').style.background  = chip.color;
+    document.getElementById('dh-status-text').textContent = chip.text;
+
+    // Check-in / Check-out / Duration
+    document.getElementById('dh-in').textContent  = item.start || '--:--';
+    document.getElementById('dh-out').textContent = item.end   || '--:--';
+    if (item.start && item.end) {
+        const s = parseInt(item.start)*60 + parseInt(item.start.split(':')[1]);
+        const e = parseInt(item.end)*60   + parseInt(item.end.split(':')[1]);
+        const diff = Math.max(0, e - s);
+        const hh = Math.floor(diff/60), mm = diff % 60;
+        document.getElementById('dh-duration').textContent = hh + 'g ' + (mm ? mm + 'p' : '');
+    } else {
+        document.getElementById('dh-duration').textContent = '--';
+    }
+
+    // Actions
+    const actionsEl = document.getElementById('dh-actions');
+    const canCancel = !isCancelled && !isDone;
+    const canResched = !isCancelled && !isDone;
+    actionsEl.innerHTML = '';
+    if (canResched) {
+        const btnR = document.createElement('button');
+        btnR.textContent = 'Đổi giờ';
+        btnR.style.cssText = 'flex:1;height:50px;border-radius:18px;border:2px solid #006241;background:#fff;color:#006241;font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;';
+        btnR.onclick = () => { closeHistoryDetail(); openRescheduleModal(key); };
+        actionsEl.appendChild(btnR);
+    }
+    if (canCancel) {
+        const btnC = document.createElement('button');
+        btnC.textContent = 'Hủy lịch';
+        btnC.style.cssText = 'flex:1;height:50px;border-radius:18px;border:none;background:#fee2e2;color:#dc2626;font-weight:900;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;';
+        btnC.onclick = () => { closeHistoryDetail(); handleCancelBooking(key); };
+        actionsEl.appendChild(btnC);
+    }
+
+    // Vi phạm + phí — load từ Firebase
+    const vsec = document.getElementById('dh-violation-section');
+    vsec.innerHTML = '<div style="background:#f8fafc;border-radius:20px;padding:16px;text-align:center;color:#9ca3af;font-size:12px;">Đang kiểm tra vi phạm...</div>';
+
+    const phone = item.phone || curPhone;
+    const warnRef = db.ref('bedWarnings/' + phone + '/' + key);
+    warnRef.once('value', function(wSnap) {
+        const wData = wSnap.val();
+        const warnCount = (wData && wData.count) ? wData.count : 0;
+        const lastWarn  = (wData && wData.lastWarning) ? wData.lastWarning : null;
+
+        // Penalty từ bedBookings
+        db.ref('bedBookings/' + key).once('value', function(bSnap) {
+            const bData    = bSnap.val() || {};
+            const hasFee   = bData.hasPenalty === true;
+            const feeAmt   = bData.penaltyAmount || 0;
+            // penaltyPaid: nếu hasPenalty còn true = chưa trả, false = đã xóa/trả
+            // Dựa vào logic POS: xóa phí = set hasPenalty:false → tức là nếu booking đã xong mà hasPenalty=false thì đã trả
+            const feePaid  = isDone && !hasFee && bData.penaltyAmount === 0 && bData._penaltyWasPaid === true;
+
+            // Render
+            let html = '';
+
+            // --- Warnings block ---
+            if (warnCount > 0) {
+                const levels = ['', '#f59e0b', '#ef4444', '#7c3aed'];
+                const levelLabels = ['', 'Cảnh báo cấp 1', 'Cảnh báo cấp 2', 'Cảnh báo cấp 3'];
+                let warnRows = '';
+                for (let i = 1; i <= warnCount; i++) {
+                    const col = levels[Math.min(i, 3)];
+                    const lbl = levelLabels[Math.min(i, 3)];
+                    warnRows += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #fef3c7;last-child:border-bottom:none;">
+                        <div style="width:32px;height:32px;border-radius:10px;background:${col}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                        <div style="flex:1;">
+                            <p style="font-size:12px;font-weight:800;color:#92400e;margin:0;">${lbl}</p>
+                            ${i === warnCount && lastWarn ? `<p style="font-size:10px;color:#a16207;margin:2px 0 0;">${lastWarn}</p>` : ''}
+                        </div>
+                    </div>`;
+                }
+                html += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:20px;padding:16px;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                        <div style="width:28px;height:28px;border-radius:8px;background:#f59e0b22;display:flex;align-items:center;justify-content:center;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                        </div>
+                        <p style="font-size:11px;font-weight:900;color:#92400e;letter-spacing:0.08em;text-transform:uppercase;margin:0;">Vi phạm nội quy · ${warnCount} lần</p>
+                    </div>
+                    ${warnRows}
+                </div>`;
+            }
+
+            // --- Penalty block ---
+            if (hasFee || (isDone && bData._hadPenalty)) {
+                const paid = !hasFee; // Nếu đã xong và hasPenalty=false → đã thanh toán
+                html += `<div style="background:${paid ? '#f0fdf4' : '#fef2f2'};border:1px solid ${paid ? '#bbf7d0' : '#fecaca'};border-radius:20px;padding:16px;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <div style="width:36px;height:36px;border-radius:12px;background:${paid ? '#dcfce7' : '#fee2e2'};display:flex;align-items:center;justify-content:center;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${paid ? '#16a34a' : '#dc2626'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v4H3z"/><path d="M3 7v13a1 1 0 001 1h16a1 1 0 001-1V7"/><path d="M12 12v4m-2-2h4"/></svg>
+                            </div>
+                            <div>
+                                <p style="font-size:11px;font-weight:900;color:${paid ? '#15803d' : '#dc2626'};text-transform:uppercase;letter-spacing:0.06em;margin:0;">Phí vệ sinh</p>
+                                <p style="font-size:18px;font-weight:900;color:${paid ? '#166534' : '#991b1b'};margin:2px 0 0;font-family:'League Spartan',sans-serif;">${feeAmt ? feeAmt.toLocaleString() + 'đ' : '--'}</p>
+                            </div>
+                        </div>
+                        <div style="background:${paid ? '#dcfce7' : '#fee2e2'};border-radius:99px;padding:5px 12px;">
+                            <p style="font-size:10px;font-weight:800;color:${paid ? '#16a34a' : '#dc2626'};margin:0;">${paid ? 'Đã thanh toán' : 'Chưa thanh toán'}</p>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            if (!warnCount && !hasFee) {
+                html = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:16px;display:flex;align-items:center;gap:12px;">
+                    <div style="width:36px;height:36px;border-radius:12px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    </div>
+                    <div>
+                        <p style="font-size:12px;font-weight:900;color:#166534;margin:0;">Không có vi phạm</p>
+                        <p style="font-size:11px;color:#4ade80;margin:2px 0 0;font-weight:600;">Cảm ơn bạn đã sử dụng văn minh!</p>
+                    </div>
+                </div>`;
+            }
+
+            vsec.innerHTML = html;
+        });
+    });
+
+    modal.style.display = 'flex';
 }
 
-function toggleViolationDetail() {
-    const box = document.getElementById('violation-detail-box');
-    box.classList.toggle('hidden');
+function closeHistoryDetail() {
+    document.getElementById('detail-history-modal').style.display = 'none';
 }
+
+// stub để không crash code cũ
+function toggleViolationDetail() {}
   // =========================================================
 // LOGIC ĐỔI GIỜ (RESCHEDULE)
 // =========================================================
@@ -2084,60 +2172,52 @@ window.handleLogout = function() {
 }
   
 </script>
-  <div id="detail-history-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-6 transition-all duration-300">
-    <div class="absolute inset-0 bg-black/30 backdrop-blur-md" onclick="closeHistoryDetail()"></div>
-    
-    <div class="relative bg-white/90 backdrop-blur-xl w-full max-w-sm rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] overflow-hidden animate-fade-in border border-white/50">
-        
-        <div id="dh-header" class="h-32 bg-gradient-to-br from-[#006241] to-[#1e3932] relative flex items-center justify-center">
-            <p class="text-[80px] opacity-10">☕</p>
-            <div class="absolute -bottom-10 w-full flex justify-center">
-                <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg text-3xl">
-                    🛌
-                </div>
-            </div>
-            <button onclick="closeHistoryDetail()" class="absolute top-5 right-5 w-8 h-8 bg-black/20 text-white rounded-full flex items-center justify-center backdrop-blur-sm hover:bg-black/30 transition">✕</button>
+  <div id="detail-history-modal" style="display:none;position:fixed;inset:0;z-index:100;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeHistoryDetail()">
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(12px);"></div>
+    <div style="position:relative;background:#fff;width:100%;max-width:480px;border-radius:36px 36px 0 0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 -20px 60px rgba(0,0,0,0.25);">
+
+      <!-- Header gradient -->
+      <div id="dh-header" style="position:relative;padding:28px 24px 24px;background:linear-gradient(135deg,#006241,#003d28);overflow:hidden;flex-shrink:0;">
+        <div style="position:absolute;top:-40px;right:-40px;width:160px;height:160px;background:rgba(255,255,255,0.06);border-radius:50%;"></div>
+        <div style="position:absolute;bottom:-30px;left:-20px;width:100px;height:100px;background:rgba(255,255,255,0.04);border-radius:50%;"></div>
+        <button onclick="closeHistoryDetail()" style="position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+        <p style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.55);letter-spacing:0.15em;text-transform:uppercase;margin:0 0 6px;">Chi tiết lịch đặt</p>
+        <p id="dh-bed" style="font-size:28px;font-weight:900;color:#fff;margin:0 0 4px;font-family:'League Spartan',sans-serif;letter-spacing:-0.02em;">BED --</p>
+        <p id="dh-date" style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.65);margin:0;"></p>
+        <!-- Status chip -->
+        <div id="dh-status-chip" style="display:inline-flex;align-items:center;gap:5px;margin-top:10px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2);border-radius:99px;padding:5px 12px;">
+          <div id="dh-status-dot" style="width:6px;height:6px;border-radius:50%;background:#4ade80;flex-shrink:0;"></div>
+          <span id="dh-status-text" style="font-size:11px;font-weight:800;color:#fff;letter-spacing:0.05em;text-transform:uppercase;"></span>
+        </div>
+      </div>
+
+      <!-- Scrollable body -->
+      <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;padding:20px 20px 40px;">
+
+        <!-- Time row -->
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <div style="flex:1;background:#f8fafc;border-radius:20px;padding:16px;text-align:center;">
+            <p style="font-size:9px;font-weight:800;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;margin:0 0 4px;">Check-in</p>
+            <p id="dh-in" style="font-size:22px;font-weight:900;color:#1e3932;margin:0;font-family:'League Spartan',sans-serif;">--:--</p>
+          </div>
+          <div style="flex:1;background:#f8fafc;border-radius:20px;padding:16px;text-align:center;">
+            <p style="font-size:9px;font-weight:800;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;margin:0 0 4px;">Check-out</p>
+            <p id="dh-out" style="font-size:22px;font-weight:900;color:#1e3932;margin:0;font-family:'League Spartan',sans-serif;">--:--</p>
+          </div>
+          <div style="flex:1;background:#f0fdf4;border-radius:20px;padding:16px;text-align:center;border:1px solid #bbf7d0;">
+            <p style="font-size:9px;font-weight:800;color:#16a34a;letter-spacing:0.12em;text-transform:uppercase;margin:0 0 4px;">Thời gian</p>
+            <p id="dh-duration" style="font-size:15px;font-weight:900;color:#006241;margin:0;font-family:'League Spartan',sans-serif;">--</p>
+          </div>
         </div>
 
-        <div class="pt-12 pb-8 px-8 text-center">
-            <h3 class="brand-font text-2xl text-[#1e3932] mb-1" id="dh-date">--/--/----</h3>
-            <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-6" id="dh-bed">BED --</p>
+        <!-- Vi phạm & phí vệ sinh — load từ Firebase -->
+        <div id="dh-violation-section" style="margin-bottom:14px;"></div>
 
-            <div class="flex justify-between items-center bg-gray-50/80 rounded-3xl p-5 border border-white shadow-inner mb-6">
-                <div class="text-left">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase">Check-in</p>
-                    <p class="text-xl font-black text-[#1e3932]" id="dh-in">--:--</p>
-                </div>
-                <div class="h-8 w-[1px] bg-gray-200"></div>
-                <div class="text-right">
-                    <p class="text-[10px] text-gray-400 font-bold uppercase">Check-out</p>
-                    <p class="text-xl font-black text-[#1e3932]" id="dh-out">--:--</p>
-                </div>
-            </div>
-
-            <div class="mb-8">
-                <p class="text-xs text-gray-400 font-medium">Tổng thời gian sử dụng</p>
-                <p class="text-3xl font-black text-[#006241] brand-font mt-1" id="dh-duration">-- giờ -- phút</p>
-            </div>
-
-            <div id="violation-container" class="relative inline-block group">
-                <button onclick="toggleViolationDetail()" class="w-16 h-16 rounded-full bg-white shadow-[0_8px_20px_rgba(0,0,0,0.1)] flex items-center justify-center text-2xl transition-transform active:scale-95 border border-gray-100 relative">
-                    ⚠️
-                    <div id="violation-badge" class="absolute -top-1 -right-1 w-6 h-6 bg-[#FF3B30] text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-md hidden">0</div>
-                </button>
-                <p class="text-[10px] text-gray-400 font-bold mt-2">Báo cáo vi phạm</p>
-                
-                <div id="violation-detail-box" class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-gray-100 text-left z-10 animate-fade-in">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-2">Chi tiết lỗi:</p>
-                    <ul id="violation-list" class="text-xs text-[#1e3932] font-medium space-y-1">
-                        </ul>
-                    <div class="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-b border-r border-gray-100"></div>
-                </div>
-            </div>
-
-        </div>
+        <!-- Action buttons -->
+        <div id="dh-actions" style="display:flex;gap:10px;"></div>
+      </div>
     </div>
-</div>
+  </div>
 <!-- ===== PHIẾU QUÀ (GIFT VOUCHER MODAL) ===== -->
 <div id="gift-voucher-overlay" class="fixed inset-0 z-[200] hidden items-center justify-center p-5" style="background: rgba(0,0,0,0.65); backdrop-filter: blur(16px);">
   <div class="voucher-card voucher-enter w-full max-w-sm">
@@ -2841,4 +2921,3 @@ function poConfirm(){
 
 </body>
 </html>
-
