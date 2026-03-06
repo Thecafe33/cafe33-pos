@@ -893,20 +893,42 @@ function _updateMissionChip() {
 // ── FIX KHO QUÀ — bypass cache Firebase ────────────────────────
 function openMyGifts() {
     var modal = document.getElementById('my-gifts-modal');
-    modal.classList.remove('hidden'); modal.style.display = 'flex'; modal.style.flexDirection = 'column';
+    modal.style.display = 'flex';
+    modal.style.flexDirection = 'column';
     var list = document.getElementById('my-gifts-list');
-    list.innerHTML = '<p class="text-center text-gray-400 py-8">Đang tải...</p>';
+    list.innerHTML = '<p style="text-align:center;color:#9ca3af;padding:32px 0;">Đang tải...</p>';
     var ref = db.ref('customers/' + curPhone + '/myGifts');
     ref.on('value', function(snap) {
         ref.off();
         var gifts = [], raw = snap.val();
-        if (raw && typeof raw === 'object') Object.entries(raw).forEach(function(e) { if (e[1] && typeof e[1]==='object') gifts.push(Object.assign({key:e[0]},e[1])); });
-        gifts.sort(function(a,b){return (b.redeemedAt||'').localeCompare(a.redeemedAt||'');});
-        if (!gifts.length) { list.innerHTML = '<div class="text-center py-12"><p class="text-gray-400 font-bold text-sm">Bạn chưa đổi quà nào</p></div>'; return; }
-        list.innerHTML = gifts.map(function(g) { return '<div class="bg-white rounded-[1.75rem] p-5 border ' + (g.used?'border-gray-100 opacity-60':'border-green-100 shadow-sm') + ' mb-3 relative overflow-hidden">' + (g.used?'<div class="absolute top-3 right-3 bg-gray-200 text-gray-500 text-[9px] font-black px-2 py-1 rounded-full uppercase">Đã dùng</div>':'<div class="absolute top-3 right-3 bg-green-50 text-green-700 text-[9px] font-black px-2 py-1 rounded-full uppercase border border-green-200">Chưa dùng</div>') + '<p class="font-black text-[#1e3932] text-base mb-1 pr-20">'+(g.name||'')+'</p><p class="text-[10px] font-mono font-bold text-[#006241] bg-green-50 px-2 py-0.5 rounded-lg inline-block mb-2">'+(g.code||'')+'</p><div class="flex justify-between items-center mt-1"><p class="text-[11px] text-gray-400 font-bold">'+(g.date||'')+' · '+(g.time||'')+'</p><p class="text-xs font-black text-amber-500">-'+((g.cost||0).toLocaleString())+' ★</p></div></div>'; }).join('');
+        if (raw && typeof raw === 'object') {
+            Object.entries(raw).forEach(function(e) {
+                if (e[1] && typeof e[1] === 'object') gifts.push(Object.assign({ key: e[0] }, e[1]));
+            });
+        }
+        gifts.sort(function(a, b) { return (b.redeemedAt || '').localeCompare(a.redeemedAt || ''); });
+        if (!gifts.length) {
+            list.innerHTML = '<div style="text-align:center;padding:48px 0;"><p style="color:#9ca3af;font-weight:700;font-size:14px;">Bạn chưa đổi quà nào</p><p style="color:#d1d5db;font-size:12px;margin-top:4px;">Tích điểm rồi đổi quà ngay nhé!</p></div>';
+            return;
+        }
+        list.innerHTML = gifts.map(function(g) {
+            var usedBadge = g.used
+                ? '<div style="position:absolute;top:12px;right:12px;background:#e5e7eb;color:#6b7280;font-size:9px;font-weight:800;padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:0.05em;">Đã dùng</div>'
+                : '<div style="position:absolute;top:12px;right:12px;background:#f0fdf4;color:#15803d;font-size:9px;font-weight:800;padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #bbf7d0;">Chưa dùng</div>';
+            return '<div style="background:white;border-radius:28px;padding:20px;border:1px solid ' + (g.used ? '#f3f4f6' : '#dcfce7') + ';' + (g.used ? 'opacity:0.6;' : 'box-shadow:0 2px 8px rgba(0,0,0,0.06);') + 'margin-bottom:12px;position:relative;">'
+                + usedBadge
+                + '<p style="font-weight:900;color:#1e3932;font-size:15px;margin:0 0 6px;padding-right:80px;">' + (g.name || '') + '</p>'
+                + '<p style="font-size:11px;font-family:monospace;font-weight:700;color:#006241;background:#f0fdf4;padding:3px 10px;border-radius:8px;display:inline-block;margin-bottom:10px;">' + (g.code || '') + '</p>'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                + '<p style="font-size:11px;color:#9ca3af;font-weight:600;margin:0;">' + (g.date || '') + ' · ' + (g.time || '') + '</p>'
+                + '<p style="font-size:12px;font-weight:900;color:#f59e0b;margin:0;">-' + (g.cost || 0).toLocaleString() + ' ★</p>'
+                + '</div></div>';
+        }).join('');
     });
 }
-function closeMyGifts() { var m=document.getElementById('my-gifts-modal'); m.classList.add('hidden'); m.style.display='none'; }
+function closeMyGifts() {
+    document.getElementById('my-gifts-modal').style.display = 'none';
+}
 // ───────────────────────────────────────────────────────────────
 
 // --- 4. CẬP NHẬT HỒ SƠ ---
@@ -1606,41 +1628,6 @@ async function saveVoucherImage() {
 }
 
 // --- KHO QUÀ: XEM DANH SÁCH QUÀ ĐÃ ĐỔI ---
-function openMyGifts() {
-    const modal = document.getElementById('my-gifts-modal');
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    const list = document.getElementById('my-gifts-list');
-    list.innerHTML = '<p class="text-center text-gray-400 py-8">Đang tải...</p>';
-
-    db.ref('customers/' + curPhone + '/myGifts').once('value', snap => {
-        const gifts = [];
-        snap.forEach(c => gifts.push({ key: c.key, ...c.val() }));
-        gifts.sort((a,b) => (b.redeemedAt||'').localeCompare(a.redeemedAt||''));
-
-        if (gifts.length === 0) {
-            list.innerHTML = '<div class="text-center py-12"><p class="text-4xl mb-3">🎁</p><p class="text-gray-400 font-bold text-sm">Bạn chưa đổi quà nào</p><p class="text-gray-300 text-xs mt-1">Tích điểm rồi đổi quà ngay nhé!</p></div>';
-            return;
-        }
-
-        list.innerHTML = gifts.map(g => `
-            <div class="bg-white rounded-[1.75rem] p-5 border ${g.used ? 'border-gray-100 opacity-60' : 'border-green-100 shadow-sm'} mb-3 relative overflow-hidden">
-                ${g.used ? '<div class="absolute top-3 right-3 bg-gray-200 text-gray-500 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider">Đã dùng</div>' : '<div class="absolute top-3 right-3 bg-green-50 text-green-700 text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider border border-green-200">Chưa dùng</div>'}
-                <p class="font-black text-[#1e3932] text-base mb-1 pr-20">${g.name}</p>
-                <p class="text-[10px] font-mono font-bold text-[#006241] bg-green-50 px-2 py-0.5 rounded-lg inline-block mb-2">${g.code}</p>
-                <div class="flex justify-between items-center mt-1">
-                    <p class="text-[11px] text-gray-400 font-bold">${g.date} · ${g.time}</p>
-                    <p class="text-xs font-black text-amber-500">-${(g.cost||0).toLocaleString()} ★</p>
-                </div>
-            </div>
-        `).join('');
-    });
-}
-
-function closeMyGifts() {
-    document.getElementById('my-gifts-modal').classList.add('hidden');
-    document.getElementById('my-gifts-modal').style.display = 'none';
-}
 
 // --- HÀM XEM LỊCH SỬ ĐẶT BED (ĐÃ SỬA: LẤY TỪ FIREBASE) ---
 // --- HÀM XEM LỊCH SỬ (ĐÃ FIX LỖI ẨN ĐƠN) ---
@@ -2258,16 +2245,16 @@ window.handleLogout = function() {
 </div>
 
 <!-- ===== KHO QUÀ (MY GIFTS MODAL) ===== -->
-<div id="my-gifts-modal" class="fixed inset-0 bg-white z-[160] hidden overflow-hidden">
-  <div class="px-5 pt-12 pb-4 bg-white border-b border-gray-100 flex items-center justify-between" style="flex-shrink:0;">
+<div id="my-gifts-modal" style="display:none;position:fixed;inset:0;background:white;z-index:160;flex-direction:column;overflow:hidden;">
+  <div style="flex-shrink:0;padding:48px 20px 16px;background:white;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;">
     <div>
-      <h2 class="text-2xl font-black text-[#1e3932]">Kho quà của tôi</h2>
-      <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Các phiếu quà đã đổi</p>
+      <h2 style="font-size:22px;font-weight:900;color:#1e3932;margin:0;">Kho quà của tôi</h2>
+      <p style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:4px 0 0;">Các phiếu quà đã đổi</p>
     </div>
-    <button onclick="closeMyGifts()" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">✕</button>
+    <button onclick="closeMyGifts()" style="width:40px;height:40px;border-radius:50%;background:#f3f4f6;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;">✕</button>
   </div>
-  <div id="my-gifts-list" style="flex:1;overflow-y:auto;padding:20px;padding-bottom:80px;background:#f8f9fa;">
-    <p class="text-center text-gray-400 py-8">Đang tải...</p>
+  <div id="my-gifts-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px 100px;background:#f8f9fa;">
+    <p style="text-align:center;color:#9ca3af;padding:32px 0;">Đang tải...</p>
   </div>
 </div>
 
@@ -2868,7 +2855,7 @@ function poConfirm(){
         setTimeout(function(){
             if (typeof showAppModal==='function'){
                 showAppModal('Pre-order thành công!',
-                    'Đã lưu <b>'+total+' món</b>.<br><span style="font-size:0.8rem;color:#555;font-weight:500;">Nhân viên sẽ chuẩn bị sẵn khi bạn đến!</span>',
+                    'Đã lưu <b>'+total+' món</b>.<br><span style="font-size:0.8rem;color:#555;font-weight:500;">Nhớ đến đúng giờ nhé!</span>',
                     '🎉');
             }
             showTab('user');
