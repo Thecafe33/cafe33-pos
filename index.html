@@ -1937,35 +1937,35 @@ function showHistoryDetail(key) {
 
     // Vi phạm + phí — load từ Firebase
     const vsec = document.getElementById('dh-violation-section');
-    vsec.innerHTML = '<div style="background:#f8fafc;border-radius:20px;padding:16px;text-align:center;color:#9ca3af;font-size:12px;">Đang kiểm tra vi phạm...</div>';
+    vsec.innerHTML = '';
 
-    // Normalize phone giống POS: chỉ lấy số
-    const rawPhone = item.phone || curPhone || '';
-    const normPhone = rawPhone.replace(/[^0-9]/g, '');
+    // Normalize phone giống POS
+    const rawPhone = (item.phone || curPhone || '').replace(/[^0-9]/g, '');
+    // POS dùng: warnKey = normalizePhone(phone) || bookingId
+    const warnKey = rawPhone || key;
 
-    // Fetch song song: bedWarnings theo phone (cách POS lưu) VÀ bedBookings để lấy penalty
-    Promise.all([
-        db.ref('bedWarnings/' + normPhone + '/' + key).once('value'),
-        db.ref('bedBookings/' + key).once('value')
-    ]).then(function(results) {
-        const wData    = results[0].val();
-        const bData    = results[1].val() || {};
+    function renderViolation(wData, bData) {
         const warnCount = (wData && wData.count) ? parseInt(wData.count) : 0;
-        const lastWarn  = wData ? wData.lastWarning : null;
+        const lastWarn  = wData ? (wData.lastWarning || null) : null;
         const hasFee    = bData.hasPenalty === true;
         const feeAmt    = bData.penaltyAmount || 0;
 
+        // Nếu không có gì → ẩn hoàn toàn
+        if (!warnCount && !hasFee && !feeAmt) {
+            vsec.innerHTML = '';
+            return;
+        }
+
         let html = '';
 
-        // --- Warnings ---
         if (warnCount > 0) {
-            const cols   = ['','#f59e0b','#ef4444','#7c3aed'];
+            const cols   = ['','#f59e0b','#f97316','#dc2626'];
             const labels = ['','Cảnh báo cấp 1','Cảnh báo cấp 2','Cảnh báo cấp 3'];
             let rows = '';
             for (let i = 1; i <= Math.min(warnCount, 3); i++) {
-                rows += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #fef3c7;">
-                    <div style="width:32px;height:32px;border-radius:10px;background:${cols[i]}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${cols[i]}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                rows += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;${i < warnCount ? 'border-bottom:1px solid #fef3c7;' : ''}">
+                    <div style="width:30px;height:30px;border-radius:9px;background:${cols[i]}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cols[i]}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                     </div>
                     <div>
                         <p style="font-size:12px;font-weight:800;color:#92400e;margin:0;">${labels[i]}</p>
@@ -1973,42 +1973,35 @@ function showHistoryDetail(key) {
                     </div>
                 </div>`;
             }
-            html += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:20px;padding:16px;margin-bottom:12px;">
-                <p style="font-size:11px;font-weight:900;color:#92400e;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 8px;">⚠️ Vi phạm nội quy · ${warnCount} lần</p>
+            html += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:20px;padding:14px 16px;margin-bottom:10px;">
+                <p style="font-size:10px;font-weight:900;color:#92400e;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 6px;">⚠️ Vi phạm nội quy · ${warnCount} lần</p>
                 ${rows}
             </div>`;
         }
 
-        // --- Penalty ---
         if (hasFee || feeAmt > 0) {
             const paid = !hasFee;
-            html += `<div style="background:${paid?'#f0fdf4':'#fef2f2'};border:1px solid ${paid?'#bbf7d0':'#fecaca'};border-radius:20px;padding:16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+            html += `<div style="background:${paid?'#f0fdf4':'#fef2f2'};border:1px solid ${paid?'#bbf7d0':'#fecaca'};border-radius:20px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
                 <div>
-                    <p style="font-size:11px;font-weight:900;color:${paid?'#15803d':'#dc2626'};text-transform:uppercase;letter-spacing:0.06em;margin:0 0 2px;">Phí vệ sinh</p>
+                    <p style="font-size:10px;font-weight:900;color:${paid?'#15803d':'#dc2626'};text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Phí vệ sinh</p>
                     <p style="font-size:20px;font-weight:900;color:${paid?'#166534':'#991b1b'};margin:0;font-family:'League Spartan',sans-serif;">${feeAmt.toLocaleString()}đ</p>
                 </div>
-                <div style="background:${paid?'#dcfce7':'#fee2e2'};border-radius:99px;padding:6px 14px;">
+                <div style="background:${paid?'#dcfce7':'#fee2e2'};border-radius:99px;padding:5px 14px;">
                     <p style="font-size:10px;font-weight:900;color:${paid?'#16a34a':'#dc2626'};margin:0;">${paid?'Đã thanh toán':'Chưa thanh toán'}</p>
                 </div>
             </div>`;
         }
 
-        // --- Clean ---
-        if (!warnCount && !hasFee && !feeAmt) {
-            html = `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:16px;display:flex;align-items:center;gap:12px;">
-                <div style="width:36px;height:36px;border-radius:12px;background:#dcfce7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                </div>
-                <div>
-                    <p style="font-size:13px;font-weight:900;color:#166534;margin:0;">Không có vi phạm</p>
-                    <p style="font-size:11px;color:#16a34a;margin:3px 0 0;font-weight:600;">Cảm ơn bạn đã sử dụng văn minh!</p>
-                </div>
-            </div>`;
-        }
-
         vsec.innerHTML = html;
-    }).catch(function() {
-        vsec.innerHTML = '<div style="background:#fef2f2;border-radius:20px;padding:16px;text-align:center;color:#dc2626;font-size:12px;">Không thể tải dữ liệu vi phạm</div>';
+    }
+
+    // Fetch bedBookings trước (luôn có)
+    db.ref('bedBookings/' + key).once('value', function(bSnap) {
+        const bData = bSnap.val() || {};
+        // Fetch warnings với đúng key POS dùng
+        db.ref('bedWarnings/' + warnKey + '/' + key).once('value', function(wSnap) {
+            renderViolation(wSnap.val(), bData);
+        });
     });
 
     modal.style.display = 'flex';
