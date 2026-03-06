@@ -1939,68 +1939,59 @@ function showHistoryDetail(key) {
     const vsec = document.getElementById('dh-violation-section');
     vsec.innerHTML = '';
 
-    // Normalize phone giống POS
-    const rawPhone = (item.phone || curPhone || '').replace(/[^0-9]/g, '');
-    // POS dùng: warnKey = normalizePhone(phone) || bookingId
-    const warnKey = rawPhone || key;
+    // curPhone = phone đăng nhập, chính xác nhất. Digits only = cách POS lưu key
+    const warnKey = (curPhone || '').replace(/[^0-9]/g, '') || key;
 
-    function renderViolation(wData, bData) {
-        const warnCount = (wData && wData.count) ? parseInt(wData.count) : 0;
-        const lastWarn  = wData ? (wData.lastWarning || null) : null;
+    db.ref('bedBookings/' + key).once('value', function(bSnap) {
+        const bData     = bSnap.val() || {};
         const hasFee    = bData.hasPenalty === true;
         const feeAmt    = bData.penaltyAmount || 0;
 
-        // Nếu không có gì → ẩn hoàn toàn
-        if (!warnCount && !hasFee && !feeAmt) {
-            vsec.innerHTML = '';
-            return;
-        }
+        db.ref('bedWarnings/' + warnKey + '/' + key).once('value', function(wSnap) {
+            const wData     = wSnap.val();
+            const warnCount = (wData && wData.count) ? parseInt(wData.count) : 0;
+            const lastWarn  = wData ? (wData.lastWarning || null) : null;
 
-        let html = '';
+            // Không có gì → ẩn hoàn toàn
+            if (!warnCount && !hasFee && !feeAmt) { vsec.innerHTML = ''; return; }
 
-        if (warnCount > 0) {
-            const cols   = ['','#f59e0b','#f97316','#dc2626'];
-            const labels = ['','Cảnh báo cấp 1','Cảnh báo cấp 2','Cảnh báo cấp 3'];
-            let rows = '';
-            for (let i = 1; i <= Math.min(warnCount, 3); i++) {
-                rows += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;${i < warnCount ? 'border-bottom:1px solid #fef3c7;' : ''}">
-                    <div style="width:30px;height:30px;border-radius:9px;background:${cols[i]}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cols[i]}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    </div>
+            let html = '';
+
+            if (warnCount > 0) {
+                const cols   = ['','#f59e0b','#f97316','#dc2626'];
+                const labels = ['','Cảnh báo cấp 1','Cảnh báo cấp 2','Cảnh báo cấp 3'];
+                let rows = '';
+                for (let i = 1; i <= Math.min(warnCount, 3); i++) {
+                    rows += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;${i < warnCount ? 'border-bottom:1px solid #fef3c7;' : ''}">
+                        <div style="width:30px;height:30px;border-radius:9px;background:${cols[i]}22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${cols[i]}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                        <div>
+                            <p style="font-size:12px;font-weight:800;color:#92400e;margin:0;">${labels[i]}</p>
+                            ${i === warnCount && lastWarn ? `<p style="font-size:10px;color:#b45309;margin:3px 0 0;">${lastWarn}</p>` : ''}
+                        </div>
+                    </div>`;
+                }
+                html += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:20px;padding:14px 16px;margin-bottom:10px;">
+                    <p style="font-size:10px;font-weight:900;color:#92400e;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 6px;">⚠️ Vi phạm nội quy · ${warnCount} lần</p>
+                    ${rows}
+                </div>`;
+            }
+
+            if (hasFee || feeAmt > 0) {
+                const paid = !hasFee;
+                html += `<div style="background:${paid?'#f0fdf4':'#fef2f2'};border:1px solid ${paid?'#bbf7d0':'#fecaca'};border-radius:20px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
                     <div>
-                        <p style="font-size:12px;font-weight:800;color:#92400e;margin:0;">${labels[i]}</p>
-                        ${i === warnCount && lastWarn ? `<p style="font-size:10px;color:#b45309;margin:2px 0 0;">${lastWarn}</p>` : ''}
+                        <p style="font-size:10px;font-weight:900;color:${paid?'#15803d':'#dc2626'};text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Phí vệ sinh</p>
+                        <p style="font-size:20px;font-weight:900;color:${paid?'#166534':'#991b1b'};margin:0;font-family:'League Spartan',sans-serif;">${feeAmt.toLocaleString()}đ</p>
+                    </div>
+                    <div style="background:${paid?'#dcfce7':'#fee2e2'};border-radius:99px;padding:5px 14px;">
+                        <p style="font-size:10px;font-weight:900;color:${paid?'#16a34a':'#dc2626'};margin:0;">${paid?'Đã thanh toán':'Chưa thanh toán'}</p>
                     </div>
                 </div>`;
             }
-            html += `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:20px;padding:14px 16px;margin-bottom:10px;">
-                <p style="font-size:10px;font-weight:900;color:#92400e;letter-spacing:0.1em;text-transform:uppercase;margin:0 0 6px;">⚠️ Vi phạm nội quy · ${warnCount} lần</p>
-                ${rows}
-            </div>`;
-        }
 
-        if (hasFee || feeAmt > 0) {
-            const paid = !hasFee;
-            html += `<div style="background:${paid?'#f0fdf4':'#fef2f2'};border:1px solid ${paid?'#bbf7d0':'#fecaca'};border-radius:20px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
-                <div>
-                    <p style="font-size:10px;font-weight:900;color:${paid?'#15803d':'#dc2626'};text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Phí vệ sinh</p>
-                    <p style="font-size:20px;font-weight:900;color:${paid?'#166534':'#991b1b'};margin:0;font-family:'League Spartan',sans-serif;">${feeAmt.toLocaleString()}đ</p>
-                </div>
-                <div style="background:${paid?'#dcfce7':'#fee2e2'};border-radius:99px;padding:5px 14px;">
-                    <p style="font-size:10px;font-weight:900;color:${paid?'#16a34a':'#dc2626'};margin:0;">${paid?'Đã thanh toán':'Chưa thanh toán'}</p>
-                </div>
-            </div>`;
-        }
-
-        vsec.innerHTML = html;
-    }
-
-    // Fetch bedBookings trước (luôn có)
-    db.ref('bedBookings/' + key).once('value', function(bSnap) {
-        const bData = bSnap.val() || {};
-        // Fetch warnings với đúng key POS dùng
-        db.ref('bedWarnings/' + warnKey + '/' + key).once('value', function(wSnap) {
-            renderViolation(wSnap.val(), bData);
+            vsec.innerHTML = html;
         });
     });
 
