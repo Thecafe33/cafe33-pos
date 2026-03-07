@@ -3614,9 +3614,19 @@ function toggleSecretRevenue() {
         if (khacEl)  khacEl.classList.remove('hidden');
         if (snackEl) snackEl.classList.remove('hidden');
         if (payEl)   { payEl.classList.remove('hidden'); payEl.classList.add('grid'); }
-        // Mobile: swap label, show hidden cards
+        // Mobile: swap label, show hidden cards, update chart total
         if (mobLabel) mobLabel.innerText = 'Tổng nước';
         if (mobCards) { mobCards.classList.remove('hidden'); mobCards.classList.remove('contents'); mobCards.style.display = 'contents'; }
+        // Update mob-chart-total to full total (drink + snack + khac)
+        var s = window._lastMobileStats;
+        if (s) {
+            var fullTotal = (s.drinkTotal||0) + (s.snackTotal||0) + (s.khacTotal||0);
+            var mobChartTotal = document.getElementById('mob-chart-total');
+            if (mobChartTotal) mobChartTotal.innerText = fullTotal.toLocaleString() + ' ₫';
+            // Also update mob-rev-total to show drinkTotal + khacTotal
+            var mobRevTotal = document.getElementById('mob-rev-total');
+            if (mobRevTotal) mobRevTotal.innerHTML = '<span class="text-3xl">' + ((s.drinkTotal||0) + (s.khacTotal||0)).toLocaleString() + '</span> <span class="text-xs font-bold opacity-60">₫</span>';
+        }
     } else {
         if (btn)    { btn.style.background = ''; btn.style.borderColor = ''; }
         if (btnMob) { btnMob.style.background = ''; btnMob.style.borderColor = ''; }
@@ -3628,6 +3638,14 @@ function toggleSecretRevenue() {
         if (payEl)   { payEl.classList.add('hidden'); payEl.classList.remove('grid'); }
         if (mobLabel) mobLabel.innerText = 'Tổng thu';
         if (mobCards) { mobCards.style.display = 'none'; }
+        // Restore mob-rev-total and mob-chart-total to drinkTotal
+        var s = window._lastMobileStats;
+        if (s) {
+            var mobRevTotal = document.getElementById('mob-rev-total');
+            if (mobRevTotal) mobRevTotal.innerHTML = '<span class="text-3xl">' + (s.drinkTotal||0).toLocaleString() + '</span> <span class="text-xs font-bold opacity-60">₫</span>';
+            var mobChartTotal = document.getElementById('mob-chart-total');
+            if (mobChartTotal) mobChartTotal.innerText = (s.drinkTotal||0).toLocaleString() + ' ₫';
+        }
     }
 }
 
@@ -8410,9 +8428,10 @@ function updateRevenueUIMobile(stats, mode) {
     updateFilterCardStyles('total');
     renderMobileChartBars(stats.labels, stats.chartData, '#006241');
 
-    // 3. Cập nhật TỔNG CỘNG ở dưới đáy biểu đồ
-    const totalRev = stats.drinkTotal + stats.snackTotal; // drinkTotal đã không bao gồm 'Khác'
-    document.getElementById('mob-chart-total').innerText = totalRev.toLocaleString() + ' ₫';
+    // 3. Cập nhật TỔNG CỘNG ở dưới đáy biểu đồ — khớp với ô mob-rev-total
+    document.getElementById('mob-chart-total').innerText = stats.drinkTotal.toLocaleString() + ' ₫';
+    // Lưu stats để toggleSecretRevenue cập nhật lại khi bật
+    window._lastMobileStats = stats;
     
     const labelMap = {'day': 'Hôm nay', 'week': 'Tuần này', 'month': 'Tháng này', 'year': 'Năm nay', 'custom': 'Tùy chọn'};
     let finalLabel = currentRevLabelOverride || labelMap[mode] || 'Chi tiết';
