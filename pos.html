@@ -3258,6 +3258,18 @@ function showHistoryDetailMobile(idx) {
     document.getElementById('detail-mob-cust').innerText = h.sdt || 'Vãng lai';
     document.getElementById('detail-mob-method').innerText = h.method;
     document.getElementById('detail-mob-total').innerText = Number(h.total).toLocaleString();
+    // Hiển thị khách đưa / tiền thừa
+    var paidRow = document.getElementById('detail-mob-paid-row');
+    var paidEl = document.getElementById('detail-mob-paid');
+    var changeEl = document.getElementById('detail-mob-change');
+    if (h.paid && Number(h.paid) > 0 && paidRow && paidEl && changeEl) {
+        paidEl.innerText = Number(h.paid).toLocaleString() + 'đ';
+        changeEl.innerText = Number(h.change || 0).toLocaleString() + 'đ';
+        changeEl.className = 'text-sm font-black ' + ((h.change||0) > 0 ? 'text-blue-600' : 'text-gray-400');
+        paidRow.classList.remove('hidden');
+    } else if (paidRow) {
+        paidRow.classList.add('hidden');
+    }
     
     // B. Render Danh sách món
     const itemsContainer = document.getElementById('detail-mob-items-list');
@@ -3577,6 +3589,17 @@ function selectBill(idx) {
             <div class="mt-4 pt-4 border-t-2 border-[#006241] flex flex-col items-end flex-shrink-0 text-right">
                 <div class="flex justify-between w-full items-center mb-1 text-left"><span class="text-[10px] font-bold text-gray-400 uppercase italic text-left">Số lượng: ${tQty} món</span><span class="brand-font text-[#006241] text-xl uppercase font-black opacity-30 text-right">Tổng bill</span></div>
                 <div class="font-black text-3xl leading-none text-right ${h.total < 0 ? 'text-red-500 text-right' : 'text-[#006241] text-right'}">${h.total.toLocaleString()}<span class="text-lg ml-1 text-right">đ</span></div>
+                ${(h.paid && h.paid > 0) ? `
+                <div class="mt-3 pt-3 border-t border-dashed border-gray-200 w-full flex flex-col gap-1.5">
+                    <div class="flex justify-between items-center w-full">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Khách đưa</span>
+                        <span class="text-sm font-black text-gray-700">${Number(h.paid).toLocaleString()}đ</span>
+                    </div>
+                    <div class="flex justify-between items-center w-full">
+                        <span class="text-[10px] font-bold text-gray-400 uppercase">Tiền thừa</span>
+                        <span class="text-sm font-black ${(h.change||0) > 0 ? 'text-blue-600' : 'text-gray-400'}">${Number(h.change||0).toLocaleString()}đ</span>
+                    </div>
+                </div>` : ''}
             </div>
         </div>
     </div>`;
@@ -10814,6 +10837,16 @@ function discountFormDelete() {
                         <span class="text-xl font-bold">đ</span>
                     </div>
                     <span id="detail-item-count" class="text-[11px] font-bold text-gray-400 mt-1">Số lượng: 0 món</span>
+                    <div id="detail-mob-paid-row" class="hidden mt-2 pt-2 border-t border-dashed border-gray-200 flex flex-col items-end gap-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase">Khách đưa</span>
+                            <span id="detail-mob-paid" class="text-sm font-black text-gray-700">0đ</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase">Tiền thừa</span>
+                            <span id="detail-mob-change" class="text-sm font-black text-blue-600">0đ</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
