@@ -1240,10 +1240,13 @@ function loadBedMap() {
     const dateStr = `${p[2]}/${p[1]}/${p[0]}`;
 
     db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value').then(function(bookingsSnap) {
-        const activeBeds    = new Set(); // bedId đang active (POS đã check-in)
-        const preferredBeds = new Set(); // bedId đã được app chọn trước (chưa check-in)
+        // activeBeds: bedId đã check-in (POS assign rõ ràng)
+        // preferredBeds: bedId app chọn trước (chưa check-in)
+        // unassignedCount: booking trùng giờ nhưng chưa có bedId (chờ xếp bed)
+        const activeBeds    = new Set();
+        const preferredBeds = new Set();
         const endTimes      = {};
-        let   overlapTotal  = 0;         // tổng slot bị chiếm trong khung giờ này
+        let   unassignedCount = 0;
 
         bookingsSnap.forEach(function(c) {
             const v  = c.val();
@@ -1252,26 +1255,43 @@ function loadBedMap() {
 
             const bs = parseInt(v.start.split(':')[0])*60 + parseInt(v.start.split(':')[1]);
             const be = parseInt(v.end.split(':')[0])  *60 + parseInt(v.end.split(':')[1]);
-            if (Math.max(sMin, bs) >= Math.min(eMin, be)) return; // không trùng giờ
+            if (Math.max(sMin, bs) >= Math.min(eMin, be)) return;
 
-            overlapTotal++; // đếm mọi booking trùng giờ (kể cả chờ xếp bed)
+            const hasBedId = v.bedId && v.bedId !== '' && v.bedId !== 'WAITING' && !isNaN(v.bedId);
 
-            // Active: POS đã check-in, bedId xác định
-            if (v.bedId && v.bedId !== '' && v.bedId !== 'WAITING' && st.includes('active')) {
+            if (st.includes('active') && hasBedId) {
+                // Check-in xong, biết ô cụ thể
                 activeBeds.add(String(v.bedId));
                 endTimes[String(v.bedId)] = v.end;
-            }
-
-            // PreferredBed: khách app chọn trước, chưa active, không phải mình
-            if (v.preferredBed && v.phone !== curPhone && !st.includes('active')) {
+            } else if (v.preferredBed && v.phone !== curPhone) {
+                // App chọn trước, biết ô cụ thể
                 preferredBeds.add(String(v.preferredBed));
                 if (!endTimes[String(v.preferredBed)]) endTimes[String(v.preferredBed)] = v.end;
+            } else if (v.phone !== curPhone) {
+                // Booking trùng giờ nhưng chưa biết ô (chờ xếp bed)
+                unassignedCount++;
             }
         });
 
-        // freeCount = 4 trừ tổng slot bị chiếm (không chỉ những cái có bedId)
-        const freeCount = Math.max(0, 4 - overlapTotal);
-        _bedMapCache = { activeBeds, preferredBeds, endTimes, freeCount };
+        // Tổng ô đã bị chiếm (có bedId + chưa có bedId)
+        const takenBeds  = new Set([...activeBeds, ...preferredBeds]);
+        const freeCount  = Math.max(0, 4 - takenBeds.size - unassignedCount);
+
+        // Gán unassigned vào các ô còn trống (1→4) để render đúng
+        // Dùng "ghost" set: các ô không có bedId xác định nhưng bị chiếm
+        const ghostBeds = new Set();
+        if (unassignedCount > 0) {
+            let filled = 0;
+            [1,2,3,4].forEach(function(n) {
+                if (filled >= unassignedCount) return;
+                if (!takenBeds.has(String(n))) {
+                    ghostBeds.add(String(n));
+                    filled++;
+                }
+            });
+        }
+
+        _bedMapCache = { activeBeds, preferredBeds, ghostBeds, endTimes, freeCount };
         renderBedMap();
     }).catch(function() {
         document.getElementById('bed-map-loading').textContent = 'Không thể tải dữ liệu.';
@@ -1280,9 +1300,9 @@ function loadBedMap() {
 
 function renderBedMap() {
     if (!_bedMapCache) return;
-    const { activeBeds, preferredBeds, endTimes, freeCount } = _bedMapCache;
+    const { activeBeds, preferredBeds, ghostBeds, endTimes, freeCount } = _bedMapCache;
 
-    _isBedPickFree = freeCount <= 1;
+    _isBedPickFree = freeCount === 1;
 
     document.getElementById('bed-map-loading').style.display = 'none';
     document.getElementById('bed-map-grid').style.display = 'block';
@@ -1290,7 +1310,12 @@ function renderBedMap() {
     const noteEl  = document.getElementById('bed-fee-note');
     const noteTxt = document.getElementById('bed-fee-note-text');
     noteEl.style.cssText = 'background:linear-gradient(160deg,#f0fdf4,#dcfce7);border:1px solid rgba(0,98,65,0.15);border-radius:16px;padding:12px 16px;margin-bottom:14px;';
-    if (_isBedPickFree) {
+    if (freeCount === 0) {
+        noteTxt.style.color = '#991b1b';
+        noteTxt.innerHTML   = 'Khung giờ này đã <strong>đầy cả 4 bed</strong>. Vui lòng chọn giờ khác.';
+        noteEl.style.background = 'linear-gradient(160deg,#fff5f5,#fee2e2)';
+        noteEl.style.border = '1px solid rgba(220,38,38,0.2)';
+    } else if (_isBedPickFree) {
         noteTxt.style.color = '#166534';
         noteTxt.innerHTML   = 'Chỉ còn 1 ô trống · <strong>Miễn phí</strong> lần này, hệ thống sẽ tự chọn ô phù hợp cho bạn.';
     } else {
@@ -1303,20 +1328,37 @@ function renderBedMap() {
         const id          = String(n);
         const isActive    = activeBeds.has(id);
         const isPreferred = preferredBeds.has(id);
-        const isBusy      = isActive || isPreferred;
-        const isSelected  = _selectedBed === n;
+        const isGhost     = ghostBeds && ghostBeds.has(id);
+        const isBusy      = isActive || isPreferred || isGhost;
+        const isSelected  = !isBusy && _selectedBed === n;
 
         let wrapBg, wrapBorder, wrapOpacity;
         let numColor, badgeBg, badgeColor, badgeText;
 
-        if (isBusy) {
+        if (isActive) {
             wrapBg      = '#f3f4f6';
             wrapBorder  = '1.5px solid #e5e7eb';
             wrapOpacity = '0.6';
             numColor    = '#9ca3af';
-            badgeBg     = isActive ? 'rgba(220,38,38,0.1)' : 'rgba(217,119,6,0.1)';
-            badgeColor  = isActive ? '#dc2626' : '#d97706';
-            badgeText   = isActive ? `Đang dùng đến ${endTimes[id]||''}` : 'Đã đặt trước';
+            badgeBg     = 'rgba(220,38,38,0.1)';
+            badgeColor  = '#dc2626';
+            badgeText   = `Đang dùng đến ${endTimes[id]||''}`;
+        } else if (isPreferred) {
+            wrapBg      = '#f3f4f6';
+            wrapBorder  = '1.5px solid #e5e7eb';
+            wrapOpacity = '0.6';
+            numColor    = '#9ca3af';
+            badgeBg     = 'rgba(217,119,6,0.1)';
+            badgeColor  = '#d97706';
+            badgeText   = 'Đã đặt trước';
+        } else if (isGhost) {
+            wrapBg      = '#f3f4f6';
+            wrapBorder  = '1.5px solid #e5e7eb';
+            wrapOpacity = '0.6';
+            numColor    = '#9ca3af';
+            badgeBg     = 'rgba(107,114,128,0.1)';
+            badgeColor  = '#6b7280';
+            badgeText   = 'Đã có lịch';
         } else if (isSelected) {
             wrapBg      = 'linear-gradient(160deg,#006241,#005235)';
             wrapBorder  = '1.5px solid #004d33';
@@ -1347,7 +1389,7 @@ function renderBedMap() {
             cell.ontouchstart = function(){ this.style.transform='scale(0.95)'; };
             cell.ontouchend   = function(){ this.style.transform='scale(1)'; };
         }
-    }); // end forEach
+    });
 } // end renderBedMap
 
 function selectBedCell(n) {
