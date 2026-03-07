@@ -1432,6 +1432,8 @@ input, button, select, textarea { font-size: 1rem; }
             <span class="text-[10px] font-bold text-slate-700 uppercase">Lọc ngày</span>
         </button>
         
+        <button id="btn-mob-secret-revenue" onclick="toggleSecretRevenue()" class="w-9 h-9 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center active:scale-95 transition-all text-base">🐶</button>
+
         <div class="relative">
             <button onclick="toggleRevenueDropdown()" class="w-9 h-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center active:scale-95 transition-transform">
                 <span class="material-symbols-outlined text-slate-600 text-[18px]">more_horiz</span>
@@ -1461,12 +1463,13 @@ input, button, select, textarea { font-size: 1rem; }
         <div id="mob-revenue-summary-cards" class="grid grid-cols-2 gap-4 px-4 mb-6">
     
     <div id="mob-filter-drink" onclick="setChartFilter('drink')" class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center cursor-pointer active:scale-95 transition-all ring-[#006241]">
-        <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Tổng nước</p>
+        <p id="mob-drink-label" class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Tổng thu</p>
         <div id="mob-rev-total" class="text-[#065F46] font-black tracking-tighter leading-none flex flex-col items-center">
             0 <span class="text-[10px] opacity-60">₫</span>
         </div>
     </div>
 
+    <div id="mob-secret-cards" class="hidden contents">
     <div id="mob-filter-snack" onclick="setChartFilter('snack')" class="bg-white p-4 py-5 rounded-[1.5rem] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-slate-50 flex flex-col justify-center items-center text-center cursor-pointer active:scale-95 transition-all ring-[#D97706]">
         <p class="text-[9px] font-extrabold uppercase tracking-[0.15em] text-slate-400 mb-1.5">Ăn vặt</p>
         <div id="mob-rev-snack" class="text-[#D97706] font-black tracking-tighter leading-none flex flex-col items-center">
@@ -1486,6 +1489,7 @@ input, button, select, textarea { font-size: 1rem; }
         <div id="mob-rev-cash" class="text-[#16a34a] font-black tracking-tighter leading-none flex flex-col items-center">
             0 <span class="text-[10px] opacity-60">₫</span>
         </div>
+    </div>
     </div>
 
 </div>
@@ -3584,26 +3588,46 @@ function selectBill(idx) {
 var _secretRevenueOn = false;
 function toggleSecretRevenue() {
     _secretRevenueOn = !_secretRevenueOn;
+    // PC button
     var btn = document.getElementById('btn-secret-revenue');
-    var mainEl = document.getElementById('pc-drink-main');
+    // Mobile button
+    var btnMob = document.getElementById('btn-mob-secret-revenue');
+    // PC elements
+    var mainEl   = document.getElementById('pc-drink-main');
     var secretEl = document.getElementById('pc-drink-secret');
-    var khacEl = document.getElementById('pc-khac-sub');
-    var snackEl = document.getElementById('pc-secret-snack');
-    var payEl = document.getElementById('pc-secret-payment');
+    var khacEl   = document.getElementById('pc-khac-sub');
+    var snackEl  = document.getElementById('pc-secret-snack');
+    var payEl    = document.getElementById('pc-secret-payment');
+    var pcLabel  = document.getElementById('pc-drink-label');
+    // Mobile elements
+    var mobCards = document.getElementById('mob-secret-cards');
+    var mobLabel = document.getElementById('mob-drink-label');
+
     if (_secretRevenueOn) {
-        if (btn) { btn.style.background = '#006241'; btn.style.borderColor = '#006241'; }
-        if (mainEl) mainEl.classList.add('hidden');
+        // PC button highlight
+        if (btn)    { btn.style.background = '#1f2937'; btn.style.borderColor = '#1f2937'; }
+        if (btnMob) { btnMob.style.background = '#1f2937'; btnMob.style.borderColor = '#1f2937'; }
+        // PC: swap Tổng thu → Tổng nước, show full numbers
+        if (pcLabel) pcLabel.innerText = 'Tổng nước';
+        if (mainEl)  mainEl.classList.add('hidden');
         if (secretEl) secretEl.classList.remove('hidden');
-        if (khacEl) khacEl.classList.remove('hidden');
+        if (khacEl)  khacEl.classList.remove('hidden');
         if (snackEl) snackEl.classList.remove('hidden');
-        if (payEl) { payEl.classList.remove('hidden'); payEl.classList.add('grid'); }
+        if (payEl)   { payEl.classList.remove('hidden'); payEl.classList.add('grid'); }
+        // Mobile: swap label, show hidden cards
+        if (mobLabel) mobLabel.innerText = 'Tổng nước';
+        if (mobCards) { mobCards.classList.remove('hidden'); mobCards.classList.remove('contents'); mobCards.style.display = 'contents'; }
     } else {
-        if (btn) { btn.style.background = ''; btn.style.borderColor = ''; }
-        if (mainEl) mainEl.classList.remove('hidden');
+        if (btn)    { btn.style.background = ''; btn.style.borderColor = ''; }
+        if (btnMob) { btnMob.style.background = ''; btnMob.style.borderColor = ''; }
+        if (pcLabel) pcLabel.innerText = 'Tổng thu';
+        if (mainEl)  mainEl.classList.remove('hidden');
         if (secretEl) secretEl.classList.add('hidden');
-        if (khacEl) khacEl.classList.add('hidden');
+        if (khacEl)  khacEl.classList.add('hidden');
         if (snackEl) snackEl.classList.add('hidden');
-        if (payEl) { payEl.classList.add('hidden'); payEl.classList.remove('grid'); }
+        if (payEl)   { payEl.classList.add('hidden'); payEl.classList.remove('grid'); }
+        if (mobLabel) mobLabel.innerText = 'Tổng thu';
+        if (mobCards) { mobCards.style.display = 'none'; }
     }
 }
 
@@ -3903,7 +3927,7 @@ function renderRevenueDashboard(data, mode) {
         <div class="grid grid-cols-3 gap-3 text-left z-0 relative">
             
             <div id="pc-filter-drink" onclick="setChartFilter('drink')" class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center cursor-pointer hover:shadow-md active:scale-95 transition-all ring-[#006241]">
-                <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng nước</p>
+                <p id="pc-drink-label" class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng thu</p>
                 <p id="pc-drink-main" class="brand-font text-xl text-[#006241]">${data.drinkTotal.toLocaleString()}</p>
                 <p id="pc-drink-secret" class="brand-font text-xl text-slate-400 hidden">${(data.drinkTotal + (data.khacTotal||0)).toLocaleString()}</p>
                 <p id="pc-khac-sub" class="text-[8px] text-slate-300 hidden">+ Khác: ${(data.khacTotal||0).toLocaleString()}</p>
