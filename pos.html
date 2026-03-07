@@ -2788,16 +2788,24 @@ function renderCart() {
     }).join('');
 
     // --- Áp giảm order/percent vào total ---
+    if (_giftOrderDiscount) {
+        // Recalculate discount amount dynamically from current cart total
+        if (_giftOrderDiscount.type === 'percent') {
+            _giftOrderDiscount.amt = Math.round(currentTotal * _giftOrderDiscount.value / 100);
+        } else {
+            _giftOrderDiscount.amt = _giftOrderDiscount.value;
+        }
+    }
     var displayTotal = currentTotal;
-    if (_giftOrderDiscount) displayTotal = Math.max(0, currentTotal - _giftOrderDiscount.amt);
+    if (_giftOrderDiscount && _giftOrderDiscount.amt > 0) displayTotal = Math.max(0, currentTotal - _giftOrderDiscount.amt);
     var discRow = document.getElementById('gift-order-discount-row');
     if (discRow) {
-        if (_giftOrderDiscount) {
+        if (_giftOrderDiscount && _giftOrderDiscount.amt > 0) {
             discRow.innerHTML = `<div class="flex justify-between items-center text-[11px] font-bold pb-1 mb-1 border-b border-dashed border-gray-200"><span class="text-gray-400 truncate max-w-[160px]">${_giftOrderDiscount.label}</span><span class="text-green-600 font-black">−${_giftOrderDiscount.amt.toLocaleString()}đ</span></div><div class="flex justify-between items-center text-[10px] text-gray-400 font-bold mb-1"><span>Giá gốc</span><span class="line-through">${currentTotal.toLocaleString()}đ</span></div>`;
             discRow.classList.remove('hidden');
         } else { discRow.innerHTML=''; discRow.classList.add('hidden'); }
     }
-    if (_giftOrderDiscount) currentTotal = displayTotal;
+    if (_giftOrderDiscount && _giftOrderDiscount.amt > 0) currentTotal = displayTotal;
     // --- PHẦN FIX CHO MOBILE ---
     const formattedTotal = displayTotal.toLocaleString() + 'đ';
     
@@ -9788,16 +9796,13 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
             }
             renderCart();
         } else {
-            var subtotal = 0;
-            cart.forEach(function(ci) { subtotal += ci.price * ci.qty; });
-            var discountAmt = (r.type === 'percent')
-                ? Math.round(subtotal * (r.value || 0) / 100)
-                : (r.value || 0);
-            if (discountAmt <= 0) { renderCart(); return; }
+            // Store reward info for dynamic recalculation in renderCart
             _giftOrderDiscount = {
-                amt:   discountAmt,
+                type:  r.type,
+                value: r.value || 0,
                 label: (r.label || name) + (r.type === 'percent' ? ' – ' + r.value + '%' : ''),
-                code:  code
+                code:  code,
+                amt:   0  // will be recalculated in renderCart
             };
             renderCart();
         }
