@@ -8881,8 +8881,7 @@ async function syncDataFromSheet() {
         // 2. Danh sách 3 link Functions của bạn
         const urls = [
             'https://us-central1-the-cafe-33.cloudfunctions.net/syncMenu',
-            'https://us-central1-the-cafe-33.cloudfunctions.net/syncCustomers',
-            'https://us-central1-the-cafe-33.cloudfunctions.net/syncRewards'
+            'https://us-central1-the-cafe-33.cloudfunctions.net/syncCustomers'
         ];
 
         // 3. Gọi đồng thời cả 3 link
@@ -8890,7 +8889,7 @@ async function syncDataFromSheet() {
 
         // 4. Kiểm tra nếu tất cả đều thành công (ok)
         if(responses.every(r => r.ok)) {
-            showAppModal("Thành công", "Tất cả dữ liệu (Menu, Khách, Quà) đã được cập nhật mới nhất!", "✅");
+            showAppModal("Thành công", "Menu và Khách hàng đã được cập nhật mới nhất!", "✅");
         } else {
             throw new Error("Một hoặc nhiều dịch vụ gặp lỗi");
         }
@@ -9733,9 +9732,18 @@ function scanGiftVouchers(phone) {
                 '<button class="bg-green-700 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase active:scale-95">+ Bill</button>';
             row.querySelector('button').addEventListener('click', function() {
                 giftVoucherAddToCart(phone, g._key, g.name, g.code, g.rewardKey || null);
+                // Mark this button as selected
                 this.innerText = '✓ Đã thêm';
                 this.disabled = true;
                 this.className = 'bg-green-100 text-green-700 text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase';
+                // Disable all other voucher buttons (only 1 voucher at a time)
+                var allBtns = list.querySelectorAll('button');
+                allBtns.forEach(function(btn) {
+                    if (!btn.disabled) {
+                        btn.disabled = true;
+                        btn.className = 'bg-gray-100 text-gray-400 text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase';
+                    }
+                });
             });
             list.appendChild(row);
         });
