@@ -1239,44 +1239,41 @@ function loadBedMap() {
     const p = dateVal.split('-');
     const dateStr = `${p[2]}/${p[1]}/${p[0]}`;
 
-    Promise.all([
-        db.ref('beds').once('value'),
-        db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value')
-    ]).then(function(results) {
-        const bedsData     = results[0].val() || {};
-        const bookingsSnap = results[1];
+    // Chỉ cần 1 query duy nhất — bedBookings là source of truth
+    // POS update status='active' + bedId vào đây khi check-in, không dùng beds/
+    db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value').then(function(bookingsSnap) {
+        const activeBeds  = new Set(); // bedId đang active (status=active, có bedId)
+        const preferredBeds = new Set(); // bedId đã được đặt trước qua app
+        const endTimes    = {};
 
-        const activeBeds = new Set();
-        const endTimes   = {};
-        Object.values(bedsData).forEach(function(b) {
-            if (!b.bedId) return;
-            const isAct = b.status === 'active' || (b.status && (b.status.includes('active') || b.status.includes('đang dùng')));
-            if (!isAct) return;
-            const bs = parseInt(b.start.split(':')[0])*60 + parseInt(b.start.split(':')[1]);
-            const be = parseInt(b.end.split(':')[0])  *60 + parseInt(b.end.split(':')[1]);
-            if (Math.max(sMin, bs) < Math.min(eMin, be)) {
-                activeBeds.add(String(b.bedId));
-                endTimes[String(b.bedId)] = b.end;
-            }
-        });
-
-        const preferredBeds = new Set();
         bookingsSnap.forEach(function(c) {
-            const v = c.val();
-            if (!v.preferredBed || v.phone === curPhone) return;
+            const v  = c.val();
             const st = (v.status || '').toLowerCase();
             if (st.includes('hủy') || st.includes('xong')) return;
+
             const bs = parseInt(v.start.split(':')[0])*60 + parseInt(v.start.split(':')[1]);
             const be = parseInt(v.end.split(':')[0])  *60 + parseInt(v.end.split(':')[1]);
-            if (Math.max(sMin, bs) < Math.min(eMin, be)) {
-                preferredBeds.add(String(v.preferredBed));
-                endTimes[String(v.preferredBed)] = v.end;
+            const overlaps = Math.max(sMin, bs) < Math.min(eMin, be);
+
+            // Active = POS đã check-in, có bedId thật
+            if (v.bedId && v.bedId !== '' && v.bedId !== 'WAITING' && st.includes('active')) {
+                if (overlaps) {
+                    activeBeds.add(String(v.bedId));
+                    endTimes[String(v.bedId)] = v.end;
+                }
+            }
+
+            // PreferredBed = khách app đã chọn trước (chưa check-in), bỏ qua booking của chính mình
+            if (v.preferredBed && v.phone !== curPhone && !st.includes('active')) {
+                if (overlaps) {
+                    preferredBeds.add(String(v.preferredBed));
+                    if (!endTimes[String(v.preferredBed)]) endTimes[String(v.preferredBed)] = v.end;
+                }
             }
         });
 
         const freeCount = 4 - new Set([...activeBeds, ...preferredBeds]).size;
         _bedMapCache = { activeBeds, preferredBeds, endTimes, freeCount };
-
         renderBedMap();
     }).catch(function() {
         document.getElementById('bed-map-loading').textContent = 'Không thể tải dữ liệu. Thử lại sau.';
