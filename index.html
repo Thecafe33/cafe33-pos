@@ -1231,7 +1231,7 @@ function loadBedMap() {
     }
 
     document.getElementById('bed-map-loading').style.display = 'block';
-    document.getElementById('bed-map-loading').textContent = 'Đang kiểm tra tình trạng bed...';
+    document.getElementById('bed-map-loading').textContent = 'Đang kiểm tra...';
     document.getElementById('bed-map-grid').style.display = 'none';
 
     const sMin = parseInt(startVal.split(':')[0])*60 + parseInt(startVal.split(':')[1]);
@@ -1239,12 +1239,11 @@ function loadBedMap() {
     const p = dateVal.split('-');
     const dateStr = `${p[2]}/${p[1]}/${p[0]}`;
 
-    // Chỉ cần 1 query duy nhất — bedBookings là source of truth
-    // POS update status='active' + bedId vào đây khi check-in, không dùng beds/
     db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value').then(function(bookingsSnap) {
-        const activeBeds  = new Set(); // bedId đang active (status=active, có bedId)
-        const preferredBeds = new Set(); // bedId đã được đặt trước qua app
-        const endTimes    = {};
+        const activeBeds    = new Set(); // bedId đang active (POS đã check-in)
+        const preferredBeds = new Set(); // bedId đã được app chọn trước (chưa check-in)
+        const endTimes      = {};
+        let   overlapTotal  = 0;         // tổng slot bị chiếm trong khung giờ này
 
         bookingsSnap.forEach(function(c) {
             const v  = c.val();
@@ -1253,30 +1252,29 @@ function loadBedMap() {
 
             const bs = parseInt(v.start.split(':')[0])*60 + parseInt(v.start.split(':')[1]);
             const be = parseInt(v.end.split(':')[0])  *60 + parseInt(v.end.split(':')[1]);
-            const overlaps = Math.max(sMin, bs) < Math.min(eMin, be);
+            if (Math.max(sMin, bs) >= Math.min(eMin, be)) return; // không trùng giờ
 
-            // Active = POS đã check-in, có bedId thật
+            overlapTotal++; // đếm mọi booking trùng giờ (kể cả chờ xếp bed)
+
+            // Active: POS đã check-in, bedId xác định
             if (v.bedId && v.bedId !== '' && v.bedId !== 'WAITING' && st.includes('active')) {
-                if (overlaps) {
-                    activeBeds.add(String(v.bedId));
-                    endTimes[String(v.bedId)] = v.end;
-                }
+                activeBeds.add(String(v.bedId));
+                endTimes[String(v.bedId)] = v.end;
             }
 
-            // PreferredBed = khách app đã chọn trước (chưa check-in), bỏ qua booking của chính mình
+            // PreferredBed: khách app chọn trước, chưa active, không phải mình
             if (v.preferredBed && v.phone !== curPhone && !st.includes('active')) {
-                if (overlaps) {
-                    preferredBeds.add(String(v.preferredBed));
-                    if (!endTimes[String(v.preferredBed)]) endTimes[String(v.preferredBed)] = v.end;
-                }
+                preferredBeds.add(String(v.preferredBed));
+                if (!endTimes[String(v.preferredBed)]) endTimes[String(v.preferredBed)] = v.end;
             }
         });
 
-        const freeCount = 4 - new Set([...activeBeds, ...preferredBeds]).size;
+        // freeCount = 4 trừ tổng slot bị chiếm (không chỉ những cái có bedId)
+        const freeCount = Math.max(0, 4 - overlapTotal);
         _bedMapCache = { activeBeds, preferredBeds, endTimes, freeCount };
         renderBedMap();
     }).catch(function() {
-        document.getElementById('bed-map-loading').textContent = 'Không thể tải dữ liệu. Thử lại sau.';
+        document.getElementById('bed-map-loading').textContent = 'Không thể tải dữ liệu.';
     });
 }
 
@@ -1294,10 +1292,10 @@ function renderBedMap() {
     noteEl.style.cssText = 'background:linear-gradient(160deg,#f0fdf4,#dcfce7);border:1px solid rgba(0,98,65,0.15);border-radius:16px;padding:12px 16px;margin-bottom:14px;';
     if (_isBedPickFree) {
         noteTxt.style.color = '#166534';
-        noteTxt.innerHTML   = '✅ Chỉ còn 1 ô trống · <strong>Miễn phí</strong> lần này, hệ thống sẽ tự chọn ô phù hợp cho bạn.';
+        noteTxt.innerHTML   = 'Chỉ còn 1 ô trống · <strong>Miễn phí</strong> lần này, hệ thống sẽ tự chọn ô phù hợp cho bạn.';
     } else {
         noteTxt.style.color = '#166534';
-        noteTxt.innerHTML   = '✨ Tính năng nâng cao · <strong>+25.000đ</strong> thanh toán khi đến quán. Bỏ qua để hệ thống tự xếp bed miễn phí.';
+        noteTxt.innerHTML   = 'Tính năng nâng cao · <strong>+25.000đ</strong> thanh toán khi đến quán. Bỏ qua để hệ thống tự xếp bed miễn phí.';
     }
 
     [1,2,3,4].forEach(function(n) {
@@ -1308,42 +1306,36 @@ function renderBedMap() {
         const isBusy      = isActive || isPreferred;
         const isSelected  = _selectedBed === n;
 
-        let wrapBg, wrapBorder, wrapShadow, wrapOpacity;
-        let numColor, labelColor, badgeBg, badgeColor, badgeText;
+        let wrapBg, wrapBorder, wrapOpacity;
+        let numColor, badgeBg, badgeColor, badgeText;
 
         if (isBusy) {
-            wrapBg      = 'linear-gradient(160deg,#f3f4f6,#e5e7eb)';
-            wrapBorder  = '1.5px solid #d1d5db';
-            wrapShadow  = 'none';
-            wrapOpacity = '0.55';
+            wrapBg      = '#f3f4f6';
+            wrapBorder  = '1.5px solid #e5e7eb';
+            wrapOpacity = '0.6';
             numColor    = '#9ca3af';
-            labelColor  = '#9ca3af';
             badgeBg     = isActive ? 'rgba(220,38,38,0.1)' : 'rgba(217,119,6,0.1)';
             badgeColor  = isActive ? '#dc2626' : '#d97706';
-            badgeText   = isActive ? `Đến ${endTimes[id]||''}` : 'Đã đặt';
+            badgeText   = isActive ? `Đang dùng đến ${endTimes[id]||''}` : 'Đã đặt trước';
         } else if (isSelected) {
             wrapBg      = 'linear-gradient(160deg,#006241,#005235)';
             wrapBorder  = '1.5px solid #004d33';
-            wrapShadow  = '0 8px 24px rgba(0,98,65,0.28)';
             wrapOpacity = '1';
             numColor    = '#ffffff';
-            labelColor  = 'rgba(255,255,255,0.55)';
             badgeBg     = 'rgba(255,255,255,0.18)';
             badgeColor  = '#fff';
-            badgeText   = '✓ Đã chọn';
+            badgeText   = 'Đã chọn';
         } else {
             wrapBg      = 'linear-gradient(160deg,#f0fdf4,#dcfce7)';
             wrapBorder  = '1.5px solid rgba(0,98,65,0.2)';
-            wrapShadow  = '0 4px 14px rgba(0,98,65,0.12)';
             wrapOpacity = '1';
             numColor    = '#1e3932';
-            labelColor  = 'rgba(0,98,65,0.5)';
             badgeBg     = 'rgba(0,98,65,0.10)';
             badgeColor  = '#006241';
             badgeText   = 'Còn trống';
         }
 
-        cell.style.cssText       = `background:${wrapBg};border:${wrapBorder};border-radius:24px;padding:20px 10px 16px;text-align:center;cursor:${isBusy?'not-allowed':'pointer'};box-shadow:${wrapShadow};opacity:${wrapOpacity};transition:transform 0.12s;-webkit-tap-highlight-color:transparent;`;
+        cell.style.cssText       = `background:${wrapBg};border:${wrapBorder};border-radius:24px;padding:20px 10px 16px;text-align:center;cursor:${isBusy?'not-allowed':'pointer'};opacity:${wrapOpacity};transition:transform 0.12s;-webkit-tap-highlight-color:transparent;`;
         cell.style.pointerEvents = isBusy ? 'none' : 'auto';
         cell.innerHTML           = `
             <p style="font-size:36px;font-weight:900;color:${numColor};margin:0;font-family:'League Spartan',sans-serif;letter-spacing:-0.03em;line-height:1;"><span style="font-size:14px;font-weight:700;opacity:0.55;vertical-align:middle;margin-right:2px;">BED</span>${n}</p>
@@ -1382,6 +1374,34 @@ function updateBedPickToggle() {
         toggle.style.background = '#f8faf8';
     }
 }
+
+// Auto-refresh map khi đổi ngày/giờ (nếu picker đang mở)
+(function() {
+    function onTimeChange() {
+        if (_bedPickerOpen) {
+            _selectedBed = 0;
+            _bedMapCache = null;
+            loadBedMap();
+            updateBedPickToggle();
+        }
+    }
+    // Gắn sau khi DOM sẵn sàng
+    document.addEventListener('DOMContentLoaded', function() {
+        ['book-date','book-start','book-end'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('change', onTimeChange);
+        });
+    });
+    // Fallback nếu DOM đã load rồi
+    if (document.readyState !== 'loading') {
+        setTimeout(function() {
+            ['book-date','book-start','book-end'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.addEventListener('change', onTimeChange);
+            });
+        }, 500);
+    }
+})();
 
 // =============================================================
 // LOGIC ĐẶT BED: CÓ CHECK 5 PHÚT CHUẨN BỊ (PREP BUFFER)
