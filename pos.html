@@ -1139,13 +1139,17 @@ input, button, select, textarea { font-size: 1rem; }
                         <!-- Loại giảm -->
                         <div>
                             <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:10px;">Loại giảm giá</label>
-                            <div style="display:flex;gap:6px;padding:6px;background:#F2F2F7;border-radius:20px;">
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;padding:6px;background:#F2F2F7;border-radius:20px;">
                                 <button onclick="dfSetType('item')" id="df-type-item"
-                                    style="flex:1;padding:11px 6px;border-radius:14px;border:none;font-size:0.75rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:#006241;color:white;box-shadow:0 2px 10px rgba(0,98,65,0.35);">📦 Theo món</button>
+                                    style="flex:1;min-width:calc(33% - 4px);padding:11px 6px;border-radius:14px;border:none;font-size:0.7rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:#006241;color:white;box-shadow:0 2px 10px rgba(0,98,65,0.35);">📦 Theo món</button>
                                 <button onclick="dfSetType('order')" id="df-type-order"
-                                    style="flex:1;padding:11px 6px;border-radius:14px;border:none;font-size:0.75rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">🧾 Toàn đơn</button>
+                                    style="flex:1;min-width:calc(33% - 4px);padding:11px 6px;border-radius:14px;border:none;font-size:0.7rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">🧾 Toàn đơn</button>
                                 <button onclick="dfSetType('percent')" id="df-type-percent"
-                                    style="flex:1;padding:11px 6px;border-radius:14px;border:none;font-size:0.75rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">% Phần trăm</button>
+                                    style="flex:1;min-width:calc(33% - 4px);padding:11px 6px;border-radius:14px;border:none;font-size:0.7rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">% Phần trăm</button>
+                                <button onclick="dfSetType('item_free')" id="df-type-item_free"
+                                    style="flex:1;min-width:calc(50% - 4px);padding:11px 6px;border-radius:14px;border:none;font-size:0.7rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">🆓 Miễn phí 1 ly</button>
+                                <button onclick="dfSetType('item_upsize')" id="df-type-item_upsize"
+                                    style="flex:1;min-width:calc(50% - 4px);padding:11px 6px;border-radius:14px;border:none;font-size:0.7rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">⬆️ Up size M→L</button>
                             </div>
                         </div>
 
@@ -1167,6 +1171,33 @@ input, button, select, textarea { font-size: 1rem; }
                                 <button onclick="dfClearSelectedItem()" style="background:none;border:none;cursor:pointer;font-size:1rem;color:#4ade80;font-weight:900;padding:0 4px;">✕</button>
                             </div>
                             <input type="hidden" id="df-target">
+                        </div>
+
+                        <!-- Điều kiện áp dụng (item_free / item_upsize) -->
+                        <div id="df-condition-row" style="display:none;">
+                            <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:10px;">Điều kiện lọc món <span style="color:#9ca3af;font-weight:500;text-transform:none;">(tuỳ chọn)</span></label>
+                            <div style="display:flex;flex-direction:column;gap:8px;">
+                                <div>
+                                    <label style="font-size:0.65rem;font-weight:700;color:#6b7280;display:block;margin-bottom:5px;">Chỉ áp cho danh mục (type)</label>
+                                    <input id="df-cond-category" type="text" placeholder="Ví dụ: Đá xay, Trà, Cà phê..."
+                                        style="width:100%;padding:12px 16px;border-radius:14px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.9rem;font-weight:600;color:#1f2937;box-sizing:border-box;"
+                                        onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
+                                </div>
+                                <div style="display:flex;gap:8px;">
+                                    <div style="flex:1;">
+                                        <label style="font-size:0.65rem;font-weight:700;color:#6b7280;display:block;margin-bottom:5px;">Giá tối đa (≤)</label>
+                                        <input id="df-cond-maxprice" type="number" placeholder="25000" min="0"
+                                            style="width:100%;padding:12px 16px;border-radius:14px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.9rem;font-weight:600;color:#1f2937;box-sizing:border-box;"
+                                            onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
+                                    </div>
+                                    <div style="flex:1;">
+                                        <label style="font-size:0.65rem;font-weight:700;color:#6b7280;display:block;margin-bottom:5px;">Giá tối thiểu (≥)</label>
+                                        <input id="df-cond-minprice" type="number" placeholder="0" min="0"
+                                            style="width:100%;padding:12px 16px;border-radius:14px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.9rem;font-weight:600;color:#1f2937;box-sizing:border-box;"
+                                            onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Giá trị giảm -->
@@ -2028,6 +2059,7 @@ window.onload = function() {
         
         if (data) {
             menu = Array.isArray(data) ? data : Object.values(data);
+            window._menuData = menu; // expose for voucher condition checks
             console.log(`✅ Đã tải ${menu.length} món.`);
             // Vẽ giao diện
             renderTabs();
@@ -2752,6 +2784,11 @@ function renderCart() {
         if (isGift && i._giftType === 'item') {
             const origStr = i._originalPrice ? `<span class="line-through text-gray-300 mr-1">${i._originalPrice.toLocaleString()}đ</span>` : '';
             subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">${origStr}Quà · ${i._giftLabel||i.size}</p>`;
+        } else if (isGift && i._giftType === 'item_free') {
+            const origStr = i._originalPrice ? `<span class="line-through text-gray-300 mr-1">${i._originalPrice.toLocaleString()}đ</span>` : '';
+            subLabel = `<p class="text-[9px] font-bold text-green-600 mt-0.5">${origStr}🆓 Miễn phí · ${i._giftLabel||''}</p>`;
+        } else if (isGift && i._giftType === 'item_upsize') {
+            subLabel = `<p class="text-[9px] font-bold text-yellow-600 mt-0.5">⬆️ Up size M→L · ${i._giftLabel||''}</p>`;
         } else if (isGift) {
             subLabel = `<p class="text-[9px] font-bold text-amber-600 mt-0.5">Quà · ${i._giftLabel||i.size}</p>`;
         }
@@ -9755,7 +9792,7 @@ function giftVoucherResetOld() {
     for (var i = cart.length - 1; i >= 0; i--) {
         var ci = cart[i];
         if (ci._vKey === _giftVoucherKey) {
-            if (ci._giftType === 'item') {
+            if (ci._giftType === 'item' || ci._giftType === 'item_free') {
                 ci.price = ci._originalPrice;
                 ci.name  = ci._originalName || ci.name;
                 if (i > 0 && cart[i-1].name === ci._originalName && !cart[i-1]._vKey) {
@@ -9764,7 +9801,10 @@ function giftVoucherResetOld() {
                     delete ci._vKey; delete ci._originalPrice; delete ci._originalName;
                     delete ci._giftType; delete ci._giftLabel;
                 }
-            } else { cart.splice(i, 1); }
+            } else {
+                // item_upsize: dòng phụ tách ra → xóa hẳn
+                cart.splice(i, 1);
+            }
             break;
         }
     }
@@ -9778,7 +9818,9 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
 
     function applyReward(r) {
         if (!r) { renderCart(); return; }
+
         if (r.type === 'item') {
+            // Giảm tiền 1 món cụ thể (match tên)
             var target = (r.targetItem || '').toLowerCase().trim();
             var targetIdx = -1;
             cart.forEach(function(ci, idx) {
@@ -9803,14 +9845,25 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
                 item._giftLabel = code; item._originalPrice = origPrice; item._originalName = origName;
             }
             renderCart();
+
+        } else if (r.type === 'item_free' || r.type === 'item_upsize') {
+            // Cần nhân viên chọn món từ cart → mở popup
+            if (cart.length === 0) {
+                if (typeof showAppModal === 'function')
+                    showAppModal('Giỏ hàng trống!', 'Hãy thêm món vào bill trước khi áp voucher này!', '⚠️');
+                _giftVoucherKey = null; _giftVoucherPhone = null;
+                return;
+            }
+            openPickCartModal(r, key, code, name);
+
         } else {
-            // Store reward info for dynamic recalculation in renderCart
+            // percent / order → áp toàn bill
             _giftOrderDiscount = {
                 type:  r.type,
                 value: r.value || 0,
                 label: (r.label || name) + (r.type === 'percent' ? ' – ' + r.value + '%' : ''),
                 code:  code,
-                amt:   0  // will be recalculated in renderCart
+                amt:   0
             };
             renderCart();
         }
@@ -9834,6 +9887,126 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
         }); }
     }
 }
+
+// ===== POPUP CHỌN MÓN TỪ CART =====
+function openPickCartModal(reward, vKey, vCode, vName) {
+    var modal = document.getElementById('modal-pick-cart-item');
+    var listEl = document.getElementById('pick-cart-list');
+    var titleEl = document.getElementById('pick-cart-title');
+    var subtitleEl = document.getElementById('pick-cart-subtitle');
+    if (!modal || !listEl) return;
+
+    var isUpsize = reward.type === 'item_upsize';
+    titleEl.innerText = isUpsize ? '⬆️ Chọn món để up size M→L' : '🆓 Chọn món được miễn phí';
+
+    // Build condition hint text
+    var hints = [];
+    if (reward.conditionCategory) hints.push('Danh mục: ' + reward.conditionCategory);
+    if (reward.conditionMaxPrice) hints.push('Giá ≤ ' + Number(reward.conditionMaxPrice).toLocaleString() + 'đ');
+    if (reward.conditionMinPrice) hints.push('Giá ≥ ' + Number(reward.conditionMinPrice).toLocaleString() + 'đ');
+    subtitleEl.innerText = hints.length ? 'Điều kiện: ' + hints.join(' · ') : 'Tap vào món muốn áp voucher';
+
+    listEl.innerHTML = '';
+
+    cart.forEach(function(ci, idx) {
+        if (ci._vKey || ci._discountId) return; // skip items already with voucher
+
+        // Check conditions
+        var eligible = true;
+        if (reward.conditionCategory) {
+            var menuItem = (window._menuData || []).find(function(m) { return m.name === ci.name; });
+            if (!menuItem || (menuItem.type || '').toLowerCase() !== reward.conditionCategory.toLowerCase()) eligible = false;
+        }
+        if (reward.conditionMaxPrice && ci.price > reward.conditionMaxPrice) eligible = false;
+        if (reward.conditionMinPrice && ci.price < reward.conditionMinPrice) eligible = false;
+        if (reward.conditionMaxPrice === 0 && !reward.conditionCategory && !reward.conditionMinPrice) eligible = true; // no conditions = all eligible
+
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-radius:20px;border:2px solid ' + (eligible ? '#e5e7eb' : '#f3f4f6') + ';background:' + (eligible ? 'white' : '#fafafa') + ';opacity:' + (eligible ? '1' : '0.45') + ';transition:all 0.15s;';
+
+        var infoDiv = document.createElement('div');
+        infoDiv.style.cssText = 'flex:1;min-width:0;';
+        infoDiv.innerHTML = '<p style="font-weight:800;font-size:1rem;color:#111827;margin:0 0 3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + ci.name + (ci.size ? ' <span style="font-size:0.75rem;color:#9ca3af;">(' + ci.size + ')</span>' : '') + '</p>'
+            + '<p style="font-size:0.85rem;font-weight:700;color:#006241;margin:0;">' + ci.price.toLocaleString() + 'đ'
+            + (isUpsize ? ' <span style="color:#9ca3af;font-size:0.75rem;">→ giữ giá này + size L</span>' : ' <span style="color:#ef4444;font-size:0.75rem;">→ miễn phí</span>') + '</p>';
+
+        row.appendChild(infoDiv);
+
+        if (eligible) {
+            var btn = document.createElement('button');
+            btn.style.cssText = 'background:#006241;color:white;border:none;border-radius:14px;padding:10px 18px;font-size:0.85rem;font-weight:900;cursor:pointer;flex-shrink:0;margin-left:12px;';
+            btn.innerText = isUpsize ? '⬆️ Chọn' : '🆓 Chọn';
+            btn.addEventListener('click', function() {
+                applyPickedCartItem(idx, reward, vKey, vCode, vName);
+                closePickCartModal();
+            });
+            row.appendChild(btn);
+            row.addEventListener('mouseenter', function() { if(eligible) this.style.borderColor='#006241'; this.style.boxShadow='0 4px 16px rgba(0,98,65,0.12)'; });
+            row.addEventListener('mouseleave', function() { this.style.borderColor='#e5e7eb'; this.style.boxShadow='none'; });
+        } else {
+            var badge = document.createElement('span');
+            badge.style.cssText = 'font-size:0.7rem;font-weight:800;color:#9ca3af;margin-left:12px;flex-shrink:0;';
+            badge.innerText = 'Không hợp lệ';
+            row.appendChild(badge);
+        }
+        listEl.appendChild(row);
+    });
+
+    if (listEl.children.length === 0) {
+        listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><div style="font-size:2.5rem;margin-bottom:12px;">🛒</div><p style="font-weight:700;">Không có món nào trong bill!</p></div>';
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closePickCartModal() {
+    var modal = document.getElementById('modal-pick-cart-item');
+    if (modal) modal.style.display = 'none';
+}
+
+function applyPickedCartItem(idx, reward, vKey, vCode, vName) {
+    var item = cart[idx];
+    if (!item) return;
+    var origPrice = item.price;
+    var origName = item.name;
+    var origSize = item.size;
+
+    if (reward.type === 'item_free') {
+        // Miễn phí: giá về 0
+        var newPrice = 0;
+        if (item.qty > 1) {
+            item.qty -= 1;
+            cart.splice(idx + 1, 0, {
+                name: origName, size: origSize, price: newPrice, qty: 1,
+                _vKey: vKey, _giftType: 'item_free', _giftLabel: vCode,
+                _originalPrice: origPrice, _originalName: origName
+            });
+        } else {
+            item.price = newPrice; item._vKey = vKey; item._giftType = 'item_free';
+            item._giftLabel = vCode; item._originalPrice = origPrice; item._originalName = origName;
+        }
+    } else if (reward.type === 'item_upsize') {
+        // Upsize: thêm dòng phụ "+1 Size L" giá = surcharge (thường 0)
+        var surcharge = reward.value || 0;
+        // Tìm priceL trong menuData nếu có
+        var menuItem = (window._menuData || []).find(function(m) { return m.name === item.name; });
+        var upsizeNote = 'Size L (Voucher)';
+        cart.splice(idx + 1, 0, {
+            name: origName + ' ↑L',
+            size: 'L',
+            price: surcharge,
+            qty: 1,
+            _vKey: vKey,
+            _giftType: 'item_upsize',
+            _giftLabel: vCode,
+            _originalName: origName,
+            _originalPrice: surcharge,
+            _upsizeNote: true
+        });
+    }
+    renderCart();
+}
+// ===== END POPUP =====
 
 function giftVoucherMarkUsedAndReset(resetOnly) {
     if (!resetOnly && _giftVoucherKey && _giftVoucherPhone) {
@@ -9883,9 +10056,9 @@ function renderDiscountList() {
         }
 
         listEl.innerHTML = '';
-        var typeLabels = { item: '📦 Theo món', order: '🧾 Toàn đơn', percent: '% Phần trăm' };
-        var typeBg = { item: '#EDE9FE', order: '#DBEAFE', percent: '#FEF3C7' };
-        var typeClr = { item: '#7C3AED', order: '#1D4ED8', percent: '#D97706' };
+        var typeLabels = { item: '📦 Theo món', order: '🧾 Toàn đơn', percent: '% Phần trăm', item_free: '🆓 Miễn phí', item_upsize: '⬆️ Up size' };
+        var typeBg = { item: '#EDE9FE', order: '#DBEAFE', percent: '#FEF3C7', item_free: '#DCFCE7', item_upsize: '#FEF9C3' };
+        var typeClr = { item: '#7C3AED', order: '#1D4ED8', percent: '#D97706', item_free: '#16a34a', item_upsize: '#ca8a04' };
 
         keys.forEach(function(k) {
             var d = data[k];
@@ -9956,12 +10129,19 @@ function discountFormLoad(key, d) {
     _dfActive = d.active !== false;
     dfSetType(_dfType);
     dfRenderActiveToggle();
+    // Load condition fields
+    var condCat = document.getElementById('df-cond-category');
+    var condMax = document.getElementById('df-cond-maxprice');
+    var condMin = document.getElementById('df-cond-minprice');
+    if (condCat) condCat.value = d.conditionCategory || '';
+    if (condMax) condMax.value = d.conditionMaxPrice || '';
+    if (condMin) condMin.value = d.conditionMinPrice || '';
     document.getElementById('discount-form-title').innerText = '✏️ Chỉnh sửa';
     document.getElementById('df-delete-btn').style.display = 'block';
 }
 
 function discountFormClear() {
-    ['df-editing-key','df-code','df-label','df-img','df-desc','df-value','df-target-search','df-target'].forEach(function(id) {
+    ['df-editing-key','df-code','df-label','df-img','df-desc','df-value','df-target-search','df-target','df-cond-category','df-cond-maxprice','df-cond-minprice'].forEach(function(id) {
         var el = document.getElementById(id);
         if (el) el.value = '';
     });
@@ -10055,8 +10235,8 @@ function dfClearSelectedItem() {
 
 function dfSetType(type) {
     _dfType = type;
-    var icons = { item: '📦 Theo món', order: '🧾 Toàn đơn', percent: '% Phần trăm' };
-    ['item', 'order', 'percent'].forEach(function(t) {
+    var icons = { item: '📦 Theo món', order: '🧾 Toàn đơn', percent: '% Phần trăm', item_free: '🆓 Miễn phí 1 ly', item_upsize: '⬆️ Up size M→L' };
+    ['item', 'order', 'percent', 'item_free', 'item_upsize'].forEach(function(t) {
         var btn = document.getElementById('df-type-' + t);
         if (!btn) return;
         btn.innerHTML = icons[t];
@@ -10068,12 +10248,28 @@ function dfSetType(type) {
             btn.style.boxShadow = 'none';
         }
     });
+    // target-row: chỉ hiện khi type=item
     var targetRow = document.getElementById('df-target-row');
     if (targetRow) targetRow.style.display = (type === 'item') ? 'block' : 'none';
+    // condition-row: hiện khi item_free hoặc item_upsize
+    var condRow = document.getElementById('df-condition-row');
+    if (condRow) condRow.style.display = (type === 'item_free' || type === 'item_upsize') ? 'block' : 'none';
+    // value field
     var valLabel = document.getElementById('df-value-label');
-    if (valLabel) valLabel.innerText = (type === 'percent') ? 'Phần trăm giảm (%)' : 'Số tiền giảm (đ)';
     var valInput = document.getElementById('df-value');
-    if (valInput) valInput.placeholder = (type === 'percent') ? '10' : '5000';
+    if (type === 'percent') {
+        if (valLabel) valLabel.innerText = 'Phần trăm giảm (%)';
+        if (valInput) { valInput.placeholder = '10'; valInput.closest('div').style.display = 'block'; }
+    } else if (type === 'item_free') {
+        if (valLabel) valLabel.innerText = 'Giá trị miễn phí tối đa (đ, 0 = bất kỳ)';
+        if (valInput) { valInput.placeholder = '0'; valInput.closest('div').style.display = 'block'; }
+    } else if (type === 'item_upsize') {
+        if (valLabel) valLabel.innerText = 'Phụ thu up size (đ, 0 = miễn phí hoàn toàn)';
+        if (valInput) { valInput.placeholder = '0'; valInput.closest('div').style.display = 'block'; }
+    } else {
+        if (valLabel) valLabel.innerText = 'Số tiền giảm (đ)';
+        if (valInput) { valInput.placeholder = '5000'; valInput.closest('div').style.display = 'block'; }
+    }
 }
 function dfToggleActive() { _dfActive = !_dfActive; dfRenderActiveToggle(); }
 function dfRenderActiveToggle() {
@@ -10102,6 +10298,10 @@ function discountFormSave() {
     if (!label) return alert('Vui lòng nhập tên quà!');
     if (_dfType === 'item' && !target) return alert('Vui lòng chọn món áp dụng!');
 
+    var condCategory = (document.getElementById('df-cond-category') || {}).value || '';
+    var condMaxPrice = parseInt((document.getElementById('df-cond-maxprice') || {}).value) || 0;
+    var condMinPrice = parseInt((document.getElementById('df-cond-minprice') || {}).value) || 0;
+
     // Cấu trúc đồng bộ index.html: dùng 'name', 'img', 'desc', 'cost'
     var record = {
         code:       code || null,
@@ -10117,6 +10317,11 @@ function discountFormSave() {
         usedCount:  0
     };
     if (_dfType === 'item') record.targetItem = target;
+    if (_dfType === 'item_free' || _dfType === 'item_upsize') {
+        if (condCategory) record.conditionCategory = condCategory;
+        if (condMaxPrice > 0) record.conditionMaxPrice = condMaxPrice;
+        if (condMinPrice > 0) record.conditionMinPrice = condMinPrice;
+    }
 
     var isNew = !editKey;
     var key = isNew ? ('gift_' + (code || Date.now())) : editKey;
@@ -11256,5 +11461,21 @@ async function showRepDetail(phone, name, bookingId) {
   </div>
 </div>
 <!-- ===== END MODAL REPUTATION ===== -->
+<!-- ===== POPUP CHỌN MÓN TỪ CART (item_free / item_upsize) ===== -->
+<div id="modal-pick-cart-item" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px);">
+    <div style="background:white;border-radius:32px;width:100%;max-width:420px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,0.3);overflow:hidden;">
+        <!-- Header -->
+        <div style="padding:24px 24px 16px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                <span id="pick-cart-title" style="font-size:1.1rem;font-weight:900;color:#111827;">Chọn món để áp voucher</span>
+                <button onclick="closePickCartModal()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:900;color:#6b7280;">✕</button>
+            </div>
+            <p id="pick-cart-subtitle" style="font-size:0.8rem;color:#9ca3af;font-weight:600;margin:0;"></p>
+        </div>
+        <!-- List -->
+        <div id="pick-cart-list" style="overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;flex:1;"></div>
+    </div>
+</div>
+
 </body>
 </html>
