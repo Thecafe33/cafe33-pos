@@ -3588,16 +3588,22 @@ function toggleSecretRevenue() {
     var mainEl = document.getElementById('pc-drink-main');
     var secretEl = document.getElementById('pc-drink-secret');
     var khacEl = document.getElementById('pc-khac-sub');
+    var snackEl = document.getElementById('pc-secret-snack');
+    var payEl = document.getElementById('pc-secret-payment');
     if (_secretRevenueOn) {
-        if (btn) { btn.style.opacity = '1'; btn.style.color = '#006241'; btn.style.borderColor = '#006241'; }
+        if (btn) { btn.style.background = '#006241'; btn.style.color = 'white'; btn.style.borderColor = '#006241'; btn.innerHTML = btn.innerHTML.replace('Chi tiết', 'Ẩn bớt'); }
         if (mainEl) mainEl.classList.add('hidden');
         if (secretEl) secretEl.classList.remove('hidden');
         if (khacEl) khacEl.classList.remove('hidden');
+        if (snackEl) snackEl.classList.remove('hidden');
+        if (payEl) { payEl.classList.remove('hidden'); payEl.classList.add('grid'); }
     } else {
-        if (btn) { btn.style.opacity = '0.45'; btn.style.color = ''; btn.style.borderColor = ''; }
+        if (btn) { btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = ''; btn.innerHTML = btn.innerHTML.replace('Ẩn bớt', 'Chi tiết'); }
         if (mainEl) mainEl.classList.remove('hidden');
         if (secretEl) secretEl.classList.add('hidden');
         if (khacEl) khacEl.classList.add('hidden');
+        if (snackEl) snackEl.classList.add('hidden');
+        if (payEl) { payEl.classList.add('hidden'); payEl.classList.remove('grid'); }
     }
 }
 
@@ -3885,8 +3891,9 @@ function renderRevenueDashboard(data, mode) {
                 <button onclick="openRevenue('custom')" class="w-8 h-8 bg-[#006241] text-white rounded-full flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 </button>
-                <button id="btn-secret-revenue" onclick="toggleSecretRevenue()" title="Xem tổng bao gồm mục Khác" class="w-8 h-8 bg-gray-50 hover:bg-slate-100 text-gray-300 hover:text-slate-500 rounded-full flex items-center justify-center transition-all active:scale-95 border border-gray-100" style="opacity:0.45;hover:opacity:1;">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                <button id="btn-secret-revenue" onclick="toggleSecretRevenue()" title="Xem chi tiết" class="flex items-center gap-1.5 px-3 h-8 bg-gray-100 hover:bg-slate-200 text-gray-400 hover:text-slate-600 rounded-full transition-all active:scale-95 text-[10px] font-bold border border-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    Chi tiết
                 </button>
                 <button onclick="switchView('menu')" class="w-8 h-8 bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-500 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95 ml-1">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -3905,9 +3912,11 @@ function renderRevenueDashboard(data, mode) {
                 <p id="pc-khac-sub" class="text-[8px] text-slate-300 hidden">+ Khác: ${(data.khacTotal||0).toLocaleString()}</p>
             </div>
             
+            <div id="pc-secret-snack" class="hidden">
             <div id="pc-filter-snack" onclick="setChartFilter('snack')" class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center cursor-pointer hover:shadow-md active:scale-95 transition-all ring-[#D97706]">
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ăn vặt</p>
                 <p class="brand-font text-xl text-amber-500">${data.snackTotal.toLocaleString()}</p>
+            </div>
             </div>
 
             <div class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
@@ -3919,7 +3928,7 @@ function renderRevenueDashboard(data, mode) {
             </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3 text-left z-0 relative">
+        <div id="pc-secret-payment" class="hidden grid grid-cols-2 gap-3 text-left z-0 relative">
             <div id="pc-filter-transfer" onclick="setChartFilter('transfer')" class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center cursor-pointer hover:shadow-md active:scale-95 transition-all ring-[#0369a1]">
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">Chuyển khoản</p>
                 <p class="brand-font text-xl text-[#0369a1]">${data.transferTotal.toLocaleString()}</p>
