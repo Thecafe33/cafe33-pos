@@ -3621,6 +3621,7 @@ function toggleSecretRevenue() {
     var khacEl   = document.getElementById('pc-khac-sub');
     var snackEl  = document.getElementById('pc-secret-snack');
     var payEl    = document.getElementById('pc-secret-payment');
+    var yesterdayEl = document.getElementById('pc-secret-yesterday');
     var pcLabel  = document.getElementById('pc-drink-label');
     // Mobile elements
     var mobCards = document.getElementById('mob-secret-cards');
@@ -3638,6 +3639,7 @@ function toggleSecretRevenue() {
         if (khacEl)  khacEl.classList.remove('hidden');
         if (snackEl) snackEl.classList.remove('hidden');
         if (payEl)   { payEl.classList.remove('hidden'); payEl.classList.add('grid'); }
+        if (yesterdayEl) yesterdayEl.classList.remove('hidden');
         // Mobile cards
         if (mobLabel) mobLabel.innerText = 'Tổng nước';
         if (mobCards) { mobCards.style.display = 'contents'; }
@@ -3670,6 +3672,7 @@ function toggleSecretRevenue() {
         if (khacEl)  khacEl.classList.add('hidden');
         if (snackEl) snackEl.classList.add('hidden');
         if (payEl)   { payEl.classList.add('hidden'); payEl.classList.remove('grid'); }
+        if (yesterdayEl) yesterdayEl.classList.add('hidden');
         // Mobile cards
         if (mobLabel) mobLabel.innerText = 'Tổng thu';
         if (mobCards) { mobCards.style.display = 'none'; }
@@ -4001,7 +4004,7 @@ function renderRevenueDashboard(data, mode) {
             </div>
             </div>
 
-            <div class="p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
+            <div id="pc-secret-yesterday" class="hidden p-4 bg-white rounded-[24px] border border-gray-50 shadow-[0_4px_15px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
                 <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1">So hôm qua</p>
                 <div class="flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded-full mt-1">
                     <span class="text-[10px] ${dColor}">${dIcon}</span>
@@ -6025,15 +6028,25 @@ function skipExtendAndOrder() {
 
 // ===== GIỜ ĐÓNG CỬA BED & AUTO-STOP =====
 var currentBedClosingTime = '20:50';
-var BED_AUTOSTOP_TIME = '21:30';
 var _bedAutoStopChecked = false;
 var _bedCloseTimer = null;
+
+// Tính giờ auto-stop = closing_time + 30 phút
+function calcAutoStopTime(closingTime) {
+    var parts = (closingTime || '20:50').split(':');
+    var hh = parseInt(parts[0]) || 20;
+    var mm = parseInt(parts[1]) || 50;
+    var total = hh * 60 + mm + 10;
+    return String(Math.floor(total / 60) % 24).padStart(2,'0') + ':' + String(total % 60).padStart(2,'0');
+}
 
 db.ref('bed_closing_time').on('value', function(snap) {
     var val = snap.val();
     currentBedClosingTime = val || '20:50';
     var el = document.getElementById('bed-closing-display');
     if (el) el.innerText = currentBedClosingTime;
+    // Reset flag khi giờ thay đổi để có thể trigger lại
+    _bedAutoStopChecked = false;
 });
 
 function openBedClosingModal() {
@@ -6062,10 +6075,12 @@ function startBedAutoStopTimer() {
 function checkBedAutoStop() {
     var now = new Date();
     var nowStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-    if (nowStr >= BED_AUTOSTOP_TIME && !_bedAutoStopChecked) {
+    var autoStopTime = calcAutoStopTime(currentBedClosingTime);
+    if (nowStr === autoStopTime && !_bedAutoStopChecked) {
         _bedAutoStopChecked = true;
         triggerBedAutoStop();
     }
+    // Reset lúc 01:00 sáng để hôm sau có thể chạy lại
     if (nowStr < '01:00') _bedAutoStopChecked = false;
 }
 
@@ -6086,12 +6101,35 @@ function triggerBedAutoStop() {
             });
         }
     });
-    document.getElementById('autostop-time-display').innerText = BED_AUTOSTOP_TIME;
+    document.getElementById('autostop-time-display').innerText = calcAutoStopTime(currentBedClosingTime);
     document.getElementById('autostop-count').innerText = count;
     document.getElementById('modal-bed-autostop').classList.remove('hidden');
 }
 
 startBedAutoStopTimer();
+
+// Lắng nghe log từ Cloud Function (chạy khi app tắt)
+// Khi mở app lại sẽ hiện thông báo nếu Cloud Function đã auto-checkout
+var _lastSeenAutoStopLog = null;
+db.ref('bedAutoStopLog').limitToLast(1).on('value', function(snap) {
+    if (!snap.exists()) return;
+    var key = Object.keys(snap.val())[0];
+    var log = snap.val()[key];
+    if (!log || log.triggeredBy !== 'cloud_function') return;
+    // Chỉ hiện nếu log mới (trong vòng 10 phút) và chưa hiện rồi
+    if (_lastSeenAutoStopLog === key) return;
+    _lastSeenAutoStopLog = key;
+    var logTime = log.timestamp ? new Date(log.timestamp) : null;
+    var now = new Date();
+    if (logTime && (now - logTime) > 10 * 60 * 1000) return; // cũ hơn 10 phút thì bỏ qua
+    // Hiện modal thông báo
+    var countEl = document.getElementById('autostop-count');
+    var timeEl = document.getElementById('autostop-time-display');
+    if (countEl) countEl.innerText = log.count || 0;
+    if (timeEl) timeEl.innerText = log.time || '';
+    var modal = document.getElementById('modal-bed-autostop');
+    if (modal) modal.classList.remove('hidden');
+});
 // ===== END GIỜ ĐÓNG CỬA BED & AUTO-STOP =====
 
 function handleBedCheckout(booking) {
