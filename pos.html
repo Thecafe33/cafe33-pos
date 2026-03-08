@@ -1080,7 +1080,12 @@ input, button, select, textarea { font-size: 1rem; }
                 <div style="width:52%;display:flex;flex-direction:column;background:white;border-radius:28px;box-shadow:0 2px 24px rgba(0,0,0,0.07);overflow:hidden;min-height:0;">
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
                         <span style="font-weight:900;font-size:1rem;color:#111827;">Quà tặng & Mã giảm</span>
-                        <span id="discount-count" style="font-weight:900;font-size:0.7rem;color:#006241;background:#F0FDF4;padding:4px 12px;border-radius:999px;">0</span>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span id="discount-count" style="font-weight:900;font-size:0.7rem;color:#006241;background:#F0FDF4;padding:4px 12px;border-radius:999px;">0</span>
+                            <button onclick="discountFormClear()" style="font-size:0.7rem;font-weight:900;color:white;background:#006241;border:none;padding:7px 14px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:4px;" class="active:scale-95">
+                                + Tạo mới
+                            </button>
+                        </div>
                     </div>
                     <div id="discount-list" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;" class="custom-scrollbar">
                         <div style="display:flex;flex-direction:column;align-items:center;padding:48px 0;opacity:0.4;">
@@ -10277,7 +10282,17 @@ function renderDiscountList() {
             row.appendChild(imgEl);
             row.appendChild(info);
             row.appendChild(Object.assign(document.createElement('span'), { innerText: '›', style: { fontSize: '1.2rem', opacity: '0.3' } }));
-            row.addEventListener('click', function() { discountFormLoad(k, d); });
+            (function(rowRef, keyRef, dataRef) {
+                rowRef.addEventListener('click', function() {
+                    // Bỏ highlight tất cả row cũ
+                    var allRows = document.querySelectorAll('#discount-list > div');
+                    allRows.forEach(function(r) { r.style.borderColor = '#f9fafb'; r.style.background = 'white'; });
+                    // Highlight row đang chọn
+                    rowRef.style.borderColor = '#006241';
+                    rowRef.style.background = '#f0fdf4';
+                    discountFormLoad(keyRef, dataRef);
+                });
+            })(row, k, d);
             listEl.appendChild(row);
         });
     });
@@ -10328,6 +10343,12 @@ function discountFormClear() {
     dfShowSelectedItem('');
     dfPreviewImg('');
     _dfType = 'item'; _dfActive = true;
+    // Scroll form về đầu
+    var formScroll = document.querySelector('#view-discount .custom-scrollbar');
+    if (formScroll) formScroll.scrollTop = 0;
+    // Bỏ highlight tất cả row trong list
+    var rows = document.querySelectorAll('#discount-list > div');
+    rows.forEach(function(r) { r.style.borderColor = '#f9fafb'; r.style.background = 'white'; });
     dfSetType('item');
     dfRenderActiveToggle();
     document.getElementById('discount-form-title').innerText = '✦ Thêm quà mới';
@@ -10360,10 +10381,16 @@ function dfHideMenuDropdown() {
 function dfFilterMenu(q) {
     var dd = document.getElementById('df-menu-dropdown');
     if (!dd) return;
-    var items = (typeof menu !== 'undefined' ? menu : []);
-    var fil = q.trim() === '' ? items : items.filter(function(m) {
-        return m.name && m.name.toLowerCase().indexOf(q.toLowerCase()) !== -1;
-    });
+    // Reload menu từ Firebase để đảm bảo có món mới nhất
+    db.ref('menu').once('value', function(snap) {
+        var freshMenu = [];
+        snap.forEach(function(c) { var v = c.val(); if (v && v.name) freshMenu.push(v); });
+        // Cập nhật biến global menu luôn
+        if (freshMenu.length > 0) menu = freshMenu;
+        var items = freshMenu.length > 0 ? freshMenu : (typeof menu !== 'undefined' ? menu : []);
+        var fil = q.trim() === '' ? items : items.filter(function(m) {
+            return m.name && m.name.toLowerCase().indexOf(q.toLowerCase()) !== -1;
+        });
     dd.innerHTML = '';
     if (fil.length === 0) {
         dd.innerHTML = '<div style="padding:14px;text-align:center;color:#9ca3af;font-size:0.85rem;">Không tìm thấy</div>';
@@ -10385,7 +10412,8 @@ function dfFilterMenu(q) {
             dd.appendChild(row);
         });
     }
-    dd.style.display = 'block';
+        dd.style.display = 'block';
+    }); // end db.ref
 }
 function dfSelectMenuItem(name) {
     document.getElementById('df-target-search').value = name;
