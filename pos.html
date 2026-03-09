@@ -853,7 +853,7 @@ input, button, select, textarea { font-size: 1rem; }
             Lịch sử
         </button>
         <button id="btn-nav-discount" onclick="openDiscountManager()" class="bg-gray-100 text-gray-400 px-6 py-3 rounded-2xl text-[11px] font-black uppercase hover:bg-gray-200 active:scale-95 transition-all tracking-widest">
-            Quà Tặng
+            Quản lý
         </button>
         <button id="btn-nav-bed" onclick="openBedManager()" class="bg-gray-100 text-gray-500 px-5 py-2 rounded-full text-[11px] font-black uppercase hover:bg-gray-200 active:scale-95 transition-all tracking-widest border border-transparent">
             Cafe in Bed
@@ -1072,6 +1072,21 @@ input, button, select, textarea { font-size: 1rem; }
         <!-- ===== VIEW QUẢN LÝ MÃ GIẢM GIÁ ===== -->
         <!-- ===== VIEW QUẢN LÝ MÃ GIẢM GIÁ ===== -->
         <div id="view-discount" class="hidden h-full flex flex-col" style="background:#F2F2F7;overflow:hidden;">
+
+            <!-- Sub-tab bar -->
+            <div style="display:flex;align-items:center;gap:12px;padding:18px 24px 0 24px;flex-shrink:0;">
+                <button id="mgr-tab-gift" onclick="switchMgrTab('gift')"
+                    style="padding:14px 32px;border-radius:999px;font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;border:none;cursor:pointer;transition:all 0.18s;background:#006241;color:white;min-height:50px;">
+                    Quà Tặng
+                </button>
+                <button id="mgr-tab-screen" onclick="switchMgrTab('screen')"
+                    style="padding:14px 32px;border-radius:999px;font-size:1rem;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;border:none;cursor:pointer;transition:all 0.18s;background:#e5e7eb;color:#6b7280;min-height:50px;">
+                    Màn hình phụ
+                </button>
+            </div>
+
+            <!-- Panel Quà Tặng -->
+            <div id="mgr-panel-gift" style="display:flex;flex:1;overflow:hidden;min-height:0;">
 
             <!-- 2 cột, không có header riêng — dùng nav bar chung -->
             <div style="display:flex;flex:1;overflow:hidden;gap:16px;padding:20px;min-height:0;">
@@ -1346,6 +1361,54 @@ input, button, select, textarea { font-size: 1rem; }
                 </div>
             </div>
         </div>
+            </div><!-- end mgr-panel-gift -->
+
+            <!-- Panel Màn hình phụ -->
+            <div id="mgr-panel-screen" style="display:none;flex:1;overflow:hidden;flex-direction:column;gap:16px;padding:20px;min-height:0;">
+                <!-- Cột trái: danh sách slides -->
+                <div style="display:flex;gap:16px;flex:1;min-height:0;">
+                    <div style="width:50%;display:flex;flex-direction:column;background:white;border-radius:28px;box-shadow:0 2px 24px rgba(0,0,0,0.07);overflow:hidden;min-height:0;">
+                        <div style="padding:18px 24px;border-bottom:1px solid #f3f4f6;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;">
+                            <span style="font-weight:900;font-size:1rem;color:#111827;">Danh sách Slides</span>
+                            <span id="slide-count" style="font-size:0.75rem;font-weight:700;color:#9ca3af;"></span>
+                        </div>
+                        <div id="slide-list" style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;">
+                        </div>
+                    </div>
+                    <!-- Cột phải: thêm slide mới -->
+                    <div id="slide-form-panel" style="width:50%;display:flex;flex-direction:column;background:white;border-radius:28px;box-shadow:0 2px 24px rgba(0,0,0,0.07);overflow:hidden;min-height:0;">
+                        <div style="padding:18px 24px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
+                            <span style="font-weight:900;font-size:1rem;color:#111827;">Thêm / Xem trước</span>
+                        </div>
+                        <div style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;" class="custom-scrollbar">
+                            <div>
+                                <label style="font-size:0.7rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:8px;">URL Ảnh / Video</label>
+                                <textarea id="slide-new-url" placeholder="https://..." rows="3"
+                                    style="width:100%;padding:12px 16px;border-radius:16px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.9rem;font-weight:600;color:#1f2937;box-sizing:border-box;resize:none;transition:border-color 0.2s;"
+                                    onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent';screenPreviewSlide()"></textarea>
+                            </div>
+                            <div>
+                                <label style="font-size:0.7rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:8px;">Thời gian hiển thị (giây)</label>
+                                <input id="slide-new-duration" type="number" value="8" min="1"
+                                    style="width:100%;padding:12px 16px;border-radius:16px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:1.2rem;font-weight:900;color:#006241;box-sizing:border-box;transition:border-color 0.2s;"
+                                    onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
+                            </div>
+                            <!-- Preview -->
+                            <div id="slide-preview-box" style="width:100%;aspect-ratio:16/9;background:#f3f4f6;border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem;color:#d1d5db;">
+                                🖼
+                            </div>
+                            <button onclick="screenAddSlide()"
+                                style="width:100%;padding:14px;background:linear-gradient(135deg,#006241,#00a86b);color:white;font-weight:900;font-size:1rem;border-radius:18px;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(0,98,65,0.35);" class="active:scale-95">
+                                + Thêm slide
+                            </button>
+                            <button onclick="screenSaveSlides()"
+                                style="width:100%;padding:14px;background:#1f2937;color:white;font-weight:900;font-size:1rem;border-radius:18px;border:none;cursor:pointer;" class="active:scale-95">
+                                💾 Lưu danh sách slides
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- end mgr-panel-screen -->
     <div id="view-bed-mobile" class="hidden h-full flex flex-col relative">
     
     <div id="mob-bed-list-screen" class="flex flex-col h-full w-full absolute inset-0 z-10 bg-[#F2F2F7]">
@@ -10790,7 +10853,133 @@ function dfLoadCategoryOptions(selectEl) {
 function openDiscountManager() {
     setActiveNavBtn('btn-nav-discount');
     switchView('discount');
-    renderDiscountList();
+    switchMgrTab('gift');
+}
+
+function switchMgrTab(tab) {
+    var gBtn = document.getElementById('mgr-tab-gift');
+    var sBtn = document.getElementById('mgr-tab-screen');
+    var gPanel = document.getElementById('mgr-panel-gift');
+    var sPanel = document.getElementById('mgr-panel-screen');
+    if (!gBtn || !sBtn || !gPanel || !sPanel) return;
+    if (tab === 'gift') {
+        gBtn.style.background = '#006241'; gBtn.style.color = 'white';
+        sBtn.style.background = '#e5e7eb'; sBtn.style.color = '#6b7280';
+        gPanel.style.display = 'flex';
+        sPanel.style.display = 'none';
+        renderDiscountList();
+    } else {
+        sBtn.style.background = '#006241'; sBtn.style.color = 'white';
+        gBtn.style.background = '#e5e7eb'; gBtn.style.color = '#6b7280';
+        gPanel.style.display = 'none';
+        sPanel.style.display = 'flex';
+        screenLoadSlides();
+    }
+}
+
+// ===== SCREEN SLIDES =====
+var _screenSlides = [];
+
+function screenLoadSlides() {
+    var listEl = document.getElementById('slide-list');
+    var countEl = document.getElementById('slide-count');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="padding:24px;text-align:center;opacity:0.4;font-size:0.85rem;font-weight:700;color:#9ca3af">Đang tải...</div>';
+    db.ref('screen_slides').once('value', function(snap) {
+        _screenSlides = snap.val() || [];
+        if (countEl) countEl.innerText = _screenSlides.length + ' slides';
+        screenRenderList();
+    });
+}
+
+function screenRenderList() {
+    var listEl = document.getElementById('slide-list');
+    var countEl = document.getElementById('slide-count');
+    if (!listEl) return;
+    if (countEl) countEl.innerText = _screenSlides.length + ' slides';
+    if (_screenSlides.length === 0) {
+        listEl.innerHTML = '<div style="padding:32px;text-align:center;opacity:0.4;font-size:0.85rem;font-weight:700;color:#9ca3af">Chưa có slide nào</div>';
+        return;
+    }
+    listEl.innerHTML = '';
+    _screenSlides.forEach(function(slide, idx) {
+        var row = document.createElement('div');
+        row.style.cssText = 'background:#f9fafb;border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:10px;border:2px solid #f3f4f6;';
+        // thumbnail
+        var thumb = document.createElement('div');
+        thumb.style.cssText = 'width:56px;height:36px;border-radius:8px;background:#e5e7eb;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem;';
+        if (slide.url) {
+            var img = document.createElement('img');
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+            img.src = slide.url;
+            img.onerror = function() { thumb.innerText = '🖼'; };
+            thumb.appendChild(img);
+        } else { thumb.innerText = '🖼'; }
+        // info
+        var info = document.createElement('div');
+        info.style.cssText = 'flex:1;min-width:0;';
+        info.innerHTML = '<p style="font-size:0.8rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 2px 0">' + (slide.url || '(trống)') + '</p>'
+            + '<p style="font-size:0.72rem;color:#9ca3af;margin:0">⏱ ' + (slide.duration || 8) + 's</p>';
+        // buttons
+        var btnUp = document.createElement('button');
+        btnUp.innerText = '↑';
+        btnUp.style.cssText = 'background:#e5e7eb;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-weight:900;font-size:0.85rem;';
+        btnUp.onclick = (function(i) { return function() { screenMoveSlide(i, -1); }; })(idx);
+        var btnDel = document.createElement('button');
+        btnDel.innerText = '✕';
+        btnDel.style.cssText = 'background:#fee2e2;border:none;border-radius:8px;padding:4px 8px;cursor:pointer;font-weight:900;font-size:0.85rem;color:#ef4444;';
+        btnDel.onclick = (function(i) { return function() { screenRemoveSlide(i); }; })(idx);
+        row.appendChild(thumb);
+        row.appendChild(info);
+        if (idx > 0) row.appendChild(btnUp);
+        row.appendChild(btnDel);
+        listEl.appendChild(row);
+    });
+}
+
+function screenMoveSlide(idx, dir) {
+    var newIdx = idx + dir;
+    if (newIdx < 0 || newIdx >= _screenSlides.length) return;
+    var tmp = _screenSlides[idx];
+    _screenSlides[idx] = _screenSlides[newIdx];
+    _screenSlides[newIdx] = tmp;
+    screenRenderList();
+}
+
+function screenRemoveSlide(idx) {
+    _screenSlides.splice(idx, 1);
+    screenRenderList();
+}
+
+function screenPreviewSlide() {
+    var url = (document.getElementById('slide-new-url').value || '').trim();
+    var box = document.getElementById('slide-preview-box');
+    if (!box) return;
+    box.innerHTML = '';
+    if (url) {
+        var img = document.createElement('img');
+        img.src = url;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        img.onerror = function() { box.innerHTML = '❌'; };
+        box.appendChild(img);
+    } else { box.innerHTML = '🖼'; }
+}
+
+function screenAddSlide() {
+    var url = (document.getElementById('slide-new-url').value || '').trim();
+    var dur = parseInt(document.getElementById('slide-new-duration').value) || 8;
+    if (!url) return alert('Vui lòng nhập URL ảnh!');
+    _screenSlides.push({ url: url, duration: dur });
+    document.getElementById('slide-new-url').value = '';
+    document.getElementById('slide-preview-box').innerHTML = '🖼';
+    screenRenderList();
+}
+
+function screenSaveSlides() {
+    db.ref('screen_slides').set(_screenSlides, function(err) {
+        if (err) return alert('Lỗi: ' + err.message);
+        alert('✅ Đã lưu ' + _screenSlides.length + ' slides!');
+    });
 }
 
 window.addEventListener('load', function() {
