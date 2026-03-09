@@ -136,21 +136,18 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 .card.selected { border-color: var(--brand); background: var(--brand-light); }
 
 /* =============================================
-   ITEM SHEET — STARBUCKS EXACT STYLE
+   ITEM SHEET — FULL SCREEN, NO SCROLL
    ============================================= */
 #sheet-item {
   position: fixed; inset: 0; z-index: 9000;
-  display: none; align-items: flex-end;
-  background: rgba(0,0,0,0.55);
+  display: none;
 }
-#sheet-item.open { display: flex; animation: backdropIn 0.25s ease; }
+#sheet-item.open { display: block; animation: backdropIn 0.25s ease; }
 @keyframes backdropIn { from{opacity:0} to{opacity:1} }
 
-/* Card = 1 khối gradient liền, không padding, không viền trắng */
+/* Full màn hình, không border-radius, không shadow ngoài */
 .item-sheet {
-  position: relative; z-index: 1;
-  width: 100%; height: 90dvh;
-  border-radius: 28px 28px 0 0;
+  position: absolute; inset: 0;
   display: flex; flex-direction: column;
   overflow: hidden;
   transform: translateY(100%);
@@ -161,19 +158,21 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 #sheet-item.open .item-sheet { transform: translateY(0); }
 #sheet-item.closing .item-sheet {
   transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.4,0,1,1);
+  transition: transform 0.28s cubic-bezier(0.4,0,1,1);
 }
 
-/* Handle bar + nút back */
+/* Handle bar */
+.item-handle-bar {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  width: 40px; height: 4px; border-radius: 99px;
+  background: rgba(255,255,255,0.35); z-index: 10;
+}
+/* Nút back góc trái */
 .item-topbar {
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;
-  padding: 12px 16px 0;
+  padding: max(14px, env(safe-area-inset-top)) 16px 0;
   display: flex; align-items: center;
-}
-.item-handle-bar {
-  width: 40px; height: 4px; border-radius: 99px;
-  background: rgba(255,255,255,0.38);
-  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  pointer-events: none;
 }
 .item-back-btn {
   width: 36px; height: 36px; border-radius: 50%; border: none;
@@ -181,136 +180,127 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
   -webkit-backdrop-filter: blur(12px);
   color: white; font-size: 1rem; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; -webkit-tap-highlight-color: transparent;
+  pointer-events: all; -webkit-tap-highlight-color: transparent;
 }
 
-/* Ảnh ly — vùng trên, nền gradient xuyên suốt */
+/* Vùng ảnh: flex 1 co lại, ảnh + qty chồng nhau */
 .item-img-zone {
-  flex-shrink: 0; padding-top: 54px;
-  display: flex; flex-direction: column; align-items: center;
+  flex: 1 1 0; min-height: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding-top: 60px; padding-bottom: 0;
+  position: relative;
 }
 .item-hero-img {
-  width: 200px; height: 200px; object-fit: contain;
-  filter: drop-shadow(0 18px 32px rgba(0,0,0,0.55));
-  transition: opacity 0.3s; display: block;
+  max-width: 52vw; max-height: 38vh;
+  width: auto; height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 28px rgba(0,0,0,0.55));
+  transition: opacity 0.35s, transform 0.35s;
+  display: block; flex-shrink: 0;
 }
-.item-hero-img.no-img { opacity: 0; }
+.item-hero-img.no-img { opacity: 0; transform: translateY(16px); }
 
-/* Qty — NẰM DƯỚI ẢNH, trên gradient */
+/* Qty NẰM NGAY DƯỚI ẢNH, cũng trong img-zone */
 .item-qty-row {
-  margin-top: 18px;
+  margin-top: 16px; flex-shrink: 0;
   display: inline-flex; align-items: center;
   background: rgba(0,0,0,0.32); backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-radius: 99px; padding: 4px;
 }
 .item-qty-btn {
-  width: 42px; height: 42px; border-radius: 50%; border: none;
-  background: rgba(255,255,255,0.2); color: white;
-  font-size: 1.5rem; font-weight: 300; cursor: pointer;
+  width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.18); color: white;
+  font-size: 1.4rem; font-weight: 300; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   line-height: 1; -webkit-tap-highlight-color: transparent;
   transition: background 0.12s, transform 0.1s;
 }
 .item-qty-btn:active { background: rgba(255,255,255,0.38); transform: scale(0.9); }
 .item-qty-num {
-  min-width: 46px; text-align: center;
-  font-size: 1.15rem; font-weight: 700; color: white;
+  min-width: 44px; text-align: center;
+  font-size: 1.1rem; font-weight: 700; color: white;
 }
 
-/* Body cuộn — nền tối trong suốt, KHÔNG trắng */
+/* Body dưới ảnh: FIXED HEIGHT, không scroll */
 .item-body {
-  flex: 1; overflow-y: auto; overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  padding: 18px 20px 8px;
+  flex-shrink: 0;
+  padding: 14px 20px 0;
   background: rgba(0,0,0,0.18);
+  overflow: hidden;
 }
 .item-name {
   font-family: "League Spartan", sans-serif;
-  font-size: 1.8rem; font-weight: 800; color: white;
-  letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 4px;
+  font-size: 1.6rem; font-weight: 800; color: white;
+  letter-spacing: -0.02em; line-height: 1; margin-bottom: 14px;
 }
-.item-price-tag { font-size: 1rem; font-weight: 900; color: rgba(255,255,255,0.75); }
 
 .opt-label {
-  font-size: 0.72rem; font-weight: 900;
-  color: rgba(255,255,255,0.5);
+  font-size: 0.68rem; font-weight: 900;
+  color: rgba(255,255,255,0.45);
   text-transform: uppercase; letter-spacing: 0.1em;
-  margin: 16px 0 10px;
+  margin-bottom: 7px; display: block;
 }
-.opt-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt-section { margin-bottom: 12px; }
+
+.opt-pills { display: flex; gap: 7px; }
 .opt-pill {
-  padding: 9px 20px; border-radius: 99px;
-  font-size: 0.84rem; font-weight: 800;
-  border: 1.5px solid rgba(255,255,255,0.22);
+  flex: 1; padding: 8px 4px; border-radius: 99px;
+  font-size: 0.82rem; font-weight: 800; text-align: center;
+  border: 1.5px solid rgba(255,255,255,0.2);
   background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85);
   cursor: pointer; transition: all 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 .opt-pill.sel {
-  background: rgba(255,255,255,0.9);
-  border-color: transparent; color: #1a0a04;
+  background: rgba(255,255,255,0.92);
+  border-color: transparent; color: #1a0a04; font-weight: 900;
 }
 
+/* Size pills — nhỏ gọn hơn */
 .size-pills { display: flex; gap: 8px; }
 .size-pill {
-  flex: 1; padding: 12px 8px; border-radius: 16px;
-  border: 1.5px solid rgba(255,255,255,0.22);
+  flex: 1; padding: 8px 6px; border-radius: 14px;
+  border: 1.5px solid rgba(255,255,255,0.2);
   background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85);
-  font-weight: 900; font-size: 0.88rem; cursor: pointer;
+  font-weight: 900; font-size: 0.85rem; cursor: pointer;
   transition: all 0.15s; text-align: center;
   -webkit-tap-highlight-color: transparent;
 }
-.size-pill.sel { background: rgba(255,255,255,0.9); border-color: transparent; color: #1a0a04; }
-.size-price { font-size: 0.74rem; opacity: 0.75; margin-top: 2px; display: block; }
+.size-pill.sel { background: rgba(255,255,255,0.92); border-color: transparent; color: #1a0a04; }
+.size-price { font-size: 0.72rem; opacity: 0.75; margin-top: 1px; display: block; }
+.size-pill.sel .size-price { opacity: 0.7; }
 
-.topping-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 14px;
-  background: rgba(255,255,255,0.09); border-radius: 14px;
-  margin-bottom: 8px; cursor: pointer;
-  border: 1.5px solid rgba(255,255,255,0.14);
-  transition: all 0.15s; -webkit-tap-highlight-color: transparent;
-}
-.topping-row.sel { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.45); }
-.topping-name { font-size: 0.9rem; font-weight: 800; color: white; }
-.topping-price { font-size: 0.78rem; color: rgba(255,255,255,0.6); font-weight: 700; }
-.topping-check {
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,0.35);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  transition: all 0.15s;
-}
-.topping-row.sel .topping-check { background: white; border-color: white; }
-
+/* Note input — bo tròn nhiều */
 .note-input {
-  width: 100%; padding: 12px 16px;
+  width: 100%; padding: 10px 18px;
   background: rgba(255,255,255,0.1);
-  border: 1.5px solid rgba(255,255,255,0.18); border-radius: 14px;
-  font-size: 0.9rem; font-weight: 600; outline: none;
+  border: 1.5px solid rgba(255,255,255,0.18); border-radius: 99px;
+  font-size: 0.88rem; font-weight: 600; outline: none;
   font-family: "Nunito", sans-serif; box-sizing: border-box;
-  color: white; transition: all 0.2s; margin-top: 4px;
+  color: white; transition: all 0.2s;
 }
-.note-input::placeholder { color: rgba(255,255,255,0.38); }
-.note-input:focus { border-color: rgba(255,255,255,0.55); background: rgba(255,255,255,0.16); }
+.note-input::placeholder { color: rgba(255,255,255,0.35); }
+.note-input:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.15); }
 
-/* Footer nút thêm — mờ iOS */
+/* Footer — nút màu chủ đề quán */
 .item-footer {
-  padding: 12px 20px max(28px, env(safe-area-inset-bottom));
-  flex-shrink: 0; background: rgba(0,0,0,0.2);
+  padding: 12px 20px max(24px, env(safe-area-inset-bottom));
+  flex-shrink: 0;
 }
 .item-add-btn {
-  width: 100%; padding: 17px 22px;
-  background: rgba(255,255,255,0.16);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  width: 100%; padding: 16px 22px;
+  background: var(--brand);
   color: white; font-family: "Nunito", sans-serif;
   font-weight: 900; font-size: 1rem;
-  border: 1.5px solid rgba(255,255,255,0.28);
-  border-radius: 20px; cursor: pointer;
+  border: none; border-radius: 20px; cursor: pointer;
   display: flex; align-items: center; justify-content: space-between;
-  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
 }
-.item-add-btn:active { background: rgba(255,255,255,0.28); }
+.item-add-btn:active { opacity: 0.88; transform: scale(0.99); }
 
 /* Toast */
 #toast {
@@ -1125,41 +1115,38 @@ window.onunhandledrejection = null;
       </div>
     </div>
 
-    <!-- Body cuộn — nền tối trong suốt -->
+    <!-- Body dưới ảnh -->
     <div class="item-body" id="item-body">
-      <div style="margin-bottom:12px">
-        <div class="item-name" id="si-name">Tên món</div>
-        <div class="item-price-tag" id="si-price-display">0đ</div>
-      </div>
+      <div class="item-name" id="si-name">Tên món</div>
 
       <!-- Size -->
-      <div id="si-size-wrap" class="hidden">
+      <div id="si-size-wrap" class="opt-section hidden">
         <div class="opt-label">Kích cỡ</div>
         <div class="size-pills" id="si-sizes"></div>
       </div>
 
-      <!-- Đường -->
-      <div id="si-sugar-wrap">
-        <div class="opt-label">Đường</div>
-        <div class="opt-pills" id="si-sugars"></div>
-      </div>
-
-      <!-- Đá -->
-      <div id="si-ice-wrap">
-        <div class="opt-label">Đá</div>
-        <div class="opt-pills" id="si-ices"></div>
+      <!-- Đường + Đá cùng hàng -->
+      <div style="display:flex;gap:12px">
+        <div class="opt-section" style="flex:1">
+          <div class="opt-label">Đường</div>
+          <div class="opt-pills" id="si-sugars"></div>
+        </div>
+        <div class="opt-section" style="flex:1">
+          <div class="opt-label">Đá</div>
+          <div class="opt-pills" id="si-ices"></div>
+        </div>
       </div>
 
       <!-- Topping -->
-      <div id="si-topping-wrap" class="hidden">
+      <div id="si-topping-wrap" class="opt-section hidden">
         <div class="opt-label">Topping</div>
         <div id="si-toppings"></div>
       </div>
 
       <!-- Ghi chú -->
-      <div style="margin-bottom:24px">
+      <div class="opt-section">
         <div class="opt-label">Ghi chú</div>
-        <input type="text" id="si-note" class="note-input" placeholder="VD: ít đá, không đường...">
+        <input type="text" id="si-note" class="note-input" placeholder="VD: ít đường, không hành...">
       </div>
     </div>
 
@@ -1451,8 +1438,8 @@ const DEFAULT_SHIP_CONFIG = {
   pricePerKm: 10000,            // >6km: 10k/km
 };
 
-const SUGAR_OPTIONS = ['100%', '70%', '50%', '30%', '0%'];
-const ICE_OPTIONS   = ['Nhiều đá', 'Bình thường', 'Ít đá', 'Không đá'];
+const SUGAR_OPTIONS = ['100%', '50%', '0%'];
+const ICE_OPTIONS   = ['Đá chung', 'Đá riêng', 'Không đá'];
 
 // ======================================================
 // STATE
@@ -1476,7 +1463,7 @@ let state = {
   sheetQty: 1,
   sheetSize: null,
   sheetSugar: '100%',
-  sheetIce: 'Bình thường',
+  sheetIce: 'Đá chung',
   sheetToppings: [],
 };
 
@@ -1737,7 +1724,17 @@ function loadMenu() {
       });
     });
 
-    state.menuData  = items;
+    // Thêm 1 demo item để test gradient màu
+    items.unshift({
+      id: '_demo_latte',
+      name: 'Caramel Latte',
+      category: 'Demo',
+      priceM: 35000, priceL: 45000,
+      image: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?w=400&q=80',
+      toppings: [{ name: 'Trân châu', price: 5000 }, { name: 'Thạch', price: 5000 }],
+      hasSizes: true,
+      basePrice: 35000,
+    });
     state.categories = ['all', ...cats].filter((v, i, a) => a.indexOf(v) === i);
     state.activeCat = 'all';
     renderCatTabs();
@@ -1848,7 +1845,7 @@ function openItemSheet(itemId) {
   if(!item)return;
   state.currentItem=item; state.sheetQty=1;
   state.sheetSize=item.hasSizes?'M':null;
-  state.sheetSugar='100%'; state.sheetIce='Bình thường';
+  state.sheetSugar='100%'; state.sheetIce='Đá chung';
   state.sheetToppings=[];
 
   document.getElementById('si-name').textContent=item.name;
@@ -1963,7 +1960,8 @@ function getSheetItemPrice(){
 
 function updateSheetSubtotal(){
   const price=getSheetItemPrice(),total=price*state.sheetQty;
-  document.getElementById('si-price-display').textContent=`${price.toLocaleString('vi')}đ`;
+  const el = document.getElementById('si-price-display');
+  if (el) el.textContent=`${price.toLocaleString('vi')}đ`;
   document.getElementById('si-subtotal').textContent=`${total.toLocaleString('vi')}đ`;
 }
 
