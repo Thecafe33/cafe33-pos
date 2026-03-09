@@ -9,6 +9,8 @@
 <title>Đặt hàng giao tận nơi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=League+Spartan:wght@700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
@@ -74,8 +76,6 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 }
 .screen.active { 
   display: flex;
-  flex-direction: column;
-  min-height: 100dvh;
   position: fixed;
   inset: 0;
   overflow-y: auto;
@@ -204,6 +204,10 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 #screen-welcome {
   background: #ffffff;
   overflow: hidden;
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Vùng card trên — đủ cao cho card đứng */
@@ -310,6 +314,10 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 #screen-store {
   background: #f8f9fa;
   overflow: hidden;
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 .store-header {
@@ -334,87 +342,95 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
   position: relative; z-index: 10;
   flex: 1; display: flex; flex-direction: column;
   align-items: stretch; justify-content: center;
-  padding: 20px 20px 60px;
-  gap: 16px;
-  min-height: 400px;
+  padding: 12px 18px 48px;
+  gap: 0;
 }
 
-/* Card chi nhánh — to, ngang, phẳng như ảnh mẫu */
+/* Card chi nhánh — ngang, đứng, chồng chéo */
 .store-pick-card {
-  border-radius: 28px;
-  padding: 36px 28px;
+  border-radius: 26px;
+  padding: 22px 20px;
   cursor: pointer; position: relative; overflow: hidden;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.14);
   user-select: none;
-  opacity: 1;
-  transition: transform 0.18s, box-shadow 0.18s;
-  min-height: 160px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  opacity: 0;
+  transition: box-shadow 0.25s;
 }
-.store-pick-card:not(.disabled):active { transform: scale(0.97); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+.store-pick-card:not(.disabled):active { opacity: 0.92; }
 .store-pick-card.disabled { opacity: 0.38 !important; pointer-events: none; }
 
 .spc-cafe33 {
-  background: linear-gradient(135deg, #004030 0%, #006241 60%, #009060 100%);
+  background: linear-gradient(135deg, #004030 0%, #006241 50%, #009060 100%);
+  transform: rotate(-1.5deg);
+  z-index: 1;
+  margin-bottom: -22px;
 }
 .spc-xolifa {
-  background: linear-gradient(135deg, #7a3010 0%, #C26A2E 60%, #de7e38 100%);
+  background: linear-gradient(135deg, #7a3010 0%, #C26A2E 50%, #de7e38 100%);
+  transform: rotate(1.5deg);
+  z-index: 2;
 }
 
 /* Shine */
 .spc-shine {
-  position: absolute; top: -40%; right: -5%;
-  width: 50%; padding-bottom: 100%;
+  position: absolute; top: -50%; right: -10%;
+  width: 55%; padding-bottom: 120%;
   border-radius: 50%;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.09);
+  pointer-events: none;
+}
+/* Edge */
+.spc-edge {
+  position: absolute; inset: 0; border-radius: 26px;
+  border: 1px solid rgba(255,255,255,0.2);
   pointer-events: none;
 }
 
 .spc-name-cafe33 {
   font-family: 'League Spartan', sans-serif;
-  font-weight: 800; font-size: 2.4rem;
+  font-weight: 800; font-size: 1.9rem;
   color: white; letter-spacing: -0.02em;
-  line-height: 1; margin-bottom: 8px;
+  line-height: 1; margin-bottom: 5px;
 }
 .spc-name-xolifa {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 3rem; color: white;
-  letter-spacing: 0.12em; line-height: 1; margin-bottom: 8px;
+  font-size: 2.5rem; color: white;
+  letter-spacing: 0.12em; line-height: 1; margin-bottom: 5px;
 }
 .spc-addr {
-  font-size: 0.85rem; font-weight: 600;
-  color: rgba(255,255,255,0.75);
-  display: flex; align-items: center; gap: 5px;
+  font-size: 0.76rem; font-weight: 600;
+  color: rgba(255,255,255,0.68); margin-bottom: 14px;
 }
 .spc-footer {
   display: flex; align-items: center; justify-content: space-between;
-  margin-top: 16px;
 }
-.spc-hours { font-size: 0.78rem; font-weight: 700; color: rgba(255,255,255,0.6); }
+.spc-hours { font-size: 0.74rem; font-weight: 700; color: rgba(255,255,255,0.65); }
 .spc-status {
-  font-size: 0.72rem; font-weight: 900; padding: 6px 16px;
+  font-size: 0.7rem; font-weight: 900; padding: 5px 14px;
   border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em;
 }
-.spc-status.open  { background: rgba(255,255,255,0.22); color: white; }
-.spc-status.closed { background: rgba(0,0,0,0.22); color: rgba(255,255,255,0.5); }
+.spc-status.open  { background: rgba(255,255,255,0.2); color: white; }
+.spc-status.closed { background: rgba(0,0,0,0.25); color: rgba(255,255,255,0.45); }
 
-/* Entrance animations — fade up, không xoay */
-@keyframes enterCard {
-  from { opacity: 0; transform: translateY(32px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+/* Entrance animations — screen 2 */
+@keyframes enterCafe33 {
+  from { opacity: 0; transform: rotate(-5deg) translateX(-60px) scale(0.9); }
+  to   { opacity: 1; transform: rotate(-1.5deg) translateX(0) scale(1); }
 }
-.spc-cafe33.entering { animation: enterCard 0.55s cubic-bezier(0.16,1,0.3,1) both; }
-.spc-xolifa.entering { animation: enterCard 0.55s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
+@keyframes enterXolifa {
+  from { opacity: 0; transform: rotate(5deg) translateX(60px) scale(0.9); }
+  to   { opacity: 1; transform: rotate(1.5deg) translateX(0) scale(1); }
+}
+.spc-cafe33.entering { animation: enterCafe33 0.65s cubic-bezier(0.16,1,0.3,1) both; }
+.spc-xolifa.entering { animation: enterXolifa 0.65s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
 
 /* Card tap */
 @keyframes cardTap {
   0%   { transform: scale(1); }
-  35%  { transform: scale(0.95); }
-  100% { transform: scale(1.03); opacity: 0; }
+  35%  { transform: scale(0.96); }
+  100% { transform: scale(1.04); opacity: 0; }
 }
-.store-pick-card.tapping { animation: cardTap 0.35s cubic-bezier(0.4,0,0.2,1) forwards !important; }
+.store-pick-card.tapping { animation: cardTap 0.4s cubic-bezier(0.4,0,0.2,1) forwards !important; }
 
 /* Back button — light style */
 .light-back-btn {
@@ -435,58 +451,35 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 }
 .menu-header {
   position: sticky; top: 0; z-index: 50;
-  background: var(--brand);
-  padding: 48px 20px 20px;
-  border-radius: 0 0 28px 28px;
-}
-.menu-header-store-name {
-  font-family: 'League Spartan', sans-serif;
-  font-size: 1.7rem; font-weight: 800;
-  color: white; letter-spacing: -0.02em;
-  line-height: 1; margin-bottom: 3px;
-}
-.menu-header-store-addr {
-  font-size: 0.8rem; font-weight: 600;
-  color: rgba(255,255,255,0.7);
-  display: flex; align-items: center; gap: 4px;
-  margin-bottom: 16px;
+  background: white;
+  border-bottom: 1px solid #f3f4f6;
+  padding: 12px 16px 0;
 }
 .menu-header-top {
-  display: flex; align-items: center; gap: 12px; margin-bottom: 0;
+  display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
 }
-.back-btn {
-  width: 42px; height: 42px; border-radius: 50%;
-  background: rgba(255,255,255,0.18); border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; color: white; font-weight: 700; flex-shrink: 0;
-  transition: background 0.2s;
-}
-.back-btn:active { background: rgba(255,255,255,0.3); }
 .search-box {
   flex: 1; display: flex; align-items: center; gap: 10px;
-  background: white; border-radius: 16px; padding: 12px 16px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  background: #f3f4f6; border-radius: 14px; padding: 10px 14px;
 }
 .search-box input {
   background: transparent; border: none; outline: none;
-  font-size: 0.95rem; font-weight: 600; width: 100%;
-  font-family: 'Nunito', sans-serif; color: #1f2937;
+  font-size: 0.9rem; font-weight: 600; width: 100%;
+  font-family: 'Nunito', sans-serif; color: var(--text);
 }
-.search-box input::placeholder { color: #9ca3af; font-weight: 500; }
 .cat-tabs {
-  display: flex; gap: 8px; overflow-x: auto; padding: 16px 20px 4px;
-  scrollbar-width: none; margin: 0 -20px;
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px;
+  scrollbar-width: none;
 }
 .cat-tabs::-webkit-scrollbar { display: none; }
 .cat-tab {
-  flex-shrink: 0; padding: 9px 20px;
-  border-radius: 99px; font-size: 0.85rem; font-weight: 800;
-  border: none; background: white; cursor: pointer;
-  color: #374151; transition: all 0.2s; white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  flex-shrink: 0; padding: 7px 16px;
+  border-radius: 99px; font-size: 0.82rem; font-weight: 800;
+  border: 2px solid #f3f4f6; background: white; cursor: pointer;
+  color: #6b7280; transition: all 0.2s; white-space: nowrap;
 }
 .cat-tab.active {
-  background: #1f2937; color: white;
+  background: var(--brand); color: white; border-color: var(--brand);
 }
 .menu-grid {
   display: grid; grid-template-columns: 1fr 1fr;
@@ -607,6 +600,16 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 #map-container {
   position: absolute; inset: 0; z-index: 0;
 }
+/* Leaflet attribution nhỏ lại */
+.leaflet-control-attribution { font-size: 9px !important; }
+.leaflet-control-zoom { border: none !important; }
+.leaflet-control-zoom a {
+  width: 36px !important; height: 36px !important;
+  line-height: 36px !important; font-size: 18px !important;
+  border-radius: 10px !important; border: none !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+  margin-bottom: 4px !important;
+}
 .map-overlay-top {
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;
   background: linear-gradient(to bottom, rgba(255,255,255,0.95) 60%, transparent);
@@ -687,8 +690,7 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 }
 
 /* Screen success */
-#screen-success { background: white; text-align: center; padding: 40px 24px; }
-#screen-success.active { align-items: center; justify-content: center; }
+#screen-success { background: white; align-items: center; justify-content: center; text-align: center; padding: 40px 24px; }
 .success-icon { font-size: 4rem; margin-bottom: 20px; animation: bounceIn 0.6s cubic-bezier(0.34,1.6,0.64,1); }
 @keyframes bounceIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .success-order-id { font-size: 0.8rem; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
@@ -755,14 +757,6 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 </style>
 </head>
 <body>
-
-<!-- =============================================
-     LOADING OVERLAY — giống index.html
-     ============================================= -->
-<div id="loading-overlay" style="position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.92);backdrop-filter:blur(4px)">
-  <div style="width:52px;height:52px;border:4px solid var(--brand);border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;margin-bottom:16px"></div>
-  <p style="font-family:'League Spartan',sans-serif;color:var(--brand);font-size:1.2rem;font-weight:900">Đang tải...</p>
-</div>
 
 <!-- =============================================
      TOAST
@@ -835,8 +829,8 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
   <button class="light-back-btn" onclick="goBack('screen-welcome')">←</button>
 
   <div class="store-header">
-    <h2>Chọn cửa hàng</h2>
-    <p>Bạn muốn order từ cửa hàng nào?</p>
+    <h2>Chọn chi nhánh</h2>
+    <p>Bạn muốn đặt từ đâu?</p>
   </div>
 
   <div class="store-cards-area" id="store-cards-area">
@@ -851,18 +845,19 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
   <div class="menu-header">
     <div class="menu-header-top">
       <button class="back-btn" onclick="goBack('screen-store')">←</button>
-      <div style="flex:1">
-        <div class="menu-header-store-name" id="menu-store-name">The cafe 33</div>
-        <div class="menu-header-store-addr">📍 <span id="menu-store-addr">Chi nhánh chính</span></div>
+      <div class="search-box">
+        <span style="color:#9ca3af">🔍</span>
+        <input type="text" id="menu-search" placeholder="Tìm món..." oninput="renderMenu()">
       </div>
     </div>
-    <div class="search-box" style="margin-top:12px">
-      <span style="color:#9ca3af;font-size:1.1rem">🔍</span>
-      <input type="text" id="menu-search" placeholder="Tìm món..." oninput="renderMenu()">
+    <div class="cat-tabs" id="cat-tabs">
+      <!-- Render từ JS -->
     </div>
-    <div class="cat-tabs" id="cat-tabs"></div>
   </div>
-  <div class="menu-grid pb-cart" id="menu-grid"></div>
+  <div class="menu-grid pb-cart" id="menu-grid">
+    <!-- Render từ JS -->
+  </div>
+  <!-- Floating cart button -->
   <button class="cart-float hidden" id="cart-float" onclick="goTo('screen-cart')">
     <div class="cart-float-left">
       <div class="cart-count-badge" id="cart-count">0</div>
@@ -1130,8 +1125,9 @@ const FIREBASE_CONFIG = {
   projectId: "the-cafe-33",
   storageBucket: "the-cafe-33.appspot.com"
 };
-// Google Maps API Key
-const MAPS_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
+// Tọa độ trung tâm xã — chỉnh theo xã của bạn
+const MAP_CENTER = { lat: 10.247345346357173, lng: 105.14997451152426 };
+const MAP_ZOOM_DEFAULT = 15;
 
 // ======================================================
 // CẤU HÌNH 2 CHI NHÁNH
@@ -1140,7 +1136,7 @@ const STORES = {
   cafe33: {
     id: 'cafe33',
     name: 'The Cafe 33',
-    address: 'Trung Sơn, Óc Eo',
+    address: '33 Đường ABC, TP. Long Xuyên',
     hours: '07:00 – 22:00',
     lat: 10.3759,
     lng: 105.4350,
@@ -1154,7 +1150,7 @@ const STORES = {
   xolifa: {
     id: 'xolifa',
     name: 'XOLIFA',
-    address: 'Tân Hiệp A, Óc Eo',
+    address: '33 Đường XYZ, TP. Long Xuyên',
     hours: '08:00 – 21:00',
     lat: 10.3800,
     lng: 105.4380,
@@ -1216,10 +1212,10 @@ try {
 
 function dbRef(path) {
   if (!db) return {
-    once: (evt, cb) => { if (cb) cb({ exists: () => false, val: () => null }); return Promise.resolve({ exists: () => false, val: () => null }); },
-    set: (val, cb) => { if (cb) cb(null); return Promise.resolve(); },
-    update: (val, cb) => { if (cb) cb(null); return Promise.resolve(); },
-    on: (evt, cb) => { if (cb) cb({ val: () => null }); },
+    once: () => Promise.resolve({ exists: () => false, val: () => null }),
+    set: () => Promise.resolve(),
+    update: () => Promise.resolve(),
+    on: () => {},
     push: () => ({ key: 'local_' + Date.now() })
   };
   return db.ref(path);
@@ -1309,13 +1305,16 @@ function submitInfo() {
   state.customer = { name, phone, source: 'ship' };
   localStorage.setItem('ship_customer', JSON.stringify(state.customer));
 
-  // Lưu customer async ở nền — KHÔNG block UI, KHÔNG chờ Firebase
+  // Tạo customer async ở nền — không block UI
   if (db) {
-    dbRef('customer_ship/' + phone).once('value', snap => {
-      if (!snap.exists()) {
+    Promise.all([
+      dbRef('customers/' + phone).once('value'),
+      dbRef('customer_ship/' + phone).once('value')
+    ]).then(([s1, s2]) => {
+      if (!s1.exists() && !s2.exists()) {
         dbRef('customer_ship/' + phone).set({ name, phone, joinDate: new Date().toISOString(), source: 'ship' });
       }
-    });
+    }).catch(() => {});
   }
 
   // Chuyển màn hình ngay lập tức
@@ -1337,68 +1336,95 @@ function checkOpen(openStr, closeStr, nowMin) {
 }
 
 function renderStores() {
-  // Render thẳng từ STORES config local — không cần gọi Firebase
-  // (giống index.html: chỉ gọi db khi thực sự cần, không phải để hiện UI cơ bản)
-  _renderStoreCards({});
-}
-
-function _renderStoreCards(cfg) {
   const area = document.getElementById('store-cards-area');
   if (!area) return;
 
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const storeList = Object.values(STORES);
-  let html = '';
+  dbRef('shipConfig/stores').once('value', snap => {
+    const cfg = snap.val() || {};
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
 
-  storeList.forEach(s => {
-    const storeCfg = cfg[s.id] || {};
-    const hours = storeCfg.hours || s.hours;
-    // Dùng regex để tách giờ — tránh lỗi encoding dấu –
-    const timeParts = hours.match(/(\d{1,2}:\d{2})/g) || [];
-    const openT  = storeCfg.openTime  || timeParts[0] || '07:00';
-    const closeT = storeCfg.closeTime || timeParts[1] || '22:00';
-    const isOpen = timeParts.length >= 2 ? checkOpen(openT, closeT, nowMin) : true;
-    const canOrder = true; // Không khóa theo giờ, chỉ dùng isOpen để hiện badge
-    const addr   = storeCfg.address || s.address;
+    const storeList = Object.values(STORES);
+    let html = '';
 
-    if (s.id === 'cafe33') {
-      html += `
-      <div class="store-pick-card spc-cafe33 ${!canOrder ? 'disabled' : ''}"
-           id="spc-cafe33"
-           onclick="selectStore('cafe33')">
-        <div class="spc-shine"></div>
-        <div class="spc-name-cafe33">The cafe 33</div>
-        <div class="spc-addr">📍 ${addr}</div>
-        <div class="spc-footer">
-          <span class="spc-hours">⏰ ${hours}</span>
-          <span class="spc-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Đang mở' : 'Đã đóng'}</span>
-        </div>
-      </div>`;
-    } else {
-      html += `
-      <div class="store-pick-card spc-xolifa ${!canOrder ? 'disabled' : ''}"
-           id="spc-xolifa"
-           onclick="selectStore('xolifa')">
-        <div class="spc-shine"></div>
-        <div class="spc-name-xolifa">XOLIFA</div>
-        <div class="spc-addr">📍 ${addr}</div>
-        <div class="spc-footer">
-          <span class="spc-hours">⏰ ${hours}</span>
-          <span class="spc-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Đang mở' : 'Đã đóng'}</span>
-        </div>
-      </div>`;
-    }
-  });
+    storeList.forEach((s, i) => {
+      const storeCfg = cfg[s.id] || {};
+      const hours = storeCfg.hours || s.hours;
+      const openT  = storeCfg.openTime  || s.hours.split('–')[0].trim();
+      const closeT = storeCfg.closeTime || s.hours.split('–')[1]?.trim() || '22:00';
+      const isOpen = checkOpen(openT, closeT, nowMin);
+      const addr   = storeCfg.address || s.address;
 
-  area.innerHTML = html;
+      if (s.id === 'cafe33') {
+        html += `
+        <div class="store-pick-card spc-cafe33 ${!isOpen ? 'disabled' : ''}"
+             id="spc-cafe33"
+             onclick="selectStore('cafe33')">
+          <div class="spc-shine"></div>
+          
+          <div class="spc-name-cafe33">The cafe 33</div>
+          <div class="spc-addr">📍 ${addr}</div>
+          <div class="spc-footer">
+            <span class="spc-hours">⏰ ${hours}</span>
+            <span class="spc-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Đang mở' : 'Đã đóng'}</span>
+          </div>
+        </div>`;
+      } else {
+        html += `
+        <div class="store-pick-card spc-xolifa ${!isOpen ? 'disabled' : ''}"
+             id="spc-xolifa"
+             onclick="selectStore('xolifa')">
+          <div class="spc-shine"></div>
+          
+          <div class="spc-name-xolifa">XOLIFA</div>
+          <div class="spc-addr">📍 ${addr}</div>
+          <div class="spc-footer">
+            <span class="spc-hours">⏰ ${hours}</span>
+            <span class="spc-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Đang mở' : 'Đã đóng'}</span>
+          </div>
+        </div>`;
+      }
+    });
 
-  // Trigger entrance animation sau 1 frame
-  requestAnimationFrame(() => {
+    area.innerHTML = html;
+
+    // Trigger entrance animation sau 1 frame
     requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const c1 = document.getElementById('spc-cafe33');
+        const c2 = document.getElementById('spc-xolifa');
+        if (c1) c1.classList.add('entering');
+        if (c2) c2.classList.add('entering');
+      });
+    });
+  }).catch(() => {
+    // Nếu không có config, vẫn render với giá trị mặc định
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    let html = '';
+    Object.values(STORES).forEach(s => {
+      const isOpen = checkOpen(s.hours.split('–')[0].trim(), s.hours.split('–')[1]?.trim() || '22:00', nowMin);
+      if (s.id === 'cafe33') {
+        html += `<div class="store-pick-card spc-cafe33" id="spc-cafe33" onclick="selectStore('cafe33')">
+          <div class="spc-shine"></div><div class="spc-name-cafe33">The cafe 33</div>
+          <div class="spc-addr">📍 ${s.address}</div>
+          <div class="spc-footer"><span class="spc-hours">⏰ ${s.hours}</span>
+          <span class="spc-status ${isOpen?'open':'closed'}">${isOpen?'Đang mở':'Đã đóng'}</span></div>
+        </div>`;
+      } else {
+        html += `<div class="store-pick-card spc-xolifa" id="spc-xolifa" onclick="selectStore('xolifa')">
+          <div class="spc-shine"></div><div class="spc-name-xolifa">XOLIFA</div>
+          <div class="spc-addr">📍 ${s.address}</div>
+          <div class="spc-footer"><span class="spc-hours">⏰ ${s.hours}</span>
+          <span class="spc-status ${isOpen?'open':'closed'}">${isOpen?'Đang mở':'Đã đóng'}</span></div>
+        </div>`;
+      }
+    });
+    area.innerHTML = html;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
       document.getElementById('spc-cafe33')?.classList.add('entering');
       document.getElementById('spc-xolifa')?.classList.add('entering');
-    });
+    }));
   });
 }
 
@@ -1422,12 +1448,9 @@ function _doSelectStore(storeId) {
   } else {
     document.body.classList.remove('theme-xolifa');
   }
-  // Cập nhật header menu
-  const nameEl = document.getElementById('menu-store-name');
-  const addrEl = document.getElementById('menu-store-addr');
-  if (nameEl) nameEl.textContent = state.store.name;
-  if (addrEl) addrEl.textContent = state.store.address;
-
+  if (state.store.qrStorageRef) {
+    // QR storage: thêm sau khi có appId đầy đủ
+  }
   loadMenu();
   goTo('screen-menu');
 }
@@ -1914,60 +1937,101 @@ function removeVoucher() {
 // ======================================================
 // SCREEN 5: BẢN ĐỒ
 // ======================================================
-let mapLoaded = false;
 
-function initMap() {
-  if (!state.store) return;
-  const storeLatLng = { lat: state.store.lat, lng: state.store.lng };
+
+// ======================================================
+// SCREEN 5: BẢN ĐỒ — LEAFLET + OPENSTREETMAP (miễn phí, không cần API key)
+// ======================================================
+let leafletMap = null;
+let nominatimTimer = null;
+
+function initLeafletMap() {
   const mapEl = document.getElementById('map-container');
-  const map = new google.maps.Map(mapEl, {
-    center: storeLatLng,
-    zoom: 15,
-    disableDefaultUI: true,
+  if (!mapEl) return;
+
+  // Nếu map đã khởi tạo rồi thì chỉ invalidate size (khi screen show lại)
+  if (leafletMap) {
+    leafletMap.invalidateSize();
+    return;
+  }
+
+  const center = state.store
+    ? [state.store.lat, state.store.lng]
+    : [MAP_CENTER.lat, MAP_CENTER.lng];
+
+  leafletMap = L.map(mapEl, {
+    center: center,
+    zoom: MAP_ZOOM_DEFAULT,
     zoomControl: true,
-    styles: [
-      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-      { featureType: 'transit', stylers: [{ visibility: 'off' }] }
-    ]
+    attributionControl: true,
   });
-  state.map = map;
-  state.geocoder = new google.maps.Geocoder();
 
-  let debounceTimer;
-  map.addListener('idle', () => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => reverseGeocode(map.getCenter()), 600);
+  // OpenStreetMap tile — miễn phí, không cần key
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap',
+    maxZoom: 19,
+  }).addTo(leafletMap);
+
+  // Đặt zoom control góc phải dưới
+  leafletMap.zoomControl.setPosition('bottomright');
+
+  // Lắng nghe khi map dừng di chuyển
+  leafletMap.on('moveend', () => {
+    clearTimeout(nominatimTimer);
+    nominatimTimer = setTimeout(() => {
+      const c = leafletMap.getCenter();
+      reverseGeocodeNominatim(c.lat, c.lng);
+    }, 700);
   });
-  mapLoaded = true;
+
+  // Trigger lần đầu
+  const c = leafletMap.getCenter();
+  reverseGeocodeNominatim(c.lat, c.lng);
 }
 
-function loadMapScript() {
-  if (mapLoaded || window.google) { initMap(); return; }
-  const s = document.createElement('script');
-  s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=initMap&language=vi`;
-  s.async = true; s.defer = true;
-  document.head.appendChild(s);
-}
+// Nominatim reverse geocode — miễn phí, không cần API key
+async function reverseGeocodeNominatim(lat, lng) {
+  const addrEl    = document.getElementById('addr-display');
+  const feeEl     = document.getElementById('ship-fee-preview');
+  const feeTextEl = document.getElementById('ship-fee-text');
+  const confirmBtn = document.getElementById('btn-confirm-addr');
 
-function reverseGeocode(latLng) {
-  if (!state.geocoder) return;
-  state.geocoder.geocode({ location: { lat: latLng.lat(), lng: latLng.lng() } }, (res, status) => {
-    if (status === 'OK' && res[0]) {
-      const addr = res[0].formatted_address;
-      document.getElementById('addr-display').textContent = '📍 ' + addr;
-      state.address = { lat: latLng.lat(), lng: latLng.lng(), text: addr };
+  addrEl.textContent = '📍 Đang lấy địa chỉ...';
 
-      // Tính phí ship
-      const dist = getDistanceKm(state.store.lat, state.store.lng, latLng.lat(), latLng.lng());
-      const fee  = calcShipFee(dist, getCartSubtotal());
-      state.shipFee = fee;
-      const feeTxt = fee === 0 ? 'Miễn phí ship 🎉' : `Phí ship: ${fee.toLocaleString('vi')}đ (~${dist.toFixed(1)}km)`;
-      document.getElementById('ship-fee-text').textContent = feeTxt;
-      document.getElementById('ship-fee-preview').style.display = 'flex';
-      document.getElementById('btn-confirm-addr').disabled = false;
-      updateCartSummary();
-    }
-  });
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=vi`,
+      { headers: { 'Accept-Language': 'vi' } }
+    );
+    const data = await res.json();
+
+    const addr = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    addrEl.textContent = '📍 ' + addr;
+
+    state.address = { lat, lng, text: addr };
+
+    // Tính phí ship
+    const storeLat = state.store ? state.store.lat : MAP_CENTER.lat;
+    const storeLng = state.store ? state.store.lng : MAP_CENTER.lng;
+    const dist = getDistanceKm(storeLat, storeLng, lat, lng);
+    const fee  = calcShipFee(dist, getCartSubtotal());
+    state.shipFee = fee;
+
+    const feeTxt = fee === 0
+      ? 'Miễn phí ship 🎉'
+      : `Phí ship: ${fee.toLocaleString('vi')}đ  (~${dist.toFixed(1)} km)`;
+    feeTextEl.textContent = feeTxt;
+    feeEl.style.display = 'flex';
+    confirmBtn.disabled = false;
+    updateCartSummary();
+
+  } catch(e) {
+    // Nếu Nominatim lỗi (offline...) vẫn cho xác nhận với tọa độ thô
+    const fallback = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    addrEl.textContent = '📍 ' + fallback;
+    state.address = { lat, lng, text: fallback };
+    confirmBtn.disabled = false;
+  }
 }
 
 function getDistanceKm(lat1, lng1, lat2, lng2) {
@@ -2158,7 +2222,8 @@ window.goTo = function(screenId) {
     renderCart();
   }
   if (screenId === 'screen-map') {
-    setTimeout(loadMapScript, 100);
+    // Leaflet cần invalidateSize sau khi element hiện ra
+    setTimeout(initLeafletMap, 80);
   }
   if (screenId === 'screen-payment') {
     renderPayment();
@@ -2167,32 +2232,6 @@ window.goTo = function(screenId) {
 };
 </script>
 
-<!-- Load Maps khi cần -->
-<script>
-function initMap() {
-  if (typeof google === 'undefined') return;
-  const mapEl = document.getElementById('map-container');
-  const storeLatLng = state.store
-    ? { lat: state.store.lat, lng: state.store.lng }
-    : { lat: 10.3759, lng: 105.4350 };
-
-  const map = new google.maps.Map(mapEl, {
-    center: storeLatLng,
-    zoom: 15,
-    disableDefaultUI: true,
-    zoomControl: true,
-  });
-  state.map = map;
-  state.geocoder = new google.maps.Geocoder();
-
-  let timer;
-  map.addListener('idle', () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => reverseGeocode(map.getCenter()), 600);
-  });
-  mapLoaded = true;
-}
-</script>
 
 </body>
 </html>
