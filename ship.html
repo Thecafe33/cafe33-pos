@@ -758,9 +758,33 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 </head>
 <body>
 
-<!-- =============================================
-     TOAST
-     ============================================= -->
+<!-- DEBUG PANEL — xóa sau khi fix xong -->
+<div id="debug-panel" style="
+  position:fixed; bottom:0; left:0; right:0; z-index:99999;
+  background:rgba(0,0,0,0.85); color:#0f0; font-family:monospace;
+  font-size:11px; padding:8px 10px; max-height:160px; overflow-y:auto;
+  border-top:2px solid #0f0; pointer-events:none;
+">
+  <div style="color:#ff0;font-weight:bold">🐛 DEBUG LOG</div>
+</div>
+<script>
+function dlog(msg, color) {
+  const p = document.getElementById('debug-panel');
+  if (!p) return;
+  const d = document.createElement('div');
+  d.style.color = color || '#0f0';
+  d.textContent = new Date().toLocaleTimeString('vi') + ' › ' + msg;
+  p.appendChild(d);
+  p.scrollTop = p.scrollHeight;
+  console.log('[DEBUG]', msg);
+}
+window.onerror = function(msg, src, line, col, err) {
+  dlog('❌ JS ERROR: ' + msg + ' (line ' + line + ')', '#f55');
+};
+window.onunhandledrejection = function(e) {
+  dlog('❌ PROMISE: ' + (e.reason?.message || e.reason), '#f55');
+};
+</script>
 <div id="toast"></div>
 
 <!-- =============================================
@@ -1220,8 +1244,9 @@ let db = null;
 try {
   if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
   db = firebase.database();
+  dlog('✅ Firebase OK');
 } catch(e) {
-  console.warn('Firebase init lỗi:', e.message);
+  dlog('❌ Firebase FAIL: ' + e.message, '#f55');
 }
 
 function dbRef(path) {
@@ -1239,14 +1264,15 @@ function dbRef(path) {
 // INIT
 // ======================================================
 window.addEventListener('load', () => {
+  dlog('✅ window loaded', '#0f0');
   loadSavedCustomer();
   loadShipConfig();
-  // Trigger card entrance animation
   requestAnimationFrame(() => {
     document.querySelectorAll('.ws-enter').forEach(el => {
       el.style.animationPlayState = 'running';
     });
   });
+  dlog('init done, screen-welcome active=' + document.getElementById('screen-welcome')?.classList.contains('active'), '#0f0');
 });
 
 function normalizePhone(p) {
@@ -1285,27 +1311,31 @@ function switchToNewUser() {
 }
 
 function continueAsReturning() {
-  // state.customer đã được set trong loadSavedCustomer
-  if (!state.customer) return;
-  renderStores();
+  dlog('continueAsReturning, customer=' + JSON.stringify(state.customer), '#0ff');
+  if (!state.customer) { dlog('❌ no customer in state!', '#f55'); return; }
   goTo('screen-store');
+  renderStores();
 }
 
 function loadShipConfig() {
-  dbRef('shipConfig').once('value', snap => {
-    if (snap.exists()) {
-      state.shipConfig = { ...DEFAULT_SHIP_CONFIG, ...snap.val() };
-    }
-  });
+  try {
+    dbRef('shipConfig').once('value', snap => {
+      if (snap && snap.exists && snap.exists()) {
+        state.shipConfig = { ...DEFAULT_SHIP_CONFIG, ...snap.val() };
+        dlog('shipConfig loaded', '#0f0');
+      }
+    });
+  } catch(e) { dlog('shipConfig err: ' + e.message, '#f55'); }
 }
 
 // ======================================================
 // SCREEN NAVIGATION
 // ======================================================
 function goTo(screenId) {
+  dlog('goTo: ' + screenId, '#ff0');
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active', 'fade-in'));
   const el = document.getElementById(screenId);
-  if (!el) return;
+  if (!el) { dlog('❌ screen not found: ' + screenId, '#f55'); return; }
   el.classList.add('active');
   el.scrollTop = 0;
   requestAnimationFrame(() => el.classList.add('fade-in'));
@@ -1323,31 +1353,27 @@ function goBack(screenId) {
 // SCREEN 1: THÔNG TIN KHÁCH
 // ======================================================
 function submitInfo() {
+  dlog('submitInfo called', '#0ff');
   const name  = document.getElementById('inp-name').value.trim();
   const phone = normalizePhone(document.getElementById('inp-phone').value);
+  dlog('name="' + name + '" phone="' + phone + '"', '#0ff');
 
   if (name.length < 2) { showToast('Vui lòng nhập tên đầy đủ'); return; }
   if (phone.length < 9) { showToast('Số điện thoại không hợp lệ'); return; }
 
-  // Lưu ngay vào state + localStorage, KHÔNG chờ Firebase
   state.customer = { name, phone, source: 'ship' };
   localStorage.setItem('ship_customer', JSON.stringify(state.customer));
+  dlog('customer saved, going to screen-store', '#0f0');
 
-  // Tạo customer async ở nền — không block UI
-  if (db) {
-    Promise.all([
-      dbRef('customers/' + phone).once('value'),
-      dbRef('customer_ship/' + phone).once('value')
-    ]).then(([s1, s2]) => {
-      if (!s1.exists() && !s2.exists()) {
-        dbRef('customer_ship/' + phone).set({ name, phone, joinDate: new Date().toISOString(), source: 'ship' });
-      }
+  // Tạo customer async ở nền
+  try {
+    if (db) dbRef('customer_ship/' + phone).once('value').then(s => {
+      if (!s.exists()) dbRef('customer_ship/' + phone).set({ name, phone, joinDate: new Date().toISOString(), source: 'ship' });
     }).catch(() => {});
-  }
+  } catch(e) {}
 
-  // Chuyển màn hình ngay lập tức
-  renderStores();
   goTo('screen-store');
+  renderStores();
 }
 
 // ======================================================
