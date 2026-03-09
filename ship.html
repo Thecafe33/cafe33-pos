@@ -1303,15 +1303,16 @@ function loadShipConfig() {
 // SCREEN NAVIGATION
 // ======================================================
 function goTo(screenId) {
-  document.querySelectorAll('.screen').forEach(s => {
-    s.classList.remove('active', 'fade-in');
-  });
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active', 'fade-in'));
   const el = document.getElementById(screenId);
-  if (el) {
-    el.classList.add('active');
-    el.scrollTop = 0;
-    requestAnimationFrame(() => el.classList.add('fade-in'));
-  }
+  if (!el) return;
+  el.classList.add('active');
+  el.scrollTop = 0;
+  requestAnimationFrame(() => el.classList.add('fade-in'));
+
+  if (screenId === 'screen-cart')    { checkGifts(); renderCart(); }
+  if (screenId === 'screen-map')     { setTimeout(initLeafletMap, 80); }
+  if (screenId === 'screen-payment') { renderPayment(); selectPayment(state.payMethod); }
 }
 
 function goBack(screenId) {
@@ -1366,93 +1367,42 @@ function renderStores() {
   const area = document.getElementById('store-cards-area');
   if (!area) return;
 
-  dbRef('shipConfig/stores').once('value', snap => {
-    const cfg = snap.val() || {};
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
+  const now    = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  let html = '';
 
-    const storeList = Object.values(STORES);
-    let html = '';
-
-    storeList.forEach((s, i) => {
-      const storeCfg = cfg[s.id] || {};
-      const hours = storeCfg.hours || s.hours;
-      const openT  = storeCfg.openTime  || s.hours.split('–')[0].trim();
-      const closeT = storeCfg.closeTime || s.hours.split('–')[1]?.trim() || '22:00';
-      const isOpen = checkOpen(openT, closeT, nowMin);
-      const addr   = storeCfg.address || s.address;
-
-      if (s.id === 'cafe33') {
-        html += `
-        <div class="store-pick-card spc-cafe33 ${!isOpen ? 'disabled' : ''}"
-             id="spc-cafe33"
-             onclick="selectStore('cafe33')">
-          <div class="spc-shine"></div>
-          
-          <div class="spc-name-cafe33">The cafe 33</div>
-          <div class="spc-addr">📍 ${addr}</div>
-          <div class="spc-footer">
-            <span class="spc-hours">⏰ ${hours}</span>
-            <span class="spc-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Đang mở' : 'Đã đóng'}</span>
-          </div>
-        </div>`;
-      } else {
-        html += `
-        <div class="store-pick-card spc-xolifa ${!isOpen ? 'disabled' : ''}"
-             id="spc-xolifa"
-             onclick="selectStore('xolifa')">
-          <div class="spc-shine"></div>
-          
-          <div class="spc-name-xolifa">XOLIFA</div>
-          <div class="spc-addr">📍 ${addr}</div>
-          <div class="spc-footer">
-            <span class="spc-hours">⏰ ${hours}</span>
-            <span class="spc-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Đang mở' : 'Đã đóng'}</span>
-          </div>
-        </div>`;
-      }
-    });
-
-    area.innerHTML = html;
-
-    // Trigger entrance animation sau 1 frame
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const c1 = document.getElementById('spc-cafe33');
-        const c2 = document.getElementById('spc-xolifa');
-        if (c1) c1.classList.add('entering');
-        if (c2) c2.classList.add('entering');
-      });
-    });
-  }).catch(() => {
-    // Nếu không có config, vẫn render với giá trị mặc định
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    let html = '';
-    Object.values(STORES).forEach(s => {
-      const isOpen = checkOpen(s.hours.split('–')[0].trim(), s.hours.split('–')[1]?.trim() || '22:00', nowMin);
-      if (s.id === 'cafe33') {
-        html += `<div class="store-pick-card spc-cafe33" id="spc-cafe33" onclick="selectStore('cafe33')">
-          <div class="spc-shine"></div><div class="spc-name-cafe33">The cafe 33</div>
-          <div class="spc-addr">📍 ${s.address}</div>
-          <div class="spc-footer"><span class="spc-hours">⏰ ${s.hours}</span>
-          <span class="spc-status ${isOpen?'open':'closed'}">${isOpen?'Đang mở':'Đã đóng'}</span></div>
-        </div>`;
-      } else {
-        html += `<div class="store-pick-card spc-xolifa" id="spc-xolifa" onclick="selectStore('xolifa')">
-          <div class="spc-shine"></div><div class="spc-name-xolifa">XOLIFA</div>
-          <div class="spc-addr">📍 ${s.address}</div>
-          <div class="spc-footer"><span class="spc-hours">⏰ ${s.hours}</span>
-          <span class="spc-status ${isOpen?'open':'closed'}">${isOpen?'Đang mở':'Đã đóng'}</span></div>
-        </div>`;
-      }
-    });
-    area.innerHTML = html;
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      document.getElementById('spc-cafe33')?.classList.add('entering');
-      document.getElementById('spc-xolifa')?.classList.add('entering');
-    }));
+  Object.values(STORES).forEach(s => {
+    const openT  = s.hours.split('–')[0].trim();
+    const closeT = (s.hours.split('–')[1] || '22:00').trim();
+    const isOpen = checkOpen(openT, closeT, nowMin);
+    if (s.id === 'cafe33') {
+      html += `<div class="store-pick-card spc-cafe33 ${!isOpen?'disabled':''}" id="spc-cafe33" onclick="selectStore('cafe33')">
+        <div class="spc-shine"></div>
+        <div class="spc-name-cafe33">The cafe 33</div>
+        <div class="spc-addr">📍 ${s.address}</div>
+        <div class="spc-footer">
+          <span class="spc-hours">⏰ ${s.hours}</span>
+          <span class="spc-status ${isOpen?'open':'closed'}">${isOpen?'Đang mở':'Đã đóng'}</span>
+        </div>
+      </div>`;
+    } else {
+      html += `<div class="store-pick-card spc-xolifa ${!isOpen?'disabled':''}" id="spc-xolifa" onclick="selectStore('xolifa')">
+        <div class="spc-shine"></div>
+        <div class="spc-name-xolifa">XOLIFA</div>
+        <div class="spc-addr">📍 ${s.address}</div>
+        <div class="spc-footer">
+          <span class="spc-hours">⏰ ${s.hours}</span>
+          <span class="spc-status ${isOpen?'open':'closed'}">${isOpen?'Đang mở':'Đã đóng'}</span>
+        </div>
+      </div>`;
+    }
   });
+
+  area.innerHTML = html;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.getElementById('spc-cafe33')?.classList.add('entering');
+    document.getElementById('spc-xolifa')?.classList.add('entering');
+  }));
 }
 
 function selectStore(storeId) {
@@ -2239,26 +2189,9 @@ function showToast(msg) {
 }
 
 // ======================================================
-// SCREEN TRANSITIONS — gắn thêm logic khi vào screen
+// SCREEN TRANSITIONS
 // ======================================================
-const _origGoTo = goTo;
-window.goTo = function(screenId) {
-  _origGoTo(screenId);
-  if (screenId === 'screen-cart') {
-    checkGifts();
-    renderCart();
-  }
-  if (screenId === 'screen-map') {
-    // Leaflet cần invalidateSize sau khi element hiện ra
-    setTimeout(initLeafletMap, 80);
-  }
-  if (screenId === 'screen-payment') {
-    renderPayment();
-    selectPayment(state.payMethod);
-  }
-};
 </script>
-
 
 </body>
 </html>
