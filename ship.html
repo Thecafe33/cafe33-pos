@@ -43,9 +43,9 @@
    RESET & BASE
    ============================================= */
 *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html { overflow: hidden; height: 100%; }
+html { height: 100%; }
 html, body {
-  margin: 0; padding: 0; height: 100%;
+  margin: 0; padding: 0;
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -53,7 +53,7 @@ body {
   font-family: 'Nunito', sans-serif;
   background: #ffffff;
   color: var(--text);
-  overflow: hidden;
+  overflow-x: hidden;
 }
 input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 ::-webkit-scrollbar { width: 3px; }
@@ -68,19 +68,16 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 .brand-light-bg { background: var(--brand-light); }
 
 .screen { 
-  display: none; 
+  display: none !important; 
   width: 100%;
+  min-height: 100vh;
   min-height: 100dvh; 
   flex-direction: column;
   position: relative;
+  background: #fff;
 }
 .screen.active { 
-  display: flex;
-  position: fixed;
-  inset: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  z-index: 1;
+  display: flex !important;
 }
 
 .btn-primary {
@@ -1337,8 +1334,11 @@ function goTo(screenId) {
   const el = document.getElementById(screenId);
   if (!el) { dlog('❌ screen not found: ' + screenId, '#f55'); return; }
   el.classList.add('active');
-  el.scrollTop = 0;
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
   requestAnimationFrame(() => el.classList.add('fade-in'));
+  dlog('active screen set: ' + screenId + ', display=' + getComputedStyle(el).display, '#0f0');
 
   if (screenId === 'screen-cart')    { checkGifts(); renderCart(); }
   if (screenId === 'screen-map')     { setTimeout(initLeafletMap, 80); }
