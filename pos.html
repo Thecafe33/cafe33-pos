@@ -3229,11 +3229,20 @@ function calcChange() {
     document.getElementById('cash-change').innerText = (change > 0 ? change.toLocaleString() : 0) + 'đ';
 
     // Gửi realtime lên màn hình khách
-    if (paid > 0 && typeof syncToCustomerDisplay === 'function') {
-        syncToCustomerDisplay('cash_payment', {
-            paid:   paid,
-            change: Math.max(0, change)
-        });
+    if (paid > 0) {
+        try {
+            var _payload = {
+                state: 'cash_payment',
+                updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                total: currentTotal || 0,
+                paid: paid,
+                change: Math.max(0, change),
+                cart: cart ? cart.map(function(i){ return {name:i.name,qty:i.qty,size:i.size,price:i.price}; }) : []
+            };
+            db.ref('session_display').set(_payload).then(function(){
+                console.log('✅ cash_payment sent: paid='+paid+' change='+Math.max(0,change));
+            }).catch(function(e){ console.error('❌ cash_payment error:', e); });
+        } catch(e) { console.error('❌ cash_payment exception:', e); }
     }
 }
 
@@ -7071,12 +7080,21 @@ if (custNameEl) {
         changeEl.innerText = (change > 0 ? change.toLocaleString() : 0) + 'đ';
     }
 
-    // Gửi realtime lên màn hình khách (mobile)
-    if (paid > 0 && typeof syncToCustomerDisplay === 'function') {
-        syncToCustomerDisplay('cash_payment', {
-            paid:   paid,
-            change: Math.max(0, change)
-        });
+    // Gửi realtime lên màn hình khách (mobile) - ghi trực tiếp
+    if (paid > 0) {
+        try {
+            var _mob_payload = {
+                state: 'cash_payment',
+                updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                total: currentTotal || 0,
+                paid: paid,
+                change: Math.max(0, change),
+                cart: cart ? cart.map(function(i){ return {name:i.name,qty:i.qty,size:i.size,price:i.price}; }) : []
+            };
+            db.ref('session_display').set(_mob_payload).then(function(){
+                console.log('✅ cash_payment mobile sent: paid='+paid+' change='+Math.max(0,change));
+            }).catch(function(e){ console.error('❌ cash_payment mobile error:', e); });
+        } catch(e) { console.error('❌ cash_payment mobile exception:', e); }
     }
 }
 // --- LOGIC ĐIỀU KHIỂN BƯỚC THANH TOÁN MOBILE ---
