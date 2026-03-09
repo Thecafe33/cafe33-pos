@@ -684,12 +684,76 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 }
 
 /* Screen success */
-#screen-success { background: white; align-items: center; justify-content: center; text-align: center; padding: 40px 24px; }
-.success-icon { font-size: 4rem; margin-bottom: 20px; animation: bounceIn 0.6s cubic-bezier(0.34,1.6,0.64,1); }
+#screen-success { background: #f8f9fa; padding: 0; }
+.success-hero {
+  background: var(--brand); padding: 48px 24px 32px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.success-check {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+  animation: bounceIn 0.6s cubic-bezier(0.34,1.6,0.64,1);
+}
+.success-check svg { width: 32px; height: 32px; }
 @keyframes bounceIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.success-order-id { font-size: 0.8rem; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
-.success-title { font-family: 'League Spartan', sans-serif; font-size: 2rem; font-weight: 800; color: var(--brand); margin-bottom: 10px; }
-.success-sub { font-size: 0.9rem; color: #6b7280; font-weight: 600; line-height: 1.7; margin-bottom: 32px; }
+.success-order-id { font-size: 0.75rem; font-weight: 800; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; }
+.success-title { font-family: 'League Spartan', sans-serif; font-size: 1.8rem; font-weight: 800; color: white; margin-bottom: 6px; }
+.success-sub { font-size: 0.85rem; color: rgba(255,255,255,0.75); font-weight: 600; line-height: 1.6; }
+
+/* Status tracker mới — dọc với SVG icon */
+.status-card {
+  margin: 16px; background: white; border-radius: 20px;
+  padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.status-card-title {
+  font-size: 0.72rem; font-weight: 900; color: #9ca3af;
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;
+}
+.status-step {
+  display: flex; align-items: center; gap: 14px; padding: 10px 0;
+  position: relative;
+}
+.status-step:not(:last-child)::after {
+  content: ''; position: absolute; left: 19px; top: 44px;
+  width: 2px; height: calc(100% - 12px);
+  background: #e5e7eb; z-index: 0;
+}
+.status-step.done:not(:last-child)::after { background: var(--brand); }
+.status-icon {
+  width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+  background: #f3f4f6; display: flex; align-items: center; justify-content: center;
+  position: relative; z-index: 1;
+  transition: background 0.4s;
+}
+.status-icon svg { width: 20px; height: 20px; }
+.status-step.done .status-icon { background: var(--brand); }
+.status-step.done .status-icon svg { color: white; }
+.status-step.active .status-icon { background: var(--brand); opacity: 0.6; }
+.status-label { font-size: 0.9rem; font-weight: 700; color: #9ca3af; transition: color 0.4s; }
+.status-step.done .status-label,
+.status-step.active .status-label { color: var(--brand); font-weight: 900; }
+.status-time { font-size: 0.72rem; color: #9ca3af; font-weight: 600; }
+
+/* Screen orders */
+#screen-orders { background: #f8f9fa; }
+.order-card {
+  background: white; margin: 8px 16px; border-radius: 16px;
+  padding: 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  cursor: pointer;
+}
+.order-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.order-card-id { font-size: 0.75rem; font-weight: 900; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.08em; }
+.order-card-status { font-size: 0.7rem; font-weight: 900; padding: 4px 10px; border-radius: 99px; }
+.order-card-status.pending   { background: #fef3c7; color: #d97706; }
+.order-card-status.confirmed { background: #dbeafe; color: #2563eb; }
+.order-card-status.making    { background: #fde8d8; color: #c2622e; }
+.order-card-status.delivering{ background: #d1fae5; color: #059669; }
+.order-card-status.completed { background: #f3f4f6; color: #6b7280; }
+.order-card-status.cancelled { background: #fee2e2; color: #dc2626; }
+.order-card-store { font-size: 0.9rem; font-weight: 900; color: #111; margin-bottom: 3px; }
+.order-card-items { font-size: 0.8rem; color: #6b7280; font-weight: 600; }
+.order-card-total { font-size: 0.95rem; font-weight: 900; color: var(--brand); margin-top: 8px; }
 
 /* Header chung */
 .page-header {
@@ -827,9 +891,12 @@ window.onunhandledrejection = function(e) {
       <button class="btn-primary" onclick="continueAsReturning()" id="btn-continue-returning">
         Đặt hàng ngay
       </button>
-      <div style="text-align:center;margin-top:14px">
+      <div style="display:flex;justify-content:space-between;margin-top:14px">
         <button onclick="switchToNewUser()" style="background:none;border:none;font-size:0.82rem;font-weight:700;color:#9ca3af;cursor:pointer;text-decoration:underline;font-family:'Nunito',sans-serif">
           Dùng tài khoản khác?
+        </button>
+        <button onclick="goTo('screen-orders');loadOrders()" style="background:none;border:none;font-size:0.82rem;font-weight:700;color:var(--brand);cursor:pointer;font-family:'Nunito',sans-serif">
+          Đơn hàng của tôi →
         </button>
       </div>
     </div>
@@ -1127,20 +1194,51 @@ window.onunhandledrejection = function(e) {
      SCREEN SUCCESS
      ============================================= -->
 <div id="screen-success" class="screen">
-  <div class="success-icon">🎉</div>
-  <div class="success-order-id" id="suc-order-id">Mã đơn #000000</div>
-  <div class="success-title">Đặt hàng thành công!</div>
-  <div class="success-sub" id="suc-message">
-    Đơn hàng của bạn đã được gửi đến quán.<br>Chúng tôi sẽ liên hệ xác nhận sớm nhất!
+  <!-- Hero -->
+  <div class="success-hero">
+    <div class="success-check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <div class="success-order-id" id="suc-order-id">Mã đơn #000000</div>
+    <div class="success-title">Đặt thành công!</div>
+    <div class="success-sub" id="suc-message">Đơn hàng đã được gửi đến quán.</div>
   </div>
+
   <!-- Status tracker -->
-  <div style="width:100%;max-width:320px;background:#f8f9fa;border-radius:20px;padding:20px;margin-bottom:32px">
-    <div style="font-size:0.75rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;text-align:center">Trạng thái đơn hàng</div>
-    <div id="status-tracker">
-      <!-- Render từ JS -->
+  <div class="status-card">
+    <div class="status-card-title">Theo dõi đơn hàng</div>
+    <div id="status-tracker"></div>
+  </div>
+
+  <!-- Nút -->
+  <div style="padding: 8px 16px 40px; display:flex; flex-direction:column; gap:10px">
+    <button class="btn-primary" onclick="goTo('screen-orders')">Xem đơn hàng của tôi</button>
+    <button onclick="startOver()" style="background:none;border:none;font-size:0.9rem;font-weight:800;color:#6b7280;cursor:pointer;padding:8px;font-family:'Nunito',sans-serif">
+      Đặt thêm →
+    </button>
+  </div>
+</div>
+
+<!-- =============================================
+     SCREEN ORDERS: LỊCH SỬ ĐƠN HÀNG
+     ============================================= -->
+<div id="screen-orders" class="screen">
+  <div class="page-header">
+    <button class="back-btn" onclick="goBack('screen-welcome')">←</button>
+    <span class="page-title">Đơn hàng của tôi</span>
+  </div>
+  <div id="orders-list" style="padding: 8px 0 40px">
+    <div style="text-align:center;padding:60px 24px;color:#9ca3af">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="1"/>
+      </svg>
+      <div style="font-weight:800;font-size:0.95rem;margin-bottom:4px">Chưa có đơn hàng</div>
+      <div style="font-size:0.8rem">Đơn hàng sẽ hiện ở đây</div>
     </div>
   </div>
-  <button class="btn-primary" style="max-width:280px" onclick="startOver()">Đặt thêm</button>
 </div>
 
 <!-- =============================================
@@ -1338,8 +1436,10 @@ function goTo(screenId) {
   dlog('active screen set: ' + screenId + ', display=' + getComputedStyle(el).display, '#0f0');
 
   if (screenId === 'screen-cart')    { checkGifts(); renderCart(); }
+  if (screenId === 'screen-store')   { renderStores(); }
   if (screenId === 'screen-map')     { setTimeout(initLeafletMap, 80); }
   if (screenId === 'screen-payment') { renderPayment(); selectPayment(state.payMethod); }
+  if (screenId === 'screen-orders')  { loadOrders(); }
 }
 
 function goBack(screenId) {
@@ -1422,6 +1522,7 @@ function renderStores() {
   });
 
   area.innerHTML = html;
+  // Double rAF để đảm bảo DOM đã paint xong trước khi add class
   requestAnimationFrame(() => requestAnimationFrame(() => {
     document.getElementById('spc-cafe33')?.classList.add('entering');
     document.getElementById('spc-xolifa')?.classList.add('entering');
@@ -1442,14 +1543,17 @@ function selectStore(storeId) {
 }
 
 function _doSelectStore(storeId) {
+  // Nếu đổi chi nhánh khác → xóa cart
+  if (state.store && state.store.id !== storeId && state.cart.length > 0) {
+    if (!confirm('Đổi chi nhánh sẽ xóa giỏ hàng hiện tại. Tiếp tục?')) return;
+    state.cart = [];
+    state.voucher = null;
+  }
   state.store = STORES[storeId];
   if (storeId === 'xolifa') {
     document.body.classList.add('theme-xolifa');
   } else {
     document.body.classList.remove('theme-xolifa');
-  }
-  if (state.store.qrStorageRef) {
-    // QR storage: thêm sau khi có appId đầy đủ
   }
   loadMenu();
   goTo('screen-menu');
@@ -2014,13 +2118,9 @@ async function reverseGeocodeNominatim(lat, lng) {
     const storeLat = state.store ? state.store.lat : MAP_CENTER.lat;
     const storeLng = state.store ? state.store.lng : MAP_CENTER.lng;
     const dist = getDistanceKm(storeLat, storeLng, lat, lng);
-    const fee  = calcShipFee(dist, getCartSubtotal());
-    state.shipFee = fee;
+    state.shipFee = 0;
 
-    const feeTxt = fee === 0
-      ? 'Miễn phí ship 🎉'
-      : `Phí ship: ${fee.toLocaleString('vi')}đ  (~${dist.toFixed(1)} km)`;
-    feeTextEl.textContent = feeTxt;
+    feeTextEl.textContent = `Miễn phí ship 🎉  (~${dist.toFixed(1)} km)`;
     feeEl.style.display = 'flex';
     confirmBtn.disabled = false;
     updateCartSummary();
@@ -2043,10 +2143,7 @@ function getDistanceKm(lat1, lng1, lat2, lng2) {
 }
 
 function calcShipFee(dist, subtotal) {
-  const cfg = state.shipConfig;
-  if (dist <= 3) return subtotal >= cfg.freeShipUnder3kmMin ? 0 : Math.round(dist * cfg.pricePerKm);
-  if (dist <= 6) return subtotal >= cfg.freeShipUnder6kmMin ? 0 : Math.round(dist * cfg.pricePerKm);
-  return Math.round(dist * cfg.pricePerKm);
+  return 0; // Miễn phí ship toàn bộ trong xã
 }
 
 function confirmAddress() {
@@ -2153,42 +2250,124 @@ function showSuccess(orderId, order) {
   document.getElementById('suc-message').innerHTML =
     `Đơn hàng đến <strong>${order.store.name}</strong> đã được gửi.<br>${payNote}`;
 
-  // Status tracker
+  // Status tracker với SVG icons
   const steps = [
-    { key: 'pending',   label: 'Đã đặt', icon: '✅' },
-    { key: 'confirmed', label: 'Xác nhận', icon: '☑️' },
-    { key: 'making',    label: 'Đang pha', icon: '☕' },
-    { key: 'delivering',label: 'Đang giao', icon: '🛵' },
-    { key: 'completed', label: 'Hoàn thành', icon: '🎉' },
+    { key: 'pending',    label: 'Đã đặt hàng',   desc: 'Đơn đã gửi đến quán',
+      svg: '<path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>' },
+    { key: 'confirmed',  label: 'Đã xác nhận',   desc: 'Quán đã nhận đơn',
+      svg: '<polyline points="20 6 9 17 4 12"/>' },
+    { key: 'making',     label: 'Đang pha chế',  desc: 'Đồ uống đang được chuẩn bị',
+      svg: '<path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>' },
+    { key: 'delivering', label: 'Đang giao',     desc: 'Shipper đang trên đường',
+      svg: '<rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>' },
+    { key: 'completed',  label: 'Hoàn thành',    desc: 'Đã giao thành công',
+      svg: '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>' },
   ];
+
   document.getElementById('status-tracker').innerHTML = steps.map((s, i) => `
-    <div style="display:flex;align-items:center;gap:12px;padding:8px 0">
-      <div style="width:32px;height:32px;border-radius:50%;background:${i===0?'var(--brand)':'#e5e7eb'};display:flex;align-items:center;justify-content:center;font-size:0.9rem;flex-shrink:0">${s.icon}</div>
-      <span style="font-weight:${i===0?'900':'700'};font-size:0.9rem;color:${i===0?'var(--brand)':'#9ca3af'}">${s.label}</span>
+    <div class="status-step ${i === 0 ? 'done' : ''}" id="step-${s.key}">
+      <div class="status-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${s.svg}</svg>
+      </div>
+      <div>
+        <div class="status-label">${s.label}</div>
+        <div class="status-time" id="step-time-${s.key}">${i === 0 ? _fmtTime(new Date()) : ''}</div>
+      </div>
     </div>`).join('');
 
-  // Realtime status update
+  // Realtime update
   dbRef('shipOrders/' + orderId + '/status').on('value', snap => {
-    const status = snap.val();
+    const status = snap.val() || 'pending';
     const stepIdx = steps.findIndex(s => s.key === status);
-    const rows = document.getElementById('status-tracker')?.querySelectorAll('div');
-    if (!rows) return;
-    rows.forEach((row, i) => {
-      const circle = row.querySelector('div');
-      const label  = row.querySelector('span');
-      if (!circle || !label) return;
-      if (i <= stepIdx) {
-        circle.style.background = 'var(--brand)';
-        label.style.color       = 'var(--brand)';
-        label.style.fontWeight  = '900';
+    steps.forEach((s, i) => {
+      const el = document.getElementById('step-' + s.key);
+      if (!el) return;
+      el.classList.toggle('done', i <= stepIdx);
+      el.classList.toggle('active', i === stepIdx + 1);
+      if (i === stepIdx && !document.getElementById('step-time-' + s.key).textContent) {
+        document.getElementById('step-time-' + s.key).textContent = _fmtTime(new Date());
       }
     });
   });
 
   goTo('screen-success');
+  // Lưu đơn vào localStorage để xem lại
+  _saveOrderLocal(orderId, order);
   state.cart = [];
   state.voucher = null;
   state.shipFee = 0;
+}
+
+function _fmtTime(d) {
+  return d.toLocaleTimeString('vi', { hour: '2-digit', minute: '2-digit' });
+}
+
+function _saveOrderLocal(orderId, order) {
+  try {
+    const key = 'ship_orders_' + (state.customer?.phone || 'guest');
+    const list = JSON.parse(localStorage.getItem(key) || '[]');
+    list.unshift({ orderId, ...order, savedAt: Date.now() });
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 20))); // giữ 20 đơn gần nhất
+  } catch(e) {}
+}
+
+// ======================================================
+// SCREEN ORDERS
+// ======================================================
+function loadOrders() {
+  const listEl = document.getElementById('orders-list');
+  if (!listEl) return;
+
+  const phone = state.customer?.phone;
+  if (!phone) {
+    listEl.innerHTML = `<div style="text-align:center;padding:60px 24px;color:#9ca3af;font-weight:700">Vui lòng đăng nhập để xem đơn hàng</div>`;
+    return;
+  }
+
+  const statusLabel = { pending:'Chờ xác nhận', confirmed:'Đã xác nhận', making:'Đang pha chế', delivering:'Đang giao', completed:'Hoàn thành', cancelled:'Đã hủy' };
+
+  // Lấy từ localStorage trước (instant)
+  const key = 'ship_orders_' + phone;
+  const local = JSON.parse(localStorage.getItem(key) || '[]');
+  if (local.length > 0) _renderOrderList(local, statusLabel);
+
+  // Sau đó sync từ Firebase
+  if (db) {
+    dbRef('shipOrders').orderByChild('customer/phone').equalTo(phone).limitToLast(20).once('value', snap => {
+      if (!snap.exists()) return;
+      const orders = [];
+      snap.forEach(child => orders.unshift({ orderId: child.key, ...child.val() }));
+      _renderOrderList(orders, statusLabel);
+    }).catch(() => {});
+  }
+}
+
+function _renderOrderList(orders, statusLabel) {
+  const listEl = document.getElementById('orders-list');
+  if (!listEl || !orders.length) return;
+
+  listEl.innerHTML = orders.map(o => {
+    const items = (o.items || []).map(i => i.name).join(', ');
+    const total = (o.total || 0).toLocaleString('vi');
+    const status = o.status || 'pending';
+    const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('vi') : '';
+    return `<div class="order-card" onclick="viewOrderDetail('${o.orderId}')">
+      <div class="order-card-header">
+        <div>
+          <div class="order-card-id">#${(o.orderId||'').slice(-6).toUpperCase()} · ${date}</div>
+          <div class="order-card-store">${o.store?.name || ''}</div>
+        </div>
+        <span class="order-card-status ${status}">${statusLabel[status] || status}</span>
+      </div>
+      <div class="order-card-items">${items}</div>
+      <div class="order-card-total">${total}đ</div>
+    </div>`;
+  }).join('');
+}
+
+function viewOrderDetail(orderId) {
+  // TODO: mở chi tiết đơn — sẽ làm sau
+  showToast('Đơn #' + orderId.slice(-6).toUpperCase());
 }
 
 function startOver() {
