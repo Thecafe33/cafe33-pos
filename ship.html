@@ -795,30 +795,44 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
   <!-- Liquid glass form — dính đáy màn hình -->
   <div class="welcome-form-card">
 
-    <!-- Returning user banner -->
-    <div id="returning-user" class="returning-banner hidden" onclick="continueAsReturning()">
-      <div class="returning-avatar" id="returning-avatar">?</div>
-      <div style="flex:1">
-        <div class="ret-name" id="returning-name">Khách hàng</div>
-        <div class="ret-phone" id="returning-phone">0xx xxx xxxx</div>
+    <!-- CHẾ ĐỘ 1: Khách cũ — ẩn form, chỉ show tên -->
+    <div id="mode-returning" style="display:none">
+      <div style="font-size:0.78rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Chào mừng trở lại</div>
+      <div id="returning-user" class="returning-banner" onclick="continueAsReturning()" style="margin-bottom:20px">
+        <div class="returning-avatar" id="returning-avatar">?</div>
+        <div style="flex:1">
+          <div class="ret-name" id="returning-name">Khách hàng</div>
+          <div class="ret-phone" id="returning-phone">0xx xxx xxxx</div>
+        </div>
+        <div class="ret-arrow">Tiếp tục →</div>
       </div>
-      <div class="ret-arrow">Tiếp tục →</div>
+      <button class="btn-primary" onclick="continueAsReturning()" id="btn-continue-returning">
+        Đặt hàng ngay
+      </button>
+      <div style="text-align:center;margin-top:14px">
+        <button onclick="switchToNewUser()" style="background:none;border:none;font-size:0.82rem;font-weight:700;color:#9ca3af;cursor:pointer;text-decoration:underline;font-family:'Nunito',sans-serif">
+          Dùng tài khoản khác?
+        </button>
+      </div>
     </div>
 
-    <h2>Xin chào! 👋</h2>
-    <p>Nhập thông tin để đặt hàng giao tận nơi</p>
+    <!-- CHẾ ĐỘ 2: Khách mới — hiện form nhập -->
+    <div id="mode-new">
+      <h2>Xin chào! 👋</h2>
+      <p>Nhập thông tin để đặt hàng giao tận nơi</p>
+      <div class="input-wrap">
+        <label>Họ và tên</label>
+        <input type="text" id="inp-name" placeholder="Ví dụ: Nguyễn Văn A" autocomplete="name">
+      </div>
+      <div class="input-wrap" style="margin-bottom:18px">
+        <label>Số điện thoại</label>
+        <input type="tel" id="inp-phone" placeholder="090..." inputmode="numeric" autocomplete="tel">
+      </div>
+      <button class="btn-primary" onclick="submitInfo()" id="btn-submit-info">
+        Tiếp tục →
+      </button>
+    </div>
 
-    <div class="input-wrap">
-      <label>Họ và tên</label>
-      <input type="text" id="inp-name" placeholder="Ví dụ: Nguyễn Văn A" autocomplete="name">
-    </div>
-    <div class="input-wrap" style="margin-bottom:18px">
-      <label>Số điện thoại</label>
-      <input type="tel" id="inp-phone" placeholder="090..." inputmode="numeric" autocomplete="tel">
-    </div>
-    <button class="btn-primary" onclick="submitInfo()" id="btn-submit-info">
-      Tiếp tục →
-    </button>
   </div>
 </div>
 
@@ -1126,7 +1140,7 @@ const FIREBASE_CONFIG = {
   storageBucket: "the-cafe-33.appspot.com"
 };
 // Tọa độ trung tâm xã — chỉnh theo xã của bạn
-const MAP_CENTER = { lat: 10.247345346357173, lng: 105.14997451152426 };
+const MAP_CENTER = { lat: 10.3759, lng: 105.4350 };
 const MAP_ZOOM_DEFAULT = 15;
 
 // ======================================================
@@ -1252,16 +1266,29 @@ function loadSavedCustomer() {
 }
 
 function showReturningUser(c) {
-  const el = document.getElementById('returning-user');
   document.getElementById('returning-name').textContent = c.name;
   document.getElementById('returning-phone').textContent = c.phone;
   document.getElementById('returning-avatar').textContent = c.name.charAt(0).toUpperCase();
-  el.classList.remove('hidden');
+  // Ẩn form mới, hiện chế độ returning
+  document.getElementById('mode-new').style.display = 'none';
+  document.getElementById('mode-returning').style.display = 'block';
+}
+
+function switchToNewUser() {
+  // Xóa cache, hiện form nhập mới
+  localStorage.removeItem('ship_customer');
+  state.customer = null;
+  document.getElementById('mode-returning').style.display = 'none';
+  document.getElementById('mode-new').style.display = 'block';
+  document.getElementById('inp-name').value = '';
+  document.getElementById('inp-phone').value = '';
 }
 
 function continueAsReturning() {
-  goTo('screen-store');
+  // state.customer đã được set trong loadSavedCustomer
+  if (!state.customer) return;
   renderStores();
+  goTo('screen-store');
 }
 
 function loadShipConfig() {
