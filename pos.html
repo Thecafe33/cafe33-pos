@@ -1095,7 +1095,10 @@ input, button, select, textarea { font-size: 1rem; }
                 <div style="width:52%;display:flex;flex-direction:column;background:white;border-radius:28px;box-shadow:0 2px 24px rgba(0,0,0,0.07);overflow:hidden;min-height:0;">
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
                         <span style="font-weight:900;font-size:1rem;color:#111827;">Quà tặng & Mã giảm</span>
-                        <span id="discount-count" style="font-weight:900;font-size:0.7rem;color:#006241;background:#F0FDF4;padding:4px 12px;border-radius:999px;">0</span>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span id="discount-count" style="font-weight:900;font-size:0.7rem;color:#006241;background:#F0FDF4;padding:4px 12px;border-radius:999px;">0</span>
+                            <button onclick="giftVoucherAddNewBtn()" style="padding:6px 16px;border-radius:999px;background:#006241;color:white;font-size:0.75rem;font-weight:900;border:none;cursor:pointer;" class="active:scale-95">＋ Tạo mới</button>
+                        </div>
                     </div>
                     <div id="discount-list" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;" class="custom-scrollbar">
                         <div style="display:flex;flex-direction:column;align-items:center;padding:48px 0;opacity:0.4;">
@@ -1161,6 +1164,10 @@ input, button, select, textarea { font-size: 1rem; }
                                     style="flex:1;padding:11px 6px;border-radius:14px;border:none;font-size:0.75rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">🧾 Toàn đơn</button>
                                 <button onclick="dfSetType('percent')" id="df-type-percent"
                                     style="flex:1;padding:11px 6px;border-radius:14px;border:none;font-size:0.75rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">% Phần trăm</button>
+                                <button onclick="dfSetType('item_free')" id="df-type-item_free"
+                                    style="flex:1;padding:11px 6px;border-radius:14px;border:none;font-size:0.75rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">Miễn phí 1 ly</button>
+                                <button onclick="dfSetType('item_upsize')" id="df-type-item_upsize"
+                                    style="flex:1;padding:11px 6px;border-radius:14px;border:none;font-size:0.75rem;font-weight:900;cursor:pointer;transition:all 0.2s;background:transparent;color:#9ca3af;">Up size M→L</button>
                             </div>
                         </div>
 
@@ -1359,9 +1366,7 @@ input, button, select, textarea { font-size: 1rem; }
     Giờ Đóng Bed: <span id="bed-closing-display">20:50</span>
 </button>
                 </div>
-            </div>
-        </div>
-            </div><!-- end mgr-panel-gift -->
+                   </div><!-- end mgr-panel-gift -->
 
             <!-- Panel Màn hình phụ -->
             <div id="mgr-panel-screen" style="display:none;flex:1;overflow:hidden;flex-direction:column;gap:16px;padding:20px;min-height:0;">
@@ -1409,6 +1414,8 @@ input, button, select, textarea { font-size: 1rem; }
                     </div>
                 </div>
             </div><!-- end mgr-panel-screen -->
+        </div>
+    </div>
     <div id="view-bed-mobile" class="hidden h-full flex flex-col relative">
     
     <div id="mob-bed-list-screen" class="flex flex-col h-full w-full absolute inset-0 z-10 bg-[#F2F2F7]">
@@ -10866,6 +10873,7 @@ function switchMgrTab(tab) {
         gBtn.style.background = '#006241'; gBtn.style.color = 'white';
         sBtn.style.background = '#e5e7eb'; sBtn.style.color = '#6b7280';
         gPanel.style.display = 'flex';
+        gPanel.style.flexDirection = 'row';
         sPanel.style.display = 'none';
         renderDiscountList();
     } else {
@@ -10873,6 +10881,7 @@ function switchMgrTab(tab) {
         gBtn.style.background = '#e5e7eb'; gBtn.style.color = '#6b7280';
         gPanel.style.display = 'none';
         sPanel.style.display = 'flex';
+        sPanel.style.flexDirection = 'column';
         screenLoadSlides();
     }
 }
@@ -10987,5 +10996,18 @@ window.addEventListener('load', function() {
 });
 
 </script>
+<!-- Modal chọn món trong giỏ hàng (item_free / item_upsize) -->
+<div id="modal-pick-cart-item" style="position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);">
+    <div style="background:white;border-radius:28px;width:min(480px,92vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="padding:20px 24px 16px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
+            <p id="pick-cart-title" style="font-size:1.1rem;font-weight:900;color:#111827;margin:0 0 4px 0">Chọn món</p>
+            <p id="pick-cart-subtitle" style="font-size:0.8rem;color:#9ca3af;margin:0"></p>
+        </div>
+        <div id="pick-cart-list" style="flex:1;overflow-y:auto;padding:12px;" class="custom-scrollbar"></div>
+        <div style="padding:16px 24px;border-top:1px solid #f3f4f6;flex-shrink:0;">
+            <button onclick="closePickCartModal()" style="width:100%;padding:12px;background:#f3f4f6;color:#6b7280;font-weight:900;font-size:0.9rem;border-radius:16px;border:none;cursor:pointer;" class="active:scale-95">Huỷ</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
