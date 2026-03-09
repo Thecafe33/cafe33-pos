@@ -3226,7 +3226,15 @@ function calcChange() {
     // Nếu ô trống (paid = 0) thì coi như khách chưa đưa, tiền thừa = 0 (hoặc âm)
     let change = paid - currentTotal;
     
-    document.getElementById('cash-change').innerText = (change > 0 ? change.toLocaleString() : 0) + 'đ'; 
+    document.getElementById('cash-change').innerText = (change > 0 ? change.toLocaleString() : 0) + 'đ';
+
+    // Gửi realtime lên màn hình khách
+    if (paid > 0 && typeof syncToCustomerDisplay === 'function') {
+        syncToCustomerDisplay('cash_payment', {
+            paid:   paid,
+            change: Math.max(0, change)
+        });
+    }
 }
 
 // --- SỬA LẠI HÀM QUICK PAID (ĐỂ ĐIỀN CÓ DẤU PHẨY) ---
@@ -7062,6 +7070,14 @@ if (custNameEl) {
     if (changeEl) {
         changeEl.innerText = (change > 0 ? change.toLocaleString() : 0) + 'đ';
     }
+
+    // Gửi realtime lên màn hình khách (mobile)
+    if (paid > 0 && typeof syncToCustomerDisplay === 'function') {
+        syncToCustomerDisplay('cash_payment', {
+            paid:   paid,
+            change: Math.max(0, change)
+        });
+    }
 }
 // --- LOGIC ĐIỀU KHIỂN BƯỚC THANH TOÁN MOBILE ---
 
@@ -7249,7 +7265,6 @@ function completeOrder() {
         method = 'Chuyển khoản';
     }
 
-    syncCashPaymentToScreen(method);
     // Gọi hàm xử lý chính
     saveOrderToFirebase(method);
 }
@@ -9719,7 +9734,6 @@ function listenToClientInput() {
             // C. Tự động chạy tiếp quy trình thanh toán
             // Kiểm tra xem có đang trong quá trình lưu không để tránh gọi lặp lại ở đây
             let method = document.getElementById('btn-bank').classList.contains('sb-green') ? 'Chuyển khoản' : 'Tiền mặt';
-            syncCashPaymentToScreen(method);
             saveOrderToFirebase(method);
             
             // D. Xóa tin nhắn ngay lập tức
