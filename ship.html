@@ -135,26 +135,141 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 }
 .card.selected { border-color: var(--brand); background: var(--brand-light); }
 
-/* Bottom sheet */
-.sheet-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-  z-index: 9000; display: none; align-items: flex-end;
-  backdrop-filter: blur(4px);
+/* =============================================
+   ITEM SHEET — STARBUCKS STYLE
+   ============================================= */
+#sheet-item {
+  position: fixed; inset: 0; z-index: 9000;
+  display: none; align-items: flex-end;
+}
+#sheet-item.open { display: flex; }
+#sheet-item-backdrop {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.5);
   animation: backdropIn 0.3s ease;
 }
-.sheet-backdrop.open { display: flex; }
-@keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
-.sheet {
-  background: white; border-radius: 28px 28px 0 0;
-  padding: 8px 20px 40px; width: 100%; max-height: 92dvh;
-  overflow-y: auto; transform: translateY(100%);
-  transition: transform 0.35s cubic-bezier(0.16,1,0.3,1);
+@keyframes backdropIn { from{opacity:0} to{opacity:1} }
+
+.item-sheet {
+  position: relative; z-index: 1;
+  width: 100%; height: 82dvh;
+  border-radius: 28px 28px 0 0;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transform: translateY(100%);
+  transition: transform 0.38s cubic-bezier(0.16,1,0.3,1);
+  will-change: transform;
 }
-.sheet-backdrop.open .sheet { transform: translateY(0); }
-.sheet-handle {
-  width: 40px; height: 4px; background: #e5e7eb;
-  border-radius: 99px; margin: 10px auto 20px;
+#sheet-item.open .item-sheet { transform: translateY(0); }
+#sheet-item.closing .item-sheet { transform: translateY(100%); transition: transform 0.28s ease-in; }
+
+.item-hero {
+  position: relative; flex-shrink: 0; height: 44%;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 12px;
+  background: linear-gradient(160deg,#2d6a4f 0%,#1b4332 100%);
+  transition: background 0.6s ease;
 }
+.item-handle {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  width: 40px; height: 4px; background: rgba(255,255,255,0.4); border-radius: 99px;
+}
+.item-hero-img {
+  width: 180px; height: 180px; object-fit: contain;
+  filter: drop-shadow(0 12px 28px rgba(0,0,0,0.4));
+  transition: opacity 0.3s;
+}
+.item-hero-img.no-img { opacity: 0; }
+
+.item-qty-row {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center;
+  background: rgba(0,0,0,0.3); backdrop-filter: blur(8px);
+  border-radius: 99px; padding: 5px 5px;
+}
+.item-qty-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.2); color: white;
+  font-size: 1.2rem; font-weight: 900; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.item-qty-btn:active { background: rgba(255,255,255,0.38); }
+.item-qty-num {
+  min-width: 38px; text-align: center;
+  font-size: 1.1rem; font-weight: 900; color: white;
+}
+
+.item-body {
+  flex: 1; overflow-y: auto; background: white;
+  padding: 20px 20px 8px; -webkit-overflow-scrolling: touch;
+}
+.item-name {
+  font-family: 'League Spartan', sans-serif;
+  font-size: 1.7rem; font-weight: 800; color: #111;
+  letter-spacing: -0.02em; line-height: 1.1; margin-bottom: 4px;
+}
+.item-price-tag { font-size: 1rem; font-weight: 900; color: var(--brand); margin-bottom: 2px; }
+
+.opt-label {
+  font-size: 0.72rem; font-weight: 900; color: #9ca3af;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin: 18px 0 10px;
+}
+.opt-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt-pill {
+  padding: 9px 18px; border-radius: 99px;
+  font-size: 0.84rem; font-weight: 800;
+  border: 2px solid #e5e7eb; background: white; color: #374151;
+  cursor: pointer; transition: all 0.15s;
+}
+.opt-pill.sel { border-color: var(--brand); background: var(--brand); color: white; }
+
+.size-pill {
+  flex: 1; min-width: 80px; padding: 12px 8px; border-radius: 16px;
+  border: 2px solid #e5e7eb; background: white; color: #374151;
+  font-weight: 900; font-size: 0.88rem; cursor: pointer;
+  transition: all 0.15s; text-align: center;
+}
+.size-pill.sel { border-color: var(--brand); background: var(--brand); color: white; }
+.size-price { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; display: block; }
+
+.topping-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; background: #f8f9fa; border-radius: 14px;
+  margin-bottom: 8px; cursor: pointer;
+  border: 2px solid transparent; transition: all 0.15s;
+}
+.topping-row.sel { border-color: var(--brand); background: #f0fdf4; }
+.topping-name { font-size: 0.9rem; font-weight: 800; }
+.topping-price { font-size: 0.78rem; color: var(--brand); font-weight: 700; }
+.topping-check {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid #d1d5db; background: white;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: all 0.15s;
+}
+.topping-row.sel .topping-check { background: var(--brand); border-color: var(--brand); }
+
+.note-input {
+  width: 100%; padding: 12px 16px; background: #f3f4f6;
+  border: 2px solid transparent; border-radius: 14px;
+  font-size: 0.9rem; font-weight: 600; outline: none;
+  font-family: 'Nunito', sans-serif; box-sizing: border-box;
+  transition: border-color 0.2s; margin-top: 4px;
+}
+.note-input:focus { border-color: var(--brand); background: white; }
+
+.item-footer {
+  background: white; padding: 12px 20px max(24px, env(safe-area-inset-bottom));
+  border-top: 1px solid #f3f4f6; flex-shrink: 0;
+}
+.item-add-btn {
+  width: 100%; padding: 16px 20px; background: var(--brand); color: white;
+  font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 1rem;
+  border: none; border-radius: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: opacity 0.15s;
+}
+.item-add-btn:active { opacity: 0.88; }
 
 /* Toast */
 #toast {
@@ -969,57 +1084,68 @@ window.onunhandledrejection = function(e) {
 <!-- =============================================
      SHEET: TUỲ CHỌN MÓN
      ============================================= -->
-<div id="sheet-item" class="sheet-backdrop">
-  <div class="sheet">
-    <div class="sheet-handle"></div>
-    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:16px">
-      <div id="si-img" style="width:80px;height:80px;border-radius:16px;background:#f3f4f6;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:2rem"></div>
-      <div style="flex:1">
-        <div style="font-weight:900;font-size:1.1rem;margin-bottom:4px" id="si-name"></div>
-        <div style="font-size:0.85rem;font-weight:700;color:var(--brand)" id="si-price-display"></div>
+<div id="sheet-item">
+  <div id="sheet-item-backdrop" onclick="closeSheet()"></div>
+  <div class="item-sheet" id="item-sheet-inner">
+
+    <!-- Hero gradient + ảnh ly -->
+    <div class="item-hero" id="item-hero">
+      <div class="item-handle"></div>
+      <!-- Quantity nổi trên hero -->
+      <div class="item-qty-row">
+        <button class="item-qty-btn" onclick="changeSheetQty(-1)">−</button>
+        <span class="item-qty-num" id="si-qty">1</span>
+        <button class="item-qty-btn" onclick="changeSheetQty(1)">+</button>
+      </div>
+      <img id="si-img" class="item-hero-img no-img" src="" alt="" crossorigin="anonymous">
+    </div>
+
+    <!-- Body cuộn -->
+    <div class="item-body" id="item-body">
+      <div style="margin-bottom:16px">
+        <div class="item-name" id="si-name">Tên món</div>
+        <div class="item-price-tag" id="si-price-display">0đ</div>
+      </div>
+
+      <!-- Size -->
+      <div id="si-size-wrap" class="hidden">
+        <div class="opt-label">Kích cỡ</div>
+        <div id="si-sizes" style="display:flex;gap:8px;margin-bottom:4px"></div>
+      </div>
+
+      <!-- Đường -->
+      <div id="si-sugar-wrap">
+        <div class="opt-label">Đường</div>
+        <div class="opt-pills" id="si-sugars"></div>
+      </div>
+
+      <!-- Đá -->
+      <div id="si-ice-wrap">
+        <div class="opt-label">Đá</div>
+        <div class="opt-pills" id="si-ices"></div>
+      </div>
+
+      <!-- Topping -->
+      <div id="si-topping-wrap" class="hidden">
+        <div class="opt-label">Topping</div>
+        <div id="si-toppings"></div>
+      </div>
+
+      <!-- Ghi chú -->
+      <div style="margin-bottom:20px">
+        <div class="opt-label">Ghi chú</div>
+        <input type="text" id="si-note" class="note-input" placeholder="VD: ít đá, không đường...">
       </div>
     </div>
 
-    <!-- Size -->
-    <div id="si-size-wrap" class="hidden">
-      <div style="font-size:0.78rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Size</div>
-      <div id="si-sizes" style="display:flex;gap:8px;margin-bottom:18px"></div>
+    <!-- Footer -->
+    <div class="item-footer">
+      <button class="item-add-btn" onclick="addToCart()">
+        <span>Thêm vào giỏ hàng</span>
+        <span id="si-subtotal">0đ</span>
+      </button>
     </div>
 
-    <!-- Đường -->
-    <div id="si-sugar-wrap">
-      <div style="font-size:0.78rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Đường</div>
-      <div id="si-sugars" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px"></div>
-    </div>
-
-    <!-- Đá -->
-    <div id="si-ice-wrap">
-      <div style="font-size:0.78rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Đá</div>
-      <div id="si-ices" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px"></div>
-    </div>
-
-    <!-- Topping -->
-    <div id="si-topping-wrap" class="hidden">
-      <div style="font-size:0.78rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Topping</div>
-      <div id="si-toppings" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px"></div>
-    </div>
-
-    <!-- Ghi chú -->
-    <div style="margin-bottom:20px">
-      <div style="font-size:0.78rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px">Ghi chú</div>
-      <input type="text" id="si-note" placeholder="Ít đá, thêm trân châu..." style="width:100%;padding:12px 16px;background:#f3f4f6;border:none;border-radius:14px;font-size:0.9rem;font-weight:600;outline:none;font-family:'Nunito',sans-serif">
-    </div>
-
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div class="stepper">
-        <button class="minus" onclick="changeSheetQty(-1)">−</button>
-        <span class="qty" id="si-qty">1</span>
-        <button class="plus" onclick="changeSheetQty(1)">+</button>
-      </div>
-      <div style="font-weight:900;font-size:1.1rem;color:var(--brand)" id="si-subtotal">0đ</div>
-    </div>
-
-    <button class="btn-primary safe-bottom" onclick="addToCart()">Thêm vào giỏ</button>
   </div>
 </div>
 
@@ -1645,120 +1771,202 @@ function renderMenu() {
 // ======================================================
 // BOTTOM SHEET: TUỲ CHỌN MÓN
 // ======================================================
+// ======================================================
+// ITEM SHEET — STARBUCKS STYLE
+// ======================================================
+
+// Swipe-to-close
+let _swipeStartY = 0, _swipeDelta = 0, _swipeActive = false;
+
+function _initSheetSwipe() {
+  const sheet = document.getElementById('item-sheet-inner');
+  const body  = document.getElementById('item-body');
+  if (!sheet) return;
+
+  sheet.addEventListener('touchstart', e => {
+    _swipeStartY = e.touches[0].clientY;
+    _swipeDelta  = 0;
+    _swipeActive = body.scrollTop <= 0; // chỉ swipe khi đang ở đầu
+  }, { passive: true });
+
+  sheet.addEventListener('touchmove', e => {
+    if (!_swipeActive) return;
+    _swipeDelta = e.touches[0].clientY - _swipeStartY;
+    if (_swipeDelta > 0) {
+      sheet.style.transform = `translateY(${_swipeDelta}px)`;
+      sheet.style.transition = 'none';
+    }
+  }, { passive: true });
+
+  sheet.addEventListener('touchend', () => {
+    sheet.style.transition = '';
+    if (_swipeDelta > 100) {
+      closeSheet();
+    } else {
+      sheet.style.transform = '';
+    }
+    _swipeDelta = 0; _swipeActive = false;
+  });
+}
+
+// Lấy màu chủ đạo từ ảnh bằng canvas
+function _getDominantColor(imgEl, cb) {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 40; canvas.height = 40;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imgEl, 0, 0, 40, 40);
+    const data = ctx.getImageData(0, 0, 40, 40).data;
+    let r = 0, g = 0, b = 0, count = 0;
+    for (let i = 0; i < data.length; i += 16) {
+      const a = data[i + 3];
+      if (a < 30) continue; // bỏ qua pixel trong suốt
+      r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+    }
+    if (count === 0) { cb(null); return; }
+    r = Math.round(r/count); g = Math.round(g/count); b = Math.round(b/count);
+    // Làm tối hơn cho gradient
+    const dark = `rgb(${Math.round(r*0.4)},${Math.round(g*0.4)},${Math.round(b*0.4)})`;
+    const mid  = `rgb(${Math.round(r*0.65)},${Math.round(g*0.65)},${Math.round(b*0.65)})`;
+    cb({ dark, mid, r, g, b });
+  } catch(e) { cb(null); }
+}
+
 function openItemSheet(itemId) {
   const item = state.menuData.find(i => i.id === itemId);
   if (!item) return;
-  state.currentItem = item;
-  state.sheetQty    = 1;
-  state.sheetSize   = item.hasSizes ? 'M' : null;
-  state.sheetSugar  = '100%';
-  state.sheetIce    = 'Bình thường';
+  state.currentItem  = item;
+  state.sheetQty     = 1;
+  state.sheetSize    = item.hasSizes ? 'M' : null;
+  state.sheetSugar   = '100%';
+  state.sheetIce     = 'Bình thường';
   state.sheetToppings = [];
 
+  // Reset sheet
   document.getElementById('si-name').textContent = item.name;
   document.getElementById('si-qty').textContent  = 1;
   document.getElementById('si-note').value = '';
+  const sheet = document.getElementById('item-sheet-inner');
+  sheet.style.transform = '';
 
-  // Image
+  // Hero gradient default → màu thương hiệu
+  const hero = document.getElementById('item-hero');
+  const brand = state.store?.color || '#006241';
+  const r = parseInt(brand.slice(1,3),16), gg = parseInt(brand.slice(3,5),16), bb = parseInt(brand.slice(5,7),16);
+  hero.style.background = `linear-gradient(160deg,rgb(${Math.round(r*0.85)},${Math.round(gg*0.85)},${Math.round(bb*0.85)}) 0%,rgb(${Math.round(r*0.4)},${Math.round(gg*0.4)},${Math.round(bb*0.4)}) 100%)`;
+
+  // Ảnh món
   const imgEl = document.getElementById('si-img');
-  imgEl.innerHTML = item.image ? `<img src="${item.image}" style="width:100%;height:100%;object-fit:cover">` : `<span style="font-size:2.5rem">☕</span>`;
+  imgEl.classList.add('no-img');
+  if (item.image) {
+    imgEl.onload = () => {
+      imgEl.classList.remove('no-img');
+      _getDominantColor(imgEl, colors => {
+        if (colors) {
+          hero.style.background = `linear-gradient(160deg,${colors.mid} 0%,${colors.dark} 100%)`;
+        }
+      });
+    };
+    imgEl.onerror = () => imgEl.classList.add('no-img');
+    imgEl.src = item.image;
+  } else {
+    imgEl.src = '';
+  }
 
   // Size
   const sizeWrap = document.getElementById('si-size-wrap');
   if (item.hasSizes) {
     sizeWrap.classList.remove('hidden');
-    renderSizeBtns(item);
-  } else {
-    sizeWrap.classList.add('hidden');
-  }
+    _renderSizePills(item);
+  } else { sizeWrap.classList.add('hidden'); }
 
-  // Sugar
+  // Đường
   document.getElementById('si-sugars').innerHTML = SUGAR_OPTIONS.map(s =>
-    `<button onclick="selectOpt('sugar','${s}')" id="sug-${s.replace('%','')}"
-      style="padding:8px 16px;border-radius:99px;font-size:0.82rem;font-weight:800;border:2px solid ${s===state.sheetSugar?'var(--brand)':'#e5e7eb'};background:${s===state.sheetSugar?'var(--brand)':'white'};color:${s===state.sheetSugar?'white':'#374151'};cursor:pointer;transition:all 0.15s">${s}</button>`
+    `<button class="opt-pill ${s===state.sheetSugar?'sel':''}" onclick="selectOpt('sugar','${s}')" id="sug-${s.replace('%','')}">${s}</button>`
   ).join('');
 
-  // Ice
+  // Đá
   document.getElementById('si-ices').innerHTML = ICE_OPTIONS.map(ic =>
-    `<button onclick="selectOpt('ice','${ic}')" id="ice-${ic.replace(' ','_')}"
-      style="padding:8px 14px;border-radius:99px;font-size:0.82rem;font-weight:800;border:2px solid ${ic===state.sheetIce?'var(--brand)':'#e5e7eb'};background:${ic===state.sheetIce?'var(--brand)':'white'};color:${ic===state.sheetIce?'white':'#374151'};cursor:pointer;transition:all 0.15s">${ic}</button>`
+    `<button class="opt-pill ${ic===state.sheetIce?'sel':''}" onclick="selectOpt('ice','${ic}')" id="ice-${ic.replace(/ /g,'_')}">${ic}</button>`
   ).join('');
 
-  // Toppings
+  // Topping
   const toppingWrap = document.getElementById('si-topping-wrap');
   if (item.toppings && item.toppings.length) {
     toppingWrap.classList.remove('hidden');
     document.getElementById('si-toppings').innerHTML = item.toppings.map(t =>
-      `<label style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f3f4f6;border-radius:14px;cursor:pointer">
+      `<div class="topping-row" id="tp-${t.name.replace(/ /g,'_')}" onclick="toggleTopping('${t.name}',${t.price||0})">
         <div>
-          <div style="font-weight:800;font-size:0.9rem">${t.name}</div>
-          ${t.price > 0 ? `<div style="font-size:0.78rem;color:var(--brand);font-weight:700">+${t.price.toLocaleString('vi')}đ</div>` : ''}
+          <div class="topping-name">${t.name}</div>
+          ${t.price > 0 ? `<div class="topping-price">+${t.price.toLocaleString('vi')}đ</div>` : ''}
         </div>
-        <input type="checkbox" onchange="toggleTopping('${t.name}',${t.price||0},this.checked)"
-          style="width:20px;height:20px;accent-color:var(--brand)">
-      </label>`
+        <div class="topping-check">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+      </div>`
     ).join('');
-  } else {
-    toppingWrap.classList.add('hidden');
-  }
+  } else { toppingWrap.classList.add('hidden'); }
+
+  // Scroll body về đầu
+  document.getElementById('item-body').scrollTop = 0;
 
   updateSheetSubtotal();
   document.getElementById('sheet-item').classList.add('open');
+  _initSheetSwipe();
 }
 
-function renderSizeBtns(item) {
+function _renderSizePills(item) {
   document.getElementById('si-sizes').innerHTML = ['M','L'].map(sz => {
     const price = sz === 'M' ? item.priceM : item.priceL;
     if (!price) return '';
     const sel = state.sheetSize === sz;
-    return `<button onclick="selectSize('${sz}')"
-      style="flex:1;padding:12px;border-radius:14px;font-weight:900;font-size:0.9rem;
-             border:2px solid ${sel?'var(--brand)':'#e5e7eb'};
-             background:${sel?'var(--brand)':'white'};
-             color:${sel?'white':'#374151'};cursor:pointer;transition:all 0.15s">
-      Size ${sz}<br><span style="font-size:0.78rem;opacity:0.85">${price.toLocaleString('vi')}đ</span>
+    return `<button class="size-pill ${sel?'sel':''}" onclick="selectSize('${sz}')">
+      Size ${sz}<span class="size-price">${price.toLocaleString('vi')}đ</span>
     </button>`;
   }).join('');
 }
 
+function closeSheet() {
+  const el = document.getElementById('sheet-item');
+  const sheet = document.getElementById('item-sheet-inner');
+  sheet.style.transform = '';
+  el.classList.add('closing');
+  setTimeout(() => {
+    el.classList.remove('open', 'closing');
+    sheet.style.transform = '';
+  }, 280);
+}
+
 function selectSize(sz) {
   state.sheetSize = sz;
-  renderSizeBtns(state.currentItem);
+  _renderSizePills(state.currentItem);
   updateSheetSubtotal();
 }
 
 function selectOpt(type, val) {
-  if (type === 'sugar') state.sheetSugar = val;
-  if (type === 'ice')   state.sheetIce   = val;
-  // Re-render buttons
   if (type === 'sugar') {
-    SUGAR_OPTIONS.forEach(s => {
-      const btn = document.getElementById(`sug-${s.replace('%','')}`);
-      if (!btn) return;
-      const sel = s === val;
-      btn.style.borderColor = sel ? 'var(--brand)' : '#e5e7eb';
-      btn.style.background  = sel ? 'var(--brand)' : 'white';
-      btn.style.color       = sel ? 'white' : '#374151';
-    });
+    state.sheetSugar = val;
+    document.querySelectorAll('#si-sugars .opt-pill').forEach(b =>
+      b.classList.toggle('sel', b.textContent.trim() === val));
   }
   if (type === 'ice') {
-    ICE_OPTIONS.forEach(ic => {
-      const btn = document.getElementById(`ice-${ic.replace(' ','_')}`);
-      if (!btn) return;
-      const sel = ic === val;
-      btn.style.borderColor = sel ? 'var(--brand)' : '#e5e7eb';
-      btn.style.background  = sel ? 'var(--brand)' : 'white';
-      btn.style.color       = sel ? 'white' : '#374151';
-    });
+    state.sheetIce = val;
+    document.querySelectorAll('#si-ices .opt-pill').forEach(b =>
+      b.classList.toggle('sel', b.textContent.trim() === val));
   }
   updateSheetSubtotal();
 }
 
-function toggleTopping(name, price, checked) {
-  if (checked) {
-    state.sheetToppings.push({ name, price });
+function toggleTopping(name, price) {
+  const id  = 'tp-' + name.replace(/ /g,'_');
+  const row = document.getElementById(id);
+  const idx = state.sheetToppings.findIndex(t => t.name === name);
+  if (idx >= 0) {
+    state.sheetToppings.splice(idx, 1);
+    row?.classList.remove('sel');
   } else {
-    state.sheetToppings = state.sheetToppings.filter(t => t.name !== name);
+    state.sheetToppings.push({ name, price });
+    row?.classList.add('sel');
   }
   updateSheetSubtotal();
 }
@@ -1772,14 +1980,8 @@ function changeSheetQty(delta) {
 function getSheetItemPrice() {
   const item = state.currentItem;
   if (!item) return 0;
-  let base = 0;
-  if (item.hasSizes) {
-    base = state.sheetSize === 'L' ? item.priceL : item.priceM;
-  } else {
-    base = item.basePrice;
-  }
-  const toppingExtra = state.sheetToppings.reduce((s, t) => s + (t.price || 0), 0);
-  return base + toppingExtra;
+  let base = item.hasSizes ? (state.sheetSize === 'L' ? item.priceL : item.priceM) : item.basePrice;
+  return base + state.sheetToppings.reduce((s, t) => s + (t.price || 0), 0);
 }
 
 function updateSheetSubtotal() {
@@ -1813,14 +2015,7 @@ function addToCart() {
   showToast(`Đã thêm ${item.name}!`);
 }
 
-function closeSheet() {
-  document.getElementById('sheet-item').classList.remove('open');
-}
 
-// Click backdrop để đóng sheet
-document.getElementById('sheet-item').addEventListener('click', function(e) {
-  if (e.target === this) closeSheet();
-});
 
 // ======================================================
 // CART
