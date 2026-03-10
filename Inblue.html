@@ -147,7 +147,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="info-banner">
     <span class="ib-icon">✅</span>
     <div class="ib-text">
-      <strong>2 fix quan trọng:</strong> paperW = <strong>48mm</strong> (printhead thực tế, không phải 58mm) · Chunk = <strong>128 bytes</strong> (tránh tràn buffer BLE). Offset 0mm = mép trái của vùng in 48mm (cách mép giấy 5mm).
+      <strong>Logic mới:</strong> Giấy sát mép phải · Printhead 48mm · Tem 40mm <strong>tự động căn giữa</strong> (4mm mỗi bên) · Chunk 128 bytes · Slider chỉ để tinh chỉnh ±4mm nếu cần.
     </div>
   </div>
 
@@ -189,9 +189,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 
   <div class="card">
     <div class="sl-row">
-      <div class="sl-head"><span class="sl-name">Offset trái</span><span class="sl-val" id="vOff">18 mm</span></div>
-      <div class="sl-sub">Lề trống bên trái tem trên giấy 58mm</div>
-      <input type="range" id="slOff" min="0" max="8" step="0.5" value="4">
+      <div class="sl-head"><span class="sl-name">Tinh chỉnh vị trí ngang</span><span class="sl-val" id="vOff">18 mm</span></div>
+      <div class="sl-sub">Fine-tune vị trí ±4mm · 0 = căn giữa tự động</div>
+      <input type="range" id="slOff" min="-4" max="4" step="0.5" value="0">
     </div>
     <div class="sl-row">
       <div class="sl-head"><span class="sl-name">Gap phía trên</span><span class="sl-val" id="vGap">0 mm</span></div>
@@ -261,9 +261,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="log-card">
     <div class="log-head"><span class="log-title">Console</span><button class="log-clear" onclick="clearLog()">Xóa</button></div>
     <div class="log-body" id="logBody">
-      <div class="ll ok">› paperW=48mm (384 dots) — đúng printhead MP583</div>
-      <div class="ll ok">› Chunk=128 bytes + delay 30ms — tránh tràn buffer BLE</div>
-      <div class="ll info">› Offset 0mm = mép trái printhead (cách mép giấy 5mm)</div>
+      <div class="ll ok">› Giấy sát mép phải · Printhead 48mm · Auto-center</div>
+      <div class="ll ok">› Tem 40mm căn giữa: offset tự động = 4mm mỗi bên</div>
+      <div class="ll info">› Slider chỉ để tinh chỉnh ±4mm nếu lệch nhẹ</div>
     </div>
   </div>
 </div>
@@ -383,14 +383,26 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
   const MM2PX_H = currentDpiH / 25.4;  // DPI chiều cao (có thể khác ngang)
   const MM2PX_W = DPI / 25.4;
 
-  // Printhead thực tế chỉ 48mm (384 dots) — không phải 58mm
-  // 2 bên mép giấy mỗi bên 5mm không in được
-  const paperW  = Math.round(48 * MM2PX_W);   // 384 dots — đúng printhead width
-  const labelW  = Math.round(40 * MM2PX_W);   // 319 dots
-  const labelH  = Math.round(30 * MM2PX_H);   // chiều cao dùng DPI_H riêng
-  // offMM từ mép printhead (không phải mép giấy) — mép giấy đã lệch 5mm rồi
-  const offDots = Math.round(offMM * MM2PX_W);
-  const gapDots = Math.round(gapMM * MM2PX_H);
+  // ── Printhead thực tế: 48mm (384 dots) ──
+  // Giấy 58mm đặt SÁT MÉP PHẢI → 10mm bên trái ra ngoài printhead
+  // Tem 40mm tự động căn GIỮA printhead 48mm → margin = (48-40)/2 = 4mm mỗi bên
+  // Người dùng KHÔNG cần chỉnh offset — code tự tính
+  const PRINTHEAD_MM = 48;
+  const LABEL_W_MM   = 40;
+  const LABEL_H_MM   = 30;
+
+  const paperW   = Math.round(PRINTHEAD_MM * MM2PX_W); // 384 dots
+  const labelW   = Math.round(LABEL_W_MM   * MM2PX_W); // 319 dots
+  const labelH   = Math.round(LABEL_H_MM   * MM2PX_H); // 239 dots
+
+  // Auto-center: căn giữa printhead, bỏ qua offMM từ UI
+  const autoOffMM = (PRINTHEAD_MM - LABEL_W_MM) / 2; // = 4mm
+  // Fine-tune: người dùng có thể dịch ±4mm nếu muốn
+  const finalOffMM = autoOffMM + offMM;
+  const offDots  = Math.round(Math.max(0, finalOffMM) * MM2PX_W); // 32 dots mặc định
+  const gapDots  = Math.round(gapMM * MM2PX_H);
+
+  log(\`Auto-center: printhead=\${PRINTHEAD_MM}mm, label=\${LABEL_W_MM}mm → off=\${finalOffMM.toFixed(1)}mm (\${offDots}dots)\`, 'info');
   const useDither = document.getElementById('ckDither').checked;
 
   log(`W=${paperW}px H=${labelH}px off=${offDots} DPI_H=${currentDpiH}`,'info');
@@ -521,7 +533,8 @@ async function testPrint() {
   if (!isConn) { toast('Chưa kết nối!'); return; }
   log('Test: 2 đường kẻ cách nhau 10mm (DPI=203)...','info');
   try {
-    const paperW = Math.round(48 * MM2PX);  // 48mm printhead thực tế
+    const paperW = Math.round(48 * MM2PX);  // 48mm printhead
+    const autoOffDots = Math.round(4 * MM2PX); // 4mm auto-center
     const totalH = Math.round(25 * MM2PX); // 25mm total
     const line1  = Math.round(5  * MM2PX); // 5mm từ top
     const line2  = Math.round(15 * MM2PX); // 15mm từ top → cách 10mm
@@ -596,12 +609,13 @@ function upd() {
   const off = parseFloat(document.getElementById('slOff').value);
   const gap = parseFloat(document.getElementById('slGap').value);
   const nf  = document.getElementById('ckFeed').checked;
-  document.getElementById('vOff').textContent = off+' mm';  // 0..8mm trong vùng 48mm printhead
+  const sign = off >= 0 ? '+' : '';
+  document.getElementById('vOff').textContent = sign+off+' mm';
   document.getElementById('vGap').textContent = gap+' mm';
   document.getElementById('spO').textContent  = off+' mm';
   document.getElementById('spF').textContent  = nf?'INSTANT':'FEED';
   document.getElementById('spF').className    = 'sv '+(nf?'gr':'rd');
-  document.getElementById('pvSub').textContent = '40×30 @ '+off+'mm';
+  const autoOff = 4 + off; document.getElementById('pvSub').textContent = '40×30 @ '+autoOff.toFixed(1)+'mm (auto)';
   const offPx=off*PVSC, gapPx=gap*PVSC, lwPx=40*PVSC, lhPx=30*PVSC;
   document.getElementById('gs').style.height    = gapPx+'px';
   document.getElementById('os').style.width     = offPx+'px';
