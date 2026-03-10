@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <!-- PWA — scope chỉ pos.html, không ảnh hưởng file khác cùng domain -->
+  <link rel="manifest" href="/pos-manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cafe 33">
+  <meta name="theme-color" content="#006241">
+
 <title>POS The cafe 33</title>
 <meta name="apple-mobile-web-app-title" content="POS The cafe 33">
 <meta charset="UTF-8">
@@ -11702,6 +11710,53 @@ document.getElementById('print-sticker-modal').addEventListener('click', functio
 });
 </script>
 
+
+<script>
+// ── PWA Service Worker — chỉ đăng ký tại đúng pos.html ──
+(function() {
+  if (!('serviceWorker' in navigator)) return;
+
+  // Double-check: chỉ chạy nếu đang ở đúng URL pos.html
+  if (!location.pathname.endsWith('/pos.html') && location.pathname !== '/') return;
+
+  navigator.serviceWorker.register('/pos-sw.js', {
+    scope: '/pos.html'
+  }).then(function(reg) {
+    console.log('[PWA] SW registered, scope:', reg.scope);
+  }).catch(function(err) {
+    console.warn('[PWA] SW failed:', err);
+  });
+
+  // ── Install prompt: chỉ hiện khi ở đúng pos.html ──
+  var deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', function(e) {
+    // Chặn prompt tự động
+    e.preventDefault();
+    deferredPrompt = e;
+    // Hiện nút install tuỳ chỉnh (nếu muốn)
+    var btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.style.display = 'flex';
+  });
+
+  window.addEventListener('appinstalled', function() {
+    deferredPrompt = null;
+    var btn = document.getElementById('pwa-install-btn');
+    if (btn) btn.style.display = 'none';
+  });
+
+  // Export để nút install có thể gọi
+  window.triggerPwaInstall = function() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(result) {
+      deferredPrompt = null;
+      var btn = document.getElementById('pwa-install-btn');
+      if (btn) btn.style.display = 'none';
+    });
+  };
+})();
+</script>
+
 </body>
 </html>
-
