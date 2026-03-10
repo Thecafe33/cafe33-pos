@@ -9166,6 +9166,10 @@ function openDiscountManager() {
 
 function switchMgrTab(tab) {
     var tabs = ['gift','screen','label','sticker'];
+    // Ẩn/hiện mgr-col-b-wrap: sticker dùng full-width col-C nên ẩn cột B
+    var bWrap = document.getElementById('mgr-col-b-wrap');
+    if (bWrap) bWrap.style.display = (tab === 'sticker') ? 'none' : 'flex';
+
     tabs.forEach(function(t) {
         var btn = document.getElementById('mgr-tab-'+t);
         var b   = document.getElementById('mgr-b-'+t);
@@ -9176,12 +9180,19 @@ function switchMgrTab(tab) {
             btn.style.color       = active ? 'white'   : '#6b7280';
             btn.style.boxShadow   = active ? '0 2px 10px rgba(0,98,65,0.2)' : 'none';
         }
-        if (b) { b.style.display = active ? 'flex' : 'none'; if (active) b.style.flexDirection='column'; }
-        if (c) { c.style.display = active ? 'flex' : 'none'; if (active) c.style.flexDirection='column'; }
+        // Col B: sticker tab không dùng col-B nên luôn ẩn
+        if (b && t !== 'sticker') {
+            b.style.display = active ? 'flex' : 'none';
+            if (active) b.style.flexDirection = 'column';
+        }
+        if (c) {
+            c.style.display = active ? 'flex' : 'none';
+            if (active) c.style.flexDirection = 'column';
+        }
     });
     if (tab === 'gift')    renderDiscountList();
     if (tab === 'screen')  screenLoadSlides();
-    if (tab === 'sticker') { stickerLoadConfig(); var bEl = document.getElementById('mgr-b-sticker'); if(bEl) bEl.style.display='none'; }
+    if (tab === 'sticker') stickerLoadConfig();
 }
 
 function giftVoucherAddNewBtn() {
