@@ -194,9 +194,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
       <input type="range" id="slOff" min="-4" max="4" step="0.5" value="0">
     </div>
     <div class="sl-row">
-      <div class="sl-head"><span class="sl-name">Gap phía trên</span><span class="sl-val" id="vGap">0 mm</span></div>
-      <div class="sl-sub">Khoảng trắng phía trên tem · 0–15mm</div>
-      <input type="range" id="slGap" min="0" max="15" step="0.5" value="0">
+      <div class="sl-head"><span class="sl-name">Gap sau khi in</span><span class="sl-val" id="vGap">3 mm</span></div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:10px">Feed thêm sau khi in để đến đầu tem kế · thử 2–5mm</div>
+      <input type="range" id="slGap" min="0" max="10" step="0.5" value="3">
     </div>
   </div>
   <div class="card">
@@ -209,13 +209,19 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
         <div class="sw-name">Dithering (Floyd-Steinberg)</div>
         <div class="sw-desc">Làm mịn ảnh trước khi in — tốt hơn cho ảnh có gradient</div>
       </div>
-      <label class="mdsw"><input type="checkbox" id="ckDither" checked><div class="mdt"><div class="mdth"></div></div></label>
+      <label class="mdsw"><input type="checkbox" id="ckDither"><div class="mdt"><div class="mdth"></div></div></label>
     </div>
   </div>
 
   <!-- IMAGE EDITOR CARD -->
   <div class="sec">Chỉnh ảnh & Preview</div>
   <div class="card">
+    <!-- Threshold -->
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-name">Threshold (độ nhạy)</span><span class="sl-val" id="vThresh">180</span></div>
+      <div style="font-size:12px;color:var(--ink3);margin-bottom:10px">Tăng để bắt màu nhạt hơn (nâu, xám) · 140=chỉ đen · 200=bắt hết màu nhạt</div>
+      <input type="range" id="slThresh" min="100" max="240" step="5" value="180">
+    </div>
     <!-- Contrast -->
     <div class="sl-row">
       <div class="sl-head"><span class="sl-name">Contrast</span><span class="sl-val" id="vContrast">+50</span></div>
@@ -326,6 +332,7 @@ const PVSC   = 160 / 58;
 
 let imgData=null, bleDevice=null, bleChar=null, isConn=false;
 let contrastVal = 50; // default contrast boost
+let threshVal = 180;  // threshold: cao hơn = bắt màu nhạt hơn
 
 // ── UI ──
 function log(msg,t=''){const b=document.getElementById('logBody');const d=document.createElement('div');d.className='ll '+t;d.textContent='› '+msg;b.appendChild(d);b.scrollTop=b.scrollHeight;}
@@ -495,7 +502,7 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
       for (let x = 0; x < paperW; x++) {
         const idx2 = y * paperW + x;
         const old = gray[idx2];
-        const nw  = old < 140 ? 0 : 255; // threshold 140 = đậm hơn
+        const nw  = old < threshVal ? 0 : 255;
         gray[idx2] = nw;
         const err = old - nw;
         if (x+1 < paperW)           gray[idx2+1]        += err * 7/16;
@@ -517,11 +524,7 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
   bytes.push(0x1B, 0x40);        // ESC @ reset
   bytes.push(0x1B, 0x33, 0x00);  // ESC 3 0 — line spacing 0
 
-  // Gap feed
-  if (gapDots > 0) {
-    let r = gapDots;
-    while (r > 0) { const n = Math.min(255, r); bytes.push(0x1B, 0x4A, n); r -= n; }
-  }
+  // Gap trước ảnh đã bỏ — slider Gap = feed SAU khi in đến tem kế
 
   // GS v 0 header
   bytes.push(0x1D, 0x76, 0x30, mode);
@@ -534,17 +537,20 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
       let b = 0;
       for (let bit = 0; bit < 8; bit++) {
         const x = bx * 8 + bit;
-        if (x < paperW && gray[y * paperW + x] < 128) b |= (0x80 >> bit);
+        if (x < paperW && gray[y * paperW + x] < threshVal) b |= (0x80 >> bit);
       }
       bytes.push(b);
     }
   }
 
-  // Feed sau khi in — đẩy đến tem tiếp theo
-  // Gap giữa các tem ~3-4mm + phần còn lại của tem hiện tại
-  // noFeed=false: feed thêm để đến đầu tem kế (khoảng 5mm)
-  const feedDots = noFeed ? 8 : Math.min(255, Math.round(5 * MM2PX_H));
-  bytes.push(0x1B, 0x4A, feedDots);
+  // Feed sau khi in = gapMM (slider "Gap sau khi in")
+  // Đẩy giấy đúng khoảng cách gap giữa 2 tem → tem kế bắt đầu đúng vị trí
+  if (!noFeed && gapMM > 0) {
+    let rem = Math.round(gapMM * MM2PX_H);
+    while(rem > 0){ const n=Math.min(255,rem); bytes.push(0x1B,0x4A,n); rem-=n; }
+  } else {
+    bytes.push(0x1B, 0x4A, 8); // minimal feed
+  }
 
   log(`GS v 0 mode=${mode}: ${bpr}bpr × ${labelH}rows = ${bytes.length} bytes`,'ok');
   return new Uint8Array(bytes);
@@ -579,7 +585,7 @@ async function doPrint() {
   log('=== BẮT ĐẦU IN (ESC * 33) ===','info'); setProgress(5);
   try {
     const off = parseFloat(document.getElementById('slOff').value);
-    const gap = parseFloat(document.getElementById('slGap').value);
+    const gap = parseFloat(document.getElementById('slGap').value); // feed sau in
     const nf  = document.getElementById('ckFeed').checked;
     const data = await imgToEscPos(imgData, off, gap, nf);
     setProgress(25);
@@ -674,11 +680,11 @@ function clearImg() {
 // ── Preview ──
 function upd() {
   const off = parseFloat(document.getElementById('slOff').value);
-  const gap = parseFloat(document.getElementById('slGap').value);
+  const gap = parseFloat(document.getElementById('slGap').value); // feed sau in
   const nf  = document.getElementById('ckFeed').checked;
   const sign = off >= 0 ? '+' : '';
   document.getElementById('vOff').textContent = sign+off+' mm';
-  document.getElementById('vGap').textContent = gap+' mm';
+  document.getElementById('vGap').textContent = gap.toFixed(1)+' mm';
   document.getElementById('spO').textContent  = off+' mm';
   document.getElementById('spF').textContent  = nf?'INSTANT':'FEED';
   document.getElementById('spF').className    = 'sv '+(nf?'gr':'rd');
@@ -725,6 +731,11 @@ function rotateImg(deg) {
   updatePreviewCanvas();
 }
 
+document.getElementById('slThresh').addEventListener('input', function(){
+  threshVal = parseInt(this.value);
+  document.getElementById('vThresh').textContent = threshVal;
+  updatePreviewCanvas();
+});
 document.getElementById('slContrast').addEventListener('input', function(){
   contrastVal = parseInt(this.value);
   const sign = contrastVal>=0?'+':'';
@@ -769,7 +780,7 @@ async function updatePreviewCanvas() {
   for(let i=0;i<px.length;i+=4){
     const g = 0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
     const boosted = Math.max(0,Math.min(255, factor*(g-128)+128));
-    const out = boosted < 140 ? 0 : 255;
+    const out = boosted < threshVal ? 0 : 255;
     px[i]=px[i+1]=px[i+2]=out; px[i+3]=255;
   }
   ctx.putImageData(id,0,0);
