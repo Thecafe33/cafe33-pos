@@ -147,7 +147,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="info-banner">
     <span class="ib-icon">✅</span>
     <div class="ib-text">
-      <strong>Logic mới:</strong> Giấy sát mép phải · Printhead 48mm · Tem 40mm <strong>tự động căn giữa</strong> (4mm mỗi bên) · Chunk 128 bytes · Slider chỉ để tinh chỉnh ±4mm nếu cần.
+      <strong>Thông số:</strong> Giấy <strong>40mm</strong> sát mép phải · Printhead 48mm · In <strong>35mm</strong> căn giữa giấy · Auto offset = 10.5mm · Feed tự động đến tem tiếp theo.
     </div>
   </div>
 
@@ -190,7 +190,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="card">
     <div class="sl-row">
       <div class="sl-head"><span class="sl-name">Tinh chỉnh vị trí ngang</span><span class="sl-val" id="vOff">18 mm</span></div>
-      <div class="sl-sub">Fine-tune vị trí ±4mm · 0 = căn giữa tự động</div>
+      <div class="sl-sub">Fine-tune ±4mm nếu lệch · 0 = tự động căn giữa 35mm trong giấy 40mm</div>
       <input type="range" id="slOff" min="-4" max="4" step="0.5" value="0">
     </div>
     <div class="sl-row">
@@ -261,9 +261,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="log-card">
     <div class="log-head"><span class="log-title">Console</span><button class="log-clear" onclick="clearLog()">Xóa</button></div>
     <div class="log-body" id="logBody">
-      <div class="ll ok">› Giấy sát mép phải · Printhead 48mm · Auto-center</div>
-      <div class="ll ok">› Tem 40mm căn giữa: offset tự động = 4mm mỗi bên</div>
-      <div class="ll info">› Slider chỉ để tinh chỉnh ±4mm nếu lệch nhẹ</div>
+      <div class="ll ok">› Giấy 40mm sát phải · In 35mm · Auto offset=10.5mm</div>
+      <div class="ll ok">› Feed tự động đến tem tiếp · Threshold 140 = đậm hơn</div>
+      <div class="ll info">› Slider fine-tune ±4mm nếu lệch · DPI dọc điều chỉnh nén</div>
     </div>
   </div>
 </div>
@@ -310,84 +310,60 @@ function setProgress(pct){
 
 // ── BLE ──
 async function toggleBle(){if(isConn)await disconnectBle();else await connectBle();}
-async function connectBle() {
-  if (!navigator.bluetooth) {
-    toast('⚠️ Cần Chrome & HTTPS');
-    log('Web Bluetooth không khả dụng. Nhớ dùng HTTPS hoặc localhost!','err');
-    return;
-  }
-  
-  try {
-    log('Bắt đầu mở popup quét BLE...','info');
-    // 1. GỌI REQUEST NGAY LẬP TỨC để không mất user gesture
-    const device = await navigator.bluetooth.requestDevice({
-      acceptAllDevices: true,
-      optionalServices: [SVC, SVC2]
+async function connectBle(){
+  if(!navigator.bluetooth){toast('⚠️ Cần Chrome Android');log('Web Bluetooth không khả dụng','err');return;}
+  const btn=document.getElementById('btnBle');
+  btn.disabled=true;btn.innerHTML='⏳ &nbsp;Đang tìm...';
+  setStatus('ing','Đang kết nối...');setProgress(10);
+  log('Quét BLE...','info');
+  try{
+    bleDevice=await navigator.bluetooth.requestDevice({
+      // Dùng filters cụ thể — tránh treo UI trên Chrome Android
+      filters:[
+        {name:'MP583'},
+        {namePrefix:'MP583'},
+      ],
+      optionalServices:[SVC, SVC2],
     });
+    log('Tìm thấy: '+bleDevice.name,'ok');setProgress(35);
+    const server=await bleDevice.gatt.connect();
+    log('GATT OK','ok');setProgress(55);
 
-    // 2. Chờ bạn chọn thiết bị xong mới khóa nút và update UI
-    bleDevice = device;
-    const btn = document.getElementById('btnBle');
-    btn.disabled = true; 
-    btn.innerHTML = '⏳ &nbsp;Đang kết nối...';
-    setStatus('ing','Đang kết nối...'); 
-    setProgress(10);
-    
-    log('Tìm thấy: ' + bleDevice.name, 'ok'); 
-    setProgress(35);
-
-    // 3. Kết nối GATT
-    const server = await bleDevice.gatt.connect();
-    log('GATT OK', 'ok'); 
-    setProgress(55);
-
-    // Dùng lại logic lặp service bao quát của file ban đầu
-    const svcs = await server.getPrimaryServices();
-    let char = null;
-    let foundInSPP = false;
-    
-    for (const s of svcs) {
-      try {
-        const cs = await s.getCharacteristics();
-        for (const c of cs) {
-          const w = c.properties.write, wnr = c.properties.writeWithoutResponse;
-          if (s.uuid.startsWith('49535343') && (wnr || w)) {
-            if (!char || (!foundInSPP)) { char = c; foundInSPP = true; }
-          } else if (!char && (wnr || w)) {
-            char = c;
-          }
+    let char=null;
+    // Thử service 49535343 trước (SPP bridge — kênh in thật)
+    try{
+      const svc=await server.getPrimaryService(SVC);
+      const chars=await svc.getCharacteristics();
+      for(const c of chars){
+        log('49535343 char: '+c.uuid.slice(0,8)+' WNR='+c.properties.writeWithoutResponse,'info');
+        if(c.properties.writeWithoutResponse||c.properties.write) char=char||c;
+      }
+      if(char) log('✓ SPP 49535343 char OK','ok');
+    }catch(e){
+      log('49535343 thất bại, thử 0x18F0...','warn');
+      try{
+        const svc2=await server.getPrimaryService(SVC2);
+        const chars=await svc2.getCharacteristics();
+        for(const c of chars){
+          if(c.properties.writeWithoutResponse||c.properties.write) char=char||c;
         }
-      } catch(e) { log('Bỏ qua svc ' + s.uuid.slice(0,8), 'warn'); }
+        if(char) log('✓ 0x18F0 char OK','ok');
+      }catch(e2){ log('Cả 2 service đều lỗi: '+e2.message,'err'); }
     }
-
-    if (!char) throw new Error('Không tìm thấy writable characteristic');
-    
-    bleChar = char; 
-    isConn = true; 
-    setProgress(100); 
-    setTimeout(() => setProgress(null), 500);
-    
+    if(!char)throw new Error('Không tìm thấy writable characteristic');
+    bleChar=char;isConn=true;setProgress(100);setTimeout(()=>setProgress(null),500);
+    log('✓ Sẵn sàng in! WNR='+char.properties.writeWithoutResponse,'ok');
     setStatus('con','Đã kết nối');
-    btn.disabled = false; 
-    btn.className = 'btn-ble on'; 
-    btn.innerHTML = '🔗 &nbsp;Ngắt kết nối';
-    document.getElementById('led1').className = 'led con';
-    document.getElementById('btnPrint').disabled = !imgData;
-    toast('✓ Đã kết nối ' + bleDevice.name);
-    
-    bleDevice.addEventListener('gattserverdisconnected', onDis);
-  } catch(e) {
-    // In rõ lỗi ra console web để bạn dễ nhìn
-    log('Lỗi: ' + e.message, 'err'); 
-    toast('Lỗi: ' + e.message, 3500);
-    setStatus('dis','Chưa kết nối'); 
-    setProgress(null);
-    const btn = document.getElementById('btnBle');
-    if (btn) {
-      btn.disabled = false; 
-      btn.className = 'btn-ble'; 
-      btn.innerHTML = '📶 &nbsp;Thử lại';
-    }
+    document.getElementById('bleDesc').textContent='✓ Đã kết nối. In trực tiếp ESC * 33 — kích thước chính xác.';
+    btn.disabled=false;btn.className='btn-ble on';btn.innerHTML='🔗 &nbsp;Ngắt kết nối';
+    document.getElementById('led1').className='led con';
+    document.getElementById('btnPrint').disabled=!imgData;
+    toast('✓ Đã kết nối '+bleDevice.name);
+    bleDevice.addEventListener('gattserverdisconnected',onDis);
+  }catch(e){
+    log('Lỗi: '+e.message,'err');toast('Lỗi: '+e.message,3500);
+    setStatus('dis','Chưa kết nối');setProgress(null);
+    btn.disabled=false;btn.className='btn-ble';btn.innerHTML='📶 &nbsp;Thử lại';
   }
 }
 function onDis(){
@@ -414,22 +390,30 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
   // Giấy 58mm đặt SÁT MÉP PHẢI → 10mm bên trái ra ngoài printhead
   // Tem 40mm tự động căn GIỮA printhead 48mm → margin = (48-40)/2 = 4mm mỗi bên
   // Người dùng KHÔNG cần chỉnh offset — code tự tính
-  const PRINTHEAD_MM = 48;
-  const LABEL_W_MM   = 40;
-  const LABEL_H_MM   = 30;
+  // ══════════════════════════════════════════════
+  // THÔNG SỐ THỰC TẾ AIBECY MP583
+  // Printhead    : 48mm = 384 dots
+  // Giấy tem     : 40mm đặt SÁT MÉP PHẢI printhead
+  // Gap trái     : 48 - 40 = 8mm (không có giấy)
+  // Vùng in thực : 35mm (2 mép giấy mỗi bên 2.5mm)
+  // Auto offset  : 8mm + 2.5mm = 10.5mm = 84 dots
+  // ══════════════════════════════════════════════
+  const PRINTHEAD_MM  = 48;
+  const PAPER_MM      = 40;
+  const PRINTABLE_MM  = 35;
+  const LABEL_H_MM    = 30;
 
-  const paperW   = Math.round(PRINTHEAD_MM * MM2PX_W); // 384 dots
-  const labelW   = Math.round(LABEL_W_MM   * MM2PX_W); // 319 dots
-  const labelH   = Math.round(LABEL_H_MM   * MM2PX_H); // 239 dots
+  const paperW  = Math.round(PRINTHEAD_MM * MM2PX_W); // 384 dots
+  const labelW  = Math.round(PRINTABLE_MM * MM2PX_W); // 280 dots = 35mm
+  const labelH  = Math.round(LABEL_H_MM   * MM2PX_H); // 239 dots
 
-  // Auto-center: căn giữa printhead, bỏ qua offMM từ UI
-  const autoOffMM = (PRINTHEAD_MM - LABEL_W_MM) / 2; // = 4mm
-  // Fine-tune: người dùng có thể dịch ±4mm nếu muốn
+  // offset = gap trái (8mm) + margin trên giấy (2.5mm) = 10.5mm
+  const autoOffMM  = (PRINTHEAD_MM - PAPER_MM) + (PAPER_MM - PRINTABLE_MM) / 2.0;
   const finalOffMM = autoOffMM + offMM;
-  const offDots  = Math.round(Math.max(0, finalOffMM) * MM2PX_W); // 32 dots mặc định
-  const gapDots  = Math.round(gapMM * MM2PX_H);
+  const offDots    = Math.round(Math.max(0, finalOffMM) * MM2PX_W);
+  const gapDots    = Math.round(gapMM * MM2PX_H);
 
-  log(`Auto-center: printhead=${PRINTHEAD_MM}mm, label=${LABEL_W_MM}mm → off=${finalOffMM.toFixed(1)}mm (${offDots}dots)`, 'info');
+  log('off=' + finalOffMM.toFixed(1) + 'mm (' + offDots + 'dots) | label=' + labelW + 'x' + labelH + 'px', 'info');
   const useDither = document.getElementById('ckDither').checked;
 
   log(`W=${paperW}px H=${labelH}px off=${offDots} DPI_H=${currentDpiH}`,'info');
@@ -459,7 +443,7 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
       for (let x = 0; x < paperW; x++) {
         const idx2 = y * paperW + x;
         const old = gray[idx2];
-        const nw  = old < 128 ? 0 : 255;
+        const nw  = old < 140 ? 0 : 255; // threshold 140 = đậm hơn
         gray[idx2] = nw;
         const err = old - nw;
         if (x+1 < paperW)           gray[idx2+1]        += err * 7/16;
@@ -504,8 +488,11 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
     }
   }
 
-  // Feed after
-  bytes.push(0x1B, 0x4A, noFeed ? 4 : Math.min(255, Math.round(8 * MM2PX_H)));
+  // Feed sau khi in — đẩy đến tem tiếp theo
+  // Gap giữa các tem ~3-4mm + phần còn lại của tem hiện tại
+  // noFeed=false: feed thêm để đến đầu tem kế (khoảng 5mm)
+  const feedDots = noFeed ? 8 : Math.min(255, Math.round(5 * MM2PX_H));
+  bytes.push(0x1B, 0x4A, feedDots);
 
   log(`GS v 0 mode=${mode}: ${bpr}bpr × ${labelH}rows = ${bytes.length} bytes`,'ok');
   return new Uint8Array(bytes);
@@ -676,6 +663,3 @@ upd();
 </script>
 </body>
 </html>
-
-
-
