@@ -145,7 +145,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="info-banner">
     <span class="ib-icon">✅</span>
     <div class="ib-text">
-      <strong>Fix ảnh bị nén:</strong> Đã chuyển sang dùng <strong>ESC * m=33</strong> (24-dot stripe) — đúng cách RawBT dùng. Không dùng GS v 0 nữa vì firmware Aibecy xử lý sai tỷ lệ chiều cao với lệnh đó.
+      <strong>Fix kênh in:</strong> Đã chuyển sang <strong>service 49535343</strong> (SPP-over-BLE) — đây là kênh RawBT dùng để giao tiếp với print engine. Service 0x18F0/0x2AF1 chỉ là status, không in được.
     </div>
   </div>
 
@@ -238,8 +238,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="log-card">
     <div class="log-head"><span class="log-title">Console</span><button class="log-clear" onclick="clearLog()">Xóa</button></div>
     <div class="log-body" id="logBody">
-      <div class="ll info">› Sử dụng ESC * m=33 (24-dot double density stripe) — giống RawBT</div>
-      <div class="ll info">› Line spacing = 24 dots = đúng 1 stripe, không bị nén</div>
+      <div class="ll info">› Kết nối qua SPP 49535343 — kênh in thật của MP583</div>
+      <div class="ll info">› ESC * 33 (24-dot stripe) — line spacing=24, không bị nén</div>
+      <div class="ll warn">› Bấm kết nối → xem log → tìm char W=true trong SVC 49535343</div>
     </div>
   </div>
 </div>
@@ -252,10 +253,15 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 <iframe id="pf" title="print"></iframe>
 
 <script>
-// ── Confirmed MP583 UUIDs ──
-const SVC  = '000018f0-0000-1000-8000-00805f9b34fb';
-const CHAR = '00002af1-0000-1000-8000-00805f9b34fb';
-const SVC2 = '49535343-fe7d-4ae5-8fa9-9fafd205e455';
+// ── MP583 UUIDs — SPP-over-BLE (kênh thật vào print engine) ──
+// 0x18F0/0x2AF1 = chỉ status, KHÔNG in được
+// 49535343 = SPP bridge — RawBT dùng kênh này
+const SVC  = '49535343-fe7d-4ae5-8fa9-9fafd205e455'; // SPP-over-BLE primary
+const SVC2 = '000018f0-0000-1000-8000-00805f9b34fb'; // fallback
+// Char WRITE trong service 49535343:
+const CHAR_WRITE  = '49535343-8841-43f4-a8d4-ecbe34729bb3'; // WRITE (with response)
+const CHAR_WRITE2 = '49535343-1e4d-4bd9-ba61-23c647249616'; // WRITE NO RESPONSE (thường là cái này)
+const CHAR_NOTIFY = '49535343-4c8a-39b3-2f49-511cff073b7e'; // NOTIFY (status từ máy)
 
 // MP583 Aibecy: 203 DPI confirmed
 const DPI    = 203;
@@ -288,22 +294,35 @@ async function connectBle(){
   log('Quét BLE...','info');
   try{
     bleDevice=await navigator.bluetooth.requestDevice({
-      filters:[{name:'MP583'},{namePrefix:'MP'},{namePrefix:'Aibecy'}],
+      acceptAllDevices:true,
       optionalServices:[SVC,SVC2],
     });
     log('Tìm thấy: '+bleDevice.name,'ok');setProgress(35);
     const server=await bleDevice.gatt.connect();
-    log('GATT OK','ok');setProgress(60);
-    let char;
-    try{
-      const svc=await server.getPrimaryService(SVC);
-      char=await svc.getCharacteristic(CHAR);
-      log('Service 0x18F0 / Char 0x2AF1 OK','ok');
-    }catch(e){
-      log('Fallback: scan tất cả...','warn');
-      const svcs=await server.getPrimaryServices();
-      for(const s of svcs){try{const cs=await s.getCharacteristics();for(const c of cs){if((c.properties.write||c.properties.writeWithoutResponse)&&!char){char=c;log('Char found: '+c.uuid,'ok');}}}catch(e){}}
+    log('GATT OK','ok');setProgress(55);
+
+    // Scan tất cả services & characteristics, log đầy đủ để debug
+    const svcs=await server.getPrimaryServices();
+    log('Tổng services: '+svcs.length,'info');
+    let char=null;
+    let foundInSPP=false;
+    for(const s of svcs){
+      try{
+        const cs=await s.getCharacteristics();
+        for(const c of cs){
+          const w=c.properties.write, wnr=c.properties.writeWithoutResponse, n=c.properties.notify;
+          log('SVC '+s.uuid.slice(0,8)+' CHAR '+c.uuid.slice(0,8)+' W='+w+' WNR='+wnr+' N='+n,'info');
+          // Ưu tiên char WRITE trong service SPP 49535343
+          if(s.uuid.startsWith('49535343') && (wnr||w)){
+            if(!char || (!foundInSPP)){char=c;foundInSPP=true;}
+          } else if(!char && (wnr||w)){
+            char=c;
+          }
+        }
+      }catch(e){log('Err scan svc '+s.uuid.slice(0,8)+': '+e.message,'warn');}
     }
+    if(foundInSPP) log('✓ Dùng SPP 49535343 char — kênh in thật','ok');
+    else if(char)  log('⚠ Dùng char fallback: '+char.uuid,'warn');
     if(!char)throw new Error('Không tìm thấy writable characteristic');
     bleChar=char;isConn=true;setProgress(100);setTimeout(()=>setProgress(null),500);
     log('✓ Sẵn sàng in! WNR='+char.properties.writeWithoutResponse,'ok');
