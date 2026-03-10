@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Label Print · 58mm</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;500;700&family=Google+Sans+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --md-primary:     #1a73e8;
+  --md-primary-c:   #e8f0fe;
+  --md-secondary:   #1e8e3e;
+  --md-surface:     #ffffff;
+  --md-surface-1:   #f8f9ff;
+  --md-surface-2:   #f0f4ff;
+  --md-surface-var: #e8eaed;
+  --md-outline:     #dadce0;
+  --md-on-surface:  #202124;
+  --md-on-surface-v:#5f6368;
+  --md-error:       #d93025;
+  --r-sm:12px; --r-md:16px; --r-lg:24px; --r-full:100px;
+  --sh1: 0 1px 3px rgba(60,64,67,.12),0 1px 2px rgba(60,64,67,.08);
+  --sh2: 0 2px 6px rgba(60,64,67,.15),0 1px 4px rgba(60,64,67,.08);
+  --sh3: 0 4px 12px rgba(60,64,67,.18),0 2px 6px rgba(60,64,67,.1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Google Sans',sans-serif;background:var(--md-surface-1);color:var(--md-on-surface);min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+/* TOP BAR */
+.top-bar{background:var(--md-surface);border-bottom:1px solid var(--md-outline);height:64px;display:flex;align-items:center;padding:0 24px;gap:14px;position:sticky;top:0;z-index:10;}
+.top-icon{width:40px;height:40px;background:var(--md-primary-c);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:20px;}
+.top-title{font-family:'Google Sans Display',sans-serif;font-size:22px;font-weight:500;letter-spacing:-.01em;}
+.top-sub{font-size:13px;color:var(--md-on-surface-v);}
+.ready-pill{margin-left:auto;display:flex;align-items:center;gap:6px;padding:6px 14px;background:#e6f4ea;border-radius:var(--r-full);font-size:12px;font-weight:500;color:#1e8e3e;}
+.rdot{width:7px;height:7px;background:#1e8e3e;border-radius:50%;animation:blink 2.4s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:360px 1fr;min-height:calc(100vh - 64px);}
+
+/* RAIL */
+.rail{background:var(--md-surface);border-right:1px solid var(--md-outline);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+.sh{display:flex;align-items:center;gap:8px;padding:8px 12px 4px;margin-top:6px;}
+.sh-icon{width:32px;height:32px;background:var(--md-surface-2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.sh-label{font-size:13px;font-weight:600;color:var(--md-primary);letter-spacing:.01em;}
+
+/* CARD */
+.card{background:var(--md-surface);border:1px solid var(--md-outline);border-radius:var(--r-lg);overflow:hidden;animation:sup .3s cubic-bezier(.4,0,.2,1) both;}
+@keyframes sup{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* UPLOAD */
+.upload-zone{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px 20px;background:var(--md-surface-1);border:2px dashed var(--md-outline);border-radius:var(--r-lg);cursor:pointer;transition:all .2s;text-align:center;}
+.upload-zone:hover,.upload-zone.drag{background:var(--md-primary-c);border-color:var(--md-primary);}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+.up-icon{width:56px;height:56px;background:var(--md-surface);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:var(--sh1);}
+.up-title{font-size:14px;font-weight:500;}
+.up-hint{font-size:12px;color:var(--md-on-surface-v);}
+.fmt-chip{display:inline-flex;align-items:center;padding:3px 10px;background:var(--md-surface-var);border-radius:var(--r-full);font-size:11px;font-weight:500;color:var(--md-on-surface-v);}
+
+/* THUMB */
+.thumb-card{display:none;flex-direction:column;align-items:center;gap:12px;padding:16px;background:var(--md-surface-2);border-radius:var(--r-lg);border:1px solid var(--md-outline);}
+.thumb-card.show{display:flex;}
+.thumb-img{max-width:100%;max-height:120px;border-radius:var(--r-md);object-fit:contain;background:#fff;box-shadow:var(--sh2);}
+.thumb-row{display:flex;align-items:center;gap:8px;width:100%;}
+.thumb-name{flex:1;font-size:12px;font-family:'Google Sans Mono',monospace;color:var(--md-on-surface-v);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.btn-del{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:var(--r-full);border:none;background:none;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;color:var(--md-error);transition:background .15s;}
+.btn-del:hover{background:rgba(217,48,37,.08);}
+
+/* SLIDER ROW */
+.sl-row{padding:14px 16px;border-bottom:1px solid var(--md-outline);}
+.sl-row:last-child{border-bottom:none;}
+.sl-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.sl-name{font-size:14px;font-weight:500;}
+.sl-badge{font-family:'Google Sans Mono',monospace;font-size:13px;font-weight:600;color:var(--md-primary);background:var(--md-primary-c);padding:3px 10px;border-radius:var(--r-full);min-width:60px;text-align:center;}
+.sl-sub{font-size:12px;color:var(--md-on-surface-v);margin-bottom:10px;}
+input[type=range]{-webkit-appearance:none;width:100%;height:20px;background:transparent;cursor:pointer;}
+input[type=range]::-webkit-slider-runnable-track{height:4px;background:var(--md-outline);border-radius:2px;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--md-primary);margin-top:-8px;box-shadow:0 0 0 0 rgba(26,115,232,.2);transition:box-shadow .15s;}
+input[type=range]:hover::-webkit-slider-thumb{box-shadow:0 0 0 8px rgba(26,115,232,.1);}
+input[type=range]:active::-webkit-slider-thumb{box-shadow:0 0 0 12px rgba(26,115,232,.15);}
+input[type=range]::-moz-range-track{height:4px;background:var(--md-outline);border-radius:2px;}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--md-primary);border:none;}
+
+/* SWITCH ROW */
+.sw-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--md-outline);}
+.sw-row:last-child{border-bottom:none;}
+.sw-info{flex:1;}
+.sw-name{font-size:14px;font-weight:500;}
+.sw-desc{font-size:12px;color:var(--md-on-surface-v);margin-top:2px;}
+.mdsw{position:relative;width:52px;height:32px;flex-shrink:0;}
+.mdsw input{opacity:0;width:0;height:0;}
+.mdt{position:absolute;inset:0;background:var(--md-surface-var);border:2px solid #79747e;border-radius:100px;cursor:pointer;transition:all .2s cubic-bezier(.4,0,.2,1);}
+.mdth{position:absolute;top:50%;left:6px;transform:translateY(-50%);width:16px;height:16px;background:#79747e;border-radius:50%;transition:all .2s cubic-bezier(.4,0,.2,1);pointer-events:none;}
+.mdsw input:checked~.mdt{background:var(--md-primary);border-color:var(--md-primary);}
+.mdsw input:checked~.mdt .mdth{left:22px;width:24px;height:24px;background:white;}
+
+/* SPECS GRID */
+.specs-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--md-outline);border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--md-outline);animation:sup .3s .12s cubic-bezier(.4,0,.2,1) both;}
+.sc{background:var(--md-surface);padding:14px 16px;}
+.sk{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--md-on-surface-v);margin-bottom:4px;}
+.sv{font-size:16px;font-weight:600;font-family:'Google Sans Mono',monospace;color:var(--md-on-surface);}
+.sv.a{color:var(--md-primary);} .sv.g{color:var(--md-secondary);} .sv.r{color:var(--md-error);}
+
+/* FAB */
+.fab-wrap{animation:sup .3s .15s cubic-bezier(.4,0,.2,1) both;}
+.fab{width:100%;height:56px;border-radius:var(--r-lg);background:var(--md-primary);color:white;border:none;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:600;letter-spacing:.01em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:var(--sh2);transition:all .2s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden;}
+.fab::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .15s;}
+.fab:hover::after{background:rgba(255,255,255,.08);}
+.fab:hover{box-shadow:var(--sh3);}
+.fab:active{transform:scale(.98);box-shadow:var(--sh1);}
+.fab:disabled{background:var(--md-surface-var);color:var(--md-on-surface-v);box-shadow:none;cursor:not-allowed;}
+
+/* PREVIEW PANE */
+.preview-pane{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:48px 40px;background:var(--md-surface-1);position:relative;}
+.preview-pane::before{content:'';position:absolute;inset:0;background-image:linear-gradient(var(--md-outline) 1px,transparent 1px),linear-gradient(90deg,var(--md-outline) 1px,transparent 1px);background-size:32px 32px;opacity:.3;pointer-events:none;}
+.pv-eyebrow{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--md-on-surface-v);display:flex;align-items:center;gap:10px;position:relative;z-index:1;}
+.pv-eyebrow::before,.pv-eyebrow::after{content:'';width:32px;height:1px;background:var(--md-outline);}
+
+/* PRINTER BODY */
+.prt-wrap{display:flex;flex-direction:column;align-items:center;position:relative;z-index:1;}
+.prt-body{width:232px;background:linear-gradient(180deg,#f8f9fa 0%,#e8eaed 100%);border:1.5px solid #dadce0;border-radius:20px 20px 6px 6px;padding:14px 20px 10px;box-shadow:var(--sh2),inset 0 1px 0 rgba(255,255,255,.8);display:flex;flex-direction:column;gap:8px;}
+.prt-slot{background:#202124;border-radius:4px;height:4px;margin:0 8px;}
+.prt-info{display:flex;align-items:center;justify-content:space-between;}
+.prt-brand{font-family:'Google Sans Mono',monospace;font-size:9px;letter-spacing:.12em;color:#80868b;}
+.prt-leds{display:flex;gap:5px;}
+.led{width:7px;height:7px;border-radius:50%;}
+.led.g{background:#1e8e3e;box-shadow:0 0 5px #1e8e3e;animation:blink 2s infinite;}
+.led.gr{background:#dadce0;}
+
+/* PAPER OUT */
+.paper-out{width:188px;background:#fff;border-radius:0 0 4px 4px;box-shadow:0 6px 16px rgba(60,64,67,.2);border:1px solid #e8eaed;border-top:none;overflow:hidden;transition:min-height .25s ease;min-height:16px;}
+.lbl-inner{width:100%;}
+.gap-strip{background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.03) 3px,rgba(0,0,0,.03) 4px);width:100%;}
+.img-row{display:flex;width:100%;}
+.off-sp{background:white;flex-shrink:0;}
+.img-box{overflow:hidden;background:white;display:flex;align-items:center;justify-content:center;}
+.img-box img{width:100%;height:100%;object-fit:contain;display:block;}
+.img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;background:linear-gradient(135deg,#f8f9ff,#e8f0fe);font-size:11px;color:#80868b;font-family:'Google Sans Mono',monospace;letter-spacing:.04em;}
+.img-ph .phi{font-size:22px;opacity:.5;}
+.feed-ln{height:1px;background:repeating-linear-gradient(90deg,#dadce0 0,#dadce0 4px,transparent 4px,transparent 8px);}
+
+/* CHIPS */
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;position:relative;z-index:1;max-width:480px;}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--r-full);border:1px solid var(--md-outline);background:var(--md-surface);font-size:12px;font-weight:500;color:var(--md-on-surface-v);box-shadow:var(--sh1);}
+.chip.blue{background:var(--md-primary-c);border-color:rgba(26,115,232,.3);color:var(--md-primary);}
+.chip.green{background:#e6f4ea;border-color:#a8d5b5;color:var(--md-secondary);}
+
+/* RULER */
+.ruler-block{position:relative;z-index:1;background:var(--md-surface);border:1px solid var(--md-outline);border-radius:var(--r-md);padding:14px 20px;display:flex;flex-direction:column;gap:8px;min-width:300px;box-shadow:var(--sh1);}
+.rl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--md-on-surface-v);}
+.rb{flex:1;height:6px;background:var(--md-surface-var);border-radius:3px;position:relative;overflow:hidden;}
+.rf{position:absolute;top:0;left:0;height:100%;background:var(--md-primary);border-radius:3px;transition:width .2s;}
+.rof{position:absolute;top:0;height:100%;background:#fbbc04;border-radius:3px;transition:all .2s;}
+.rlbl{font-family:'Google Sans Mono',monospace;font-size:11px;font-weight:600;min-width:40px;text-align:right;}
+
+@keyframes pfeed{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.printing .lbl-inner{animation:pfeed .35s cubic-bezier(.4,0,.2,1);}
+#pf{display:none;}
+</style>
+</head>
+<body>
+
+<header class="top-bar">
+  <div class="top-icon">🖨️</div>
+  <div class="top-title">Label Print</div>
+  <span class="top-sub">58 mm · 40 × 30 mm</span>
+  <div class="ready-pill"><div class="rdot"></div>Sẵn sàng in</div>
+</header>
+
+<div class="layout">
+<nav class="rail">
+
+  <div class="sh"><div class="sh-icon">🖼️</div><span class="sh-label">Ảnh in</span></div>
+
+  <div class="upload-zone" id="dz">
+    <input type="file" id="fi" accept="image/png,image/jpeg">
+    <div class="up-icon">📂</div>
+    <div class="up-title">Chọn hoặc kéo thả ảnh</div>
+    <div class="up-hint">Tỷ lệ tốt nhất 4:3 (40×30)</div>
+    <div style="display:flex;gap:6px"><span class="fmt-chip">PNG</span><span class="fmt-chip">JPEG</span></div>
+  </div>
+
+  <div class="thumb-card" id="tc">
+    <img id="ti" class="thumb-img" src="" alt="">
+    <div class="thumb-row">
+      <span class="thumb-name" id="tn"></span>
+      <button class="btn-del" onclick="clearImg()">🗑 Xóa</button>
+    </div>
+  </div>
+
+  <div class="sh" style="margin-top:8px"><div class="sh-icon">⚙️</div><span class="sh-label">Cấu hình in</span></div>
+
+  <div class="card">
+    <div class="sl-row">
+      <div class="sl-top"><span class="sl-name">Offset trái</span><span class="sl-badge" id="vOff">18 mm</span></div>
+      <div class="sl-sub">Lề trống bên trái tem trên giấy 58mm</div>
+      <input type="range" id="slOff" min="0" max="28" step="0.5" value="18">
+    </div>
+    <div class="sl-row">
+      <div class="sl-top"><span class="sl-name">Gap (khoảng cách)</span><span class="sl-badge" id="vGap">0 mm</span></div>
+      <div class="sl-sub">Khoảng trắng phía trên tem · 0–15 mm</div>
+      <input type="range" id="slGap" min="0" max="15" step="0.5" value="0">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sw-row">
+      <div class="sw-info"><div class="sw-name">In tức thì</div><div class="sw-desc">Không feed giấy sau khi in</div></div>
+      <label class="mdsw"><input type="checkbox" id="ckFeed" checked><div class="mdt"><div class="mdth"></div></div></label>
+    </div>
+    <div class="sw-row">
+      <div class="sw-info"><div class="sw-name">Cảm biến khe hở</div><div class="sw-desc">Gap sensor — tắt mặc định (no sensor)</div></div>
+      <label class="mdsw"><input type="checkbox" id="ckSen"><div class="mdt"><div class="mdth"></div></div></label>
+    </div>
+  </div>
+
+  <div class="sh" style="margin-top:8px"><div class="sh-icon">📐</div><span class="sh-label">Thông số</span></div>
+
+  <div class="specs-grid">
+    <div class="sc"><div class="sk">Máy in</div><div class="sv a">58 mm</div></div>
+    <div class="sc"><div class="sk">Kích thước tem</div><div class="sv a">40 × 30</div></div>
+    <div class="sc"><div class="sk">Offset trái</div><div class="sv" id="spOff">18 mm</div></div>
+    <div class="sc"><div class="sk">Gap</div><div class="sv" id="spGap">0 mm</div></div>
+    <div class="sc"><div class="sk">Gap Sensor</div><div class="sv r" id="spSen">OFF</div></div>
+    <div class="sc"><div class="sk">Feed Mode</div><div class="sv g" id="spFeed">INSTANT</div></div>
+  </div>
+
+  <div class="fab-wrap" style="margin-top:8px">
+    <button class="fab" onclick="doPrint()">🖨️ &nbsp;In tem ngay</button>
+  </div>
+
+</nav>
+
+<main class="preview-pane">
+  <div class="pv-eyebrow">Xem trước · Máy 58mm</div>
+
+  <div class="prt-wrap">
+    <div class="prt-body">
+      <div class="prt-slot"></div>
+      <div class="prt-info">
+        <span class="prt-brand">THERMAL · 58MM</span>
+        <div class="prt-leds"><div class="led gr"></div><div class="led g"></div></div>
+      </div>
+    </div>
+    <div class="paper-out" id="po">
+      <div class="lbl-inner" id="li">
+        <div class="gap-strip" id="gs" style="height:0"></div>
+        <div class="img-row">
+          <div class="off-sp" id="os"></div>
+          <div class="img-box" id="ib">
+            <div class="img-ph" id="ph"><span class="phi">🖼️</span>40 × 30 mm</div>
+            <img id="pi" src="" alt="" style="display:none">
+          </div>
+        </div>
+        <div class="feed-ln"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chip-row">
+    <div class="chip green">✓ 58mm Paper</div>
+    <div class="chip green" id="cSen">✓ No Sensor Gap</div>
+    <div class="chip blue" id="cFeed">⚡ Instant Print</div>
+    <div class="chip" id="cImg">⬜ Chưa có ảnh</div>
+  </div>
+
+  <div class="ruler-block">
+    <div class="rl">
+      <span style="min-width:52px;font-size:11px;font-weight:600">Offset</span>
+      <div class="rb"><div class="rf" id="rfOff" style="width:31%"></div></div>
+      <span class="rlbl" id="rlOff">18 mm</span>
+    </div>
+    <div class="rl">
+      <span style="min-width:52px;font-size:11px;font-weight:600">Tem</span>
+      <div class="rb"><div class="rof" id="rfLbl" style="left:31%;width:69%"></div></div>
+      <span class="rlbl" style="color:var(--md-primary)">40 mm</span>
+    </div>
+    <div class="rl" style="margin-top:4px;padding-top:8px;border-top:1px solid var(--md-outline)">
+      <span style="font-size:11px">Tổng: 58mm &nbsp;·&nbsp; Còn lại phải:</span>
+      <span class="rlbl" id="rlRight">0 mm</span>
+    </div>
+  </div>
+</main>
+</div>
+
+<iframe id="pf" title="print"></iframe>
+<script>
+const SC = 188/58;
+let imgData = null;
+
+const slOff = document.getElementById('slOff');
+const slGap = document.getElementById('slGap');
+const ckFeed = document.getElementById('ckFeed');
+const ckSen  = document.getElementById('ckSen');
+
+function upd() {
+  const off = parseFloat(slOff.value), gap = parseFloat(slGap.value);
+  const nf = ckFeed.checked, sen = ckSen.checked;
+  const LW=40,LH=30;
+  const offPx=off*SC, gapPx=gap*SC, lwPx=LW*SC, lhPx=LH*SC;
+  const right = Math.max(0,58-off-LW).toFixed(1);
+  document.getElementById('vOff').textContent = off+' mm';
+  document.getElementById('vGap').textContent = gap+' mm';
+  document.getElementById('spOff').textContent = off+' mm';
+  document.getElementById('spGap').textContent = gap+' mm';
+  const se = document.getElementById('spSen');
+  se.textContent = sen?'ON':'OFF'; se.className='sv '+(sen?'a':'r');
+  const fe = document.getElementById('spFeed');
+  fe.textContent = nf?'INSTANT':'FEED'; fe.className='sv '+(nf?'g':'r');
+  document.getElementById('gs').style.height = gapPx+'px';
+  document.getElementById('os').style.width  = offPx+'px';
+  document.getElementById('ib').style.width  = lwPx+'px';
+  document.getElementById('ib').style.height = lhPx+'px';
+  document.getElementById('ph').style.height = lhPx+'px';
+  document.getElementById('po').style.minHeight = (gapPx+lhPx+2)+'px';
+  document.getElementById('cSen').textContent = sen?'⚠️ Sensor ON':'✓ No Sensor Gap';
+  document.getElementById('cSen').className = 'chip '+(sen?'':'green');
+  document.getElementById('cFeed').textContent = nf?'⚡ Instant Print':'📄 With Feed';
+  document.getElementById('cFeed').className = 'chip '+(nf?'blue':'');
+  const op=(off/58*100).toFixed(1), lp=(LW/58*100).toFixed(1);
+  document.getElementById('rfOff').style.width = op+'%';
+  document.getElementById('rfLbl').style.left  = op+'%';
+  document.getElementById('rfLbl').style.width = lp+'%';
+  document.getElementById('rlOff').textContent = off+' mm';
+  document.getElementById('rlRight').textContent = right+' mm';
+}
+
+const dz = document.getElementById('dz');
+document.getElementById('fi').addEventListener('change', e => hf(e.target.files[0]));
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag');});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('drag'));
+dz.addEventListener('drop', e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&(f.type==='image/png'||f.type.startsWith('image/jpeg')))hf(f);});
+
+function hf(file){
+  if(!file)return;
+  if(!['image/png','image/jpeg','image/jpg'].includes(file.type)){alert('Chỉ hỗ trợ PNG và JPEG!');return;}
+  const r=new FileReader();
+  r.onload=ev=>{
+    imgData=ev.target.result;
+    document.getElementById('ti').src=imgData;
+    document.getElementById('tn').textContent=file.name;
+    document.getElementById('tc').classList.add('show');
+    dz.style.display='none';
+    document.getElementById('ph').style.display='none';
+    const p=document.getElementById('pi');p.src=imgData;p.style.display='block';
+    const c=document.getElementById('cImg');
+    c.textContent='🖼️ '+(file.name.length>18?file.name.slice(0,18)+'…':file.name);
+    c.className='chip blue';
+    upd();
+  };
+  r.readAsDataURL(file);
+}
+
+function clearImg(){
+  imgData=null;
+  document.getElementById('tc').classList.remove('show');
+  dz.style.display='';
+  const p=document.getElementById('pi');p.src='';p.style.display='none';
+  document.getElementById('ph').style.display='flex';
+  document.getElementById('cImg').textContent='⬜ Chưa có ảnh';
+  document.getElementById('cImg').className='chip';
+  document.getElementById('fi').value='';
+}
+
+slOff.addEventListener('input',upd);
+slGap.addEventListener('input',upd);
+ckFeed.addEventListener('change',upd);
+ckSen.addEventListener('change',upd);
+
+function doPrint(){
+  if(!imgData){alert('Vui lòng chọn ảnh trước khi in!');return;}
+  const off=parseFloat(slOff.value),gap=parseFloat(slGap.value),nf=ckFeed.checked;
+  const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+@page{size:58mm auto;margin:0;}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:58mm;background:white;}
+.g{width:58mm;height:${gap}mm;}
+.r{width:58mm;height:30mm;display:flex;}
+.o{width:${off}mm;flex-shrink:0;}
+.l{width:40mm;height:30mm;overflow:hidden;}
+.l img{width:100%;height:100%;object-fit:contain;display:block;}
+${nf?'':'.f{width:58mm;height:20mm;}'}
+</style></head><body>
+<div class="g"></div><div class="r"><div class="o"></div><div class="l"><img src="${imgData}"></div></div>
+${nf?'':'<div class="f"></div>'}
+<script>window.onload=function(){window.print();${nf?'setTimeout(function(){window.close()},500);':''}}<\/script>
+</body></html>`;
+  document.getElementById('pf').srcdoc=h;
+  const l=document.getElementById('li');
+  l.classList.add('printing');
+  setTimeout(()=>l.classList.remove('printing'),400);
+}
+
+upd();
+</script>
+</body>
+</html>
