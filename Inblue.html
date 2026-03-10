@@ -109,6 +109,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
 .log-clear{font-size:11px;color:#6c6c8a;cursor:pointer;padding:4px 8px;border-radius:6px;border:none;background:none;}
 .log-body{padding:10px 14px;max-height:150px;overflow-y:auto;font-family:'Google Sans Mono',monospace;font-size:11px;line-height:1.7;}
 .ll{color:#a0a0c0;}.ll.ok{color:#4ade80;}.ll.err{color:#f87171;}.ll.info{color:#60a5fa;}.ll.warn{color:#fbbf24;}
+.dpi-btn{padding:8px 14px;border-radius:var(--r99);border:1.5px solid var(--out);background:var(--surf1);font-family:'Google Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--ink2);}
+.dpi-btn.active{background:var(--blue-c);border-color:var(--blue);color:var(--blue);}
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--out);padding:10px 14px;padding-bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:10px;z-index:100;box-shadow:0 -4px 16px rgba(60,64,67,.08);}
 .fab-main{flex:1;height:52px;border-radius:var(--r16);background:var(--blue);color:#fff;border:none;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:var(--sh2);transition:all .15s;}
 .fab-main:active{transform:scale(.97);}.fab-main:disabled{background:var(--out2);color:var(--ink3);box-shadow:none;cursor:not-allowed;}
@@ -145,7 +147,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="info-banner">
     <span class="ib-icon">✅</span>
     <div class="ib-text">
-      <strong>Fix kênh in:</strong> Đã chuyển sang <strong>service 49535343</strong> (SPP-over-BLE) — đây là kênh RawBT dùng để giao tiếp với print engine. Service 0x18F0/0x2AF1 chỉ là status, không in được.
+      <strong>Method: GS v 0</strong> — firmware MP583 chỉ hiểu lệnh này. Nếu ảnh vẫn bị nén chiều cao → tăng <strong>DPI dọc</strong> bên dưới để bù.
     </div>
   </div>
 
@@ -165,6 +167,26 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   </div>
 
   <div class="sec">Cấu hình in</div>
+
+  <!-- CALIBRATION CARD -->
+  <div class="card">
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-name">DPI dọc (chiều cao)</span><span class="sl-val" id="vDpiH">203</span></div>
+      <div class="sl-sub">Tăng nếu ảnh bị nén chiều cao · Giảm nếu bị giãn · DPI ngang cố định 203</div>
+      <input type="range" id="slDpiH" min="100" max="500" step="1" value="203">
+    </div>
+    <div class="sl-row" style="padding:12px 16px;border-bottom:none">
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px">GS v 0 Mode</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="dpi-btn active" id="gsm0" onclick="setGsMode(0,this)">Mode 0 — Normal</button>
+        <button class="dpi-btn" id="gsm2" onclick="setGsMode(2,this)">Mode 2 — Double H</button>
+        <button class="dpi-btn" id="gsm3" onclick="setGsMode(3,this)">Mode 3 — Double W+H</button>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:8px">Mode 2 = chiều cao ×2 — thử nếu ảnh bị nén 50%</div>
+      <select id="selGsMode" style="display:none"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+    </div>
+  </div>
+
   <div class="card">
     <div class="sl-row">
       <div class="sl-head"><span class="sl-name">Offset trái</span><span class="sl-val" id="vOff">18 mm</span></div>
@@ -227,7 +249,8 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
     <div class="specs">
       <div class="sc"><div class="sk">Máy in</div><div class="sv bl">58 mm</div></div>
       <div class="sc"><div class="sk">Tem</div><div class="sv bl">40×30 mm</div></div>
-      <div class="sc"><div class="sk">DPI</div><div class="sv bl">203</div></div>
+      <div class="sc"><div class="sk">DPI ngang</div><div class="sv bl">203</div></div>
+      <div class="sc"><div class="sk">DPI dọc</div><div class="sv bl" id="spDpiH">203</div></div>
       <div class="sc"><div class="sk">Phương pháp</div><div class="sv gr">ESC * 33</div></div>
       <div class="sc"><div class="sk">Offset</div><div class="sv" id="spO">18 mm</div></div>
       <div class="sc"><div class="sk">Feed</div><div class="sv gr" id="spF">INSTANT</div></div>
@@ -238,9 +261,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="log-card">
     <div class="log-head"><span class="log-title">Console</span><button class="log-clear" onclick="clearLog()">Xóa</button></div>
     <div class="log-body" id="logBody">
-      <div class="ll info">› Kết nối qua SPP 49535343 — kênh in thật của MP583</div>
-      <div class="ll info">› ESC * 33 (24-dot stripe) — line spacing=24, không bị nén</div>
-      <div class="ll warn">› Bấm kết nối → xem log → tìm char W=true trong SVC 49535343</div>
+      <div class="ll info">› Method: GS v 0 — firmware MP583 chỉ hiểu lệnh này</div>
+      <div class="ll warn">› Nếu ảnh bị nén: thử Mode 2 (Double H) hoặc tăng DPI dọc</div>
+      <div class="ll info">› Bắt đầu với Mode 0 + DPI dọc 203, điều chỉnh nếu sai tỷ lệ</div>
     </div>
   </div>
 </div>
@@ -264,8 +287,9 @@ const CHAR_WRITE2 = '49535343-1e4d-4bd9-ba61-23c647249616'; // WRITE NO RESPONSE
 const CHAR_NOTIFY = '49535343-4c8a-39b3-2f49-511cff073b7e'; // NOTIFY (status từ máy)
 
 // MP583 Aibecy: 203 DPI confirmed
-const DPI    = 203;
-const MM2PX  = DPI / 25.4;  // 7.992 px/mm
+const DPI    = 203;       // DPI ngang (cố định)
+const MM2PX  = DPI / 25.4;
+let currentDpiH = 203;    // DPI dọc — điều chỉnh để fix nén chiều cao  // 7.992 px/mm
 const PVSC   = 160 / 58;
 
 let imgData=null, bleDevice=null, bleChar=null, isConn=false;
@@ -352,16 +376,23 @@ async function disconnectBle(){if(bleDevice?.gatt?.connected)bleDevice.gatt.disc
 // Line spacing = 24 dots → mỗi stripe in chính xác 24 dòng
 // ──────────────────────────────────────────────────────────────
 async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
-  const paperW = Math.round(58  * MM2PX);  // ~464 dots
-  const labelW = Math.round(40  * MM2PX);  // ~319 dots
-  const labelH = Math.round(30  * MM2PX);  // ~239 dots
-  const offDots = Math.round(offMM * MM2PX);
-  const gapDots = Math.round(gapMM * MM2PX);
+  // GS v 0 đúng method cho firmware MP583
+  // Vấn đề nén chiều cao: GS v 0 mode=0 = "normal density"
+  // Một số firmware xử lý height sai → dùng mode=2 (double height)
+  // hoặc nhân labelH * scaleH để bù
+  const MM2PX_H = currentDpiH / 25.4;  // DPI chiều cao (có thể khác ngang)
+  const MM2PX_W = DPI / 25.4;
+
+  const paperW  = Math.round(58 * MM2PX_W);
+  const labelW  = Math.round(40 * MM2PX_W);
+  const labelH  = Math.round(30 * MM2PX_H);   // chiều cao dùng DPI_H riêng
+  const offDots = Math.round(offMM * MM2PX_W);
+  const gapDots = Math.round(gapMM * MM2PX_H);
   const useDither = document.getElementById('ckDither').checked;
 
-  log(`Bitmap: paper=${paperW}px label=${labelW}×${labelH}px off=${offDots} gap=${gapDots}`,'info');
+  log(`W=${paperW}px H=${labelH}px off=${offDots} DPI_H=${currentDpiH}`,'info');
 
-  // ── 1. Render image to canvas ──
+  // ── Canvas ──
   const cv = document.createElement('canvas');
   cv.width = paperW; cv.height = labelH;
   const ctx = cv.getContext('2d');
@@ -373,94 +404,68 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
     ctx.drawImage(img, offDots, 0, labelW, labelH);
   }
 
-  // ── 2. Get pixel data and convert to 1-bit ──
   const id = ctx.getImageData(0, 0, paperW, labelH);
   const px = id.data;
-  // Convert to grayscale float array
   const gray = new Float32Array(paperW * labelH);
   for (let i = 0; i < paperW * labelH; i++) {
-    gray[i] = (0.299*px[i*4] + 0.587*px[i*4+1] + 0.114*px[i*4+2]);
+    gray[i] = 0.299*px[i*4] + 0.587*px[i*4+1] + 0.114*px[i*4+2];
   }
 
-  // Floyd-Steinberg dithering (optional)
+  // Floyd-Steinberg dithering
   if (useDither) {
     for (let y = 0; y < labelH; y++) {
       for (let x = 0; x < paperW; x++) {
-        const idx = y * paperW + x;
-        const old = gray[idx];
+        const idx2 = y * paperW + x;
+        const old = gray[idx2];
         const nw  = old < 128 ? 0 : 255;
-        gray[idx] = nw;
+        gray[idx2] = nw;
         const err = old - nw;
-        if (x+1 < paperW)             gray[idx+1]         += err * 7/16;
+        if (x+1 < paperW)           gray[idx2+1]        += err * 7/16;
         if (y+1 < labelH) {
-          if (x > 0)                  gray[idx+paperW-1]  += err * 3/16;
-                                      gray[idx+paperW]    += err * 5/16;
-          if (x+1 < paperW)           gray[idx+paperW+1]  += err * 1/16;
+          if (x > 0)                gray[idx2+paperW-1] += err * 3/16;
+                                    gray[idx2+paperW]   += err * 5/16;
+          if (x+1 < paperW)        gray[idx2+paperW+1] += err * 1/16;
         }
       }
     }
   }
 
-  // ── 3. Build ESC/POS using ESC * 33 (24-dot double density) ──
-  // Exactly what RawBT does:
-  //   ESC @ — reset
-  //   ESC 3 24 — set line spacing to 24 dots (= 1 stripe height)
-  //   for each 24-row stripe:
-  //     ESC * 33 nL nH [data: 3 bytes per column, top→bottom]
-  //     LF — advance paper by 1 line (= 24 dots because of ESC 3 24)
-  //   ESC 2 — restore default line spacing
+  // ── GS v 0 — raster bitmap ──
+  // mode: 0=normal, 1=double-width, 2=double-height, 3=double both
+  const mode = parseInt(document.getElementById('selGsMode').value);
+  const bpr  = Math.ceil(paperW / 8);  // bytes per row
+
   const bytes = [];
+  bytes.push(0x1B, 0x40);        // ESC @ reset
+  bytes.push(0x1B, 0x33, 0x00);  // ESC 3 0 — line spacing 0
 
-  // ESC @ reset
-  bytes.push(0x1B, 0x40);
-
-  // Gap (feed blank dots before image)
+  // Gap feed
   if (gapDots > 0) {
-    let rem = gapDots;
-    while (rem > 0) { const n = Math.min(255, rem); bytes.push(0x1B, 0x4A, n); rem -= n; }
+    let r = gapDots;
+    while (r > 0) { const n = Math.min(255, r); bytes.push(0x1B, 0x4A, n); r -= n; }
   }
 
-  // ESC 3 24 — line spacing = 24 dots
-  bytes.push(0x1B, 0x33, 24);
+  // GS v 0 header
+  bytes.push(0x1D, 0x76, 0x30, mode);
+  bytes.push(bpr  & 0xFF, (bpr  >> 8) & 0xFF);  // xL xH
+  bytes.push(labelH & 0xFF, (labelH >> 8) & 0xFF); // yL yH
 
-  // nL and nH for image width (paperW columns)
-  const nL = paperW & 0xFF;
-  const nH = (paperW >> 8) & 0xFF;
-
-  // Process image in 24-row stripes
-  for (let stripeY = 0; stripeY < labelH; stripeY += 24) {
-    // ESC * 33 nL nH
-    bytes.push(0x1B, 0x2A, 33, nL, nH);
-
-    // For each column x, send 3 bytes (24 bits = 24 vertical dots)
-    for (let x = 0; x < paperW; x++) {
-      for (let k = 0; k < 3; k++) {
-        let byte = 0;
-        for (let b = 0; b < 8; b++) {
-          const y = stripeY + k * 8 + b;
-          if (y < labelH) {
-            const grayVal = gray[y * paperW + x];
-            if (grayVal < 128) byte |= (0x80 >> b);
-          }
-        }
-        bytes.push(byte);
+  // Pixel data
+  for (let y = 0; y < labelH; y++) {
+    for (let bx = 0; bx < bpr; bx++) {
+      let b = 0;
+      for (let bit = 0; bit < 8; bit++) {
+        const x = bx * 8 + bit;
+        if (x < paperW && gray[y * paperW + x] < 128) b |= (0x80 >> bit);
       }
+      bytes.push(b);
     }
-    // LF — advance 24 dots (because line spacing = 24)
-    bytes.push(0x0A);
   }
 
-  // ESC 2 — restore default line spacing (1/6 inch = ~34 dots)
-  bytes.push(0x1B, 0x32);
+  // Feed after
+  bytes.push(0x1B, 0x4A, noFeed ? 4 : Math.min(255, Math.round(8 * MM2PX_H)));
 
-  // Feed after print
-  if (!noFeed) {
-    bytes.push(0x1B, 0x4A, Math.min(255, Math.round(8 * MM2PX)));
-  } else {
-    bytes.push(0x1B, 0x4A, 4);
-  }
-
-  log(`ESC * 33: ${Math.ceil(labelH/24)} stripes × ${paperW} cols × 3 bytes = ${bytes.length} bytes total`,'ok');
+  log(`GS v 0 mode=${mode}: ${bpr}bpr × ${labelH}rows = ${bytes.length} bytes`,'ok');
   return new Uint8Array(bytes);
 }
 
@@ -607,6 +612,18 @@ function upd() {
   document.getElementById('rfL').style.width = lp+'%';
   document.getElementById('rlO').textContent = off+'mm';
   document.getElementById('rlR').textContent = Math.max(0,58-off-40).toFixed(1)+'mm';
+}
+document.getElementById('slDpiH').addEventListener('input', function(){
+  currentDpiH = parseInt(this.value);
+  document.getElementById('vDpiH').textContent = currentDpiH;
+  document.getElementById('spDpiH').textContent = currentDpiH;
+  log('DPI dọc: '+currentDpiH+' → H chiều cao 30mm = '+Math.round(30*currentDpiH/25.4)+'px','info');
+});
+function setGsMode(mode, btn){
+  document.getElementById('selGsMode').value = mode;
+  document.querySelectorAll('#gsm0,#gsm2,#gsm3').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  log('GS v 0 mode='+mode+(mode===2?' (double height — ảnh ×2 chiều cao)':mode===3?' (double W+H)':' (normal)'),'info');
 }
 document.getElementById('slOff').addEventListener('input', upd);
 document.getElementById('slGap').addEventListener('input', upd);
