@@ -147,7 +147,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="info-banner">
     <span class="ib-icon">✅</span>
     <div class="ib-text">
-      <strong>Method: GS v 0</strong> — firmware MP583 chỉ hiểu lệnh này. Nếu ảnh vẫn bị nén chiều cao → tăng <strong>DPI dọc</strong> bên dưới để bù.
+      <strong>2 fix quan trọng:</strong> paperW = <strong>48mm</strong> (printhead thực tế, không phải 58mm) · Chunk = <strong>128 bytes</strong> (tránh tràn buffer BLE). Offset 0mm = mép trái của vùng in 48mm (cách mép giấy 5mm).
     </div>
   </div>
 
@@ -191,7 +191,7 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
     <div class="sl-row">
       <div class="sl-head"><span class="sl-name">Offset trái</span><span class="sl-val" id="vOff">18 mm</span></div>
       <div class="sl-sub">Lề trống bên trái tem trên giấy 58mm</div>
-      <input type="range" id="slOff" min="0" max="28" step="0.5" value="18">
+      <input type="range" id="slOff" min="0" max="8" step="0.5" value="4">
     </div>
     <div class="sl-row">
       <div class="sl-head"><span class="sl-name">Gap phía trên</span><span class="sl-val" id="vGap">0 mm</span></div>
@@ -261,9 +261,9 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
   <div class="log-card">
     <div class="log-head"><span class="log-title">Console</span><button class="log-clear" onclick="clearLog()">Xóa</button></div>
     <div class="log-body" id="logBody">
-      <div class="ll info">› Method: GS v 0 — firmware MP583 chỉ hiểu lệnh này</div>
-      <div class="ll warn">› Nếu ảnh bị nén: thử Mode 2 (Double H) hoặc tăng DPI dọc</div>
-      <div class="ll info">› Bắt đầu với Mode 0 + DPI dọc 203, điều chỉnh nếu sai tỷ lệ</div>
+      <div class="ll ok">› paperW=48mm (384 dots) — đúng printhead MP583</div>
+      <div class="ll ok">› Chunk=128 bytes + delay 30ms — tránh tràn buffer BLE</div>
+      <div class="ll info">› Offset 0mm = mép trái printhead (cách mép giấy 5mm)</div>
     </div>
   </div>
 </div>
@@ -383,9 +383,12 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
   const MM2PX_H = currentDpiH / 25.4;  // DPI chiều cao (có thể khác ngang)
   const MM2PX_W = DPI / 25.4;
 
-  const paperW  = Math.round(58 * MM2PX_W);
-  const labelW  = Math.round(40 * MM2PX_W);
+  // Printhead thực tế chỉ 48mm (384 dots) — không phải 58mm
+  // 2 bên mép giấy mỗi bên 5mm không in được
+  const paperW  = Math.round(48 * MM2PX_W);   // 384 dots — đúng printhead width
+  const labelW  = Math.round(40 * MM2PX_W);   // 319 dots
   const labelH  = Math.round(30 * MM2PX_H);   // chiều cao dùng DPI_H riêng
+  // offMM từ mép printhead (không phải mép giấy) — mép giấy đã lệch 5mm rồi
   const offDots = Math.round(offMM * MM2PX_W);
   const gapDots = Math.round(gapMM * MM2PX_H);
   const useDither = document.getElementById('ckDither').checked;
@@ -471,7 +474,7 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
 
 // ── BLE write with chunking ──
 async function writeBle(data) {
-  const CHUNK = 512;
+  const CHUNK = 128; // 128 bytes — tránh tràn buffer máy in BLE giá rẻ
   const useWoR = bleChar.properties.writeWithoutResponse;
   let sent = 0;
   while (sent < data.length) {
@@ -486,7 +489,7 @@ async function writeBle(data) {
     }
     sent += CHUNK;
     setProgress(Math.round(sent / data.length * 100));
-    await new Promise(r => setTimeout(r, 20));
+    await new Promise(r => setTimeout(r, 30)); // 30ms — máy in kịp xử lý
   }
 }
 
@@ -518,7 +521,7 @@ async function testPrint() {
   if (!isConn) { toast('Chưa kết nối!'); return; }
   log('Test: 2 đường kẻ cách nhau 10mm (DPI=203)...','info');
   try {
-    const paperW = Math.round(58 * MM2PX);
+    const paperW = Math.round(48 * MM2PX);  // 48mm printhead thực tế
     const totalH = Math.round(25 * MM2PX); // 25mm total
     const line1  = Math.round(5  * MM2PX); // 5mm từ top
     const line2  = Math.round(15 * MM2PX); // 15mm từ top → cách 10mm
@@ -593,7 +596,7 @@ function upd() {
   const off = parseFloat(document.getElementById('slOff').value);
   const gap = parseFloat(document.getElementById('slGap').value);
   const nf  = document.getElementById('ckFeed').checked;
-  document.getElementById('vOff').textContent = off+' mm';
+  document.getElementById('vOff').textContent = off+' mm';  // 0..8mm trong vùng 48mm printhead
   document.getElementById('vGap').textContent = gap+' mm';
   document.getElementById('spO').textContent  = off+' mm';
   document.getElementById('spF').textContent  = nf?'INSTANT':'FEED';
