@@ -183,35 +183,35 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
   pointer-events: all; -webkit-tap-highlight-color: transparent;
 }
 
-/* Vùng ảnh: flex 1 co lại, ảnh + qty chồng nhau */
+/* Vùng ảnh: chiều cao cố định, không co dãn */
 .item-img-zone {
-  flex: 1 1 0; min-height: 0;
+  flex-shrink: 0;
+  height: 46dvh;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding-top: 60px; padding-bottom: 16px;
-  position: relative;
+  align-items: center; justify-content: flex-end;
+  padding-top: 56px; padding-bottom: 12px;
 }
 .item-hero-img {
-  max-width: 52vw; max-height: 34vh;
-  width: auto; height: auto;
+  flex: 1 1 0; min-height: 0;
+  max-width: 55vw; width: auto;
   object-fit: contain;
-  filter: drop-shadow(0 14px 28px rgba(0,0,0,0.55));
-  transition: opacity 0.35s, transform 0.35s;
-  display: block; flex-shrink: 0;
+  filter: drop-shadow(0 12px 24px rgba(0,0,0,0.6));
+  transition: opacity 0.3s;
+  display: block;
 }
-.item-hero-img.no-img { opacity: 0; transform: translateY(16px); }
+.item-hero-img.no-img { opacity: 0; }
 
-/* Qty NẰM NGAY DƯỚI ẢNH, trong img-zone, không tràn sang body */
+/* Qty — dưới ảnh, trong img-zone, KHÔNG tràn xuống body */
 .item-qty-row {
-  margin-top: 14px; flex-shrink: 0;
+  flex-shrink: 0;
+  margin-top: 10px;
   display: inline-flex; align-items: center;
-  background: rgba(0,0,0,0.32); backdrop-filter: blur(14px);
+  background: rgba(0,0,0,0.35); backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-radius: 99px; padding: 4px;
-  position: relative; z-index: 1;
 }
 .item-qty-btn {
-  width: 40px; height: 40px; border-radius: 50%; border: none;
+  width: 38px; height: 38px; border-radius: 50%; border: none;
   background: rgba(255,255,255,0.18); color: white;
   font-size: 1.4rem; font-weight: 300; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -220,8 +220,8 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
 }
 .item-qty-btn:active { background: rgba(255,255,255,0.38); transform: scale(0.9); }
 .item-qty-num {
-  min-width: 44px; text-align: center;
-  font-size: 1.1rem; font-weight: 700; color: white;
+  min-width: 40px; text-align: center;
+  font-size: 1.05rem; font-weight: 700; color: white;
 }
 
 /* Body dưới ảnh: FIXED HEIGHT, không scroll, LIỀN MẠCH với img-zone (cùng nền trong suốt) */
@@ -408,6 +408,7 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
   animation: spin 0.7s linear infinite; display: inline-block;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shimmer { to { background-position: -200% 0; } }
 
 /* =============================================
    SCREEN 1: WELCOME — NỀN TRẮNG, 2 CARD NHỎ CHÉO
@@ -1763,17 +1764,16 @@ function _doSelectStore(storeId) {
   // Nếu đổi chi nhánh khác → xóa cart
   if (state.store && state.store.id !== storeId && state.cart.length > 0) {
     if (!confirm('Đổi chi nhánh sẽ xóa giỏ hàng hiện tại. Tiếp tục?')) return;
-    state.cart = [];
-    state.voucher = null;
+    state.cart = []; state.voucher = null;
   }
   state.store = STORES[storeId];
-  if (storeId === 'xolifa') {
-    document.body.classList.add('theme-xolifa');
-  } else {
-    document.body.classList.remove('theme-xolifa');
-  }
-  loadMenu();
+  if (storeId === 'xolifa') document.body.classList.add('theme-xolifa');
+  else document.body.classList.remove('theme-xolifa');
+
+  // Chuyển màn hình ngay, hiện skeleton
   goTo('screen-menu');
+  _showMenuSkeleton();
+  loadMenu();
 }
 
 // ======================================================
@@ -1837,6 +1837,21 @@ function setActiveCat(cat) {
   renderMenu();
 }
 
+function _showMenuSkeleton() {
+  const grid = document.getElementById('menu-grid');
+  let s = '';
+  for (let i = 0; i < 6; i++) {
+    s += `<div class="menu-item" style="pointer-events:none">
+      <div class="menu-img" style="background:linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 50%,#e5e7eb 75%);background-size:200% 100%;animation:shimmer 1.2s infinite"></div>
+      <div class="menu-item-body">
+        <div style="height:14px;border-radius:6px;background:#e5e7eb;margin-bottom:6px;width:70%"></div>
+        <div style="height:11px;border-radius:6px;background:#f3f4f6;width:45%"></div>
+      </div>
+    </div>`;
+  }
+  grid.innerHTML = s;
+}
+
 function renderMenu() {
   const q = (document.getElementById('menu-search').value || '').toLowerCase();
   let items = state.menuData;
@@ -1844,28 +1859,29 @@ function renderMenu() {
   if (q) items = items.filter(i => i.name.toLowerCase().includes(q));
 
   if (!items.length) {
-    document.getElementById('menu-grid').innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:48px 0;color:#9ca3af;font-weight:700">Không tìm thấy món 😢</div>`;
+    document.getElementById('menu-grid').innerHTML =
+      `<div style="grid-column:1/-1;text-align:center;padding:48px 0;color:#9ca3af;font-weight:700">Không tìm thấy món 😢</div>`;
     return;
   }
 
+  // Build HTML string rồi set 1 lần — tránh nhiều lần reflow
   const html = items.map(item => {
-    const cartQty = state.cart.filter(c => c.id === item.id && !c.isGift)
-                               .reduce((s, c) => s + c.qty, 0);
-    const imgContent = item.image
-      ? `<img src="${item.image}" style="width:100%;height:100%;object-fit:cover" loading="lazy">`
+    const cartQty = state.cart.filter(c => c.id === item.id && !c.isGift).reduce((s,c) => s+c.qty, 0);
+    const img = item.image
+      ? `<img src="${item.image}" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover">`
       : `<span style="font-size:2.5rem">☕</span>`;
-    return `
-      <div class="menu-item" onclick="openItemSheet('${item.id}')">
-        <div class="menu-img">${imgContent}</div>
-        ${cartQty > 0 ? `<div class="menu-qty-badge">${cartQty}</div>` : ''}
-        <div class="menu-item-body">
-          <div class="menu-item-name">${item.name}</div>
-          <div class="menu-item-price">từ ${item.basePrice.toLocaleString('vi')}đ</div>
-        </div>
-        <button class="menu-item-add" onclick="event.stopPropagation();openItemSheet('${item.id}')">+</button>
-      </div>`;
+    return `<div class="menu-item" onclick="openItemSheet('${item.id}')">
+      <div class="menu-img">${img}</div>
+      ${cartQty > 0 ? `<div class="menu-qty-badge">${cartQty}</div>` : ''}
+      <div class="menu-item-body">
+        <div class="menu-item-name">${item.name}</div>
+        <div class="menu-item-price">từ ${item.basePrice.toLocaleString('vi')}đ</div>
+      </div>
+      <button class="menu-item-add" onclick="event.stopPropagation();openItemSheet('${item.id}')">+</button>
+    </div>`;
   }).join('');
+
+  // Set innerHTML 1 lần duy nhất
   document.getElementById('menu-grid').innerHTML = html;
   updateCartFloat();
 }
