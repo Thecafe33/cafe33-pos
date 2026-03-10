@@ -11225,11 +11225,11 @@ async function lblUpdatePreview() {
 // ═══════════════════════════════════════════════════════
 
 var stickerConfig = {
-    logoMode:   'text',       // 'text' | 'img'
+    logoMode:   'text',
     logoImgURL: null,
     footerText: 'Thank you so much\nluv u',
-    fontName:   28,           // px tên món
-    fontFooter: 16            // px footer
+    fontName:   34,   // 28 × 1.2 ≈ 34
+    fontFooter: 19    // 16 × 1.2 ≈ 19
 };
 var stickerFontTimer = null;
 var stickerSelectedPreviewItem = null;  // { name, size, price } — dùng để preview
@@ -11305,103 +11305,109 @@ function stickerRefreshPreview() {
     var size  = 'M';
     var price = item.priceM || item.priceL || 0;
     var footer = (document.getElementById('stk-footer-text') ? document.getElementById('stk-footer-text').value : stickerConfig.footerText) || stickerConfig.footerText;
-    stickerDrawCanvas(cv, item.name, size, price, footer);
+    stickerDrawCanvas(cv, item.name, size, price, footer, '10/03/2026 14:30');
 }
 
-function stickerDrawCanvas(cv, itemName, size, price, footerText) {
+function stickerDrawCanvas(cv, itemName, size, price, footerText, orderTime) {
     var W = 320, H = 240;
     cv.width = W; cv.height = H;
     var ctx = cv.getContext('2d');
-
-    // Background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, W, H);
+    var y = 14;
 
-    var y = 16;
-
-    // ── Logo ──
     if (stickerConfig.logoMode === 'img' && stickerConfig.logoImgURL) {
         var logoImg = new Image();
         logoImg.onload = function() {
-            var maxW = 140, maxH = 36;
+            var maxW = 160, maxH = 40;
             var scale = Math.min(maxW/logoImg.width, maxH/logoImg.height);
             var lw = logoImg.width*scale, lh = logoImg.height*scale;
             ctx.drawImage(logoImg, (W-lw)/2, y, lw, lh);
-            stickerDrawCanvasBody(ctx, W, H, y + maxH + 8, itemName, size, price, footerText);
+            stickerDrawCanvasBody(ctx, W, H, y + maxH + 6, itemName, size, price, footerText, orderTime);
         };
+        logoImg.onerror = function() { stickerDrawCanvasBody(ctx, W, H, y + 46, itemName, size, price, footerText, orderTime); };
         logoImg.src = stickerConfig.logoImgURL;
     } else {
-        // Text logo — dùng brand font
-        ctx.font = 'bold 18px "Libre Baskerville", Georgia, serif';
+        // Brand font: League Spartan bold — giống hệt POS
+        ctx.font = 'bold 22px "League Spartan", "Arial Black", sans-serif';
         ctx.fillStyle = '#111111';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
+        ctx.letterSpacing = '-1px';
         ctx.fillText('The cafe 33', 14, y);
-        // Gạch ngang mỏng dưới logo
+        ctx.letterSpacing = '0px';
         ctx.strokeStyle = '#e5e7eb';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(14, y + 26); ctx.lineTo(W - 14, y + 26);
+        ctx.moveTo(14, y + 30); ctx.lineTo(W - 14, y + 30);
         ctx.stroke();
-        stickerDrawCanvasBody(ctx, W, H, y + 34, itemName, size, price, footerText);
+        stickerDrawCanvasBody(ctx, W, H, y + 38, itemName, size, price, footerText, orderTime);
     }
 }
 
-function stickerDrawCanvasBody(ctx, W, H, startY, itemName, size, price, footerText) {
-    var fontName   = stickerConfig.fontName   || 28;
-    var fontFooter = stickerConfig.fontFooter || 16;
+function stickerDrawCanvasBody(ctx, W, H, startY, itemName, size, price, footerText, orderTime) {
+    // +20% so với default: fontName default=28→34, fontFooter default=16→19
+    var fontName   = Math.round((stickerConfig.fontName   || 34) * 1.0);
+    var fontFooter = Math.round((stickerConfig.fontFooter || 19) * 1.0);
+    var fontPrice  = Math.round(fontName * 0.75);  // Giá & Size: 75% tên món, đậm
     var y = startY;
 
     // ── Tên món ──
-    ctx.font = 'bold ' + fontName + 'px "Libre Baskerville", Georgia, serif';
+    ctx.font = 'bold ' + fontName + 'px "League Spartan", "Arial Black", sans-serif';
     ctx.fillStyle = '#111111';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    // Word-wrap nếu dài
-    var words = itemName.split(' ');
-    var lines = [], line = '';
+    var words = itemName.split(' '), lines = [], line = '';
     words.forEach(function(w) {
         var test = line + (line ? ' ' : '') + w;
-        if (ctx.measureText(test).width > W - 28 && line) {
-            lines.push(line); line = w;
-        } else { line = test; }
+        if (ctx.measureText(test).width > W - 28 && line) { lines.push(line); line = w; }
+        else { line = test; }
     });
     if (line) lines.push(line);
-    lines.forEach(function(l) {
-        ctx.fillText(l, 14, y);
-        y += fontName * 1.25;
-    });
+    lines.forEach(function(l) { ctx.fillText(l, 14, y); y += fontName * 1.2; });
+    y += 6;
 
-    y += 4;
-
-    // ── Giá + Size ──
-    ctx.font = '500 14px "Google Sans", Arial, sans-serif';
-    ctx.fillStyle = '#555555';
-    ctx.textAlign = 'left';
+    // ── Giá + Size — to và đậm ──
+    ctx.font = 'bold ' + fontPrice + 'px "League Spartan", "Arial Black", sans-serif';
+    ctx.fillStyle = '#222222';
     ctx.textBaseline = 'top';
-    var priceStr = '(Giá:) ' + (price ? Number(price).toLocaleString() + 'đ' : '...........');
+    // Giá bên trái
+    ctx.textAlign = 'left';
+    var priceStr = price ? Number(price).toLocaleString() + 'đ' : '...........';
     ctx.fillText(priceStr, 14, y);
+    // Size bên phải
     ctx.textAlign = 'right';
     ctx.fillText('Size: ' + (size || '....'), W - 14, y);
-    y += 24;
+    y += fontPrice * 1.3;
+    y += 4;
 
     // ── Đường kẻ ──
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(14, y); ctx.lineTo(W-14, y);
+    ctx.moveTo(14, y); ctx.lineTo(W - 14, y);
     ctx.stroke();
-    y += 10;
+    y += 8;
+
+    // ── Thời gian order ──
+    if (orderTime) {
+        ctx.font = '500 12px "League Spartan", Arial, sans-serif';
+        ctx.fillStyle = '#9ca3af';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(orderTime, W/2, y);
+        y += 17;
+    }
 
     // ── Footer ──
-    ctx.font = 'italic ' + fontFooter + 'px "Libre Baskerville", Georgia, serif';
+    ctx.font = 'italic ' + fontFooter + 'px "League Spartan", Arial, sans-serif';
     ctx.fillStyle = '#333333';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     var fLines = (footerText || 'Thank you so much\nluv u').split('\n');
     fLines.forEach(function(fl) {
         ctx.fillText(fl.trim(), W/2, y);
-        y += fontFooter * 1.4;
+        y += fontFooter * 1.35;
     });
 }
 
@@ -11415,7 +11421,7 @@ function stickerBuildCanvas(itemName, size, price) {
 }
 
 // Async version (logo img có thể cần await load)
-function stickerBuildCanvasAsync(itemName, size, price) {
+function stickerBuildCanvasAsync(itemName, size, price, orderTime) {
     return new Promise(function(resolve) {
         var cv = document.createElement('canvas');
         cv.width = 320; cv.height = 240;
@@ -11423,30 +11429,30 @@ function stickerBuildCanvasAsync(itemName, size, price) {
         var ctx = cv.getContext('2d');
         ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
         var footerText = stickerConfig.footerText;
-        var startY = 16;
+        var startY = 14;
 
         var drawBody = function(afterLogoY) {
-            stickerDrawCanvasBody(ctx, W, H, afterLogoY, itemName, size, price, footerText);
+            stickerDrawCanvasBody(ctx, W, H, afterLogoY, itemName, size, price, footerText, orderTime);
             resolve(cv);
         };
 
         if (stickerConfig.logoMode === 'img' && stickerConfig.logoImgURL) {
             var logoImg = new Image();
             logoImg.onload = function() {
-                var maxW=140, maxH=36, scale=Math.min(maxW/logoImg.width, maxH/logoImg.height);
+                var maxW=160, maxH=40, scale=Math.min(maxW/logoImg.width, maxH/logoImg.height);
                 var lw=logoImg.width*scale, lh=logoImg.height*scale;
                 ctx.drawImage(logoImg, (W-lw)/2, startY, lw, lh);
-                drawBody(startY + maxH + 8);
+                drawBody(startY + maxH + 6);
             };
-            logoImg.onerror = function() { drawBody(startY + 44); };
+            logoImg.onerror = function() { drawBody(startY + 46); };
             logoImg.src = stickerConfig.logoImgURL;
         } else {
-            ctx.font = 'bold 18px "Libre Baskerville", Georgia, serif';
+            ctx.font = 'bold 22px "League Spartan", "Arial Black", sans-serif';
             ctx.fillStyle = '#111111'; ctx.textAlign='left'; ctx.textBaseline='top';
             ctx.fillText('The cafe 33', 14, startY);
             ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
-            ctx.beginPath(); ctx.moveTo(14,startY+26); ctx.lineTo(W-14,startY+26); ctx.stroke();
-            drawBody(startY + 34);
+            ctx.beginPath(); ctx.moveTo(14,startY+30); ctx.lineTo(W-14,startY+30); ctx.stroke();
+            drawBody(startY + 38);
         }
     });
 }
@@ -11527,7 +11533,8 @@ function stickerSaveConfig() {
 async function stickerTestPrint() {
     if (!lblIsConn) { lblLog('Chưa kết nối máy in', 'err'); return; }
     var item = stickerSelectedPreviewItem || { name: 'Sữa gạo matcha', priceM: 35000 };
-    var cv = await stickerBuildCanvasAsync(item.name, 'M', item.priceM || 0);
+    var now = new Date(); var orderTime = now.getDate().toString().padStart(2,'0')+'/'+(now.getMonth()+1).toString().padStart(2,'0')+'/'+now.getFullYear()+' '+now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+    var cv = await stickerBuildCanvasAsync(item.name, 'M', item.priceM || 0, orderTime);
     var dataURL = cv.toDataURL('image/png');
     var data = await lblImgToEscPos(dataURL);
     await lblWriteBle(data);
@@ -11590,12 +11597,17 @@ function openPrintStickerModal(idx) {
         });
 
         printStickerItems = expanded;
-        renderPrintStickerModal(h);
+        // Build orderTime string từ bill
+        var _ot = '';
+        if (h.fullTime) { _ot = h.fullTime; }
+        else if (h.timeStr && h.dateStr) { _ot = h.dateStr.slice(0,5) + ' ' + h.timeStr; }
+        window._currentPrintOrderTime = _ot;
+        renderPrintStickerModal(h, _ot);
         document.getElementById('print-sticker-modal').style.display = 'flex';
     });
 }
 
-function renderPrintStickerModal(h) {
+function renderPrintStickerModal(h, orderTime) {
     var subtitle = document.getElementById('print-modal-subtitle');
     if (subtitle) subtitle.textContent = (h.timeStr || '') + ' · ' + ((h.dateStr || '').slice(0,5));
     var list = document.getElementById('print-modal-list');
@@ -11624,7 +11636,7 @@ function renderPrintStickerModal(h) {
         // Vẽ mini preview (64×48)
         var tempCv = document.createElement('canvas');
         tempCv.width = 320; tempCv.height = 240;
-        stickerDrawCanvas(tempCv, item.name, item.size, item.price, stickerConfig.footerText);
+        stickerDrawCanvas(tempCv, item.name, item.size, item.price, stickerConfig.footerText, orderTime);
         // Scale xuống canvas nhỏ
         var ctx = cv.getContext('2d');
         ctx.drawImage(tempCv, 0, 0, 64, 48);
@@ -11666,7 +11678,7 @@ async function printStickerConfirm() {
         var item = selected[i];
         if (btn) btn.textContent = 'Đang in ' + (i+1) + '/' + selected.length + '...';
         try {
-            var cv = await stickerBuildCanvasAsync(item.name, item.size, item.price);
+            var cv = await stickerBuildCanvasAsync(item.name, item.size, item.price, window._currentPrintOrderTime || '');
             var dataURL = cv.toDataURL('image/png');
             var data = await lblImgToEscPos(dataURL);
             await lblWriteBle(data);
