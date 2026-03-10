@@ -7168,9 +7168,11 @@ function saveOrderToFirebase(method) {
     isSavingOrder = true;
 
     const isMobile = window.innerWidth <= 768;
-    const pVal = isMobile
+    const _rawPaid = isMobile
         ? document.getElementById('cash-paid-mobile').value
         : document.getElementById('cash-paid').value;
+    // Xóa dấu phẩy trước khi parse (mobile lưu "500,000", PC lưu "500,000")
+    const pVal = String(_rawPaid || '').replace(/,/g, '');
     const paid = (method === 'Chuyển khoản') ? currentTotal : (Number(pVal) || currentTotal);
     
     // --- LƯU TRẠNG THÁI TRƯỚC KHI GỬI ---
@@ -10841,7 +10843,10 @@ function discountFormSave() {
         usageLimit: limit,
         usedCount:  0
     };
-    if (_dfType === 'item') record.targetItem = target;
+    // Gán targetItem cho tất cả type cần chọn món
+    if (_dfType === 'item' || _dfType === 'item_free' || _dfType === 'item_upsize') {
+        if (target) record.targetItem = target;
+    }
     if (_dfType === 'item_free' || _dfType === 'item_upsize') {
         if (condCategory) record.conditionCategory = condCategory;
         if (condMaxPrice > 0) record.conditionMaxPrice = condMaxPrice;
@@ -10850,20 +10855,46 @@ function discountFormSave() {
 
     var isNew = !editKey;
     var key = isNew ? ('gift_' + (code || Date.now())) : editKey;
-    var save = function(usedCount) {
+
+    // Nếu edit & type=item nhưng target bị trống: lấy từ cache
+    if (!isNew && _dfType === 'item' && !target) {
+        var cached = _discountCache[editKey];
+        if (cached && cached.targetItem) {
+            target = cached.targetItem;
+            var hEl = document.getElementById('df-target');
+            if (hEl) hEl.value = target;
+        }
+    }
+
+    var save = function(usedCount, existingData) {
         record.usedCount = usedCount || 0;
+        // Khi edit: merge với data cũ, tránh mất field không có trong form
+        if (!isNew && existingData) {
+            if (!record.targetItem && existingData.targetItem)
+                record.targetItem = existingData.targetItem;
+            if (!record.conditionCategory && existingData.conditionCategory)
+                record.conditionCategory = existingData.conditionCategory;
+            if (!record.conditionMaxPrice && existingData.conditionMaxPrice)
+                record.conditionMaxPrice = existingData.conditionMaxPrice;
+            if (!record.conditionMinPrice && existingData.conditionMinPrice)
+                record.conditionMinPrice = existingData.conditionMinPrice;
+        }
         db.ref('rewards/' + key).set(record, function(err) {
             if (err) return alert('Lỗi: ' + err.message);
-            showAppModal(isNew ? 'Đã tạo' : 'Đã lưu', (isNew ? 'Quà' : 'Quà') + ' <b>' + label + '</b> ' + (isNew ? 'đã được tạo!' : 'đã được cập nhật!'), '🎁');
+            showAppModal(isNew ? 'Đã tạo' : 'Đã lưu', 'Quà <b>' + label + '</b> ' + (isNew ? 'đã được tạo!' : 'đã được cập nhật!'), '🎁');
             discountFormClear();
             renderDiscountList();
             _discountCache[key] = record;
         });
     };
     if (!isNew) {
-        db.ref('rewards/' + editKey + '/usedCount').once('value', function(s) { save(s.val() || 0); });
+        // Đọc toàn bộ record cũ để merge (không mất targetItem, condition...)
+        db.ref('rewards/' + editKey).once('value', function(snap) {
+            var existing = snap.val() || {};
+            save(existing.usedCount || 0, existing);
+        });
     } else {
-        save(0);
+        save(0, null);
     }
 }
 
