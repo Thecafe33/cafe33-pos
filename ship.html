@@ -765,6 +765,15 @@ input, button, select, textarea { font-family: 'Nunito', sans-serif; }
   margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
+.cart-item-thumb {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  background: var(--brand-light); overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.cart-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cart-item-thumb-placeholder {
+  font-size: 1.4rem; line-height: 1;
+}
 .cart-item-info { flex: 1; }
 .cart-item-name { font-size: 0.92rem; font-weight: 800; margin-bottom: 3px; }
 .cart-item-opts { font-size: 0.75rem; color: #9ca3af; font-weight: 600; }
@@ -1350,13 +1359,19 @@ window.onunhandledrejection = null;
     <!-- Địa chỉ -->
     <div style="background:white;border-radius:20px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
       <div style="font-size:0.78rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Giao đến</div>
-      <div style="display:flex;align-items:flex-start;gap:10px">
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px">
         <span style="font-size:1.2rem;flex-shrink:0;margin-top:2px">📍</span>
         <div>
           <div style="font-weight:800;font-size:0.9rem;line-height:1.5" id="pay-addr">—</div>
           <div style="font-size:0.8rem;color:var(--brand);font-weight:700;margin-top:4px" id="pay-ship-fee">Phí ship: —</div>
         </div>
       </div>
+      <div style="font-size:0.72rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px">Mô tả địa điểm</div>
+      <input type="text" id="inp-location-desc"
+        placeholder="VD: Nhà màu xanh, cổng sắt, hẻm 5..."
+        style="width:100%;padding:11px 16px;background:#f3f4f6;border:2px solid transparent;border-radius:14px;font-size:0.88rem;font-weight:700;outline:none;font-family:'Nunito',sans-serif;box-sizing:border-box;color:#111;transition:border-color 0.2s"
+        onfocus="this.style.borderColor='var(--brand)';this.style.background='white'"
+        onblur="this.style.borderColor='transparent';this.style.background='#f3f4f6'">
     </div>
 
     <!-- Tóm tắt đơn -->
@@ -1402,7 +1417,7 @@ window.onunhandledrejection = null;
     </div>
 
     <button class="btn-primary safe-bottom" id="btn-place-order" onclick="placeOrder()">
-      Đặt hàng ngay 🚀
+      Đặt hàng ngay
     </button>
     <div style="height:20px"></div>
   </div>
@@ -2147,10 +2162,14 @@ function renderCart() {
 
   const html = state.cart.map((item, idx) => {
     const opts = [item.size ? `Size ${item.size}` : '', item.sugar, item.ice,
-      ...item.toppings.map(t => t.name), item.note].filter(Boolean).join(', ');
+      ...item.toppings.map(t => t.name), item.note].filter(Boolean).join(' · ');
+    const menuItem = state.menuData?.find(m => m.id === item.id);
+    const thumbHtml = menuItem?.image
+      ? `<img src="${menuItem.image}" alt="" loading="lazy">`
+      : `<span class="cart-item-thumb-placeholder">☕</span>`;
     return `
       <div class="cart-item ${item.isGift ? 'gift-item' : ''}">
-        <div style="font-size:1.3rem">${item.isGift ? '🎁' : '☕'}</div>
+        <div class="cart-item-thumb">${thumbHtml}</div>
         <div class="cart-item-info">
           <div class="cart-item-name">${item.name}${item.size ? ` (${item.size})` : ''} ${item.isGift ? '<span style="font-size:0.72rem;background:var(--brand);color:white;padding:2px 8px;border-radius:99px;margin-left:6px">Tặng</span>' : ''}</div>
           ${opts ? `<div class="cart-item-opts">${opts}</div>` : ''}
@@ -2460,17 +2479,28 @@ function renderPayment() {
   const discount = state.voucher ? state.voucher.discount : 0;
   const total    = Math.max(0, sub - discount + state.shipFee);
 
-  // Items summary
-  document.getElementById('pay-items').innerHTML = state.cart.map(i =>
-    `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6">
-      <span style="font-size:0.88rem;font-weight:700;flex:1">${i.name}${i.size ? ` (${i.size})` : ''} ×${i.qty} ${i.isGift ? '🎁' : ''}</span>
-      <span style="font-size:0.88rem;font-weight:800;color:var(--brand);margin-left:12px">${i.isGift ? 'Tặng' : `${(i.price*i.qty).toLocaleString('vi')}đ`}</span>
-    </div>`
-  ).join('');
+  // Items summary với ảnh thumbnail
+  document.getElementById('pay-items').innerHTML = state.cart.map(i => {
+    const menuItem = state.menuData?.find(m => m.id === i.id);
+    const thumb = menuItem?.image
+      ? `<img src="${menuItem.image}" style="width:40px;height:40px;border-radius:10px;object-fit:cover;flex-shrink:0" loading="lazy">`
+      : `<div style="width:40px;height:40px;border-radius:10px;background:var(--brand-light);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.1rem">☕</div>`;
+    const opts = [i.size ? `Size ${i.size}` : '', i.sugar, i.ice,
+      ...(i.toppings||[]).map(t=>t.name), i.note].filter(Boolean).join(' · ');
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">
+      ${thumb}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:0.88rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.name}${i.size?` (${i.size})`:''} ×${i.qty}${i.isGift?' 🎁':''}</div>
+        ${opts?`<div style="font-size:0.72rem;color:#9ca3af;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${opts}</div>`:''}
+      </div>
+      <span style="font-size:0.9rem;font-weight:900;color:var(--brand);flex-shrink:0">${i.isGift?'Tặng':`${(i.price*i.qty).toLocaleString('vi')}đ`}</span>
+    </div>`;
+  }).join('');
 
   document.getElementById('pay-total').textContent = `${total.toLocaleString('vi')}đ`;
+  document.getElementById('pay-addr').textContent = state.address || '—';
+  document.getElementById('pay-ship-fee').textContent = `Phí ship: ${state.shipFee>0?state.shipFee.toLocaleString('vi')+'đ':'Miễn phí'}`;
 
-  // QR transfer note
   const orderId = Date.now().toString().slice(-4);
   const transferNote = `${state.customer?.phone || ''} ${orderId}`;
   document.getElementById('qr-transfer-note').textContent = transferNote;
@@ -2503,6 +2533,7 @@ function placeOrder() {
     store: { id: state.store.id, name: state.store.name },
     items: state.cart,
     address: state.address,
+    locationDesc: (document.getElementById('inp-location-desc')?.value || '').trim(),
     shipFee: state.shipFee,
     subtotal: sub,
     discount,
@@ -2516,7 +2547,7 @@ function placeOrder() {
 
   dbRef('shipOrders/' + orderId).set(order, err => {
     if (err) {
-      btn.innerHTML = 'Đặt hàng ngay 🚀';
+      btn.innerHTML = 'Đặt hàng ngay';
       btn.disabled = false;
       showToast('Lỗi đặt hàng, thử lại!');
       return;
@@ -2539,6 +2570,10 @@ function placeOrder() {
 function showSuccess(orderId, order) {
   const shortId = orderId.slice(-6).toUpperCase();
   document.getElementById('suc-order-id').textContent = `Mã đơn #${shortId}`;
+
+  // Hero bg = màu brand chi nhánh
+  const heroEl = document.querySelector('.success-hero');
+  if (heroEl) heroEl.style.background = state.store?.color || 'var(--brand)';
 
   const payNote = order.payMethod === 'qr'
     ? 'Quán sẽ xác nhận sau khi nhận chuyển khoản.'
@@ -2602,8 +2637,10 @@ function _saveOrderLocal(orderId, order) {
   try {
     const key = 'ship_orders_' + (state.customer?.phone || 'guest');
     const list = JSON.parse(localStorage.getItem(key) || '[]');
-    list.unshift({ orderId, ...order, savedAt: Date.now() });
-    localStorage.setItem(key, JSON.stringify(list.slice(0, 20))); // giữ 20 đơn gần nhất
+    // Tránh duplicate cùng orderId
+    const filtered = list.filter(o => o.orderId !== orderId);
+    filtered.unshift({ orderId, ...order, savedAt: Date.now() });
+    localStorage.setItem(key, JSON.stringify(filtered.slice(0, 30)));
   } catch(e) {}
 }
 
@@ -2622,18 +2659,36 @@ function loadOrders() {
 
   const statusLabel = { pending:'Chờ xác nhận', confirmed:'Đã xác nhận', making:'Đang pha chế', delivering:'Đang giao', completed:'Hoàn thành', cancelled:'Đã hủy' };
 
-  // Lấy từ localStorage trước (instant)
+  // Load từ localStorage ngay (instant)
   const key = 'ship_orders_' + phone;
-  const local = JSON.parse(localStorage.getItem(key) || '[]');
-  if (local.length > 0) _renderOrderList(local, statusLabel);
+  let local = [];
+  try { local = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){}
 
-  // Sau đó sync từ Firebase
+  if (local.length > 0) {
+    _renderOrderList(local, statusLabel);
+  } else {
+    listEl.innerHTML = `<div style="text-align:center;padding:40px 24px;color:#9ca3af">
+      <div style="font-size:2rem;margin-bottom:8px">📋</div>
+      <div style="font-weight:800">Chưa có đơn hàng nào</div>
+    </div>`;
+  }
+
+  // Sync Firebase
   if (db) {
-    dbRef('shipOrders').orderByChild('customer/phone').equalTo(phone).limitToLast(20).once('value', snap => {
+    dbRef('shipOrders').orderByChild('customer/phone').equalTo(phone).limitToLast(30).once('value', snap => {
       if (!snap.exists()) return;
       const orders = [];
-      snap.forEach(child => orders.unshift({ orderId: child.key, ...child.val() }));
-      _renderOrderList(orders, statusLabel);
+      snap.forEach(child => orders.push({ orderId: child.key, ...child.val() }));
+      // Sắp xếp mới nhất trước
+      orders.sort((a, b) => new Date(b.createdAt||0) - new Date(a.createdAt||0));
+      // Merge vào localStorage
+      const merged = [...orders];
+      local.forEach(lo => {
+        if (!merged.find(o => o.orderId === lo.orderId)) merged.push(lo);
+      });
+      merged.sort((a, b) => (b.savedAt||0) - (a.savedAt||0) || new Date(b.createdAt||0) - new Date(a.createdAt||0));
+      try { localStorage.setItem(key, JSON.stringify(merged.slice(0,30))); } catch(e){}
+      _renderOrderList(merged, statusLabel);
     }).catch(() => {});
   }
 }
@@ -2643,10 +2698,12 @@ function _renderOrderList(orders, statusLabel) {
   if (!listEl || !orders.length) return;
 
   listEl.innerHTML = orders.map(o => {
-    const items = (o.items || []).map(i => i.name).join(', ');
+    const itemNames = (o.items || []).filter(i=>!i.isGift).map(i => `${i.name}${i.qty>1?` ×${i.qty}`:''}`).join(', ');
     const total = (o.total || 0).toLocaleString('vi');
     const status = o.status || 'pending';
-    const date = o.savedAt ? new Date(o.savedAt).toLocaleDateString('vi') : '';
+    const date = o.createdAt
+      ? new Date(o.createdAt).toLocaleDateString('vi', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+      : (o.savedAt ? new Date(o.savedAt).toLocaleDateString('vi', {day:'2-digit',month:'2-digit'}) : '');
     return `<div class="order-card" onclick="viewOrderDetail('${o.orderId}')">
       <div class="order-card-header">
         <div>
@@ -2655,15 +2712,101 @@ function _renderOrderList(orders, statusLabel) {
         </div>
         <span class="order-card-status ${status}">${statusLabel[status] || status}</span>
       </div>
-      <div class="order-card-items">${items}</div>
+      <div class="order-card-items">${itemNames}</div>
       <div class="order-card-total">${total}đ</div>
     </div>`;
   }).join('');
 }
 
 function viewOrderDetail(orderId) {
-  // TODO: mở chi tiết đơn — sẽ làm sau
-  showToast('Đơn #' + orderId.slice(-6).toUpperCase());
+  // Tìm trong localStorage trước
+  const key = 'ship_orders_' + (state.customer?.phone || 'guest');
+  let orders = [];
+  try { orders = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){}
+  let order = orders.find(o => o.orderId === orderId);
+
+  const statusLabel = { pending:'Chờ xác nhận', confirmed:'Đã xác nhận', making:'Đang pha chế', delivering:'Đang giao', completed:'Hoàn thành', cancelled:'Đã hủy' };
+  const statusClass = { pending:'pending', confirmed:'confirmed', making:'making', delivering:'delivering', completed:'completed', cancelled:'cancelled' };
+
+  function _showModal(o) {
+    const existing = document.getElementById('order-detail-modal');
+    if (existing) existing.remove();
+
+    const items = (o.items||[]).map(i => {
+      const opts = [i.size?`Size ${i.size}`:'', i.sugar, i.ice, ...(i.toppings||[]).map(t=>t.name), i.note].filter(Boolean).join(' · ');
+      return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f3f4f6;gap:8px">
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:0.88rem">${i.name}${i.size?` (${i.size})`:''} ×${i.qty}${i.isGift?' <span style="font-size:0.7rem;background:var(--brand);color:white;padding:1px 7px;border-radius:99px">Tặng</span>':''}</div>
+          ${opts?`<div style="font-size:0.74rem;color:#9ca3af;font-weight:600;margin-top:2px">${opts}</div>`:''}
+        </div>
+        <div style="font-weight:900;font-size:0.88rem;color:var(--brand);flex-shrink:0">${i.isGift?'Tặng':`${(i.price*i.qty).toLocaleString('vi')}đ`}</div>
+      </div>`;
+    }).join('');
+
+    const status = o.status || 'pending';
+    const payMethod = o.payMethod==='qr' ? 'Chuyển khoản QR' : 'Tiền mặt (COD)';
+    const date = o.createdAt ? new Date(o.createdAt).toLocaleString('vi',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '';
+
+    const modal = document.createElement('div');
+    modal.id = 'order-detail-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end;justify-content:center';
+    modal.innerHTML = `
+      <div style="background:#f8f9fa;border-radius:28px 28px 0 0;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;background:white;border-bottom:1px solid #f3f4f6">
+          <div>
+            <div style="font-size:0.7rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px">Mã đơn</div>
+            <div style="font-size:1.1rem;font-weight:900">#${(orderId||'').slice(-6).toUpperCase()}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="order-card-status ${statusClass[status]}">${statusLabel[status]||status}</span>
+            <button onclick="document.getElementById('order-detail-modal').remove()"
+              style="width:34px;height:34px;border-radius:50%;border:none;background:#f3f4f6;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center">✕</button>
+          </div>
+        </div>
+        <div style="overflow-y:auto;flex:1;padding:16px">
+          <div style="background:white;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,0.05)">
+            <div style="font-size:0.7rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Thông tin đơn</div>
+            <div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:7px 0;border-bottom:1px solid #f3f4f6">
+              <span style="color:#6b7280;font-weight:700">Chi nhánh</span><span style="font-weight:800">${o.store?.name||''}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:7px 0;border-bottom:1px solid #f3f4f6">
+              <span style="color:#6b7280;font-weight:700">Thời gian</span><span style="font-weight:800">${date}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:0.85rem;padding:7px 0;border-bottom:1px solid #f3f4f6">
+              <span style="color:#6b7280;font-weight:700">Thanh toán</span><span style="font-weight:800">${payMethod}</span></div>
+            <div style="font-size:0.85rem;padding:7px 0;border-bottom:1px solid #f3f4f6">
+              <div style="color:#6b7280;font-weight:700;margin-bottom:4px">Giao đến</div>
+              <div style="font-weight:800;font-size:0.82rem;line-height:1.5">${o.address||'—'}</div>
+              ${o.locationDesc?`<div style="font-size:0.78rem;color:#9ca3af;font-weight:600;margin-top:3px">${o.locationDesc}</div>`:''}
+            </div>
+          </div>
+          <div style="background:white;border-radius:18px;padding:16px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,0.05)">
+            <div style="font-size:0.7rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Sản phẩm</div>
+            ${items}
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;margin-top:4px">
+              <span style="font-weight:900;font-size:0.95rem">Tổng cộng</span>
+              <span style="font-weight:900;font-size:1.2rem;color:var(--brand)">${(o.total||0).toLocaleString('vi')}đ</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+    // slide up
+    requestAnimationFrame(() => {
+      const inner = modal.querySelector('div[style*="border-radius:28px"]');
+      if (inner) { inner.style.transform='translateY(100%)'; inner.style.transition='transform 0.35s cubic-bezier(0.16,1,0.3,1)'; }
+      requestAnimationFrame(() => { if(inner) inner.style.transform='translateY(0)'; });
+    });
+  }
+
+  if (order) {
+    _showModal(order);
+  } else if (db) {
+    // Fetch từ Firebase nếu không có local
+    dbRef('shipOrders/' + orderId).once('value', snap => {
+      if (snap.exists()) _showModal({ orderId, ...snap.val() });
+      else showToast('Không tìm thấy đơn hàng');
+    }).catch(() => showToast('Lỗi tải đơn hàng'));
+  }
 }
 
 function startOver() {
