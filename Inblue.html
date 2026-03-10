@@ -318,35 +318,38 @@ async function connectBle(){
   log('Quét BLE...','info');
   try{
     bleDevice=await navigator.bluetooth.requestDevice({
-      acceptAllDevices:true,
-      optionalServices:[SVC,SVC2],
+      // Dùng filters cụ thể — tránh treo UI trên Chrome Android
+      filters:[
+        {name:'MP583'},
+        {namePrefix:'MP583'},
+      ],
+      optionalServices:[SVC, SVC2],
     });
     log('Tìm thấy: '+bleDevice.name,'ok');setProgress(35);
     const server=await bleDevice.gatt.connect();
     log('GATT OK','ok');setProgress(55);
 
-    // Scan tất cả services & characteristics, log đầy đủ để debug
-    const svcs=await server.getPrimaryServices();
-    log('Tổng services: '+svcs.length,'info');
     let char=null;
-    let foundInSPP=false;
-    for(const s of svcs){
+    // Thử service 49535343 trước (SPP bridge — kênh in thật)
+    try{
+      const svc=await server.getPrimaryService(SVC);
+      const chars=await svc.getCharacteristics();
+      for(const c of chars){
+        log('49535343 char: '+c.uuid.slice(0,8)+' WNR='+c.properties.writeWithoutResponse,'info');
+        if(c.properties.writeWithoutResponse||c.properties.write) char=char||c;
+      }
+      if(char) log('✓ SPP 49535343 char OK','ok');
+    }catch(e){
+      log('49535343 thất bại, thử 0x18F0...','warn');
       try{
-        const cs=await s.getCharacteristics();
-        for(const c of cs){
-          const w=c.properties.write, wnr=c.properties.writeWithoutResponse, n=c.properties.notify;
-          log('SVC '+s.uuid.slice(0,8)+' CHAR '+c.uuid.slice(0,8)+' W='+w+' WNR='+wnr+' N='+n,'info');
-          // Ưu tiên char WRITE trong service SPP 49535343
-          if(s.uuid.startsWith('49535343') && (wnr||w)){
-            if(!char || (!foundInSPP)){char=c;foundInSPP=true;}
-          } else if(!char && (wnr||w)){
-            char=c;
-          }
+        const svc2=await server.getPrimaryService(SVC2);
+        const chars=await svc2.getCharacteristics();
+        for(const c of chars){
+          if(c.properties.writeWithoutResponse||c.properties.write) char=char||c;
         }
-      }catch(e){log('Err scan svc '+s.uuid.slice(0,8)+': '+e.message,'warn');}
+        if(char) log('✓ 0x18F0 char OK','ok');
+      }catch(e2){ log('Cả 2 service đều lỗi: '+e2.message,'err'); }
     }
-    if(foundInSPP) log('✓ Dùng SPP 49535343 char — kênh in thật','ok');
-    else if(char)  log('⚠ Dùng char fallback: '+char.uuid,'warn');
     if(!char)throw new Error('Không tìm thấy writable characteristic');
     bleChar=char;isConn=true;setProgress(100);setTimeout(()=>setProgress(null),500);
     log('✓ Sẵn sàng in! WNR='+char.properties.writeWithoutResponse,'ok');
