@@ -213,7 +213,39 @@ input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;bac
     </div>
   </div>
 
-  <div class="sec">Xem trước</div>
+  <!-- IMAGE EDITOR CARD -->
+  <div class="sec">Chỉnh ảnh & Preview</div>
+  <div class="card">
+    <!-- Contrast -->
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-name">Contrast</span><span class="sl-val" id="vContrast">+50</span></div>
+      <div class="sl-sub">Tăng để ảnh đậm hơn — khuyến nghị +40 đến +80 cho ảnh màu</div>
+      <input type="range" id="slContrast" min="-100" max="100" step="5" value="50">
+    </div>
+    <!-- Scale -->
+    <div class="sl-row">
+      <div class="sl-head"><span class="sl-name">Phóng to / Thu nhỏ</span><span class="sl-val" id="vScale">100%</span></div>
+      <div class="sl-sub">Scale ảnh trong vùng in 35mm</div>
+      <input type="range" id="slScale" min="50" max="150" step="5" value="100">
+    </div>
+    <!-- Flip controls -->
+    <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--out)">
+      <button class="dpi-btn" id="btnFlipH" onclick="toggleFlip('h')">↔ Lật ngang</button>
+      <button class="dpi-btn" id="btnFlipV" onclick="toggleFlip('v')">↕ Lật dọc</button>
+      <button class="dpi-btn" id="btnRot90" onclick="rotateImg(90)">↻ Xoay 90°</button>
+      <button class="dpi-btn" id="btnRot180" onclick="rotateImg(180)">↻ Xoay 180°</button>
+    </div>
+    <!-- Live preview canvas -->
+    <div style="padding:14px 16px">
+      <div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:10px">Preview thực tế (1-bit sau khi xử lý)</div>
+      <div style="background:#f5f5f5;border:1px solid var(--out);border-radius:10px;overflow:hidden;display:flex;justify-content:center;padding:8px">
+        <canvas id="previewCanvas" style="max-width:100%;border-radius:6px;image-rendering:pixelated"></canvas>
+      </div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:6px;text-align:center" id="previewInfo">Chọn ảnh để xem preview</div>
+    </div>
+  </div>
+
+  <div class="sec">Xem trước máy in</div>
   <div class="card">
     <div class="pv-head"><span class="pv-title">Preview · 58mm roll</span><span class="pv-sub" id="pvSub">40×30 @ 18mm</span></div>
     <div class="pv-body">
@@ -293,6 +325,7 @@ let currentDpiH = 203;    // DPI dọc — điều chỉnh để fix nén chiề
 const PVSC   = 160 / 58;
 
 let imgData=null, bleDevice=null, bleChar=null, isConn=false;
+let contrastVal = 50; // default contrast boost
 
 // ── UI ──
 function log(msg,t=''){const b=document.getElementById('logBody');const d=document.createElement('div');d.className='ll '+t;d.textContent='› '+msg;b.appendChild(d);b.scrollTop=b.scrollHeight;}
@@ -427,7 +460,18 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
   if (imgDataURL) {
     const img = new Image();
     await new Promise(r => { img.onload = r; img.src = imgDataURL; });
-    ctx.drawImage(img, offDots, 0, labelW, labelH);
+    // Áp dụng scale từ slider
+    const scaledW = Math.round(labelW * scaleVal);
+    const scaledH = Math.round(labelH * scaleVal);
+    const imgX = offDots + (labelW - scaledW)/2;
+    const imgY = (labelH - scaledH)/2;
+    ctx.save();
+    ctx.translate(offDots + labelW/2, labelH/2);
+    if(flipH) ctx.scale(-1,1);
+    if(flipV) ctx.scale(1,-1);
+    ctx.rotate(rotation * Math.PI/180);
+    ctx.drawImage(img, -scaledW/2, -scaledH/2, scaledW, scaledH);
+    ctx.restore();
   }
 
   const id = ctx.getImageData(0, 0, paperW, labelH);
@@ -435,6 +479,14 @@ async function imgToEscPos(imgDataURL, offMM, gapMM, noFeed) {
   const gray = new Float32Array(paperW * labelH);
   for (let i = 0; i < paperW * labelH; i++) {
     gray[i] = 0.299*px[i*4] + 0.587*px[i*4+1] + 0.114*px[i*4+2];
+  }
+
+  // ── Contrast boost trước khi threshold ──
+  // Ảnh màu nâu/xám → tăng contrast mạnh để ra đen trắng rõ
+  const contrast = contrastVal; // từ slider -100..100
+  const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+  for (let i = 0; i < gray.length; i++) {
+    gray[i] = Math.max(0, Math.min(255, factor * (gray[i] - 128) + 128));
   }
 
   // Floyd-Steinberg dithering
@@ -605,6 +657,7 @@ function hf(file) {
     document.getElementById('btnPrint').disabled = !isConn;
     log('Ảnh: ' + file.name + ' (' + Math.round(file.size/1024) + 'KB)', 'ok');
     upd();
+    updatePreviewCanvas();
   };
   r.readAsDataURL(file);
 }
@@ -656,6 +709,85 @@ function setGsMode(mode, btn){
   btn.classList.add('active');
   log('GS v 0 mode='+mode+(mode===2?' (double height — ảnh ×2 chiều cao)':mode===3?' (double W+H)':' (normal)'),'info');
 }
+// ── Image transform state ──
+let flipH = false, flipV = false, rotation = 0, scaleVal = 1.0;
+
+function toggleFlip(axis) {
+  if(axis==='h'){ flipH=!flipH; document.getElementById('btnFlipH').classList.toggle('active',flipH); }
+  else          { flipV=!flipV; document.getElementById('btnFlipV').classList.toggle('active',flipV); }
+  updatePreviewCanvas();
+}
+function rotateImg(deg) {
+  rotation = (rotation + deg) % 360;
+  const r = document.getElementById('btnRot90');
+  r.textContent = rotation === 0 ? '↻ Xoay 90°' : '↻ Xoay '+rotation+'° (reset?)';
+  if(deg===180){ document.getElementById('btnRot180').classList.toggle('active', rotation===180 || rotation===0); }
+  updatePreviewCanvas();
+}
+
+document.getElementById('slContrast').addEventListener('input', function(){
+  contrastVal = parseInt(this.value);
+  const sign = contrastVal>=0?'+':'';
+  document.getElementById('vContrast').textContent = sign+contrastVal;
+  updatePreviewCanvas();
+});
+document.getElementById('slScale').addEventListener('input', function(){
+  scaleVal = parseInt(this.value)/100;
+  document.getElementById('vScale').textContent = this.value+'%';
+  updatePreviewCanvas();
+});
+
+async function updatePreviewCanvas() {
+  if(!imgData) return;
+  const MM2PX_W = DPI/25.4, MM2PX_H = currentDpiH/25.4;
+  const paperW = Math.round(48 * MM2PX_W);
+  const labelW = Math.round(35 * MM2PX_W * scaleVal);
+  const labelH = Math.round(30 * MM2PX_H * scaleVal);
+  const autoOffMM = (48-40)+(40-35)/2.0;
+  const offDots = Math.round(autoOffMM * MM2PX_W);
+
+  const cv = document.createElement('canvas');
+  cv.width = paperW; cv.height = labelH;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,paperW,labelH);
+
+  const img = new Image();
+  await new Promise(r=>{img.onload=r;img.src=imgData;});
+
+  ctx.save();
+  ctx.translate(offDots + labelW/2, labelH/2);
+  if(flipH) ctx.scale(-1,1);
+  if(flipV) ctx.scale(1,-1);
+  ctx.rotate(rotation * Math.PI/180);
+  ctx.drawImage(img, -labelW/2, -labelH/2, labelW, labelH);
+  ctx.restore();
+
+  // Apply contrast + threshold to preview
+  const id = ctx.getImageData(0,0,paperW,labelH);
+  const px = id.data;
+  const factor = (259*(contrastVal+255))/(255*(259-contrastVal));
+  for(let i=0;i<px.length;i+=4){
+    const g = 0.299*px[i]+0.587*px[i+1]+0.114*px[i+2];
+    const boosted = Math.max(0,Math.min(255, factor*(g-128)+128));
+    const out = boosted < 140 ? 0 : 255;
+    px[i]=px[i+1]=px[i+2]=out; px[i+3]=255;
+  }
+  ctx.putImageData(id,0,0);
+
+  // Show at 2x scale for visibility
+  const display = document.getElementById('previewCanvas');
+  const displayW = Math.min(320, paperW*1.5);
+  display.width = paperW; display.height = labelH;
+  display.style.width = displayW+'px';
+  display.style.height = Math.round(labelH/paperW*displayW)+'px';
+  display.getContext('2d').putImageData(id,0,0);
+
+  const blacks = Array.from(id.data).filter((_,i)=>i%4===0&&id.data[i]===0).length;
+  const total = paperW*labelH;
+  document.getElementById('previewInfo').textContent =
+    paperW+'×'+labelH+'px | Ink: '+Math.round(blacks/total*100)+'% | Scale '+Math.round(scaleVal*100)+'%';
+}
+
 document.getElementById('slOff').addEventListener('input', upd);
 document.getElementById('slGap').addEventListener('input', upd);
 document.getElementById('ckFeed').addEventListener('change', upd);
