@@ -310,56 +310,84 @@ function setProgress(pct){
 
 // ── BLE ──
 async function toggleBle(){if(isConn)await disconnectBle();else await connectBle();}
-async function connectBle(){
-  if(!navigator.bluetooth){toast('⚠️ Cần Chrome Android');log('Web Bluetooth không khả dụng','err');return;}
-  const btn=document.getElementById('btnBle');
-  btn.disabled=true;btn.innerHTML='⏳ &nbsp;Đang tìm...';
-  setStatus('ing','Đang kết nối...');setProgress(10);
-  log('Quét BLE...','info');
-  try{
-   bleDevice = await navigator.bluetooth.requestDevice({
-  acceptAllDevices: true,
-  optionalServices: [SVC, SVC2],
-});
-    log('Tìm thấy: '+bleDevice.name,'ok');setProgress(35);
-    const server=await bleDevice.gatt.connect();
-    log('GATT OK','ok');setProgress(55);
+async function connectBle() {
+  if (!navigator.bluetooth) {
+    toast('⚠️ Cần Chrome & HTTPS');
+    log('Web Bluetooth không khả dụng. Nhớ dùng HTTPS hoặc localhost!','err');
+    return;
+  }
+  
+  try {
+    log('Bắt đầu mở popup quét BLE...','info');
+    // 1. GỌI REQUEST NGAY LẬP TỨC để không mất user gesture
+    const device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [SVC, SVC2]
+    });
 
-    let char=null;
-    // Thử service 49535343 trước (SPP bridge — kênh in thật)
-    try{
-      const svc=await server.getPrimaryService(SVC);
-      const chars=await svc.getCharacteristics();
-      for(const c of chars){
-        log('49535343 char: '+c.uuid.slice(0,8)+' WNR='+c.properties.writeWithoutResponse,'info');
-        if(c.properties.writeWithoutResponse||c.properties.write) char=char||c;
-      }
-      if(char) log('✓ SPP 49535343 char OK','ok');
-    }catch(e){
-      log('49535343 thất bại, thử 0x18F0...','warn');
-      try{
-        const svc2=await server.getPrimaryService(SVC2);
-        const chars=await svc2.getCharacteristics();
-        for(const c of chars){
-          if(c.properties.writeWithoutResponse||c.properties.write) char=char||c;
+    // 2. Chờ bạn chọn thiết bị xong mới khóa nút và update UI
+    bleDevice = device;
+    const btn = document.getElementById('btnBle');
+    btn.disabled = true; 
+    btn.innerHTML = '⏳ &nbsp;Đang kết nối...';
+    setStatus('ing','Đang kết nối...'); 
+    setProgress(10);
+    
+    log('Tìm thấy: ' + bleDevice.name, 'ok'); 
+    setProgress(35);
+
+    // 3. Kết nối GATT
+    const server = await bleDevice.gatt.connect();
+    log('GATT OK', 'ok'); 
+    setProgress(55);
+
+    // Dùng lại logic lặp service bao quát của file ban đầu
+    const svcs = await server.getPrimaryServices();
+    let char = null;
+    let foundInSPP = false;
+    
+    for (const s of svcs) {
+      try {
+        const cs = await s.getCharacteristics();
+        for (const c of cs) {
+          const w = c.properties.write, wnr = c.properties.writeWithoutResponse;
+          if (s.uuid.startsWith('49535343') && (wnr || w)) {
+            if (!char || (!foundInSPP)) { char = c; foundInSPP = true; }
+          } else if (!char && (wnr || w)) {
+            char = c;
+          }
         }
-        if(char) log('✓ 0x18F0 char OK','ok');
-      }catch(e2){ log('Cả 2 service đều lỗi: '+e2.message,'err'); }
+      } catch(e) { log('Bỏ qua svc ' + s.uuid.slice(0,8), 'warn'); }
     }
-    if(!char)throw new Error('Không tìm thấy writable characteristic');
-    bleChar=char;isConn=true;setProgress(100);setTimeout(()=>setProgress(null),500);
-    log('✓ Sẵn sàng in! WNR='+char.properties.writeWithoutResponse,'ok');
+
+    if (!char) throw new Error('Không tìm thấy writable characteristic');
+    
+    bleChar = char; 
+    isConn = true; 
+    setProgress(100); 
+    setTimeout(() => setProgress(null), 500);
+    
     setStatus('con','Đã kết nối');
-    document.getElementById('bleDesc').textContent='✓ Đã kết nối. In trực tiếp ESC * 33 — kích thước chính xác.';
-    btn.disabled=false;btn.className='btn-ble on';btn.innerHTML='🔗 &nbsp;Ngắt kết nối';
-    document.getElementById('led1').className='led con';
-    document.getElementById('btnPrint').disabled=!imgData;
-    toast('✓ Đã kết nối '+bleDevice.name);
-    bleDevice.addEventListener('gattserverdisconnected',onDis);
-  }catch(e){
-    log('Lỗi: '+e.message,'err');toast('Lỗi: '+e.message,3500);
-    setStatus('dis','Chưa kết nối');setProgress(null);
-    btn.disabled=false;btn.className='btn-ble';btn.innerHTML='📶 &nbsp;Thử lại';
+    btn.disabled = false; 
+    btn.className = 'btn-ble on'; 
+    btn.innerHTML = '🔗 &nbsp;Ngắt kết nối';
+    document.getElementById('led1').className = 'led con';
+    document.getElementById('btnPrint').disabled = !imgData;
+    toast('✓ Đã kết nối ' + bleDevice.name);
+    
+    bleDevice.addEventListener('gattserverdisconnected', onDis);
+  } catch(e) {
+    // In rõ lỗi ra console web để bạn dễ nhìn
+    log('Lỗi: ' + e.message, 'err'); 
+    toast('Lỗi: ' + e.message, 3500);
+    setStatus('dis','Chưa kết nối'); 
+    setProgress(null);
+    const btn = document.getElementById('btnBle');
+    if (btn) {
+      btn.disabled = false; 
+      btn.className = 'btn-ble'; 
+      btn.innerHTML = '📶 &nbsp;Thử lại';
+    }
   }
 }
 function onDis(){
@@ -648,4 +676,5 @@ upd();
 </script>
 </body>
 </html>
+
 
