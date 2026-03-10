@@ -3501,7 +3501,9 @@ function selectBill(idx) {
                 `<div class="mt-4 space-y-2 text-center">
                     <button onclick="executeRefundAction(${idx}, true)" class="w-full py-3 bg-red-500 text-white rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-all text-center">Hủy toàn bộ</button>
                     <button id="btn-refund-selected" onclick="executeRefundAction(${idx}, false)" class="hidden w-full py-3 border-2 border-red-500 text-red-500 rounded-xl font-black text-[10px] uppercase active:scale-95 transition-all text-center">Hoàn món đã chọn</button>
-                    <button onclick="openPrintStickerModal(${idx})" class="w-full py-3 bg-[#006241] text-white rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 text-center"><svg xmlns='http://www.w3.org/2000/svg' class='h-3 w-3' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'><path stroke-linecap='round' stroke-linejoin='round' d='M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z'/></svg>In tem</button>
+                </div>
+                <div class="mt-auto pt-3 pb-1">
+                    <button onclick="openPrintStickerModal(${idx})" class="w-full py-3 bg-[#1f2937] text-white rounded-2xl font-black text-[11px] uppercase active:scale-95 transition-all flex items-center justify-center gap-2 text-center"><svg xmlns='http://www.w3.org/2000/svg' class='h-3.5 w-3.5' fill='none' viewBox='0 0 24 24' stroke='currentColor' stroke-width='2.5'><path stroke-linecap='round' stroke-linejoin='round' d='M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z'/></svg>🏷️ In tem</button>
                 </div>`
             }
 
@@ -11528,6 +11530,25 @@ var printStickerItems = [];
 function openPrintStickerModal(idx) {
     var h = historyData[idx];
     if (!h) return;
+
+    // Nếu chưa kết nối BLE: lần đầu toast hướng dẫn, lần 2 trigger kết nối luôn
+    if (!lblIsConn) {
+        var now = Date.now();
+        if (window._printBlePromptTime && (now - window._printBlePromptTime) < 4000) {
+            // Bấm lần 2 trong 4s → kết nối luôn
+            window._printBlePromptTime = null;
+            lblToggleBle();
+            return;
+        }
+        window._printBlePromptTime = now;
+        // Toast thông báo
+        var toast = document.createElement('div');
+        toast.textContent = '🖨️ Chưa kết nối máy in — bấm lại để kết nối';
+        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1f2937;color:white;padding:10px 20px;border-radius:999px;font-size:0.82rem;font-weight:700;z-index:9999;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:fadeInUp 0.2s ease;pointer-events:none;';
+        document.body.appendChild(toast);
+        setTimeout(function() { toast.style.opacity='0'; toast.style.transition='opacity 0.4s'; setTimeout(function(){ toast.remove(); }, 400); }, 3000);
+        return;
+    }
 
     var normalizedItems = [];
     if (h.itemsArray && Array.isArray(h.itemsArray) && h.itemsArray.length > 0) {
