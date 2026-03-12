@@ -2919,24 +2919,35 @@ function renderMenu() {
 
     grid.innerHTML = filtered.map(m => {
         const color = m.color || '#006241';
-        const darkerColor = color === '#006241' ? '#004f32' : color + 'dd';
         const priceLabel = m.priceM > 0 ? (m.priceM/1000)+'k' : (m.priceL > 0 ? (m.priceL/1000)+'k' : '···');
         return `<div onclick="handleItemClick('${m.name}', ${m.priceM||0}, ${m.priceL||0})"
-            class="bg-white border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between items-center text-center cursor-pointer transition-all active:scale-95 relative overflow-hidden group aspect-square p-3 rounded-[2.2rem] md:aspect-auto md:h-32 md:p-5 md:rounded-[2rem] md:border-0 md:justify-center md:hover:scale-[1.03]"
-            style="--item-color:${color};"
-            onmouseenter="this.style.background=this.offsetWidth>200?'${darkerColor}':''" onmouseleave="this.style.background=this.offsetWidth>200?'${color}':''">
+            class="menu-card bg-white border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between items-center text-center cursor-pointer transition-all active:scale-95 relative overflow-hidden aspect-square p-3 rounded-[2.2rem] md:aspect-auto md:h-32 md:p-5 md:rounded-[2rem] md:border-0 md:justify-center md:hover:brightness-90 md:hover:scale-[1.03] md:active:scale-95"
+            data-color="${color}">
             <div class="flex-1 flex items-center justify-center w-full overflow-hidden">
-                <p class="font-black text-[#1e3932] uppercase break-words leading-none transition-colors text-lg line-clamp-2 md:text-[1.3rem] md:line-clamp-3 md:text-white md:leading-tight">
+                <p class="menu-name font-black text-[#1e3932] uppercase break-words leading-none transition-colors text-lg line-clamp-2 md:text-[1.3rem] md:line-clamp-3 md:leading-tight">
                     ${m.name}
                 </p>
             </div>
             <div class="w-full pt-1 flex justify-center md:mt-2 md:pb-0 shrink-0">
-                <p class="font-extrabold text-[#006241] tracking-tight shadow-sm bg-[#E6F4F1] px-5 py-2 rounded-full text-base md:text-[14px] md:bg-white/20 md:text-white md:px-4 md:py-1.5 md:rounded-full md:shadow-none md:font-black">
+                <p class="menu-price font-extrabold tracking-tight shadow-sm bg-[#E6F4F1] px-5 py-2 rounded-full text-base md:text-[14px] md:px-4 md:py-1.5 md:rounded-full md:shadow-none md:font-black">
                     ${priceLabel}
                 </p>
             </div>
         </div>`;
     }).join('');
+
+    // Apply màu nền cho PC (≥769px)
+    if (window.innerWidth >= 769) {
+        grid.querySelectorAll('.menu-card').forEach(function(card) {
+            const color = card.getAttribute('data-color') || '#006241';
+            card.style.background = color;
+            card.style.boxShadow = '0 6px 20px ' + color + '44';
+            card.querySelector('.menu-name').style.color = 'white';
+            const priceEl = card.querySelector('.menu-price');
+            priceEl.style.color = 'white';
+            priceEl.style.background = 'rgba(255,255,255,0.2)';
+        });
+    }
 }
 function handleItemClick(name, pM, pL) {
     if(isPaymentMode) return;
