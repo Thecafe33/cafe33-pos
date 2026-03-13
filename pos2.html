@@ -4565,28 +4565,51 @@ function _loadBedBookingsForDays(days, callback) {
     var results = [];
     var pending = days.length;
     if (pending === 0) { callback([]); return; }
+
+    function processBookingsData(data, year, month, day) {
+        Object.keys(data).forEach(function(k) {
+            var item = data[k];
+            var rawDate = item.date || item.bookingDate || (day + '/' + month + '/' + year);
+            if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
+                var p2 = rawDate.split('-');
+                rawDate = p2[2] + '/' + p2[1] + '/' + p2[0];
+            }
+            results.push({
+                id: k,
+                ...item,
+                start: item.start || item.startTime || '--:--',
+                end:   item.end   || item.endTime   || '--:--',
+                displayDate: rawDate
+            });
+        });
+    }
+
     days.forEach(function(dayStr) {
         var p = dayStr.split('-');
         var year = p[0], month = p[1], day = p[2];
         db.ref('bedBookings/' + year + '/' + month + '/' + day).once('value', function(snap) {
-            var data = snap.val() || {};
-            Object.keys(data).forEach(function(k) {
-                var item = data[k];
-                var rawDate = item.date || item.bookingDate || (day + '/' + month + '/' + year);
-                if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
-                    var p2 = rawDate.split('-');
-                    rawDate = p2[2] + '/' + p2[1] + '/' + p2[0];
-                }
-                results.push({
-                    id: k,
-                    ...item,
-                    start: item.start || item.startTime || '--:--',
-                    end:   item.end   || item.endTime   || '--:--',
-                    displayDate: rawDate
-                });
-            });
-            pending--;
-            if (pending === 0) callback(results);
+            if (snap.exists() && snap.val()) {
+                // Có data trên Realtime DB → dùng luôn
+                processBookingsData(snap.val(), year, month, day);
+                pending--;
+                if (pending === 0) callback(results);
+            } else {
+                // Không có trên RT → fallback đọc từ Firestore archive
+                var dateKey = year + '-' + month + '-' + day;
+                fstore.collection('bedBookings_archive').doc(dateKey).get()
+                    .then(function(doc) {
+                        if (doc.exists && doc.data() && doc.data().bookings) {
+                            processBookingsData(doc.data().bookings, year, month, day);
+                        }
+                        pending--;
+                        if (pending === 0) callback(results);
+                    })
+                    .catch(function(err) {
+                        console.warn('[loadBedBookings] Lỗi đọc archive ' + dateKey + ':', err.message);
+                        pending--;
+                        if (pending === 0) callback(results);
+                    });
+            }
         });
     });
 }
