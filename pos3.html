@@ -2456,73 +2456,12 @@ function autoLoginPOS() {
             // Chạy archive sau khi đăng nhập thành công
             setTimeout(runAutoArchive, 5000);
             setTimeout(syncRewardsToRT, 10000);
-            setTimeout(bootstrapPhoneIndex, 15000);
         })
         .catch((error) => {
             alert("Lỗi: Không thể đăng nhập vào hệ thống! Kiểm tra lại Email/Pass trong code.");
         });
 }
 
-// Bootstrap: đọc toàn bộ bedBookings_archive từ Firestore → ghi RT phone index
-// Chỉ cần chạy 1 lần sau khi deploy, tự bỏ qua nếu đã có data
-function bootstrapPhoneIndex() {
-    db.ref('bedBookings_by_phone').once('value', function(existSnap) {
-        var alreadyHasData = existSnap.exists() && existSnap.val() && Object.keys(existSnap.val()).length > 0;
-        if (alreadyHasData) {
-            console.log('[Bootstrap] bedBookings_by_phone đã có data, bỏ qua.');
-            return;
-        }
-        console.log('[Bootstrap] Bắt đầu tạo phone index từ Firestore archive...');
-        // Đọc nested: bedBookings_archive/{year} → {month} → {day}
-        fstore.collection('bedBookings_archive').get().then(function(yearSnaps) {
-            var writeCount = 0;
-            var batch = {};
-            var yearDocs = [];
-            yearSnaps.forEach(function(y) { yearDocs.push(y.id); });
-
-            var pending = 0;
-            function finish() {
-                if (--pending > 0) return;
-                db.ref('bedBookings_by_phone').set(batch, function(err) {
-                    if (err) console.warn('[Bootstrap] Lỗi ghi phone index:', err.message);
-                    else console.log('[Bootstrap] Đã tạo phone index cho', writeCount, 'bookings,', Object.keys(batch).length, 'khách.');
-                });
-            }
-
-            yearDocs.forEach(function(year) {
-                pending++;
-                fstore.collection('bedBookings_archive').doc(year)
-                    .listCollections().then(function(monthCols) {
-                        var mPending = monthCols.length || 0;
-                        if (mPending === 0) { finish(); return; }
-                        monthCols.forEach(function(monthCol) {
-                            monthCol.get().then(function(daySnaps) {
-                                daySnaps.forEach(function(dayDoc) {
-                                    var archiveKey = year + '/' + monthCol.id + '/' + dayDoc.id;
-                                    var data = dayDoc.data() && dayDoc.data().bookings;
-                                    if (!data) return;
-                                    Object.keys(data).forEach(function(k) {
-                                        var b = data[k];
-                                        if (!b || !b.phone) return;
-                                        var phone = b.phone.replace(/[^0-9]/g, '');
-                                        if (!batch[phone]) batch[phone] = {};
-                                        batch[phone][k] = Object.assign({}, b, { _archiveKey: archiveKey, key: k });
-                                        writeCount++;
-                                    });
-                                });
-                                if (--mPending === 0) finish();
-                            });
-                        });
-                    }).catch(function() { finish(); });
-            });
-            if (yearDocs.length === 0) {
-                console.log('[Bootstrap] Không có data trong Firestore archive.');
-            }
-        }).catch(function(err) {
-            console.warn('[Bootstrap] Lỗi đọc Firestore archive:', err.message);
-        });
-    });
-}
 
 // Sync rewards từ Firestore → RT mirror (cho app khách đọc không cần Firestore auth)
 function syncRewardsToRT() {
@@ -2576,14 +2515,6 @@ function runAutoArchive() {
                 .collection(d.month).doc(d.day);
             fsDocRef.set({ bookings: data, archivedAt: new Date().toISOString() })
                 .then(function() {
-                    // Ghi RT index theo phone để app khách tra cứu nhanh
-                    Object.keys(data).forEach(function(k) {
-                        var b = data[k];
-                        if (b && b.phone) {
-                            db.ref('bedBookings_by_phone/' + b.phone.replace(/[^0-9]/g,'') + '/' + k)
-                              .set(Object.assign({}, b, { _archiveKey: d.year + '/' + d.month + '/' + d.day, key: k }));
-                        }
-                    });
                     // Xóa khỏi Realtime sau khi archive thành công
                     db.ref(rtPath).remove();
                     archived++;
