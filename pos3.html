@@ -2455,6 +2455,7 @@ function autoLoginPOS() {
         .then((userCredential) => {
             // Chạy archive sau khi đăng nhập thành công
             setTimeout(runAutoArchive, 5000);
+            setTimeout(runAutoArchiveOrders, 7000);
             setTimeout(syncRewardsToRT, 10000);
         })
         .catch((error) => {
@@ -2522,6 +2523,54 @@ function runAutoArchive() {
                 })
                 .catch(function(err) {
                     console.warn('[AutoArchive] Lỗi archive ' + d.year+'/'+d.month+'/'+d.day + ':', err.message);
+                    processNext(idx + 1);
+                });
+        });
+    }
+
+    processNext(0);
+}
+
+// ── Auto-archive orders cũ hơn 3 ngày sang Firestore orders_archive ──────────
+function runAutoArchiveOrders() {
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // Build danh sách ngày cần kiểm tra: từ 180 ngày trước đến 4 ngày trước
+    var days = [];
+    for (var i = 180; i >= 4; i--) {
+        var d = new Date(now);
+        d.setDate(d.getDate() - i);
+        var parts = getOrderParts(d); // { year, month(jan/feb...), day }
+        days.push(parts);
+    }
+
+    var archived = 0;
+
+    function processNext(idx) {
+        if (idx >= days.length) {
+            if (archived > 0) console.log('[AutoArchiveOrders] Da archive ' + archived + ' ngay orders sang Firestore.');
+            return;
+        }
+        var d = days[idx];
+        var rtPath = 'orders/' + d.year + '/' + d.month + '/' + d.day;
+
+        db.ref(rtPath).once('value', function(snap) {
+            if (!snap.exists() || !snap.val()) { processNext(idx + 1); return; }
+            var data = snap.val();
+
+            // Ghi vào Firestore orders_archive/{year}/{month}/{day}
+            // Cùng cấu trúc với RT → đọc đồng nhất
+            fstore.collection('orders_archive').doc(d.year)
+                .collection(d.month).doc(d.day)
+                .set({ orders: data, archivedAt: new Date().toISOString() })
+                .then(function() {
+                    db.ref(rtPath).remove();
+                    archived++;
+                    processNext(idx + 1);
+                })
+                .catch(function(err) {
+                    console.warn('[AutoArchiveOrders] Loi archive ' + d.year+'/'+d.month+'/'+d.day + ':', err.message);
                     processNext(idx + 1);
                 });
         });
@@ -3164,7 +3213,7 @@ function getOrdersRef(date) {
     return db.ref(`orders/${year}/${month}/${day}`);
 }
 
-// Fetch orders trong khoảng ngày, gom từ orders/năm/tháng/ngày
+// Fetch orders trong khoảng ngày — RT trước, fallback Firestore orders_archive
 async function fetchOrdersByDateRange(startDate, endDate) {
     const allOrders = [];
     const cur = new Date(startDate);
@@ -3172,22 +3221,41 @@ async function fetchOrdersByDateRange(startDate, endDate) {
     const end = new Date(endDate);
     end.setHours(23, 59, 59, 999);
 
-    const refs = [];
+    // Build danh sách ngày cần đọc
+    const days = [];
     while (cur <= end) {
         const { year, month, day } = getOrderParts(new Date(cur));
-        refs.push(db.ref(`orders/${year}/${month}/${day}`).once('value'));
+        days.push({ year, month, day });
         cur.setDate(cur.getDate() + 1);
     }
-    // Tương thích node cũ
-    refs.push(db.ref('order').once('value'));
 
-    const snaps = await Promise.all(refs);
-    snaps.forEach(snap => {
-        if (snap.exists()) {
-            const val = snap.val();
-            if (val) Object.values(val).forEach(o => allOrders.push(o));
+    // Đọc từng ngày: RT trước → fallback Firestore orders_archive/{year}/{month}/{day}
+    await Promise.all(days.map(async ({ year, month, day }) => {
+        const snap = await db.ref(`orders/${year}/${month}/${day}`).once('value');
+        if (snap.exists() && snap.val()) {
+            Object.values(snap.val()).forEach(o => allOrders.push(o));
+        } else {
+            // RT trống → đọc Firestore orders_archive (cùng cấu trúc year/month/day)
+            try {
+                const doc = await fstore
+                    .collection('orders_archive').doc(year)
+                    .collection(month).doc(day).get();
+                if (doc.exists && doc.data() && doc.data().orders) {
+                    Object.values(doc.data().orders).forEach(o => allOrders.push(o));
+                }
+            } catch(e) {
+                console.warn('[fetchOrders] Firestore loi ' + year+'/'+month+'/'+day + ':', e.message);
+            }
         }
-    });
+    }));
+
+    // Tương thích node cũ
+    try {
+        const oldSnap = await db.ref('order').once('value');
+        if (oldSnap.exists() && oldSnap.val())
+            Object.values(oldSnap.val()).forEach(o => allOrders.push(o));
+    } catch(e) {}
+
     return allOrders;
 }
 
