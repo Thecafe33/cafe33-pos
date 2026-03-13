@@ -2981,43 +2981,42 @@ function addToCart(name, size, price) {
     updateCartPadding();
 }
 
-// ===== ORDERS SHARDING BY DATE =====
+// ===== ORDERS SHARDING BY DATE (cấu trúc: orders/năm/tháng/ngày) =====
 const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
-function getOrderNodeName(date) {
+function getOrderParts(date) {
     const d = date || new Date();
-    const year = d.getFullYear();
-    const month = MONTHS[d.getMonth()];
-    const day = String(d.getDate()).padStart(2, '0');
-    return `orders-${year}-${month}-${day}`;
+    return {
+        year: String(d.getFullYear()),
+        month: MONTHS[d.getMonth()],
+        day: String(d.getDate()).padStart(2, '0')
+    };
 }
 
+// Ref ghi đơn mới: orders/2026/mar/13
 function getOrdersRef(date) {
-    return db.ref(getOrderNodeName(date));
+    const { year, month, day } = getOrderParts(date || new Date());
+    return db.ref(`orders/${year}/${month}/${day}`);
 }
 
-// Lấy tất cả node names trong khoảng startDate -> endDate
-function getOrderNodesBetween(startDate, endDate) {
-    const nodes = [];
+// Fetch orders trong khoảng ngày, gom từ orders/năm/tháng/ngày
+async function fetchOrdersByDateRange(startDate, endDate) {
+    const allOrders = [];
     const cur = new Date(startDate);
-    cur.setHours(0,0,0,0);
+    cur.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
-    end.setHours(23,59,59,999);
+    end.setHours(23, 59, 59, 999);
+
+    const refs = [];
     while (cur <= end) {
-        nodes.push(getOrderNodeName(new Date(cur)));
+        const { year, month, day } = getOrderParts(new Date(cur));
+        refs.push(db.ref(`orders/${year}/${month}/${day}`).once('value'));
         cur.setDate(cur.getDate() + 1);
     }
-    // Luôn thêm node cũ 'orders' để tương thích dữ liệu cũ
-    nodes.push('orders');
-    nodes.push('order');
-    return [...new Set(nodes)];
-}
+    // Tương thích node cũ
+    refs.push(db.ref('order').once('value'));
 
-// Fetch orders từ nhiều node theo khoảng ngày, trả về mảng orders
-async function fetchOrdersByDateRange(startDate, endDate) {
-    const nodes = getOrderNodesBetween(startDate, endDate);
-    const snaps = await Promise.all(nodes.map(n => db.ref(n).once('value')));
-    const allOrders = [];
+    const snaps = await Promise.all(refs);
     snaps.forEach(snap => {
         if (snap.exists()) {
             const val = snap.val();
@@ -3027,11 +3026,14 @@ async function fetchOrdersByDateRange(startDate, endDate) {
     return allOrders;
 }
 
-// Fetch orders hôm nay + node cũ
+// Fetch orders hôm nay
 async function fetchTodayOrders() {
     const today = new Date();
-    const nodes = [getOrderNodeName(today), 'orders', 'order'];
-    const snaps = await Promise.all(nodes.map(n => db.ref(n).once('value')));
+    const { year, month, day } = getOrderParts(today);
+    const snaps = await Promise.all([
+        db.ref(`orders/${year}/${month}/${day}`).once('value'),
+        db.ref('order').once('value')
+    ]);
     const allOrders = [];
     snaps.forEach(snap => {
         if (snap.exists()) {
