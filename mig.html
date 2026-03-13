@@ -3,467 +3,438 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Cafe 33 — Migration Tool</title>
+<title>Migrate bedBookings_archive → Firestore đúng cấu trúc</title>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; padding: 32px 16px; overflow-x: hidden; }
-.container { max-width: 680px; margin: 0 auto; width: 100%; }
-h1 { font-size: 1.3rem; font-weight: 900; color: #006241; margin-bottom: 4px; }
-.subtitle { font-size: 0.8rem; color: #64748b; margin-bottom: 28px; }
-.card { background: white; border-radius: 18px; border: 2px solid #e2e8f0; padding: 20px; margin-bottom: 16px; overflow: hidden; }
-.card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.step-badge { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.85rem; flex-shrink: 0; }
-.step1 .step-badge { background: #FEF3C7; color: #D97706; }
-.step2 .step-badge { background: #DBEAFE; color: #1D4ED8; }
-.step3 .step-badge { background: #F0FDF4; color: #16a34a; }
-.card-title { min-width: 0; flex: 1; }
-.card-title h2 { font-size: 0.95rem; font-weight: 800; color: #1e293b; }
-.card-title small { font-size: 0.72rem; color: #64748b; display: block; }
-.card p { font-size: 0.78rem; color: #64748b; line-height: 1.6; margin-bottom: 10px; }
-.warn { background: #FFF7ED; border: 1.5px solid #FED7AA; border-radius: 10px; padding: 9px 12px; font-size: 0.75rem; color: #9A3412; font-weight: 600; margin-bottom: 12px; }
-.info { background: #EFF6FF; border: 1.5px solid #BFDBFE; border-radius: 10px; padding: 9px 12px; font-size: 0.75rem; color: #1E40AF; font-weight: 600; margin-bottom: 12px; }
-button { border: none; border-radius: 10px; padding: 10px 18px; font-size: 0.82rem; font-weight: 800; cursor: pointer; transition: all 0.15s; }
-button:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-warning { background: #F59E0B; color: white; }
-.btn-warning:hover:not(:disabled) { background: #D97706; }
-.btn-primary { background: #006241; color: white; }
-.btn-primary:hover:not(:disabled) { background: #004d33; }
-.btn-sm { padding: 6px 12px; font-size: 0.72rem; background: #f1f5f9; color: #475569; border-radius: 8px; }
-.btn-sm:hover:not(:disabled) { background: #e2e8f0; }
-.log-box { background: #0f172a; border-radius: 10px; padding: 14px; margin-top: 12px; max-height: 260px; overflow-y: auto; overflow-x: hidden; font-family: 'Courier New', monospace; font-size: 0.7rem; line-height: 1.7; word-break: break-word; }
-.log-box:empty::before { content: 'Nhật ký sẽ hiển thị ở đây...'; color: #475569; }
-.log-info  { color: #94a3b8; }
-.log-ok    { color: #4ade80; }
-.log-warn  { color: #fbbf24; }
-.log-error { color: #f87171; }
-.log-head  { color: #38bdf8; font-weight: bold; }
-.status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-.badge { padding: 3px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 800; flex-shrink: 0; }
-.badge-idle    { background: #f1f5f9; color: #64748b; }
-.badge-running { background: #FEF3C7; color: #D97706; }
-.badge-done    { background: #D1FAE5; color: #059669; }
-.badge-error   { background: #FEE2E2; color: #DC2626; }
-.auth-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-.auth-status { font-size: 0.72rem; padding: 5px 10px; border-radius: 8px; font-weight: 700; }
-.auth-ok  { background: #D1FAE5; color: #059669; }
-.auth-err { background: #FEE2E2; color: #DC2626; }
-.keep-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-.keep-row label { font-size: 0.75rem; font-weight: 700; color: #475569; }
-.keep-row input { width: 56px; padding: 4px 6px; border-radius: 7px; border: 1.5px solid #e2e8f0; font-weight: 800; font-size: 0.82rem; text-align: center; }
-.keep-row span { font-size: 0.72rem; color: #9ca3af; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; min-height: 100vh; padding: 24px; color: #1e293b; }
+  .card { background: white; border-radius: 16px; padding: 28px; max-width: 820px; margin: 0 auto; box-shadow: 0 4px 24px rgba(0,0,0,0.07); }
+  h1 { font-size: 1.3rem; font-weight: 900; color: #006241; margin-bottom: 4px; }
+  .subtitle { font-size: 0.82rem; color: #64748b; margin-bottom: 24px; }
+
+  .section { margin-bottom: 20px; }
+  .section label { display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; font-size: 0.82rem; line-height: 1.7; color: #475569; }
+  .info-box code { background: #e2e8f0; padding: 1px 6px; border-radius: 4px; font-size: 0.78rem; color: #334155; font-family: monospace; }
+
+  .steps { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .step-btn { flex: 1; min-width: 160px; padding: 12px 16px; border: none; border-radius: 10px; font-size: 0.82rem; font-weight: 800; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; justify-content: center; }
+  .step-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-scan   { background: #dbeafe; color: #1d4ed8; }
+  .btn-scan:not(:disabled):hover   { background: #bfdbfe; }
+  .btn-run    { background: #006241; color: white; }
+  .btn-run:not(:disabled):hover    { background: #004d33; }
+  .btn-verify { background: #f0fdf4; color: #166534; border: 2px solid #bbf7d0; }
+  .btn-verify:not(:disabled):hover { background: #dcfce7; }
+  .btn-reset  { background: #fef2f2; color: #991b1b; border: 2px solid #fecaca; }
+  .btn-reset:not(:disabled):hover  { background: #fee2e2; }
+
+  #log { background: #0f172a; color: #94a3b8; border-radius: 12px; padding: 16px; font-family: monospace; font-size: 0.78rem; line-height: 1.8; height: 380px; overflow-y: auto; white-space: pre-wrap; }
+  .log-ok   { color: #4ade80; }
+  .log-warn { color: #fbbf24; }
+  .log-err  { color: #f87171; }
+  .log-info { color: #38bdf8; }
+  .log-dim  { color: #475569; }
+
+  .stats-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .stat { flex: 1; min-width: 100px; background: #f8fafc; border-radius: 10px; padding: 12px; text-align: center; border: 1px solid #e2e8f0; }
+  .stat-num { font-size: 1.6rem; font-weight: 900; color: #006241; }
+  .stat-label { font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+
+  .progress-wrap { margin-top: 12px; background: #e2e8f0; border-radius: 99px; height: 8px; overflow: hidden; display: none; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, #006241, #00a86b); border-radius: 99px; transition: width 0.3s; width: 0%; }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>☕ The Cafe 33 — Migration Tool</h1>
-  <p class="subtitle">Chạy theo thứ tự: 1 → 2 → 3. Mỗi script có dry run để xem trước.</p>
+<div class="card">
+  <h1>🔧 Migrate bedBookings_archive</h1>
+  <p class="subtitle">Chuẩn hóa dữ liệu Firestore về đúng cấu trúc <code>{ bookings: {...}, archivedAt: "..." }</code> theo từng ngày YYYY-MM-DD</p>
 
-  <div class="auth-bar">
-    <span id="auth-status" class="auth-status auth-err">⏳ Đang đăng nhập...</span>
-    <button class="btn-sm" onclick="doLogin()">Đăng nhập lại</button>
+  <div class="section">
+    <label>Cấu trúc cần đạt (mỗi document trong <code>bedBookings_archive</code>)</label>
+    <div class="info-box">
+      <b>Document ID:</b> <code>YYYY-MM-DD</code> (ví dụ: <code>2026-03-10</code>)<br>
+      <b>Fields:</b><br>
+      &nbsp;&nbsp;<code>archivedAt</code>: string ISO — thời điểm archive<br>
+      &nbsp;&nbsp;<code>bookings</code>: object — map các booking theo key push ID<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;└ mỗi booking có: <code>phone, name, date, start, end, status, bedId, dateKey, ...</code><br><br>
+      <b>Các trường hợp lỗi script sẽ sửa:</b><br>
+      &nbsp;&nbsp;① Document không có field <code>bookings</code> (data nằm thẳng ở root) → bọc vào <code>bookings</code><br>
+      &nbsp;&nbsp;② Document ID không đúng dạng <code>YYYY-MM-DD</code> → tạo lại doc đúng, xóa doc sai<br>
+      &nbsp;&nbsp;③ Field <code>archivedAt</code> bị thiếu → tự thêm giá trị mặc định<br>
+      &nbsp;&nbsp;④ <code>dateKey</code> trong mỗi booking bị sai hoặc thiếu → cập nhật theo doc ID
+    </div>
   </div>
 
-  <!-- SCRIPT 1 -->
-  <div class="card step1">
-    <div class="card-header">
-      <div class="step-badge">1</div>
-      <div class="card-title">
-        <h2>Sắp xếp lại bedBookings</h2>
-        <small>Realtime DB: flat key → YYYY/MM/DD/key</small>
-      </div>
-      <span id="s1-badge" class="badge badge-idle">Chờ</span>
-    </div>
-    <p>Đọc tất cả booking từ <code>bedBookings/{pushKey}</code> (flat), ghi lại vào <code>bedBookings/YYYY/MM/DD/{pushKey}</code> theo field <b>date</b>. Sau đó xóa các key flat cũ.</p>
-    <div class="warn">⚠️ Script sẽ <b>xóa key flat cũ</b> sau khi copy xong. Backup trước nếu cần.</div>
-    <div class="status-row">
-      <button id="s1-dry-btn" class="btn-sm" onclick="runScript1(true)">🔍 Dry run</button>
-      <button id="s1-run-btn" class="btn-warning" onclick="runScript1(false)">▶ Chạy thật</button>
-    </div>
-    <div id="s1-log" class="log-box"></div>
+  <div class="steps">
+    <button class="step-btn btn-scan"   id="btn-scan"   onclick="doScan()">🔍 1. Quét & kiểm tra</button>
+    <button class="step-btn btn-run"    id="btn-run"    onclick="doMigrate()" disabled>⚡ 2. Chạy migrate</button>
+    <button class="step-btn btn-verify" id="btn-verify" onclick="doVerify()"  disabled>✅ 3. Verify kết quả</button>
+    <button class="step-btn btn-reset"  id="btn-reset"  onclick="resetLog()">🗑 Reset log</button>
   </div>
 
-  <!-- SCRIPT 2 -->
-  <div class="card step2">
-    <div class="card-header">
-      <div class="step-badge">2</div>
-      <div class="card-title">
-        <h2>Copy config → Firestore</h2>
-        <small>screen_slides · sticker_config · rewards</small>
-      </div>
-      <span id="s2-badge" class="badge badge-idle">Chờ</span>
-    </div>
-    <p>Copy 3 node từ Realtime Database sang Firestore. Data cũ trong Realtime <b>không bị xóa</b>.</p>
-    <div class="info">ℹ️ Nếu Firestore đã có data, script sẽ <b>ghi đè</b>. Chạy nhiều lần an toàn.</div>
-    <div class="status-row">
-      <button id="s2-dry-btn" class="btn-sm" onclick="runScript2(true)">🔍 Dry run</button>
-      <button id="s2-run-btn" class="btn-primary" onclick="runScript2(false)">▶ Chạy thật</button>
-    </div>
-    <div id="s2-log" class="log-box"></div>
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
   </div>
 
-  <!-- SCRIPT 3 -->
-  <div class="card step3">
-    <div class="card-header">
-      <div class="step-badge">3</div>
-      <div class="card-title">
-        <h2>Archive bedBookings cũ → Firestore</h2>
-        <small>RT YYYY/MM/DD → Firestore bedBookings_archive</small>
-      </div>
-      <span id="s3-badge" class="badge badge-idle">Chờ</span>
-    </div>
-    <p>Đọc các ngày cũ trong RT, ghi vào Firestore <code>bedBookings_archive/{YYYY-MM-DD}</code>, rồi <b>xóa khỏi RT</b>. Chạy 1 lần — sau đó POS tự lo hàng ngày.</p>
-    <div class="keep-row">
-      <label>Giữ lại RT:</label>
-      <input id="s3-keep-days" type="number" value="3" min="0" max="30">
-      <span>ngày gần nhất</span>
-    </div>
-    <div class="warn">⚠️ Script sẽ <b>xóa data khỏi Realtime</b> sau khi archive thành công. Không thể hoàn tác.</div>
-    <div class="status-row">
-      <button id="s3-dry-btn" class="btn-sm" onclick="runScript3(true)">🔍 Dry run</button>
-      <button id="s3-run-btn" class="btn-primary" onclick="runScript3(false)">▶ Chạy thật</button>
-    </div>
-    <div id="s3-log" class="log-box"></div>
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-num" id="s-total">—</div><div class="stat-label">Tổng docs</div></div>
+    <div class="stat"><div class="stat-num" id="s-ok">—</div><div class="stat-label">Đúng cấu trúc</div></div>
+    <div class="stat"><div class="stat-num" id="s-fix">—</div><div class="stat-label">Cần sửa</div></div>
+    <div class="stat"><div class="stat-num" id="s-bookings">—</div><div class="stat-label">Tổng bookings</div></div>
+    <div class="stat"><div class="stat-num" id="s-done">—</div><div class="stat-label">Đã migrate</div></div>
   </div>
 
-</div><!-- /.container -->
+  <pre id="log"><span class="log-dim">» Nhấn "Quét & kiểm tra" để bắt đầu phân tích dữ liệu...</span></pre>
+</div>
 
 <script>
-// ── Firebase init ──
+// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
   authDomain: "the-cafe-33.firebaseapp.com",
-  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "the-cafe-33",
-  storageBucket: "the-cafe-33.appspot.com"
+  storageBucket: "the-cafe-33.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",   // ← điền nếu cần, không bắt buộc
+  appId: "YOUR_APP_ID"                   // ← điền nếu cần, không bắt buộc
 };
+
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db     = firebase.database();
 const fstore = firebase.firestore();
 const auth   = firebase.auth();
 
-// ── Auth ──
-function doLogin() {
-  const el = document.getElementById('auth-status');
-  el.className = 'auth-status auth-err';
-  el.textContent = '⏳ Đang đăng nhập...';
-  auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty")
-    .then(() => {
-      el.className = 'auth-status auth-ok';
-      el.textContent = '✅ elio@thecafe33.com';
-    })
-    .catch(err => {
-      el.className = 'auth-status auth-err';
-      el.textContent = '❌ ' + err.message;
-    });
-}
-doLogin();
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const logEl  = document.getElementById('log');
+const progWrap = document.getElementById('progress-wrap');
+const progBar  = document.getElementById('progress-bar');
 
-// ── Logger ──
-function log(id, msg, type) {
-  const box = document.getElementById(id);
-  const d = document.createElement('div');
-  d.className = 'log-' + (type || 'info');
-  d.textContent = msg;
-  box.appendChild(d);
-  box.scrollTop = box.scrollHeight;
+function log(msg, cls = '') {
+  const line = document.createElement('span');
+  line.className = cls;
+  line.textContent = msg + '\n';
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
 }
-function logOk(id, m)   { log(id, m, 'ok'); }
-function logWarn(id, m) { log(id, m, 'warn'); }
-function logErr(id, m)  { log(id, m, 'error'); }
-function logHead(id, m) { log(id, m, 'head'); }
-function clearLog(id)   { document.getElementById(id).innerHTML = ''; }
-function setBadge(id, state) {
-  const el = document.getElementById(id);
-  el.className = 'badge badge-' + state;
-  el.textContent = { idle:'Chờ', running:'Đang chạy...', done:'✓ Xong', error:'✗ Lỗi' }[state] || state;
+function setStat(id, val) { document.getElementById(id).textContent = val; }
+function setProgress(pct) {
+  progWrap.style.display = 'block';
+  progBar.style.width = pct + '%';
 }
 
-// ════════════════════════════════
-// SCRIPT 1 — flat → YYYY/MM/DD
-// ════════════════════════════════
-async function runScript1(dryRun) {
-  const BOX = 's1-log';
-  clearLog(BOX);
-  setBadge('s1-badge', 'running');
-  document.getElementById('s1-dry-btn').disabled = true;
-  document.getElementById('s1-run-btn').disabled = true;
+// Kiểm tra doc ID đúng dạng YYYY-MM-DD
+function isValidDateKey(id) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(id);
+}
 
-  logHead(BOX, 'Script 1: bedBookings flat → YYYY/MM/DD ' + (dryRun ? '[DRY RUN]' : '[THẬT]'));
+// Thử parse date từ các dạng khác nhau bạn đã đẩy nhầm
+// Ví dụ: "2026-tháng-01-03" hoặc "2026-jan-03" hoặc "20260103" ...
+const MONTH_MAP = {
+  'jan':'01','feb':'02','mar':'03','apr':'04','may':'05','jun':'06',
+  'jul':'07','aug':'08','sep':'09','oct':'10','nov':'11','dec':'12',
+  'tháng-1':'01','tháng-2':'02','tháng-3':'03','tháng-4':'04',
+  'tháng-5':'05','tháng-6':'06','tháng-7':'07','tháng-8':'08',
+  'tháng-9':'09','tháng-10':'10','tháng-11':'11','tháng-12':'12'
+};
 
-  try {
-    log(BOX, 'Đang đọc bedBookings...');
-    const snap = await db.ref('bedBookings').once('value');
-    const val  = snap.val();
+function tryFixDocId(rawId) {
+  // Đã đúng rồi
+  if (isValidDateKey(rawId)) return rawId;
 
-    if (!val) {
-      logWarn(BOX, 'bedBookings rỗng.');
-      setBadge('s1-badge', 'done');
-      return;
-    }
+  // Thử lower case
+  const low = rawId.toLowerCase();
 
-    const flatKeys = Object.keys(val).filter(k => !/^\d{4}$/.test(k));
-    log(BOX, 'Tìm thấy ' + flatKeys.length + ' booking flat cần migrate.');
-
-    if (flatKeys.length === 0) {
-      logOk(BOX, 'Không có booking flat nào — đã migrate rồi!');
-      setBadge('s1-badge', 'done');
-      return;
-    }
-
-    let ok = 0, skip = 0;
-    const writes = {};
-    const deletes = {};
-
-    for (const key of flatKeys) {
-      const b = val[key];
-      if (!b || typeof b !== 'object') { skip++; continue; }
-
-      let year, month, day;
-      if (b.dateKey && /^\d{4}-\d{2}-\d{2}$/.test(b.dateKey)) {
-        [year, month, day] = b.dateKey.split('-');
-      } else if (b.date) {
-        const p = String(b.date).split('/');
-        if (p.length === 3) { day = p[0]; month = p[1]; year = p[2]; }
+  // Dạng: 2026-jun-03 hoặc 2026-tháng-6-03
+  for (const [k, v] of Object.entries(MONTH_MAP)) {
+    if (low.includes(k)) {
+      // extract year và day
+      const parts = low.replace(k, '__').split('-');
+      const year = parts[0];
+      const day  = parts[parts.length - 1].replace('__','').padStart(2,'0');
+      if (year && day && /^\d{4}$/.test(year) && /^\d{2}$/.test(day)) {
+        return `${year}-${v}-${day}`;
       }
-
-      if (!year || !month || !day) {
-        logWarn(BOX, '  Skip ' + key + ': không đọc được ngày (date=' + (b.date||'?') + ')');
-        skip++; continue;
-      }
-
-      const newPath = 'bedBookings/' + year + '/' + month + '/' + day + '/' + key;
-      writes[newPath] = Object.assign({}, b, { dateKey: year+'-'+month+'-'+day, path: newPath });
-      deletes['bedBookings/' + key] = null;
-
-      if (dryRun) log(BOX, '  → ' + key + ' → ' + newPath);
-      ok++;
     }
-
-    if (!dryRun && ok > 0) {
-      await db.ref().update(writes);
-      await db.ref().update(deletes);
-      logOk(BOX, 'Đã migrate ' + ok + ' bookings và xóa ' + ok + ' key flat.');
-    }
-
-    logHead(BOX, '── Tổng kết ──');
-    if (dryRun) {
-      logWarn(BOX, 'Dry run: ' + ok + ' sẽ migrate, ' + skip + ' skip. Bấm "Chạy thật".');
-      setBadge('s1-badge', 'idle');
-    } else {
-      logOk(BOX, '✅ Xong! ' + ok + ' migrated, ' + skip + ' skipped.');
-      setBadge('s1-badge', 'done');
-    }
-  } catch(e) {
-    logErr(BOX, 'LỖI: ' + e.message);
-    setBadge('s1-badge', 'error');
-  } finally {
-    document.getElementById('s1-dry-btn').disabled = false;
-    document.getElementById('s1-run-btn').disabled = false;
   }
+
+  // Dạng YYYYMMDD
+  if (/^\d{8}$/.test(rawId)) {
+    return `${rawId.slice(0,4)}-${rawId.slice(4,6)}-${rawId.slice(6,8)}`;
+  }
+
+  // Dạng DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawId)) {
+    const [d,m,y] = rawId.split('/');
+    return `${y}-${m}-${d}`;
+  }
+
+  return null; // không parse được
 }
 
-// ════════════════════════════════
-// SCRIPT 2 — RT config → Firestore
-// ════════════════════════════════
-async function runScript2(dryRun) {
-  const BOX = 's2-log';
-  clearLog(BOX);
-  setBadge('s2-badge', 'running');
-  document.getElementById('s2-dry-btn').disabled = true;
-  document.getElementById('s2-run-btn').disabled = true;
+// ─── SCAN ────────────────────────────────────────────────────────────────────
+let scanResults = null;
 
-  logHead(BOX, 'Script 2: Copy config → Firestore ' + (dryRun ? '[DRY RUN]' : '[THẬT]'));
-
-  let totalOk = 0, totalErr = 0;
+async function doScan() {
+  document.getElementById('btn-scan').disabled = true;
+  document.getElementById('btn-run').disabled  = true;
+  document.getElementById('btn-verify').disabled = true;
+  log('\n══════════════════════════════════════════', 'log-dim');
+  log('🔍 BẮT ĐẦU QUÉT bedBookings_archive...', 'log-info');
+  log('══════════════════════════════════════════', 'log-dim');
 
   try {
-    // screen_slides
-    log(BOX, 'Đọc screen_slides...');
-    try {
-      const d = (await db.ref('screen_slides').once('value')).val();
-      if (!d) { logWarn(BOX, '  screen_slides rỗng, bỏ qua.'); }
-      else {
-        if (!dryRun) await fstore.collection('config').doc('screen_slides').set({ slides: d, updatedAt: new Date().toISOString() });
-        logOk(BOX, '  screen_slides → config/screen_slides ' + (dryRun?'(dry)':'✓'));
-        totalOk++;
-      }
-    } catch(e) { logErr(BOX, '  screen_slides LỖI: ' + e.message); totalErr++; }
+    // Đăng nhập trước
+    if (!auth.currentUser) {
+      log('  → Đang đăng nhập...', 'log-dim');
+      await auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty");
+      log('  ✓ Đăng nhập thành công', 'log-ok');
+    }
 
-    // sticker_config
-    log(BOX, 'Đọc sticker_config...');
-    try {
-      const d = (await db.ref('sticker_config').once('value')).val();
-      if (!d) { logWarn(BOX, '  sticker_config rỗng, bỏ qua.'); }
-      else {
-        if (!dryRun) await fstore.collection('config').doc('sticker_config').set(Object.assign({}, d, { updatedAt: new Date().toISOString() }));
-        logOk(BOX, '  sticker_config → config/sticker_config ' + (dryRun?'(dry)':'✓'));
-        totalOk++;
-      }
-    } catch(e) { logErr(BOX, '  sticker_config LỖI: ' + e.message); totalErr++; }
+    const snapshot = await fstore.collection('bedBookings_archive').get();
+    const docs = [];
+    snapshot.forEach(d => docs.push({ id: d.id, data: d.data() }));
 
-    // rewards
-    log(BOX, 'Đọc rewards...');
-    try {
-      const d = (await db.ref('rewards').once('value')).val();
-      if (!d) { logWarn(BOX, '  rewards rỗng, bỏ qua.'); }
-      else {
-        const keys = Object.keys(d);
-        if (!dryRun) {
-          const batch = fstore.batch();
-          keys.forEach(k => batch.set(fstore.collection('rewards').doc(k), Object.assign({}, d[k], { _id: k })));
-          await batch.commit();
+    log(`\n📦 Tổng số documents: ${docs.length}`, 'log-info');
+    setStat('s-total', docs.length);
+
+    let countOk = 0, countFix = 0, totalBookings = 0;
+    const issues = [];
+
+    for (const doc of docs) {
+      const { id, data } = doc;
+      const problems = [];
+
+      // Kiểm tra doc ID
+      if (!isValidDateKey(id)) {
+        const fixed = tryFixDocId(id);
+        problems.push({ type: 'bad_id', fixedId: fixed });
+      }
+
+      // Kiểm tra field bookings
+      if (!data.bookings) {
+        // Data có thể nằm thẳng ở root (đẩy nhầm)
+        const rootKeys = Object.keys(data).filter(k => k !== 'archivedAt');
+        if (rootKeys.length > 0) {
+          problems.push({ type: 'no_bookings_wrapper', rootKeys });
+          totalBookings += rootKeys.length;
+        } else {
+          problems.push({ type: 'empty_doc' });
         }
-        logOk(BOX, '  rewards → collection rewards/ (' + keys.length + ' docs) ' + (dryRun?'(dry)':'✓'));
-        totalOk++;
-      }
-    } catch(e) { logErr(BOX, '  rewards LỖI: ' + e.message); totalErr++; }
+      } else {
+        const bCount = Object.keys(data.bookings).length;
+        totalBookings += bCount;
 
-  } catch(e) {
-    logErr(BOX, 'LỖI NGHIÊM TRỌNG: ' + e.message);
-    setBadge('s2-badge', 'error');
-    document.getElementById('s2-dry-btn').disabled = false;
-    document.getElementById('s2-run-btn').disabled = false;
+        // Kiểm tra archivedAt
+        if (!data.archivedAt) problems.push({ type: 'no_archived_at' });
+
+        // Kiểm tra dateKey trong mỗi booking
+        const expectedDateKey = isValidDateKey(id) ? id : tryFixDocId(id);
+        if (expectedDateKey) {
+          for (const [bk, bv] of Object.entries(data.bookings)) {
+            if (bv && bv.dateKey && bv.dateKey !== expectedDateKey) {
+              problems.push({ type: 'wrong_datekey', bookingId: bk, got: bv.dateKey, expected: expectedDateKey });
+              break; // chỉ report 1 lần per doc
+            }
+          }
+        }
+      }
+
+      if (problems.length === 0) {
+        countOk++;
+        log(`  ✓ ${id}  (${Object.keys(data.bookings||{}).length} bookings)`, 'log-ok');
+      } else {
+        countFix++;
+        issues.push({ id, data, problems });
+        const desc = problems.map(p => p.type).join(', ');
+        log(`  ⚠ ${id}  → Vấn đề: ${desc}`, 'log-warn');
+        for (const p of problems) {
+          if (p.type === 'bad_id')              log(`      ID sai → sẽ đổi thành: ${p.fixedId || '(không parse được)'}`, 'log-warn');
+          if (p.type === 'no_bookings_wrapper') log(`      Thiếu wrapper bookings (${p.rootKeys.length} keys nằm root)`, 'log-warn');
+          if (p.type === 'empty_doc')           log(`      Document rỗng`, 'log-warn');
+          if (p.type === 'no_archived_at')      log(`      Thiếu archivedAt`, 'log-warn');
+          if (p.type === 'wrong_datekey')       log(`      dateKey sai: "${p.got}" → sẽ đổi thành "${p.expected}"`, 'log-warn');
+        }
+      }
+    }
+
+    setStat('s-ok',       countOk);
+    setStat('s-fix',      countFix);
+    setStat('s-bookings', totalBookings);
+
+    log(`\n──────────────────────────────────────────`, 'log-dim');
+    log(`✓ Đúng cấu trúc : ${countOk} docs`, 'log-ok');
+    log(`⚠ Cần migrate   : ${countFix} docs`, countFix > 0 ? 'log-warn' : 'log-ok');
+    log(`📋 Tổng bookings : ${totalBookings}`, 'log-info');
+
+    scanResults = { docs, issues };
+
+    if (countFix === 0) {
+      log(`\n🎉 Dữ liệu đã đúng cấu trúc, không cần migrate!`, 'log-ok');
+      document.getElementById('btn-verify').disabled = false;
+    } else {
+      log(`\n→ Nhấn "Chạy migrate" để sửa ${countFix} documents`, 'log-info');
+      document.getElementById('btn-run').disabled = false;
+    }
+
+  } catch (err) {
+    log(`\n❌ Lỗi: ${err.message}`, 'log-err');
+  }
+
+  document.getElementById('btn-scan').disabled = false;
+}
+
+// ─── MIGRATE ─────────────────────────────────────────────────────────────────
+async function doMigrate() {
+  if (!scanResults || scanResults.issues.length === 0) {
+    log('\n⚠ Chưa quét hoặc không có vấn đề gì', 'log-warn');
     return;
   }
 
-  logHead(BOX, '── Tổng kết ──');
-  if (dryRun) {
-    logWarn(BOX, 'Dry run xong. Bấm "Chạy thật" để thực hiện.');
-    setBadge('s2-badge', 'idle');
-  } else if (totalErr === 0) {
-    logOk(BOX, '✅ ' + totalOk + '/3 nodes đã copy sang Firestore. Realtime giữ nguyên.');
-    setBadge('s2-badge', 'done');
-  } else {
-    logErr(BOX, '⚠️ ' + totalOk + ' OK, ' + totalErr + ' lỗi.');
-    setBadge('s2-badge', 'error');
-  }
+  document.getElementById('btn-run').disabled = true;
+  log('\n══════════════════════════════════════════', 'log-dim');
+  log('⚡ BẮT ĐẦU MIGRATE...', 'log-info');
+  log('══════════════════════════════════════════', 'log-dim');
 
-  document.getElementById('s2-dry-btn').disabled = false;
-  document.getElementById('s2-run-btn').disabled = false;
-}
+  const issues = scanResults.issues;
+  let doneCount = 0;
 
-// ════════════════════════════════
-// SCRIPT 3 — RT YYYY/MM/DD → Firestore archive
-// ════════════════════════════════
-async function runScript3(dryRun) {
-  const BOX = 's3-log';
-  clearLog(BOX);
-  setBadge('s3-badge', 'running');
-  document.getElementById('s3-dry-btn').disabled = true;
-  document.getElementById('s3-run-btn').disabled = true;
+  for (let i = 0; i < issues.length; i++) {
+    const { id, data, problems } = issues[i];
+    setProgress(Math.round((i / issues.length) * 100));
+    log(`\n[${i+1}/${issues.length}] Xử lý: ${id}`, 'log-info');
 
-  const keepDays = parseInt(document.getElementById('s3-keep-days').value) || 3;
-  logHead(BOX, 'Script 3: Archive bedBookings → Firestore ' + (dryRun ? '[DRY RUN]' : '[THẬT]'));
-  log(BOX, 'Giữ lại RT: ' + keepDays + ' ngày gần nhất');
+    try {
+      let newDocId   = id;
+      let newBookings = data.bookings || null;
+      let archivedAt  = data.archivedAt || new Date().toISOString();
 
-  const now = new Date(); now.setHours(0,0,0,0);
-  const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - keepDays);
-  log(BOX, 'Cutoff: trước ' + cutoff.toLocaleDateString('vi-VN') + ' sẽ archive');
+      // 1. Sửa doc ID xấu
+      const badIdProblem = problems.find(p => p.type === 'bad_id');
+      if (badIdProblem) {
+        if (!badIdProblem.fixedId) {
+          log(`  ✗ Không thể parse ID "${id}" → bỏ qua doc này`, 'log-err');
+          continue;
+        }
+        newDocId = badIdProblem.fixedId;
+        log(`  → Đổi ID: "${id}" → "${newDocId}"`, 'log-warn');
+      }
 
-  try {
-    log(BOX, 'Đang scan RT bedBookings...');
-    const rootVal = (await db.ref('bedBookings').once('value')).val();
+      // 2. Bọc bookings nếu thiếu wrapper
+      const noWrapperProblem = problems.find(p => p.type === 'no_bookings_wrapper');
+      if (noWrapperProblem) {
+        // Data nằm root → bọc vào bookings
+        const wrapped = {};
+        for (const k of noWrapperProblem.rootKeys) {
+          wrapped[k] = data[k];
+        }
+        newBookings = wrapped;
+        log(`  → Bọc ${noWrapperProblem.rootKeys.length} bookings vào field "bookings"`, 'log-warn');
+      }
 
-    if (!rootVal) {
-      logWarn(BOX, 'bedBookings rỗng!');
-      setBadge('s3-badge', 'done');
-      return;
-    }
-
-    const datePaths = [];
-    Object.keys(rootVal).forEach(y => {
-      if (!/^\d{4}$/.test(y)) return;
-      const yd = rootVal[y];
-      if (!yd || typeof yd !== 'object') return;
-      Object.keys(yd).forEach(m => {
-        const md = yd[m];
-        if (!md || typeof md !== 'object') return;
-        Object.keys(md).forEach(d => {
-          const dateObj = new Date(+y, +m-1, +d); dateObj.setHours(0,0,0,0);
-          if (dateObj < cutoff) datePaths.push({ y, m, d, dateKey: y+'-'+m+'-'+d, dateObj });
-        });
-      });
-    });
-
-    datePaths.sort((a, b) => a.dateObj - b.dateObj);
-    log(BOX, 'Tìm thấy ' + datePaths.length + ' ngày cần archive');
-
-    if (datePaths.length === 0) {
-      logOk(BOX, 'Không có ngày nào cần archive.');
-      setBadge('s3-badge', 'done');
-      return;
-    }
-
-    let archivedDays = 0, totalBookings = 0, errors = 0;
-
-    for (const dp of datePaths) {
-      const dayData = rootVal[dp.y][dp.m][dp.d];
-      if (!dayData || typeof dayData !== 'object') continue;
-      const count = Object.keys(dayData).length;
-
-      if (dryRun) {
-        log(BOX, '  → ' + dp.dateKey + ' (' + count + ' bookings) → bedBookings_archive/' + dp.dateKey);
-        archivedDays++; totalBookings += count;
-      } else {
-        try {
-          await fstore.collection('bedBookings_archive').doc(dp.dateKey).set({
-            bookings: dayData, archivedAt: new Date().toISOString(), bookingCount: count
-          });
-          await db.ref('bedBookings/' + dp.y + '/' + dp.m + '/' + dp.d).remove();
-          logOk(BOX, '  ✓ ' + dp.dateKey + ' — ' + count + ' bookings archived');
-          archivedDays++; totalBookings += count;
-        } catch(e) {
-          logErr(BOX, '  ✗ ' + dp.dateKey + ' LỖI: ' + e.message);
-          errors++;
+      // 3. Cập nhật dateKey trong mỗi booking
+      if (newBookings) {
+        let fixedDateKeyCount = 0;
+        for (const [bk, bv] of Object.entries(newBookings)) {
+          if (bv && bv.dateKey !== newDocId) {
+            newBookings[bk] = { ...bv, dateKey: newDocId };
+            fixedDateKeyCount++;
+          }
+        }
+        if (fixedDateKeyCount > 0) {
+          log(`  → Cập nhật dateKey cho ${fixedDateKeyCount} bookings → "${newDocId}"`, 'log-warn');
         }
       }
-    }
 
-    // Dọn node rỗng
-    if (!dryRun && errors === 0) {
-      try {
-        const checkVal = (await db.ref('bedBookings').once('value')).val() || {};
-        const delObj = {};
-        Object.keys(checkVal).forEach(y => {
-          if (!/^\d{4}$/.test(y)) return;
-          const yd = checkVal[y];
-          if (!yd || Object.keys(yd).length === 0) { delObj['bedBookings/'+y] = null; return; }
-          Object.keys(yd).forEach(m => {
-            const md = yd[m];
-            if (!md || Object.keys(md).length === 0) delObj['bedBookings/'+y+'/'+m] = null;
-          });
-        });
-        if (Object.keys(delObj).length > 0) {
-          await db.ref().update(delObj);
-          logOk(BOX, 'Dọn ' + Object.keys(delObj).length + ' node rỗng');
-        }
-      } catch(e) { logWarn(BOX, 'Dọn node rỗng thất bại: ' + e.message); }
-    }
+      // 4. Ghi document mới
+      const newDocData = {
+        bookings:   newBookings || {},
+        archivedAt: archivedAt
+      };
 
-    logHead(BOX, '── Tổng kết ──');
-    if (dryRun) {
-      logWarn(BOX, 'Dry run: ' + archivedDays + ' ngày (' + totalBookings + ' bookings) sẽ archive. Bấm "Chạy thật".');
-      setBadge('s3-badge', 'idle');
-    } else if (errors === 0) {
-      logOk(BOX, '✅ Đã archive ' + archivedDays + ' ngày, ' + totalBookings + ' bookings sang Firestore.');
-      logOk(BOX, 'Từ giờ POS runAutoArchive() sẽ tự lo hàng ngày.');
-      setBadge('s3-badge', 'done');
-    } else {
-      logErr(BOX, '⚠️ ' + archivedDays + ' ngày OK, ' + errors + ' ngày lỗi.');
-      setBadge('s3-badge', 'error');
-    }
+      if (newDocId !== id) {
+        // Phải tạo doc mới rồi xóa doc cũ
+        await fstore.collection('bedBookings_archive').doc(newDocId).set(newDocData);
+        log(`  ✓ Tạo document mới: ${newDocId}`, 'log-ok');
 
-  } catch(err) {
-    logErr(BOX, 'LỖI NGHIÊM TRỌNG: ' + err.message);
-    setBadge('s3-badge', 'error');
-  } finally {
-    document.getElementById('s3-dry-btn').disabled = false;
-    document.getElementById('s3-run-btn').disabled = false;
+        // Xóa doc cũ có ID sai
+        await fstore.collection('bedBookings_archive').doc(id).delete();
+        log(`  ✓ Xóa document cũ: ${id}`, 'log-ok');
+      } else {
+        // Chỉ cần update
+        await fstore.collection('bedBookings_archive').doc(id).set(newDocData);
+        log(`  ✓ Cập nhật document: ${id}`, 'log-ok');
+      }
+
+      doneCount++;
+
+    } catch (err) {
+      log(`  ❌ Lỗi khi xử lý "${id}": ${err.message}`, 'log-err');
+    }
   }
+
+  setProgress(100);
+  setStat('s-done', doneCount);
+  log(`\n──────────────────────────────────────────`, 'log-dim');
+  log(`✅ Migrate xong: ${doneCount}/${issues.length} documents`, doneCount === issues.length ? 'log-ok' : 'log-warn');
+  log(`→ Nhấn "Verify kết quả" để kiểm tra lần cuối`, 'log-info');
+  document.getElementById('btn-verify').disabled = false;
+  document.getElementById('btn-run').disabled = false;
+}
+
+// ─── VERIFY ──────────────────────────────────────────────────────────────────
+async function doVerify() {
+  document.getElementById('btn-verify').disabled = true;
+  log('\n══════════════════════════════════════════', 'log-dim');
+  log('✅ VERIFY KẾT QUẢ SAU MIGRATE...', 'log-info');
+  log('══════════════════════════════════════════', 'log-dim');
+
+  try {
+    const snapshot = await fstore.collection('bedBookings_archive').get();
+    let pass = 0, fail = 0, totalB = 0;
+
+    snapshot.forEach(doc => {
+      const id   = doc.id;
+      const data = doc.data();
+      const ok   = isValidDateKey(id) && !!data.bookings && !!data.archivedAt;
+      const cnt  = Object.keys(data.bookings || {}).length;
+      totalB += cnt;
+
+      if (ok) {
+        pass++;
+        log(`  ✓ ${id}  (${cnt} bookings)`, 'log-ok');
+      } else {
+        fail++;
+        log(`  ✗ ${id}  → CÒN VẤN ĐỀ!`, 'log-err');
+      }
+    });
+
+    log(`\n──────────────────────────────────────────`, 'log-dim');
+    log(`✓ Pass: ${pass} docs`, 'log-ok');
+    if (fail > 0) log(`✗ Fail: ${fail} docs — cần xem lại thủ công`, 'log-err');
+    else          log(`🎉 Tất cả documents đã đúng cấu trúc!`, 'log-ok');
+    log(`📋 Tổng bookings còn lại: ${totalB}`, 'log-info');
+
+    setStat('s-total',    pass + fail);
+    setStat('s-ok',       pass);
+    setStat('s-fix',      fail);
+    setStat('s-bookings', totalB);
+
+  } catch (err) {
+    log(`\n❌ Lỗi verify: ${err.message}`, 'log-err');
+  }
+
+  document.getElementById('btn-verify').disabled = false;
+}
+
+function resetLog() {
+  logEl.innerHTML = '<span class="log-dim">» Log đã được reset...\n</span>';
+  scanResults = null;
+  ['s-total','s-ok','s-fix','s-bookings','s-done'].forEach(id => setStat(id, '—'));
+  progWrap.style.display = 'none';
+  progBar.style.width = '0%';
+  document.getElementById('btn-run').disabled = true;
+  document.getElementById('btn-verify').disabled = true;
 }
 </script>
 </body>
