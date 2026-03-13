@@ -692,59 +692,57 @@ function _fetchBookingsByPhone(phone, callback) {
     var results = [];
     var rtKeys = new Set();
 
-    // Bước 1: RT live tree (bookings 3 ngày gần nhất, chưa archive)
-    db.ref('bedBookings').once('value', function(rootSnap) {
-        if (rootSnap.exists() && rootSnap.val()) {
-            rootSnap.forEach(function(yearSnap) {
-                yearSnap.forEach(function(monthSnap) {
-                    monthSnap.forEach(function(daySnap) {
-                        daySnap.forEach(function(bookingSnap) {
-                            var b = bookingSnap.val();
-                            if (b && b.phone && b.phone.replace(/[^0-9]/g,'') === cleanPhone) {
-                                results.push(Object.assign({ key: bookingSnap.key }, b));
-                                rtKeys.add(bookingSnap.key);
-                            }
-                        });
-                    });
+    // Build danh sách ngày: từ 180 ngày trước đến hôm nay
+    var days = [];
+    var now = new Date(); now.setHours(0,0,0,0);
+    for (var i = 0; i <= 180; i++) {
+        var d = new Date(now);
+        d.setDate(now.getDate() - i);
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var dd = String(d.getDate()).padStart(2, '0');
+        days.push(y + '-' + m + '-' + dd);
+    }
+
+    // Duyệt từng ngày — RT trước, fallback Firestore nested (cùng logic vs pos2)
+    var pending = days.length;
+    function checkDone() { if (--pending === 0) callback(results); }
+
+    days.forEach(function(dayStr) {
+        var p = dayStr.split('-');
+        var year = p[0], month = p[1], day = p[2];
+
+        db.ref('bedBookings/' + year + '/' + month + '/' + day).once('value', function(snap) {
+            var data = snap.val();
+            if (data && Object.keys(data).length > 0) {
+                // RT có data → lọc theo phone
+                Object.keys(data).forEach(function(k) {
+                    var b = data[k];
+                    if (b && b.phone && b.phone.replace(/[^0-9]/g,'') === cleanPhone && !rtKeys.has(k)) {
+                        results.push(Object.assign({ key: k }, b));
+                        rtKeys.add(k);
+                    }
                 });
-            });
-        }
-
-        // Bước 2: Firestore nested year/month/day — cùng cấu trúc với RT
-        // Quét tất cả năm → tháng → ngày, lọc theo phone
-        fstore.collection('bedBookings_archive').get().then(function(yearSnap) {
-            var yearIds = [];
-            yearSnap.forEach(function(d) { if (/^\d{4}$/.test(d.id)) yearIds.push(d.id); });
-
-            if (yearIds.length === 0) { callback(results); return; }
-
-            var pending = 0;
-            var done = false;
-            function checkDone() { if (--pending === 0) callback(results); }
-
-            yearIds.forEach(function(year) {
-                var months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-                months.forEach(function(month) {
-                    pending++;
-                    fstore.collection('bedBookings_archive').doc(year)
-                        .collection(month).get()
-                        .then(function(daySnap) {
-                            daySnap.forEach(function(dayDoc) {
-                                var bookings = dayDoc.data().bookings || {};
-                                Object.keys(bookings).forEach(function(k) {
-                                    if (rtKeys.has(k)) return; // đã có từ RT
-                                    var b = bookings[k];
-                                    if (b && b.phone && b.phone.replace(/[^0-9]/g,'') === cleanPhone) {
-                                        results.push(Object.assign({ key: k }, b));
-                                        rtKeys.add(k);
-                                    }
-                                });
+                checkDone();
+            } else {
+                // Fallback Firestore nested: bedBookings_archive/{year}/{month}/{day}
+                fstore.collection('bedBookings_archive').doc(year)
+                    .collection(month).doc(day).get()
+                    .then(function(doc) {
+                        if (doc.exists) {
+                            var bookings = doc.data().bookings || {};
+                            Object.keys(bookings).forEach(function(k) {
+                                var b = bookings[k];
+                                if (b && b.phone && b.phone.replace(/[^0-9]/g,'') === cleanPhone && !rtKeys.has(k)) {
+                                    results.push(Object.assign({ key: k }, b));
+                                    rtKeys.add(k);
+                                }
                             });
-                            checkDone();
-                        }).catch(function() { checkDone(); });
-                });
-            });
-        }).catch(function() { callback(results); });
+                        }
+                        checkDone();
+                    }).catch(function() { checkDone(); });
+            }
+        });
     });
 }
 
