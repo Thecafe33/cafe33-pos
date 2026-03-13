@@ -4135,9 +4135,28 @@ function openRevenue(mode) {
     var startVal = startEl ? startEl.value : null;
     var endVal = endEl ? endEl.value : null;
 
-    // Xác định khoảng ngày cần fetch
-    var fetchStart = startVal ? new Date(startVal) : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
-    var fetchEnd = endVal ? new Date(endVal) : new Date();
+    // Xác định khoảng ngày fetch đúng theo mode
+    var now = new Date();
+    var fetchStart, fetchEnd;
+    if (startVal && endVal) {
+        // Custom range từ date picker
+        fetchStart = new Date(startVal);
+        fetchEnd   = new Date(endVal);
+    } else if (mode === 'year') {
+        fetchStart = new Date(now.getFullYear(), 0, 1);
+        fetchEnd   = new Date(now.getFullYear(), 11, 31);
+    } else if (mode === 'month') {
+        fetchStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        fetchEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (mode === 'week') {
+        var dow = now.getDay() || 7;
+        fetchStart = new Date(now); fetchStart.setDate(now.getDate() - dow + 1); fetchStart.setHours(0,0,0,0);
+        fetchEnd   = new Date(fetchStart); fetchEnd.setDate(fetchStart.getDate() + 6);
+    } else {
+        // day hoặc fallback
+        fetchStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        fetchEnd   = new Date(fetchStart);
+    }
 
     fetchOrdersByDateRange(fetchStart, fetchEnd).then(function(allOrders) {
 
@@ -8063,9 +8082,26 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
         return;
     }
 
-    // Xác định khoảng ngày cần fetch cho mobile stats
-    var mobFetchStart = startVal ? new Date(startVal) : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
-    var mobFetchEnd = endVal ? new Date(endVal) : new Date();
+    // Xác định khoảng ngày fetch đúng theo mode (mobile)
+    var now = new Date();
+    var mobFetchStart, mobFetchEnd;
+    if (startVal && endVal) {
+        mobFetchStart = new Date(startVal);
+        mobFetchEnd   = new Date(endVal);
+    } else if (mode === 'year') {
+        mobFetchStart = new Date(now.getFullYear(), 0, 1);
+        mobFetchEnd   = new Date(now.getFullYear(), 11, 31);
+    } else if (mode === 'month') {
+        mobFetchStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        mobFetchEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (mode === 'week') {
+        var dow = now.getDay() || 7;
+        mobFetchStart = new Date(now); mobFetchStart.setDate(now.getDate() - dow + 1); mobFetchStart.setHours(0,0,0,0);
+        mobFetchEnd   = new Date(mobFetchStart); mobFetchEnd.setDate(mobFetchStart.getDate() + 6);
+    } else {
+        mobFetchStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        mobFetchEnd   = new Date(mobFetchStart);
+    }
 
     fetchOrdersByDateRange(mobFetchStart, mobFetchEnd).then(orders => {
 
