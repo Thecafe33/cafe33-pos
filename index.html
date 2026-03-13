@@ -228,6 +228,20 @@
     <p class="text-xs text-gray-400 font-bold mt-2" id="loading-text">Đang kết nối...</p>
   </div>
 
+  <!-- BANNED OVERLAY -->
+  <div id="banned-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(10,10,10,0.93);backdrop-filter:blur(18px);flex-direction:column;align-items:center;justify-content:center;padding:2rem;">
+    <div style="background:#fff;border-radius:2.5rem;padding:2.5rem 2rem 2rem;max-width:360px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.5);">
+      <div style="font-size:52px;margin-bottom:12px;">🚫</div>
+      <p style="font-size:11px;font-weight:800;color:#dc2626;letter-spacing:0.12em;text-transform:uppercase;margin:0 0 10px;">Tài khoản bị hạn chế</p>
+      <h2 style="font-size:20px;font-weight:900;color:#1e3932;margin:0 0 16px;line-height:1.3;font-family:'League Spartan',sans-serif;">The cafe 33 rất tiếc</h2>
+      <p style="font-size:13px;color:#4b5563;line-height:1.7;font-weight:500;margin:0 0 24px;">Bạn không thể tiếp tục sử dụng dịch vụ <strong>Cafe in Bed</strong> tại The cafe 33 do vi phạm quy định đả cam kết.</p>
+      <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:16px;padding:14px 16px;margin-bottom:24px;">
+        <p style="font-size:12px;color:#dc2626;font-weight:600;margin:0;line-height:1.6;">Vui lòng nhắn tin qua fanpage <strong>The cafe 33</strong> để biết thêm chi tiết.</p>
+      </div>
+      <a href="https://www.facebook.com/thecafe33" target="_blank" style="display:block;width:100%;padding:14px;background:linear-gradient(135deg,#1877f2,#0d5fcc);color:#fff;font-weight:800;font-size:13px;border-radius:16px;text-decoration:none;letter-spacing:0.05em;box-sizing:border-box;">📘 Nhắn tin Fanpage</a>
+    </div>
+  </div>
+
   <div id="image-overlay" class="fixed inset-0 bg-black/95 z-[200] hidden flex flex-col items-center justify-center p-4 backdrop-blur-md">
     <button onclick="document.getElementById('image-overlay').classList.add('hidden')" class="absolute top-8 right-8 text-white text-5xl font-light">&times;</button>
     <div class="w-full h-full flex items-center justify-center overflow-auto"><img id="zoomed-img" src="" class="max-w-full max-h-full object-contain shadow-2xl transition-transform" onclick="event.stopPropagation()"></div>
@@ -775,6 +789,16 @@ function showAppModal(title, msg, icon='☕', cb=null, showCancel=false) {
 function normalizePhone(p) { return String(p || "").replace(/[^0-9]/g, ""); }
 
 // --- 3. ĐĂNG NHẬP ---
+function showBannedOverlay() {
+    const el = document.getElementById('banned-overlay');
+    if (!el) return;
+    el.style.display = 'flex';
+    // Chặn mọi tương tác phía sau
+    document.body.style.overflow = 'hidden';
+    document.body.style.pointerEvents = 'none';
+    el.style.pointerEvents = 'all';
+}
+
 function login() {
     const phone = normalizePhone(document.getElementById('login-sdt').value);
     if (phone.length < 9) return alert("SĐT không hợp lệ!");
@@ -783,6 +807,11 @@ function login() {
     db.ref('customers/' + phone).once('value', snap => {
         document.getElementById('loading-overlay').classList.add('hidden');
         if (snap.exists()) {
+            const data = snap.val();
+            if (data && data.banned === true) {
+                showBannedOverlay();
+                return;
+            }
             localStorage.setItem('member_phone', phone);
             showDashboard(phone);
         } else {
@@ -806,6 +835,8 @@ function showDashboard(phone) {
         userData = snap.val();
         
         if(userData) {
+          // Kiểm tra tài khoản bị cấm (realtime — POS ban là hiện ngay)
+          if (userData.banned === true) { showBannedOverlay(); return; }
           // === CẬP NHẬT TRANG CHỦ (MỚI) ===
             const displayName = userData.name || "Bạn mới";
             // Cập nhật tên ở trang chủ
