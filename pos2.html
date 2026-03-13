@@ -9179,11 +9179,17 @@ function giftVoucherResetOld() {
         var ci = cart[i];
         if (ci._vKey === _giftVoucherKey) {
             if (ci._giftType === 'item' || ci._giftType === 'item_free') {
-                ci.price = ci._originalPrice;
-                ci.name  = ci._originalName || ci.name;
-                if (i > 0 && cart[i-1].name === ci._originalName && !cart[i-1]._vKey) {
-                    cart[i-1].qty += 1; cart.splice(i, 1);
+                // Tim item goc ke truoc hoac ke sau de gop lai
+                var prevItem = (i > 0 && cart[i-1].name === (ci._originalName||ci.name) && !cart[i-1]._vKey) ? cart[i-1] : null;
+                var nextItem = (i < cart.length-1 && cart[i+1].name === (ci._originalName||ci.name) && !cart[i+1]._vKey) ? cart[i+1] : null;
+                if (prevItem) {
+                    prevItem.qty += 1; cart.splice(i, 1);
+                } else if (nextItem) {
+                    nextItem.qty += 1; cart.splice(i, 1);
                 } else {
+                    // Khong co item goc de gop -> khoi phuc lai item nay
+                    ci.price = ci._originalPrice;
+                    ci.name  = ci._originalName || ci.name;
                     delete ci._vKey; delete ci._originalPrice; delete ci._originalName;
                     delete ci._giftType; delete ci._giftLabel;
                 }
@@ -9218,17 +9224,25 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
                 return;
             }
             var item = cart[targetIdx];
-            var origPrice = item.price, origName = item.name;
+            var origPrice = item.price, origName = item.name, origSize = item.size;
             var newPrice = Math.max(0, origPrice - (r.value || 0));
-            // DEBUG
-            showAppModal('Debug2', 'r.type='+r.type+' | r.value='+r.value+' | origPrice='+origPrice+' | newPrice='+newPrice, '🔍');
-            // Luon ap giam gia truc tiep vao item, khong tach
-            item.price = newPrice;
-            item._vKey = key;
-            item._giftType = 'item';
-            item._giftLabel = code;
-            item._originalPrice = origPrice;
-            item._originalName = origName;
+            if (item.qty > 1) {
+                // Tach 1 cai giam ra, giu nguyen phan con lai
+                item.qty -= 1;
+                cart.splice(targetIdx + 1, 0, {
+                    name: origName, size: origSize, price: newPrice, qty: 1,
+                    _vKey: key, _giftType: 'item', _giftLabel: code,
+                    _originalPrice: origPrice, _originalName: origName
+                });
+            } else {
+                // Chi co 1 mon, ap giam truc tiep
+                item.price = newPrice;
+                item._vKey = key;
+                item._giftType = 'item';
+                item._giftLabel = code;
+                item._originalPrice = origPrice;
+                item._originalName = origName;
+            }
             renderCart();
 
         } else if (r.type === 'item_free' || r.type === 'item_upsize') {
