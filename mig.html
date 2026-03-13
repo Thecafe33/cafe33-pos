@@ -2,439 +2,227 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Migrate bedBookings_archive → Firestore đúng cấu trúc</title>
+<title>Migrate Firestore → nested year/month/day</title>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; min-height: 100vh; padding: 24px; color: #1e293b; }
-  .card { background: white; border-radius: 16px; padding: 28px; max-width: 820px; margin: 0 auto; box-shadow: 0 4px 24px rgba(0,0,0,0.07); }
-  h1 { font-size: 1.3rem; font-weight: 900; color: #006241; margin-bottom: 4px; }
-  .subtitle { font-size: 0.82rem; color: #64748b; margin-bottom: 24px; }
-
-  .section { margin-bottom: 20px; }
-  .section label { display: block; font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .info-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; font-size: 0.82rem; line-height: 1.7; color: #475569; }
-  .info-box code { background: #e2e8f0; padding: 1px 6px; border-radius: 4px; font-size: 0.78rem; color: #334155; font-family: monospace; }
-
-  .steps { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-  .step-btn { flex: 1; min-width: 160px; padding: 12px 16px; border: none; border-radius: 10px; font-size: 0.82rem; font-weight: 800; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; justify-content: center; }
-  .step-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-scan   { background: #dbeafe; color: #1d4ed8; }
-  .btn-scan:not(:disabled):hover   { background: #bfdbfe; }
-  .btn-run    { background: #006241; color: white; }
-  .btn-run:not(:disabled):hover    { background: #004d33; }
-  .btn-verify { background: #f0fdf4; color: #166534; border: 2px solid #bbf7d0; }
-  .btn-verify:not(:disabled):hover { background: #dcfce7; }
-  .btn-reset  { background: #fef2f2; color: #991b1b; border: 2px solid #fecaca; }
-  .btn-reset:not(:disabled):hover  { background: #fee2e2; }
-
-  #log { background: #0f172a; color: #94a3b8; border-radius: 12px; padding: 16px; font-family: monospace; font-size: 0.78rem; line-height: 1.8; height: 380px; overflow-y: auto; white-space: pre-wrap; }
-  .log-ok   { color: #4ade80; }
-  .log-warn { color: #fbbf24; }
-  .log-err  { color: #f87171; }
-  .log-info { color: #38bdf8; }
-  .log-dim  { color: #475569; }
-
-  .stats-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
-  .stat { flex: 1; min-width: 100px; background: #f8fafc; border-radius: 10px; padding: 12px; text-align: center; border: 1px solid #e2e8f0; }
-  .stat-num { font-size: 1.6rem; font-weight: 900; color: #006241; }
-  .stat-label { font-size: 0.7rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-top: 2px; }
-
-  .progress-wrap { margin-top: 12px; background: #e2e8f0; border-radius: 99px; height: 8px; overflow: hidden; display: none; }
-  .progress-bar { height: 100%; background: linear-gradient(90deg, #006241, #00a86b); border-radius: 99px; transition: width 0.3s; width: 0%; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; padding: 24px; }
+.card { background: white; border-radius: 16px; padding: 28px; max-width: 780px; margin: 0 auto; box-shadow: 0 4px 24px rgba(0,0,0,0.07); }
+h1 { font-size: 1.25rem; font-weight: 900; color: #006241; margin-bottom: 4px; }
+.sub { font-size: 0.8rem; color: #64748b; margin-bottom: 20px; }
+.schema { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.box { flex: 1; min-width: 200px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: 0.78rem; font-family: monospace; line-height: 1.8; color: #334155; }
+.box h3 { font-family: 'Segoe UI', sans-serif; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; color: #94a3b8; margin-bottom: 6px; letter-spacing: 0.5px; }
+.box .old { color: #ef4444; text-decoration: line-through; }
+.box .new { color: #006241; font-weight: 700; }
+.arrow { display: flex; align-items: center; font-size: 1.4rem; color: #94a3b8; padding-top: 20px; }
+.btns { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+button { padding: 10px 20px; border: none; border-radius: 10px; font-size: 0.82rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-go   { background: #006241; color: white; }
+.btn-go:not(:disabled):hover { background: #004d33; }
+.btn-sec  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.btn-sec:not(:disabled):hover { background: #e2e8f0; }
+.btn-del  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.btn-del:not(:disabled):hover { background: #fee2e2; }
+#log { background: #0f172a; color: #94a3b8; border-radius: 12px; padding: 16px; font-family: monospace; font-size: 0.78rem; line-height: 1.8; height: 360px; overflow-y: auto; white-space: pre-wrap; }
+.ok   { color: #4ade80; }
+.warn { color: #fbbf24; }
+.err  { color: #f87171; }
+.info { color: #38bdf8; }
+.dim  { color: #475569; }
+.stats { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.stat { flex: 1; min-width: 90px; background: #f8fafc; border-radius: 10px; padding: 10px; text-align: center; border: 1px solid #e2e8f0; }
+.stat-n { font-size: 1.5rem; font-weight: 900; color: #006241; }
+.stat-l { font-size: 0.68rem; color: #64748b; font-weight: 700; text-transform: uppercase; }
+.prog-wrap { background: #e2e8f0; border-radius: 99px; height: 6px; margin: 10px 0; overflow: hidden; display: none; }
+.prog-bar  { height: 100%; background: linear-gradient(90deg, #006241, #00a86b); border-radius: 99px; transition: width 0.3s; width: 0; }
 </style>
 </head>
 <body>
 <div class="card">
-  <h1>🔧 Migrate bedBookings_archive</h1>
-  <p class="subtitle">Chuẩn hóa dữ liệu Firestore về đúng cấu trúc <code>{ bookings: {...}, archivedAt: "..." }</code> theo từng ngày YYYY-MM-DD</p>
+  <h1>🔄 Migrate bedBookings_archive → nested</h1>
+  <p class="sub">Chuyển cấu trúc Firestore từ phẳng sang nested giống RT, để cả 2 đọc cùng 1 logic</p>
 
-  <div class="section">
-    <label>Cấu trúc cần đạt (mỗi document trong <code>bedBookings_archive</code>)</label>
-    <div class="info-box">
-      <b>Document ID:</b> <code>YYYY-MM-DD</code> (ví dụ: <code>2026-03-10</code>)<br>
-      <b>Fields:</b><br>
-      &nbsp;&nbsp;<code>archivedAt</code>: string ISO — thời điểm archive<br>
-      &nbsp;&nbsp;<code>bookings</code>: object — map các booking theo key push ID<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;└ mỗi booking có: <code>phone, name, date, start, end, status, bedId, dateKey, ...</code><br><br>
-      <b>Các trường hợp lỗi script sẽ sửa:</b><br>
-      &nbsp;&nbsp;① Document không có field <code>bookings</code> (data nằm thẳng ở root) → bọc vào <code>bookings</code><br>
-      &nbsp;&nbsp;② Document ID không đúng dạng <code>YYYY-MM-DD</code> → tạo lại doc đúng, xóa doc sai<br>
-      &nbsp;&nbsp;③ Field <code>archivedAt</code> bị thiếu → tự thêm giá trị mặc định<br>
-      &nbsp;&nbsp;④ <code>dateKey</code> trong mỗi booking bị sai hoặc thiếu → cập nhật theo doc ID
+  <div class="schema">
+    <div class="box">
+      <h3>Cấu trúc cũ</h3>
+      <span class="old">bedBookings_archive/</span><br>
+      &nbsp;&nbsp;<span class="old">2026-03-10</span> (doc)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;bookings: {...}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;archivedAt: "..."<br>
+      <br>
+      <span class="old">2026-03-11</span> (doc)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;bookings: {...}
+    </div>
+    <div class="arrow">→</div>
+    <div class="box">
+      <h3>Cấu trúc mới</h3>
+      <span class="new">bedBookings_archive/</span><br>
+      &nbsp;&nbsp;<span class="new">2026</span> (doc)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="new">03</span> (collection)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="new">10</span> (doc)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bookings: {...}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;archivedAt: "..."
     </div>
   </div>
 
-  <div class="steps">
-    <button class="step-btn btn-scan"   id="btn-scan"   onclick="doScan()">🔍 1. Quét & kiểm tra</button>
-    <button class="step-btn btn-run"    id="btn-run"    onclick="doMigrate()" disabled>⚡ 2. Chạy migrate</button>
-    <button class="step-btn btn-verify" id="btn-verify" onclick="doVerify()"  disabled>✅ 3. Verify kết quả</button>
-    <button class="step-btn btn-reset"  id="btn-reset"  onclick="resetLog()">🗑 Reset log</button>
+  <div class="btns">
+    <button class="btn-go"  id="btn-migrate" onclick="doMigrate()">⚡ Chạy migrate</button>
+    <button class="btn-del" id="btn-delete"  onclick="doDeleteOld()" disabled>🗑 Xóa docs cũ</button>
+    <button class="btn-sec"                  onclick="resetLog()">↺ Reset log</button>
   </div>
 
-  <div class="progress-wrap" id="progress-wrap">
-    <div class="progress-bar" id="progress-bar"></div>
+  <div class="prog-wrap" id="pw"><div class="prog-bar" id="pb"></div></div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-n" id="s-total">—</div><div class="stat-l">Docs cũ</div></div>
+    <div class="stat"><div class="stat-n" id="s-migrated">—</div><div class="stat-l">Đã migrate</div></div>
+    <div class="stat"><div class="stat-n" id="s-bookings">—</div><div class="stat-l">Bookings</div></div>
+    <div class="stat"><div class="stat-n" id="s-deleted">—</div><div class="stat-l">Đã xóa cũ</div></div>
   </div>
 
-  <div class="stats-bar">
-    <div class="stat"><div class="stat-num" id="s-total">—</div><div class="stat-label">Tổng docs</div></div>
-    <div class="stat"><div class="stat-num" id="s-ok">—</div><div class="stat-label">Đúng cấu trúc</div></div>
-    <div class="stat"><div class="stat-num" id="s-fix">—</div><div class="stat-label">Cần sửa</div></div>
-    <div class="stat"><div class="stat-num" id="s-bookings">—</div><div class="stat-label">Tổng bookings</div></div>
-    <div class="stat"><div class="stat-num" id="s-done">—</div><div class="stat-label">Đã migrate</div></div>
-  </div>
-
-  <pre id="log"><span class="log-dim">» Nhấn "Quét & kiểm tra" để bắt đầu phân tích dữ liệu...</span></pre>
+  <pre id="log"><span class="dim">» Nhấn "Chạy migrate" để bắt đầu...</span></pre>
 </div>
 
 <script>
-// ─── FIREBASE CONFIG ──────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
   authDomain: "the-cafe-33.firebaseapp.com",
   projectId: "the-cafe-33",
   storageBucket: "the-cafe-33.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",   // ← điền nếu cần, không bắt buộc
-  appId: "YOUR_APP_ID"                   // ← điền nếu cần, không bắt buộc
 };
-
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const fstore = firebase.firestore();
 const auth   = firebase.auth();
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-const logEl  = document.getElementById('log');
-const progWrap = document.getElementById('progress-wrap');
-const progBar  = document.getElementById('progress-bar');
-
-function log(msg, cls = '') {
-  const line = document.createElement('span');
-  line.className = cls;
-  line.textContent = msg + '\n';
-  logEl.appendChild(line);
-  logEl.scrollTop = logEl.scrollHeight;
+const logEl = document.getElementById('log');
+function log(msg, cls='') {
+  const s = document.createElement('span');
+  s.className = cls; s.textContent = msg + '\n';
+  logEl.appendChild(s); logEl.scrollTop = logEl.scrollHeight;
 }
-function setStat(id, val) { document.getElementById(id).textContent = val; }
-function setProgress(pct) {
-  progWrap.style.display = 'block';
-  progBar.style.width = pct + '%';
+function setStat(id, v) { document.getElementById(id).textContent = v; }
+function setProgress(p) {
+  document.getElementById('pw').style.display = 'block';
+  document.getElementById('pb').style.width = p + '%';
 }
 
-// Kiểm tra doc ID đúng dạng YYYY-MM-DD
-function isValidDateKey(id) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(id);
-}
+// Chỉ lấy docs cũ dạng YYYY-MM-DD (flat), bỏ qua docs năm như "2026"
+function isOldFlatDoc(id) { return /^\d{4}-\d{2}-\d{2}$/.test(id); }
 
-// Thử parse date từ các dạng khác nhau bạn đã đẩy nhầm
-// Ví dụ: "2026-tháng-01-03" hoặc "2026-jan-03" hoặc "20260103" ...
-const MONTH_MAP = {
-  'jan':'01','feb':'02','mar':'03','apr':'04','may':'05','jun':'06',
-  'jul':'07','aug':'08','sep':'09','oct':'10','nov':'11','dec':'12',
-  'tháng-1':'01','tháng-2':'02','tháng-3':'03','tháng-4':'04',
-  'tháng-5':'05','tháng-6':'06','tháng-7':'07','tháng-8':'08',
-  'tháng-9':'09','tháng-10':'10','tháng-11':'11','tháng-12':'12'
-};
+let migratedIds = []; // lưu để bước xóa dùng
 
-function tryFixDocId(rawId) {
-  // Đã đúng rồi
-  if (isValidDateKey(rawId)) return rawId;
+async function doMigrate() {
+  document.getElementById('btn-migrate').disabled = true;
+  migratedIds = [];
 
-  // Thử lower case
-  const low = rawId.toLowerCase();
-
-  // Dạng: 2026-jun-03 hoặc 2026-tháng-6-03
-  for (const [k, v] of Object.entries(MONTH_MAP)) {
-    if (low.includes(k)) {
-      // extract year và day
-      const parts = low.replace(k, '__').split('-');
-      const year = parts[0];
-      const day  = parts[parts.length - 1].replace('__','').padStart(2,'0');
-      if (year && day && /^\d{4}$/.test(year) && /^\d{2}$/.test(day)) {
-        return `${year}-${v}-${day}`;
-      }
-    }
-  }
-
-  // Dạng YYYYMMDD
-  if (/^\d{8}$/.test(rawId)) {
-    return `${rawId.slice(0,4)}-${rawId.slice(4,6)}-${rawId.slice(6,8)}`;
-  }
-
-  // Dạng DD/MM/YYYY
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawId)) {
-    const [d,m,y] = rawId.split('/');
-    return `${y}-${m}-${d}`;
-  }
-
-  return null; // không parse được
-}
-
-// ─── SCAN ────────────────────────────────────────────────────────────────────
-let scanResults = null;
-
-async function doScan() {
-  document.getElementById('btn-scan').disabled = true;
-  document.getElementById('btn-run').disabled  = true;
-  document.getElementById('btn-verify').disabled = true;
-  log('\n══════════════════════════════════════════', 'log-dim');
-  log('🔍 BẮT ĐẦU QUÉT bedBookings_archive...', 'log-info');
-  log('══════════════════════════════════════════', 'log-dim');
+  log('\n══════════════════════════════════════', 'dim');
+  log('⚡ BẮT ĐẦU MIGRATE...', 'info');
+  log('══════════════════════════════════════', 'dim');
 
   try {
-    // Đăng nhập trước
     if (!auth.currentUser) {
-      log('  → Đang đăng nhập...', 'log-dim');
+      log('  → Đang đăng nhập...', 'dim');
       await auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty");
-      log('  ✓ Đăng nhập thành công', 'log-ok');
+      log('  ✓ Đăng nhập thành công', 'ok');
     }
 
-    const snapshot = await fstore.collection('bedBookings_archive').get();
-    const docs = [];
-    snapshot.forEach(d => docs.push({ id: d.id, data: d.data() }));
+    // Lấy tất cả docs cũ dạng YYYY-MM-DD
+    const snap = await fstore.collection('bedBookings_archive').get();
+    const oldDocs = [];
+    snap.forEach(d => { if (isOldFlatDoc(d.id)) oldDocs.push({ id: d.id, data: d.data() }); });
 
-    log(`\n📦 Tổng số documents: ${docs.length}`, 'log-info');
-    setStat('s-total', docs.length);
+    log(`\n📦 Tìm thấy ${oldDocs.length} docs cũ cần migrate`, 'info');
+    setStat('s-total', oldDocs.length);
 
-    let countOk = 0, countFix = 0, totalBookings = 0;
-    const issues = [];
+    if (oldDocs.length === 0) {
+      log('🎉 Không có docs cũ — đã migrate hết rồi!', 'ok');
+      document.getElementById('btn-migrate').disabled = false;
+      return;
+    }
 
-    for (const doc of docs) {
-      const { id, data } = doc;
-      const problems = [];
+    let migratedCount = 0, totalBookings = 0;
 
-      // Kiểm tra doc ID
-      if (!isValidDateKey(id)) {
-        const fixed = tryFixDocId(id);
-        problems.push({ type: 'bad_id', fixedId: fixed });
-      }
+    for (let i = 0; i < oldDocs.length; i++) {
+      const { id, data } = oldDocs[i];
+      setProgress(Math.round((i / oldDocs.length) * 100));
 
-      // Kiểm tra field bookings
-      if (!data.bookings) {
-        // Data có thể nằm thẳng ở root (đẩy nhầm)
-        const rootKeys = Object.keys(data).filter(k => k !== 'archivedAt');
-        if (rootKeys.length > 0) {
-          problems.push({ type: 'no_bookings_wrapper', rootKeys });
-          totalBookings += rootKeys.length;
-        } else {
-          problems.push({ type: 'empty_doc' });
-        }
-      } else {
-        const bCount = Object.keys(data.bookings).length;
+      // Parse YYYY-MM-DD → year, month, day
+      const [year, month, day] = id.split('-');
+      const bookings  = data.bookings || {};
+      const archivedAt = data.archivedAt || new Date().toISOString();
+      const bCount = Object.keys(bookings).length;
+
+      try {
+        // Ghi vào nested: bedBookings_archive/{year}/{month}/{day}
+        await fstore
+          .collection('bedBookings_archive').doc(year)
+          .collection(month).doc(day)
+          .set({ bookings, archivedAt });
+
+        migratedCount++;
         totalBookings += bCount;
-
-        // Kiểm tra archivedAt
-        if (!data.archivedAt) problems.push({ type: 'no_archived_at' });
-
-        // Kiểm tra dateKey trong mỗi booking
-        const expectedDateKey = isValidDateKey(id) ? id : tryFixDocId(id);
-        if (expectedDateKey) {
-          for (const [bk, bv] of Object.entries(data.bookings)) {
-            if (bv && bv.dateKey && bv.dateKey !== expectedDateKey) {
-              problems.push({ type: 'wrong_datekey', bookingId: bk, got: bv.dateKey, expected: expectedDateKey });
-              break; // chỉ report 1 lần per doc
-            }
-          }
-        }
-      }
-
-      if (problems.length === 0) {
-        countOk++;
-        log(`  ✓ ${id}  (${Object.keys(data.bookings||{}).length} bookings)`, 'log-ok');
-      } else {
-        countFix++;
-        issues.push({ id, data, problems });
-        const desc = problems.map(p => p.type).join(', ');
-        log(`  ⚠ ${id}  → Vấn đề: ${desc}`, 'log-warn');
-        for (const p of problems) {
-          if (p.type === 'bad_id')              log(`      ID sai → sẽ đổi thành: ${p.fixedId || '(không parse được)'}`, 'log-warn');
-          if (p.type === 'no_bookings_wrapper') log(`      Thiếu wrapper bookings (${p.rootKeys.length} keys nằm root)`, 'log-warn');
-          if (p.type === 'empty_doc')           log(`      Document rỗng`, 'log-warn');
-          if (p.type === 'no_archived_at')      log(`      Thiếu archivedAt`, 'log-warn');
-          if (p.type === 'wrong_datekey')       log(`      dateKey sai: "${p.got}" → sẽ đổi thành "${p.expected}"`, 'log-warn');
-        }
+        migratedIds.push(id);
+        log(`  ✓ ${id}  →  ${year}/${month}/${day}  (${bCount} bookings)`, 'ok');
+      } catch (err) {
+        log(`  ✗ ${id}  lỗi: ${err.message}`, 'err');
       }
     }
 
-    setStat('s-ok',       countOk);
-    setStat('s-fix',      countFix);
+    setProgress(100);
+    setStat('s-migrated', migratedCount);
     setStat('s-bookings', totalBookings);
 
-    log(`\n──────────────────────────────────────────`, 'log-dim');
-    log(`✓ Đúng cấu trúc : ${countOk} docs`, 'log-ok');
-    log(`⚠ Cần migrate   : ${countFix} docs`, countFix > 0 ? 'log-warn' : 'log-ok');
-    log(`📋 Tổng bookings : ${totalBookings}`, 'log-info');
+    log(`\n──────────────────────────────────────`, 'dim');
+    log(`✅ Migrate xong: ${migratedCount}/${oldDocs.length} docs`, 'ok');
+    log(`→ Kiểm tra dữ liệu mới trên Firestore Console`, 'info');
+    log(`→ Sau khi xác nhận OK, nhấn "Xóa docs cũ"`, 'warn');
 
-    scanResults = { docs, issues };
-
-    if (countFix === 0) {
-      log(`\n🎉 Dữ liệu đã đúng cấu trúc, không cần migrate!`, 'log-ok');
-      document.getElementById('btn-verify').disabled = false;
-    } else {
-      log(`\n→ Nhấn "Chạy migrate" để sửa ${countFix} documents`, 'log-info');
-      document.getElementById('btn-run').disabled = false;
-    }
+    if (migratedCount > 0) document.getElementById('btn-delete').disabled = false;
 
   } catch (err) {
-    log(`\n❌ Lỗi: ${err.message}`, 'log-err');
+    log(`\n❌ Lỗi: ${err.message}`, 'err');
   }
 
-  document.getElementById('btn-scan').disabled = false;
+  document.getElementById('btn-migrate').disabled = false;
 }
 
-// ─── MIGRATE ─────────────────────────────────────────────────────────────────
-async function doMigrate() {
-  if (!scanResults || scanResults.issues.length === 0) {
-    log('\n⚠ Chưa quét hoặc không có vấn đề gì', 'log-warn');
-    return;
-  }
+async function doDeleteOld() {
+  if (migratedIds.length === 0) { log('\n⚠ Chưa migrate hoặc không có gì để xóa', 'warn'); return; }
+  if (!confirm(`Xóa ${migratedIds.length} docs cũ YYYY-MM-DD?\nHành động này KHÔNG thể hoàn tác!`)) return;
 
-  document.getElementById('btn-run').disabled = true;
-  log('\n══════════════════════════════════════════', 'log-dim');
-  log('⚡ BẮT ĐẦU MIGRATE...', 'log-info');
-  log('══════════════════════════════════════════', 'log-dim');
+  document.getElementById('btn-delete').disabled = true;
+  log('\n══════════════════════════════════════', 'dim');
+  log('🗑 XÓA DOCS CŨ...', 'warn');
+  log('══════════════════════════════════════', 'dim');
 
-  const issues = scanResults.issues;
-  let doneCount = 0;
-
-  for (let i = 0; i < issues.length; i++) {
-    const { id, data, problems } = issues[i];
-    setProgress(Math.round((i / issues.length) * 100));
-    log(`\n[${i+1}/${issues.length}] Xử lý: ${id}`, 'log-info');
-
+  let deleted = 0;
+  for (const id of migratedIds) {
     try {
-      let newDocId   = id;
-      let newBookings = data.bookings || null;
-      let archivedAt  = data.archivedAt || new Date().toISOString();
-
-      // 1. Sửa doc ID xấu
-      const badIdProblem = problems.find(p => p.type === 'bad_id');
-      if (badIdProblem) {
-        if (!badIdProblem.fixedId) {
-          log(`  ✗ Không thể parse ID "${id}" → bỏ qua doc này`, 'log-err');
-          continue;
-        }
-        newDocId = badIdProblem.fixedId;
-        log(`  → Đổi ID: "${id}" → "${newDocId}"`, 'log-warn');
-      }
-
-      // 2. Bọc bookings nếu thiếu wrapper
-      const noWrapperProblem = problems.find(p => p.type === 'no_bookings_wrapper');
-      if (noWrapperProblem) {
-        // Data nằm root → bọc vào bookings
-        const wrapped = {};
-        for (const k of noWrapperProblem.rootKeys) {
-          wrapped[k] = data[k];
-        }
-        newBookings = wrapped;
-        log(`  → Bọc ${noWrapperProblem.rootKeys.length} bookings vào field "bookings"`, 'log-warn');
-      }
-
-      // 3. Cập nhật dateKey trong mỗi booking
-      if (newBookings) {
-        let fixedDateKeyCount = 0;
-        for (const [bk, bv] of Object.entries(newBookings)) {
-          if (bv && bv.dateKey !== newDocId) {
-            newBookings[bk] = { ...bv, dateKey: newDocId };
-            fixedDateKeyCount++;
-          }
-        }
-        if (fixedDateKeyCount > 0) {
-          log(`  → Cập nhật dateKey cho ${fixedDateKeyCount} bookings → "${newDocId}"`, 'log-warn');
-        }
-      }
-
-      // 4. Ghi document mới
-      const newDocData = {
-        bookings:   newBookings || {},
-        archivedAt: archivedAt
-      };
-
-      if (newDocId !== id) {
-        // Phải tạo doc mới rồi xóa doc cũ
-        await fstore.collection('bedBookings_archive').doc(newDocId).set(newDocData);
-        log(`  ✓ Tạo document mới: ${newDocId}`, 'log-ok');
-
-        // Xóa doc cũ có ID sai
-        await fstore.collection('bedBookings_archive').doc(id).delete();
-        log(`  ✓ Xóa document cũ: ${id}`, 'log-ok');
-      } else {
-        // Chỉ cần update
-        await fstore.collection('bedBookings_archive').doc(id).set(newDocData);
-        log(`  ✓ Cập nhật document: ${id}`, 'log-ok');
-      }
-
-      doneCount++;
-
+      await fstore.collection('bedBookings_archive').doc(id).delete();
+      deleted++;
+      log(`  ✓ Xóa: ${id}`, 'ok');
     } catch (err) {
-      log(`  ❌ Lỗi khi xử lý "${id}": ${err.message}`, 'log-err');
+      log(`  ✗ Lỗi xóa ${id}: ${err.message}`, 'err');
     }
   }
 
-  setProgress(100);
-  setStat('s-done', doneCount);
-  log(`\n──────────────────────────────────────────`, 'log-dim');
-  log(`✅ Migrate xong: ${doneCount}/${issues.length} documents`, doneCount === issues.length ? 'log-ok' : 'log-warn');
-  log(`→ Nhấn "Verify kết quả" để kiểm tra lần cuối`, 'log-info');
-  document.getElementById('btn-verify').disabled = false;
-  document.getElementById('btn-run').disabled = false;
-}
-
-// ─── VERIFY ──────────────────────────────────────────────────────────────────
-async function doVerify() {
-  document.getElementById('btn-verify').disabled = true;
-  log('\n══════════════════════════════════════════', 'log-dim');
-  log('✅ VERIFY KẾT QUẢ SAU MIGRATE...', 'log-info');
-  log('══════════════════════════════════════════', 'log-dim');
-
-  try {
-    const snapshot = await fstore.collection('bedBookings_archive').get();
-    let pass = 0, fail = 0, totalB = 0;
-
-    snapshot.forEach(doc => {
-      const id   = doc.id;
-      const data = doc.data();
-      const ok   = isValidDateKey(id) && !!data.bookings && !!data.archivedAt;
-      const cnt  = Object.keys(data.bookings || {}).length;
-      totalB += cnt;
-
-      if (ok) {
-        pass++;
-        log(`  ✓ ${id}  (${cnt} bookings)`, 'log-ok');
-      } else {
-        fail++;
-        log(`  ✗ ${id}  → CÒN VẤN ĐỀ!`, 'log-err');
-      }
-    });
-
-    log(`\n──────────────────────────────────────────`, 'log-dim');
-    log(`✓ Pass: ${pass} docs`, 'log-ok');
-    if (fail > 0) log(`✗ Fail: ${fail} docs — cần xem lại thủ công`, 'log-err');
-    else          log(`🎉 Tất cả documents đã đúng cấu trúc!`, 'log-ok');
-    log(`📋 Tổng bookings còn lại: ${totalB}`, 'log-info');
-
-    setStat('s-total',    pass + fail);
-    setStat('s-ok',       pass);
-    setStat('s-fix',      fail);
-    setStat('s-bookings', totalB);
-
-  } catch (err) {
-    log(`\n❌ Lỗi verify: ${err.message}`, 'log-err');
-  }
-
-  document.getElementById('btn-verify').disabled = false;
+  setStat('s-deleted', deleted);
+  log(`\n✅ Đã xóa ${deleted} docs cũ`, 'ok');
+  log(`🎉 Hoàn tất! Firestore đã dùng cấu trúc nested year/month/day`, 'ok');
 }
 
 function resetLog() {
-  logEl.innerHTML = '<span class="log-dim">» Log đã được reset...\n</span>';
-  scanResults = null;
-  ['s-total','s-ok','s-fix','s-bookings','s-done'].forEach(id => setStat(id, '—'));
-  progWrap.style.display = 'none';
-  progBar.style.width = '0%';
-  document.getElementById('btn-run').disabled = true;
-  document.getElementById('btn-verify').disabled = true;
+  logEl.innerHTML = '<span class="dim">» Log đã reset...\n</span>';
+  migratedIds = [];
+  ['s-total','s-migrated','s-bookings','s-deleted'].forEach(id => setStat(id, '—'));
+  document.getElementById('pw').style.display = 'none';
+  document.getElementById('pb').style.width = '0';
+  document.getElementById('btn-delete').disabled = true;
+  document.getElementById('btn-migrate').disabled = false;
 }
 </script>
 </body>
