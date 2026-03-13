@@ -3221,6 +3221,38 @@ function addToCart(name, size, price) {
     updateCartPadding();
 }
 
+// ── Helper: tính fetchStart/fetchEnd đúng theo mode ──
+// Dùng chung cho openRevenue và fetchRevenueDataMobile
+function getDateRangeForMode(mode, startVal, endVal) {
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+    var start, end;
+
+    if (mode === 'day') {
+        start = new Date(now);
+        end = new Date(now);
+    } else if (mode === 'week') {
+        var dow = now.getDay() || 7; // 1=Mon..7=Sun
+        start = new Date(now); start.setDate(now.getDate() - dow + 1);
+        end = new Date(start); end.setDate(start.getDate() + 6);
+    } else if (mode === 'month') {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (mode === 'year') {
+        start = new Date(now.getFullYear(), 0, 1);
+        end = new Date(now.getFullYear(), 11, 31);
+    } else if (mode === 'custom' && startVal && endVal) {
+        start = new Date(startVal);
+        end = new Date(endVal);
+    } else {
+        // fallback: 30 ngày gần nhất
+        start = new Date(now); start.setDate(now.getDate() - 30);
+        end = new Date(now);
+    }
+    return { start: start, end: end };
+}
+
+
 // ===== ORDERS SHARDING BY DATE (cấu trúc: orders/năm/tháng/ngày) =====
 const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
@@ -4168,9 +4200,13 @@ function openRevenue(mode) {
     var startVal = startEl ? startEl.value : null;
     var endVal = endEl ? endEl.value : null;
 
-    // Xác định khoảng ngày cần fetch
-    var fetchStart = startVal ? new Date(startVal) : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
-    var fetchEnd = endVal ? new Date(endVal) : new Date();
+    // Xác định khoảng ngày cần fetch đúng theo mode
+    var _range = getDateRangeForMode(mode, startVal, endVal);
+    var fetchStart = _range.start;
+    var fetchEnd   = _range.end;
+
+
+
 
     fetchOrdersByDateRange(fetchStart, fetchEnd).then(function(allOrders) {
 
@@ -8096,9 +8132,13 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
         return;
     }
 
-    // Xác định khoảng ngày cần fetch cho mobile stats
-    var mobFetchStart = startVal ? new Date(startVal) : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
-    var mobFetchEnd = endVal ? new Date(endVal) : new Date();
+    // Xác định khoảng ngày cần fetch đúng theo mode
+    var _mobRange = getDateRangeForMode(mode, startVal, endVal);
+    var mobFetchStart = _mobRange.start;
+    var mobFetchEnd   = _mobRange.end;
+
+
+
 
     fetchOrdersByDateRange(mobFetchStart, mobFetchEnd).then(orders => {
 
