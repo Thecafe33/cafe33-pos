@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Cafe 33 — Migration Tool</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; padding: 32px 16px; }
+  .container { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; font-weight: 900; color: #006241; margin-bottom: 4px; }
+  .subtitle { font-size: 0.82rem; color: #64748b; margin-bottom: 32px; }
+
+  .card { background: white; border-radius: 20px; border: 2px solid #e2e8f0; padding: 24px; margin-bottom: 20px; }
+  .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .step-badge { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.9rem; flex-shrink: 0; }
+  .step1 .step-badge { background: #FEF3C7; color: #D97706; }
+  .step2 .step-badge { background: #DBEAFE; color: #1D4ED8; }
+  .card h2 { font-size: 1rem; font-weight: 800; color: #1e293b; }
+  .card p { font-size: 0.8rem; color: #64748b; line-height: 1.6; margin-bottom: 12px; }
+  .warn { background: #FFF7ED; border: 1.5px solid #FED7AA; border-radius: 12px; padding: 10px 14px; font-size: 0.78rem; color: #9A3412; font-weight: 600; margin-bottom: 16px; }
+  .info { background: #EFF6FF; border: 1.5px solid #BFDBFE; border-radius: 12px; padding: 10px 14px; font-size: 0.78rem; color: #1E40AF; font-weight: 600; margin-bottom: 16px; }
+
+  button { border: none; border-radius: 12px; padding: 12px 24px; font-size: 0.85rem; font-weight: 800; cursor: pointer; transition: all 0.15s; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-warning { background: #F59E0B; color: white; }
+  .btn-warning:hover:not(:disabled) { background: #D97706; }
+  .btn-primary { background: #006241; color: white; }
+  .btn-primary:hover:not(:disabled) { background: #004d33; }
+  .btn-sm { padding: 7px 14px; font-size: 0.75rem; background: #f1f5f9; color: #475569; border-radius: 8px; }
+  .btn-sm:hover { background: #e2e8f0; }
+
+  .log-box { background: #0f172a; border-radius: 12px; padding: 16px; margin-top: 16px; max-height: 320px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 0.75rem; line-height: 1.7; }
+  .log-box:empty::before { content: 'Nhật ký sẽ hiển thị ở đây...'; color: #475569; }
+  .log-info  { color: #94a3b8; }
+  .log-ok    { color: #4ade80; }
+  .log-warn  { color: #fbbf24; }
+  .log-error { color: #f87171; }
+  .log-head  { color: #38bdf8; font-weight: bold; }
+
+  .status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .badge { padding: 3px 10px; border-radius: 999px; font-size: 0.7rem; font-weight: 800; }
+  .badge-idle    { background: #f1f5f9; color: #64748b; }
+  .badge-running { background: #FEF3C7; color: #D97706; }
+  .badge-done    { background: #D1FAE5; color: #059669; }
+  .badge-error   { background: #FEE2E2; color: #DC2626; }
+
+  .divider { border: none; border-top: 1.5px solid #e2e8f0; margin: 16px 0; }
+  .auth-status { font-size: 0.75rem; padding: 6px 12px; border-radius: 8px; font-weight: 700; }
+  .auth-ok  { background: #D1FAE5; color: #059669; }
+  .auth-err { background: #FEE2E2; color: #DC2626; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>☕ The Cafe 33 — Migration Tool</h1>
+  <p class="subtitle">Chạy theo thứ tự: Script 1 trước, Script 2 sau. Không chạy ngược.</p>
+
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+    <span id="auth-status" class="auth-status auth-err">⏳ Đang đăng nhập...</span>
+    <button class="btn-sm" onclick="doLogin()">Đăng nhập lại</button>
+  </div>
+
+  <!-- SCRIPT 1 -->
+  <div class="card step1">
+    <div class="card-header">
+      <div class="step-badge">1</div>
+      <div>
+        <h2>Sắp xếp lại bedBookings</h2>
+        <div style="font-size:0.75rem;color:#64748b;">Realtime DB: flat → YYYY/MM/DD/key</div>
+      </div>
+      <span id="s1-badge" class="badge badge-idle" style="margin-left:auto;">Chờ</span>
+    </div>
+
+    <p>Đọc tất cả booking từ <code>bedBookings/{pushKey}</code> (flat), rồi ghi lại vào <code>bedBookings/YYYY/MM/DD/{pushKey}</code> dựa theo field <b>date</b> của mỗi booking. Sau đó xóa các key flat cũ.</p>
+
+    <div class="warn">⚠️ Script này sẽ <b>xóa data flat cũ</b> sau khi copy xong. Hãy backup trước nếu cần.</div>
+
+    <div class="status-row">
+      <button id="s1-dry-btn" class="btn-sm" onclick="runScript1(true)">🔍 Dry run (xem trước)</button>
+      <button id="s1-run-btn" class="btn-warning" onclick="runScript1(false)">▶ Chạy thật</button>
+    </div>
+    <div id="s1-log" class="log-box"></div>
+  </div>
+
+  <!-- SCRIPT 2 -->
+  <div class="card step2">
+    <div class="card-header">
+      <div class="step-badge">2</div>
+      <div>
+        <h2>Copy data sang Firestore</h2>
+        <div style="font-size:0.75rem;color:#64748b;">screen_slides · sticker_config · rewards</div>
+      </div>
+      <span id="s2-badge" class="badge badge-idle" style="margin-left:auto;">Chờ</span>
+    </div>
+
+    <p>Copy 3 node từ Realtime Database sang Firestore Collection. Data cũ trong Realtime <b>không bị xóa</b> (giữ nguyên để rollback nếu cần).</p>
+
+    <div class="info">ℹ️ Nếu Firestore đã có data, script sẽ <b>ghi đè</b> (overwrite). Chạy nhiều lần an toàn.</div>
+
+    <div class="status-row">
+      <button id="s2-dry-btn" class="btn-sm" onclick="runScript2(true)">🔍 Dry run (xem trước)</button>
+      <button id="s2-run-btn" class="btn-primary" onclick="runScript2(false)">▶ Chạy thật</button>
+    </div>
+    <div id="s2-log" class="log-box"></div>
+  </div>
+
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain: "the-cafe-33.firebaseapp.com",
+  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "the-cafe-33",
+  storageBucket: "the-cafe-33.appspot.com"
+};
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db    = firebase.database();
+const fstore = firebase.firestore();
+const auth  = firebase.auth();
+
+// ── Auth ──
+function doLogin() {
+  document.getElementById('auth-status').textContent = '⏳ Đang đăng nhập...';
+  auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty")
+    .then(() => {
+      document.getElementById('auth-status').className = 'auth-status auth-ok';
+      document.getElementById('auth-status').textContent = '✅ Đã đăng nhập: elio@thecafe33.com';
+    })
+    .catch(err => {
+      document.getElementById('auth-status').className = 'auth-status auth-err';
+      document.getElementById('auth-status').textContent = '❌ Lỗi đăng nhập: ' + err.message;
+    });
+}
+doLogin();
+
+// ── Logger ──
+function log(boxId, msg, type='info') {
+  const box = document.getElementById(boxId);
+  const line = document.createElement('div');
+  line.className = 'log-' + type;
+  const now = new Date();
+  const ts = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
+  line.textContent = '[' + ts + '] ' + msg;
+  box.appendChild(line);
+  box.scrollTop = box.scrollHeight;
+}
+function logHead(boxId, msg) { log(boxId, msg, 'head'); }
+function logOk(boxId, msg)   { log(boxId, msg, 'ok');   }
+function logWarn(boxId, msg) { log(boxId, msg, 'warn'); }
+function logErr(boxId, msg)  { log(boxId, msg, 'error'); }
+function clearLog(boxId)     { document.getElementById(boxId).innerHTML = ''; }
+function setBadge(id, state) {
+  const el = document.getElementById(id);
+  const map = { idle: ['Chờ','badge-idle'], running: ['Đang chạy...','badge-running'], done: ['✅ Xong','badge-done'], error: ['❌ Lỗi','badge-error'] };
+  el.className = 'badge ' + map[state][1];
+  el.textContent = map[state][0];
+}
+
+// ── Helper: parse date string → { year, month, day } ──
+// Hỗ trợ: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY
+function parseDateKey(dateStr) {
+  if (!dateStr) return null;
+  var s = dateStr.trim();
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    var p = s.split('-');
+    return { year: p[0], month: p[1], day: p[2] };
+  }
+  // DD/MM/YYYY or DD-MM-YYYY
+  var sep = s.includes('/') ? '/' : '-';
+  var p = s.split(sep);
+  if (p.length >= 3) {
+    if (p[2].length === 4) return { year: p[2], month: p[1].padStart(2,'0'), day: p[0].padStart(2,'0') };
+    if (p[0].length === 4) return { year: p[0], month: p[1].padStart(2,'0'), day: p[2].padStart(2,'0') };
+  }
+  return null;
+}
+
+// ════════════════════════════════════════════════════
+// SCRIPT 1 — Sắp xếp bedBookings: flat → YYYY/MM/DD
+// ════════════════════════════════════════════════════
+async function runScript1(dryRun) {
+  const BOX = 's1-log';
+  clearLog(BOX);
+  setBadge('s1-badge', 'running');
+  document.getElementById('s1-dry-btn').disabled = true;
+  document.getElementById('s1-run-btn').disabled = true;
+
+  const mode = dryRun ? '[DRY RUN]' : '[THẬT]';
+  logHead(BOX, '══════════════════════════════════');
+  logHead(BOX, 'Script 1: Sắp xếp bedBookings ' + mode);
+  logHead(BOX, '══════════════════════════════════');
+
+  try {
+    // 1. Đọc toàn bộ bedBookings
+    log(BOX, 'Đang đọc bedBookings từ Realtime...');
+    const snap = await db.ref('bedBookings').once('value');
+    const raw = snap.val();
+
+    if (!raw) { logWarn(BOX, 'bedBookings rỗng, không có gì để migrate.'); setBadge('s1-badge', 'done'); return; }
+
+    // 2. Phân loại: flat keys vs dated keys đã đúng
+    const flatKeys   = []; // key trực tiếp dưới bedBookings (giá trị là object booking)
+    const datedYears = []; // key là YYYY (đã được cấu trúc đúng)
+    const unknownKeys = [];
+
+    Object.keys(raw).forEach(k => {
+      const v = raw[k];
+      if (typeof v !== 'object' || v === null) return;
+      // Nếu key là năm 4 chữ số → đã là cấu trúc YYYY/MM/DD
+      if (/^\d{4}$/.test(k)) { datedYears.push(k); }
+      // Nếu có field "date" hoặc "phone" trực tiếp → flat booking
+      else if (v.date || v.phone || v.status) { flatKeys.push(k); }
+      else { unknownKeys.push(k); }
+    });
+
+    log(BOX, '── Phân tích xong ──');
+    logOk(BOX,  '  Flat keys (cần migrate): ' + flatKeys.length);
+    log(BOX,    '  Đã có cấu trúc YYYY:     ' + datedYears.length + ' năm ' + (datedYears.length ? '(' + datedYears.join(', ') + ')' : ''));
+    if (unknownKeys.length) logWarn(BOX, '  Unknown keys:            ' + unknownKeys.join(', '));
+
+    if (flatKeys.length === 0) {
+      logOk(BOX, 'Tất cả booking đã có cấu trúc đúng. Không cần làm gì!');
+      setBadge('s1-badge', 'done');
+      return;
+    }
+
+    // 3. Xử lý từng flat booking
+    let moved = 0, skipped = 0, errors = 0;
+    const updates = {}; // multi-path update object
+    const toDelete = [];
+
+    for (const key of flatKeys) {
+      const booking = raw[key];
+      const dateStr = booking.date;
+      const parsed = parseDateKey(dateStr);
+
+      if (!parsed) {
+        logWarn(BOX, '  SKIP ' + key + ' — date không parse được: "' + dateStr + '"');
+        skipped++;
+        continue;
+      }
+
+      const newPath = 'bedBookings/' + parsed.year + '/' + parsed.month + '/' + parsed.day + '/' + key;
+      // Thêm field path để dễ tra sau này
+      const bookingWithPath = Object.assign({}, booking, {
+        dateKey: parsed.year + '-' + parsed.month + '-' + parsed.day,
+        path: newPath
+      });
+
+      if (dryRun) {
+        log(BOX, '  → ' + key + ' (' + (booking.name || booking.phone || '?') + ', ' + dateStr + ')');
+        log(BOX, '    sẽ chuyển sang: ' + newPath);
+      } else {
+        updates[newPath] = bookingWithPath;
+        updates['bedBookings/' + key] = null; // xóa flat key cũ
+      }
+      moved++;
+    }
+
+    if (dryRun) {
+      logHead(BOX, '── Tổng kết dry run ──');
+      log(BOX, '  Sẽ chuyển: ' + moved + ' bookings');
+      log(BOX, '  Bỏ qua:   ' + skipped + ' bookings (date lỗi)');
+      logWarn(BOX, 'Chạy thật để thực hiện. Data chưa thay đổi.');
+    } else {
+      // 4. Multi-path update một lần
+      log(BOX, 'Đang ghi ' + moved + ' bookings bằng multi-path update...');
+      await db.ref().update(updates);
+      logOk(BOX, '  ✓ Đã ghi xong!');
+      logHead(BOX, '── Tổng kết ──');
+      logOk(BOX,  '  Đã chuyển: ' + moved + ' bookings');
+      if (skipped) logWarn(BOX, '  Bỏ qua:    ' + skipped + ' bookings (kiểm tra thủ công)');
+    }
+
+    setBadge('s1-badge', dryRun ? 'idle' : 'done');
+
+  } catch(err) {
+    logErr(BOX, 'LỖI: ' + err.message);
+    setBadge('s1-badge', 'error');
+  } finally {
+    document.getElementById('s1-dry-btn').disabled = false;
+    document.getElementById('s1-run-btn').disabled = false;
+  }
+}
+
+// ════════════════════════════════════════════════════
+// SCRIPT 2 — Copy Realtime → Firestore
+// screen_slides, sticker_config, rewards
+// ════════════════════════════════════════════════════
+async function runScript2(dryRun) {
+  const BOX = 's2-log';
+  clearLog(BOX);
+  setBadge('s2-badge', 'running');
+  document.getElementById('s2-dry-btn').disabled = true;
+  document.getElementById('s2-run-btn').disabled = true;
+
+  const mode = dryRun ? '[DRY RUN]' : '[THẬT]';
+  logHead(BOX, '══════════════════════════════════');
+  logHead(BOX, 'Script 2: Realtime → Firestore ' + mode);
+  logHead(BOX, '══════════════════════════════════');
+
+  let totalOk = 0, totalErr = 0;
+
+  // ── 2a. screen_slides ──
+  try {
+    logHead(BOX, '── [1/3] screen_slides ──');
+    const snap = await db.ref('screen_slides').once('value');
+    const val = snap.val();
+    if (!val) {
+      logWarn(BOX, '  Realtime screen_slides rỗng, bỏ qua.');
+    } else {
+      const slides = Array.isArray(val) ? val : Object.values(val);
+      log(BOX, '  Tìm thấy ' + slides.length + ' slides trong Realtime');
+      slides.forEach((s, i) => log(BOX, '  [' + i + '] ' + (s.url || '?').substring(0, 50) + ' — ' + (s.duration || 8) + 's'));
+      if (!dryRun) {
+        await fstore.collection('config').doc('screen_slides').set({ slides: slides });
+        logOk(BOX, '  ✓ Đã ghi vào Firestore: config/screen_slides');
+      } else {
+        logWarn(BOX, '  Dry run: sẽ ghi { slides: [...' + slides.length + ' items] } vào config/screen_slides');
+      }
+      totalOk++;
+    }
+  } catch(e) { logErr(BOX, '  screen_slides ERROR: ' + e.message); totalErr++; }
+
+  // ── 2b. sticker_config ──
+  try {
+    logHead(BOX, '── [2/3] sticker_config ──');
+    const snap = await db.ref('sticker_config').once('value');
+    const val = snap.val();
+    if (!val) {
+      logWarn(BOX, '  Realtime sticker_config rỗng, bỏ qua.');
+    } else {
+      log(BOX, '  logoMode:   ' + (val.logoMode || '?'));
+      log(BOX, '  footerText: ' + (val.footerText || '?'));
+      log(BOX, '  fontName:   ' + (val.fontName || '?'));
+      log(BOX, '  fontFooter: ' + (val.fontFooter || '?'));
+      log(BOX, '  logoImgURL: ' + (val.logoImgURL ? val.logoImgURL.substring(0,40)+'...' : 'null'));
+      if (!dryRun) {
+        await fstore.collection('config').doc('sticker_config').set(val);
+        logOk(BOX, '  ✓ Đã ghi vào Firestore: config/sticker_config');
+      } else {
+        logWarn(BOX, '  Dry run: sẽ ghi object trên vào config/sticker_config');
+      }
+      totalOk++;
+    }
+  } catch(e) { logErr(BOX, '  sticker_config ERROR: ' + e.message); totalErr++; }
+
+  // ── 2c. rewards ──
+  try {
+    logHead(BOX, '── [3/3] rewards ──');
+    const snap = await db.ref('rewards').once('value');
+    const val = snap.val();
+    if (!val) {
+      logWarn(BOX, '  Realtime rewards rỗng, bỏ qua.');
+    } else {
+      const keys = Object.keys(val);
+      log(BOX, '  Tìm thấy ' + keys.length + ' rewards trong Realtime');
+      keys.forEach(k => {
+        const r = val[k];
+        log(BOX, '  [' + k + '] ' + (r.code || '—') + ' · ' + (r.label || r.name || '?') + ' · ' + (r.type || '?'));
+      });
+      if (!dryRun) {
+        // Batch write để hiệu quả
+        const batch = fstore.batch();
+        keys.forEach(k => {
+          const ref = fstore.collection('rewards').doc(k);
+          batch.set(ref, val[k]);
+        });
+        await batch.commit();
+        logOk(BOX, '  ✓ Đã ghi ' + keys.length + ' rewards vào Firestore collection rewards/');
+      } else {
+        logWarn(BOX, '  Dry run: sẽ ghi ' + keys.length + ' docs vào collection rewards/');
+      }
+      totalOk++;
+    }
+  } catch(e) { logErr(BOX, '  rewards ERROR: ' + e.message); totalErr++; }
+
+  // ── Tổng kết ──
+  logHead(BOX, '── Tổng kết ──');
+  if (dryRun) {
+    logWarn(BOX, 'Dry run xong. Bấm "Chạy thật" để thực hiện.');
+    setBadge('s2-badge', 'idle');
+  } else if (totalErr === 0) {
+    logOk(BOX, '✅ Tất cả ' + totalOk + '/3 nodes đã được copy sang Firestore!');
+    logOk(BOX, 'Data cũ trong Realtime vẫn còn nguyên (không xóa).');
+    setBadge('s2-badge', 'done');
+  } else {
+    logErr(BOX, '⚠️ Xong ' + totalOk + '/3 nodes. Có ' + totalErr + ' lỗi — xem log trên.');
+    setBadge('s2-badge', 'error');
+  }
+
+  document.getElementById('s2-dry-btn').disabled = false;
+  document.getElementById('s2-run-btn').disabled = false;
+}
+</script>
+</body>
+</html>
