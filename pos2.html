@@ -2456,6 +2456,7 @@ function autoLoginPOS() {
         .then((userCredential) => {
             // Chạy archive sau khi đăng nhập thành công
             setTimeout(runAutoArchive, 5000);
+            setTimeout(runAutoArchiveOrders, 8000);
         })
         .catch((error) => {
             alert("Lỗi: Không thể đăng nhập vào hệ thống! Kiểm tra lại Email/Pass trong code.");
@@ -2522,6 +2523,80 @@ function runAutoArchive() {
                 })
                 .catch(function(err) {
                     console.warn('[AutoArchive] Lỗi archive ' + t.dateKey + ':', err.message);
+                    processNext(idx + 1);
+                });
+        }
+
+        processNext(0);
+    });
+}
+
+
+// ── Auto-archive orders cũ hơn 3 ngày sang Firestore orders_archive ──
+// Giữ lại 3 ngày gần nhất trên RT, còn lại archive sang Firestore
+function runAutoArchiveOrders() {
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+    var cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - 3);
+
+    // Map tên tháng → số để so sánh ngày
+    var MONTH_NUM = { jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',
+                      jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12' };
+
+    var archived = 0;
+
+    db.ref('orders').once('value', function(rootSnap) {
+        if (!rootSnap.exists()) return;
+
+        var tasks = [];
+
+        rootSnap.forEach(function(yearSnap) {
+            var year = yearSnap.key;
+            // Bỏ qua node 'order' cũ (flat key không phải năm số)
+            if (!/^\d{4}$/.test(year)) return;
+            yearSnap.forEach(function(monthSnap) {
+                var monthName = monthSnap.key; // 'jan','feb'...
+                var monthNum = MONTH_NUM[monthName];
+                if (!monthNum) return;
+                monthSnap.forEach(function(daySnap) {
+                    var day = daySnap.key; // '01'..'31'
+                    var dateObj = new Date(Number(year), Number(monthNum) - 1, Number(day));
+                    dateObj.setHours(0, 0, 0, 0);
+
+                    if (dateObj < cutoff && daySnap.exists()) {
+                        tasks.push({
+                            rtPath: 'orders/' + year + '/' + monthName + '/' + day,
+                            dateKey: year + '-' + monthNum + '-' + day,
+                            data: daySnap.val()
+                        });
+                    }
+                });
+            });
+        });
+
+        if (tasks.length === 0) {
+            console.log('[ArchiveOrders] Không có ngày nào cần archive.');
+            return;
+        }
+
+        console.log('[ArchiveOrders] Tìm thấy ' + tasks.length + ' ngày cần archive...');
+
+        function processNext(idx) {
+            if (idx >= tasks.length) {
+                console.log('[ArchiveOrders] Hoàn tất: đã archive ' + archived + '/' + tasks.length + ' ngày.');
+                return;
+            }
+            var t = tasks[idx];
+            fstore.collection('orders_archive').doc(t.dateKey)
+                .set({ orders: t.data, archivedAt: new Date().toISOString() })
+                .then(function() {
+                    db.ref(t.rtPath).remove();
+                    archived++;
+                    processNext(idx + 1);
+                })
+                .catch(function(err) {
+                    console.warn('[ArchiveOrders] Lỗi archive ' + t.dateKey + ':', err.message);
                     processNext(idx + 1);
                 });
         }
@@ -3165,33 +3240,58 @@ function getOrdersRef(date) {
 }
 
 // Fetch orders trong khoảng ngày, gom từ orders/năm/tháng/ngày
+// Helper: YYYY-MM-DD từ Date object
+function _dateToArchiveKey(d) {
+    return d.getFullYear() + '-' +
+           String(d.getMonth() + 1).padStart(2, '0') + '-' +
+           String(d.getDate()).padStart(2, '0');
+}
+
+// Fetch orders 1 ngày: thử RT trước, fallback Firestore orders_archive nếu trống
+async function _fetchOrdersForDay(dateObj) {
+    const { year, month, day } = getOrderParts(new Date(dateObj));
+    const snap = await db.ref(`orders/${year}/${month}/${day}`).once('value');
+    if (snap.exists() && snap.val()) {
+        return Object.values(snap.val());
+    }
+    // Không có trên RT → thử Firestore archive
+    try {
+        const dateKey = _dateToArchiveKey(dateObj);
+        const doc = await fstore.collection('orders_archive').doc(dateKey).get();
+        if (doc.exists && doc.data() && doc.data().orders) {
+            return Object.values(doc.data().orders);
+        }
+    } catch(err) {
+        console.warn('[fetchOrders] Lỗi đọc archive ' + _dateToArchiveKey(dateObj) + ':', err.message);
+    }
+    return [];
+}
+
+// Fetch orders trong khoảng ngày — hybrid RT + Firestore archive
 async function fetchOrdersByDateRange(startDate, endDate) {
-    const allOrders = [];
     const cur = new Date(startDate);
     cur.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    end.setHours(0, 0, 0, 0);
 
-    const refs = [];
+    const promises = [];
     while (cur <= end) {
-        const { year, month, day } = getOrderParts(new Date(cur));
-        refs.push(db.ref(`orders/${year}/${month}/${day}`).once('value'));
+        promises.push(_fetchOrdersForDay(new Date(cur)));
         cur.setDate(cur.getDate() + 1);
     }
-    // Tương thích node cũ
-    refs.push(db.ref('order').once('value'));
+    // Tương thích node cũ (flat 'order')
+    promises.push(
+        db.ref('order').once('value').then(snap => {
+            if (snap.exists() && snap.val()) return Object.values(snap.val());
+            return [];
+        })
+    );
 
-    const snaps = await Promise.all(refs);
-    snaps.forEach(snap => {
-        if (snap.exists()) {
-            const val = snap.val();
-            if (val) Object.values(val).forEach(o => allOrders.push(o));
-        }
-    });
-    return allOrders;
+    const results = await Promise.all(promises);
+    return results.flat();
 }
 
-// Fetch orders hôm nay
+// Fetch orders hôm nay (luôn trên RT, không cần fallback)
 async function fetchTodayOrders() {
     const today = new Date();
     const { year, month, day } = getOrderParts(today);
@@ -3209,6 +3309,7 @@ async function fetchTodayOrders() {
     return allOrders;
 }
 // ===== END ORDERS SHARDING =====
+
 
 function renderCart() {
     const list = document.getElementById('cart-list');
