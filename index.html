@@ -648,23 +648,24 @@ function _fetchBedDayBookings(dateStr) {
     var d = _parseBedDateKey(dateStr);
     if (!d) return Promise.resolve([]);
     var rtPath = 'bedBookings/' + d.year + '/' + d.month + '/' + d.day;
-    var archiveKey = d.year + '-' + d.month + '-' + d.day;
 
     return db.ref(rtPath).once('value').then(function(snap) {
         if (snap.exists() && snap.val()) {
             return _snapToBookingList(snap.val());
         }
-        // Fallback Firestore — đợi auth sẵn sàng
+        // Fallback Firestore nested: bedBookings_archive/{year}/{month}/{day}
+        // Cùng cấu trúc với RT → đọc đồng nhất, không cần xử lý riêng
         return new Promise(function(resolve) {
             _onFirestoreReady(function() {
-                fstore.collection('bedBookings_archive').doc(archiveKey).get()
-            .then(function(doc) {
-                if (doc.exists && doc.data() && doc.data().bookings)
-                    return _snapToBookingList(doc.data().bookings);
-                return [];
-            })
-            .catch(function() { return []; })
-                .then(resolve);
+                fstore.collection('bedBookings_archive').doc(d.year)
+                    .collection(d.month).doc(d.day).get()
+                    .then(function(doc) {
+                        if (doc.exists && doc.data() && doc.data().bookings)
+                            return _snapToBookingList(doc.data().bookings);
+                        return [];
+                    })
+                    .catch(function() { return []; })
+                    .then(resolve);
             });
         });
     });
@@ -685,14 +686,22 @@ function _getBedBookingRTPath(booking) {
 }
 
 // Fetch tất cả bookings của 1 phone — RT live tree + RT phone index (archive)
+// Phone index được POS ghi tự động mỗi khi archive → luôn đầy đủ, không cần đọc Firestore
 function _fetchBookingsByPhone(phone, callback) {
     var cleanPhone = (phone || '').replace(/[^0-9]/g, '');
 
-    // Bước 1: quét RT live tree
-    db.ref('bedBookings').once('value', function(rootSnap) {
-        var rtBookings = [];
-        var rtKeys = new Set();
+    // Bước 1 + 2 song song để nhanh hơn
+    var rtBookings = [];
+    var rtKeys = new Set();
+    var done = 0;
 
+    function finish() {
+        if (++done < 2) return;
+        callback(rtBookings);
+    }
+
+    // Bước 1: RT live tree (bookings chưa archive, <= 3 ngày gần nhất)
+    db.ref('bedBookings').once('value', function(rootSnap) {
         if (rootSnap.exists() && rootSnap.val()) {
             rootSnap.forEach(function(yearSnap) {
                 yearSnap.forEach(function(monthSnap) {
@@ -700,8 +709,7 @@ function _fetchBookingsByPhone(phone, callback) {
                         daySnap.forEach(function(bookingSnap) {
                             var b = bookingSnap.val();
                             if (b && b.phone && b.phone.replace(/[^0-9]/g,'') === cleanPhone) {
-                                var entry = Object.assign({ key: bookingSnap.key }, b);
-                                rtBookings.push(entry);
+                                rtBookings.push(Object.assign({ key: bookingSnap.key }, b));
                                 rtKeys.add(bookingSnap.key);
                             }
                         });
@@ -709,19 +717,20 @@ function _fetchBookingsByPhone(phone, callback) {
                 });
             });
         }
+        finish();
+    });
 
-        // Bước 2: đọc RT phone index (được POS ghi khi archive)
-        db.ref('bedBookings_by_phone/' + cleanPhone).once('value', function(idxSnap) {
-            if (idxSnap.exists() && idxSnap.val()) {
-                idxSnap.forEach(function(child) {
-                    if (!rtKeys.has(child.key)) {
-                        rtBookings.push(Object.assign({ key: child.key }, child.val()));
-                        rtKeys.add(child.key);
-                    }
-                });
-            }
-            callback(rtBookings);
-        });
+    // Bước 2: phone index (toàn bộ lịch sử đã archive)
+    db.ref('bedBookings_by_phone/' + cleanPhone).once('value', function(idxSnap) {
+        if (idxSnap.exists() && idxSnap.val()) {
+            idxSnap.forEach(function(child) {
+                if (!rtKeys.has(child.key)) {
+                    rtBookings.push(Object.assign({ key: child.key }, child.val()));
+                    rtKeys.add(child.key);
+                }
+            });
+        }
+        finish();
     });
 }
 
