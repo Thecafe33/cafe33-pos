@@ -13,6 +13,7 @@
   
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
@@ -226,20 +227,6 @@
     <div class="w-14 h-14 border-4 border-[#006241] border-t-transparent rounded-full animate-spin mb-4"></div>
     <p class="brand-font text-[#006241] text-xl font-black animate-pulse">The cafe 33</p>
     <p class="text-xs text-gray-400 font-bold mt-2" id="loading-text">Đang kết nối...</p>
-  </div>
-
-  <!-- BANNED OVERLAY -->
-  <div id="banned-overlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(10,10,10,0.93);backdrop-filter:blur(18px);flex-direction:column;align-items:center;justify-content:center;padding:2rem;">
-    <div style="background:#fff;border-radius:2.5rem;padding:2.5rem 2rem 2rem;max-width:360px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,0.5);">
-      <div style="font-size:52px;margin-bottom:12px;">🚫</div>
-      <p style="font-size:11px;font-weight:800;color:#dc2626;letter-spacing:0.12em;text-transform:uppercase;margin:0 0 10px;">Tài khoản bị hạn chế</p>
-      <h2 style="font-size:20px;font-weight:900;color:#1e3932;margin:0 0 16px;line-height:1.3;font-family:'League Spartan',sans-serif;">The cafe 33 rất tiếc</h2>
-      <p style="font-size:13px;color:#4b5563;line-height:1.7;font-weight:500;margin:0 0 24px;">Bạn không thể tiếp tục sử dụng dịch vụ <strong>Cafe in Bed</strong> tại The cafe 33 do vi phạm quy định đả cam kết.</p>
-      <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:16px;padding:14px 16px;margin-bottom:24px;">
-        <p style="font-size:12px;color:#dc2626;font-weight:600;margin:0;line-height:1.6;">Vui lòng nhắn tin qua fanpage <strong>The cafe 33</strong> để biết thêm chi tiết.</p>
-      </div>
-      <a href="https://www.facebook.com/thecafe33" target="_blank" style="display:block;width:100%;padding:14px;background:linear-gradient(135deg,#1877f2,#0d5fcc);color:#fff;font-weight:800;font-size:13px;border-radius:16px;text-decoration:none;letter-spacing:0.05em;box-sizing:border-box;">📘 Nhắn tin Fanpage</a>
-    </div>
   </div>
 
   <div id="image-overlay" class="fixed inset-0 bg-black/95 z-[200] hidden flex flex-col items-center justify-center p-4 backdrop-blur-md">
@@ -608,6 +595,7 @@ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDrZmGgIC3c-
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const fstore = firebase.firestore();
 
 // ── Giờ đóng cửa Bed — sync realtime từ Firebase (POS set) ─────
 var _bedClosingTime = '20:50';
@@ -627,6 +615,172 @@ db.ref('bed_closing_time').on('value', function(snap) {
 let curPhone = localStorage.getItem('member_phone');
 let userData = {};
 let _cachedGiftList = []; // Thêm biến cache danh sách quà
+
+// ══════════════════════════════════════════════════════════════
+// BED BOOKING HELPERS — đọc từ nested RT + Firestore archive
+// ══════════════════════════════════════════════════════════════
+
+// Parse DD/MM/YYYY hoặc YYYY-MM-DD → { year, month, day } dạng string 2 chữ số
+function _parseBedDateKey(dateStr) {
+    if (!dateStr) return null;
+    var s = dateStr.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        var p = s.split('-');
+        return { year: p[0], month: p[1], day: p[2] };
+    }
+    var sep = s.includes('/') ? '/' : '-';
+    var p = s.split(sep);
+    if (p.length >= 3 && p[2].length === 4)
+        return { year: p[2], month: p[1].padStart(2,'0'), day: p[0].padStart(2,'0') };
+    return null;
+}
+
+// Đọc bookings của 1 ngày: RT trước, fallback Firestore archive
+function _fetchBedDayBookings(dateStr) {
+    var d = _parseBedDateKey(dateStr);
+    if (!d) return Promise.resolve([]);
+    var rtPath = 'bedBookings/' + d.year + '/' + d.month + '/' + d.day;
+    var archiveKey = d.year + '-' + d.month + '-' + d.day;
+
+    return db.ref(rtPath).once('value').then(function(snap) {
+        if (snap.exists() && snap.val()) {
+            return _snapToBookingList(snap.val());
+        }
+        // Fallback Firestore
+        return fstore.collection('bedBookings_archive').doc(archiveKey).get()
+            .then(function(doc) {
+                if (doc.exists && doc.data() && doc.data().bookings)
+                    return _snapToBookingList(doc.data().bookings);
+                return [];
+            })
+            .catch(function() { return []; });
+    });
+}
+
+// Chuyển object {key: bookingData} → array [{key, ...bookingData}]
+function _snapToBookingList(data) {
+    return Object.keys(data).map(function(k) {
+        return Object.assign({ key: k }, data[k]);
+    });
+}
+
+// Lấy RT path đúng cho 1 booking (dùng để update/read by key)
+function _getBedBookingRTPath(booking) {
+    var d = _parseBedDateKey(booking.date || booking.bookingDate);
+    if (d) return 'bedBookings/' + d.year + '/' + d.month + '/' + d.day + '/' + booking.key;
+    return null;
+}
+
+// Fetch tất cả bookings của 1 phone — quét RT + có thể cả archive nếu cần
+// Fetch bookings của 1 phone — đọc RT tree 1 lần, chỉ Firestore những ngày thực sự cần
+function _fetchBookingsByPhone(phone, callback) {
+    var allBookings = [];
+
+    // Bước 1: quét RT tree để tìm ngày có booking của user
+    db.ref('bedBookings').once('value', function(rootSnap) {
+        if (!rootSnap.exists()) {
+            _fetchBookingsByPhoneFromArchive(phone, callback);
+            return;
+        }
+
+        var rtBookings = [];
+        var rtDatesFound = new Set();
+
+        rootSnap.forEach(function(yearSnap) {
+            yearSnap.forEach(function(monthSnap) {
+                monthSnap.forEach(function(daySnap) {
+                    daySnap.forEach(function(bookingSnap) {
+                        var b = bookingSnap.val();
+                        if (b && b.phone === phone) {
+                            rtBookings.push(Object.assign({ key: bookingSnap.key }, b));
+                        }
+                    });
+                    // Ghi lại ngày nào đã có trong RT (kể cả không có booking của user)
+                    var year = yearSnap.key, month = monthSnap.key, day = daySnap.key;
+                    rtDatesFound.add(year + '-' + month + '-' + day);
+                });
+            });
+        });
+
+        allBookings = rtBookings;
+
+        // Bước 2: Firestore archive — chỉ cần nếu RT không có ngày nào gần đây
+        // (nếu RT có data, user chưa có booking lâu năm trong archive cũng không cần thiết)
+        // Chỉ check archive nếu user không có booking active trên RT
+        var hasActiveOnRT = rtBookings.some(function(b) {
+            var st = (b.status || '').toLowerCase();
+            return st !== 'đã hủy' && st !== 'đã xong';
+        });
+
+        if (hasActiveOnRT) {
+            callback(allBookings);
+        } else {
+            // Không có active → check archive để lấy lịch sử đầy đủ
+            _fetchBookingsByPhoneFromArchive(phone, function(archiveBookings) {
+                // Merge, tránh trùng key
+                var rtKeys = new Set(rtBookings.map(function(b){ return b.key; }));
+                archiveBookings.forEach(function(b) {
+                    if (!rtKeys.has(b.key)) allBookings.push(b);
+                });
+                callback(allBookings);
+            });
+        }
+    });
+}
+
+// Fetch bookings của phone từ Firestore archive (dùng khi không có active trên RT)
+function _fetchBookingsByPhoneFromArchive(phone, callback) {
+    var now = new Date();
+    var archiveDays = [];
+    // Chỉ cần 90 ngày gần nhất trong archive (đủ cho lịch sử + mission)
+    for (var i = 90; i >= 4; i--) {
+        var d = new Date(now);
+        d.setDate(d.getDate() - i);
+        archiveDays.push(
+            d.getFullYear() + '-' +
+            String(d.getMonth()+1).padStart(2,'0') + '-' +
+            String(d.getDate()).padStart(2,'0')
+        );
+    }
+
+    var results = [];
+    var pending = archiveDays.length;
+    if (pending === 0) { callback([]); return; }
+
+    archiveDays.forEach(function(dateKey) {
+        fstore.collection('bedBookings_archive').doc(dateKey).get()
+            .then(function(doc) {
+                if (doc.exists && doc.data() && doc.data().bookings) {
+                    var bookings = doc.data().bookings;
+                    Object.keys(bookings).forEach(function(k) {
+                        var b = bookings[k];
+                        if (b && b.phone === phone) {
+                            results.push(Object.assign({ key: k }, b));
+                        }
+                    });
+                }
+                pending--;
+                if (pending === 0) callback(results);
+            })
+            .catch(function() {
+                pending--;
+                if (pending === 0) callback(results);
+            });
+    });
+}
+
+// Ghi booking mới vào nested path RT
+function _pushNewBedBooking(bookingData, callback, presetKey) {
+    var d = _parseBedDateKey(bookingData.date);
+    if (!d) { callback(new Error('Ngày không hợp lệ: ' + bookingData.date)); return null; }
+    var rtPath = 'bedBookings/' + d.year + '/' + d.month + '/' + d.day;
+    var newRef = presetKey ? db.ref(rtPath + '/' + presetKey) : db.ref(rtPath).push();
+    newRef.set(bookingData, function(err) {
+        callback(err, newRef.key, rtPath + '/' + newRef.key);
+    });
+    return newRef;
+}
+
 // --- LOGIC ĐĂNG KÝ (NO GSA) ---
 
 function showRegister() {
@@ -789,16 +943,6 @@ function showAppModal(title, msg, icon='☕', cb=null, showCancel=false) {
 function normalizePhone(p) { return String(p || "").replace(/[^0-9]/g, ""); }
 
 // --- 3. ĐĂNG NHẬP ---
-function showBannedOverlay() {
-    const el = document.getElementById('banned-overlay');
-    if (!el) return;
-    el.style.display = 'flex';
-    // Chặn mọi tương tác phía sau
-    document.body.style.overflow = 'hidden';
-    document.body.style.pointerEvents = 'none';
-    el.style.pointerEvents = 'all';
-}
-
 function login() {
     const phone = normalizePhone(document.getElementById('login-sdt').value);
     if (phone.length < 9) return alert("SĐT không hợp lệ!");
@@ -807,11 +951,6 @@ function login() {
     db.ref('customers/' + phone).once('value', snap => {
         document.getElementById('loading-overlay').classList.add('hidden');
         if (snap.exists()) {
-            const data = snap.val();
-            if (data && data.banned === true) {
-                showBannedOverlay();
-                return;
-            }
             localStorage.setItem('member_phone', phone);
             showDashboard(phone);
         } else {
@@ -835,8 +974,6 @@ function showDashboard(phone) {
         userData = snap.val();
         
         if(userData) {
-          // Kiểm tra tài khoản bị cấm (realtime — POS ban là hiện ngay)
-          if (userData.banned === true) { showBannedOverlay(); return; }
           // === CẬP NHẬT TRANG CHỦ (MỚI) ===
             const displayName = userData.name || "Bạn mới";
             // Cập nhật tên ở trang chủ
@@ -898,10 +1035,9 @@ function _loadMissionBedCount(phone) {
         if (d.includes('/')) { var p = d.split('/'); return new Date(+p[2], +p[1]-1, +p[0]); }
         return new Date(d);
     }
-    db.ref('bedBookings').orderByChild('phone').equalTo(phone).once('value', function(snap) {
+    _fetchBookingsByPhone(phone, function(bookings) {
         var count = 0;
-        snap.forEach(function(c) {
-            var v = c.val();
+        bookings.forEach(function(v) {
             if (!v) return;
             // Chỉ tính lịch đã checkout thành công
             if ((v.status||'').toLowerCase() !== 'đã xong') return;
@@ -1270,7 +1406,7 @@ function loadBedMap() {
     const p = dateVal.split('-');
     const dateStr = `${p[2]}/${p[1]}/${p[0]}`;
 
-    db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value').then(function(bookingsSnap) {
+    _fetchBedDayBookings(dateStr).then(function(dayBookings) {
         // activeBeds: bedId đã check-in (POS assign rõ ràng)
         // preferredBeds: bedId app chọn trước (chưa check-in)
         // unassignedCount: booking trùng giờ nhưng chưa có bedId (chờ xếp bed)
@@ -1279,8 +1415,7 @@ function loadBedMap() {
         const endTimes      = {};
         let   unassignedCount = 0;
 
-        bookingsSnap.forEach(function(c) {
-            const v  = c.val();
+        dayBookings.forEach(function(v) {
             const st = (v.status || '').toLowerCase();
             if (st.includes('hủy') || st.includes('xong')) return;
 
@@ -1294,11 +1429,11 @@ function loadBedMap() {
                 // Check-in xong, biết ô cụ thể
                 activeBeds.add(String(v.bedId));
                 endTimes[String(v.bedId)] = v.end;
-            } else if (v.preferredBed && v.phone !== curPhone && !st.includes('active')) {
-                // App chọn trước, biết ô cụ thể (chỉ khi chưa check-in)
+            } else if (v.preferredBed && v.phone !== curPhone) {
+                // App chọn trước, biết ô cụ thể
                 preferredBeds.add(String(v.preferredBed));
                 if (!endTimes[String(v.preferredBed)]) endTimes[String(v.preferredBed)] = v.end;
-            } else if (v.phone !== curPhone && !st.includes('active')) {
+            } else if (v.phone !== curPhone) {
                 // Booking trùng giờ nhưng chưa biết ô (chờ xếp bed)
                 unassignedCount++;
             }
@@ -1574,9 +1709,9 @@ function handleBooking() {
         }
 
         // D. Check Active Booking
-        db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).once('value', userSnap => {
+        _fetchBookingsByPhone(curPhone, function(userBookings) {
             let hasActive = false;
-            userSnap.forEach(c => { const st = (c.val().status||"").toLowerCase(); if(st!=='đã hủy' && st!=='đã xong') hasActive=true; });
+            userBookings.forEach(v => { const st = (v.status||"").toLowerCase(); if(st!=='đã hủy' && st!=='đã xong') hasActive=true; });
             if(hasActive) {
                 clearTimeout(safetyTimer); loading.classList.add('hidden');
                 showAppModal("Bạn đã có lịch đặt!", "Vui lòng kiểm tra lại.", "⚠️", () => { showTab('user'); openHistory(); });
@@ -1587,12 +1722,10 @@ function handleBooking() {
             const p = dateVal.split('-');
             const dateStr = `${p[2]}/${p[1]}/${p[0]}`; 
 
-            db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value', snap => {
+            _fetchBedDayBookings(dateStr).then(function(dayBookings) {
                 let bookedSlots = [];
                 let overlapCount = 0;
-                
-                snap.forEach(c => {
-                    const v = c.val();
+                dayBookings.forEach(v => {
                     if(v.status !== 'đã hủy' && v.status !== 'đã xong') {
                         bookedSlots.push(v);
                         const bs = parseInt(v.start.split(':')[0])*60 + parseInt(v.start.split(':')[1]);
@@ -1613,8 +1746,7 @@ function handleBooking() {
                     if (overlapCount === 3 && finalPreferredBed === 0) {
                         // Tìm bed nào chưa bị preferredBed trong khung giờ này
                         const takenBeds = new Set();
-                        snap.forEach(function(c) {
-                            const v = c.val();
+                        dayBookings.forEach(function(v) {
                             if (!v.preferredBed || v.status === 'đã hủy' || v.status === 'đã xong') return;
                             const bs = parseInt(v.start.split(':')[0])*60 + parseInt(v.start.split(':')[1]);
                             const be = parseInt(v.end.split(':')[0])  *60 + parseInt(v.end.split(':')[1]);
@@ -1641,8 +1773,6 @@ function handleBooking() {
                         });
                     }
 
-                    const _newRef = db.ref('bedBookings').push();
-                    _poBookingKey = _newRef.key;
                     (function(){
                         var ps=startVal.split(':'), pe=endVal.split(':');
                         var diff=(+pe[0]*60+ +pe[1])-(+ps[0]*60+ +ps[1]);
@@ -1662,31 +1792,38 @@ function handleBooking() {
                         bookingData.preferBedFee    = finalPreferBedFee;
                     }
 
-                    // Ghi pendingFee nếu có phí chọn bed
-                    var writePromises = [ _newRef.set(bookingData) ];
-                    if (finalPreferBedFee > 0) {
-                        writePromises.push(
-                            db.ref('customers/' + curPhone).once('value').then(function(cs) {
-                                const existing = (cs.val() && cs.val().pendingFee) ? cs.val().pendingFee : 0;
-                                return db.ref('customers/' + curPhone).update({
-                                    pendingFee: existing + finalPreferBedFee,
-                                    pendingFeeReason: 'Phí chọn ô bed ' + finalPreferredBed
-                                });
-                            })
-                        );
-                    }
+                    // Ghi vào nested path bedBookings/YYYY/MM/DD, chờ callback xong mới hiện success
+                    var _tempKey = db.ref('bedBookings').push().key; // tạo key duy nhất
+                    _poBookingKey = _tempKey;
+                    _pushNewBedBooking(bookingData, function(err) {
+                        if (err) { clearTimeout(safetyTimer); loading.classList.add('hidden'); alert('Lỗi ghi booking: ' + err.message); return; }
 
-                    Promise.all(writePromises).then(function() {
-                        clearTimeout(safetyTimer); loading.classList.add('hidden');
-                        _selectedBed = 0; _bedPickerOpen = false; _isBedPickFree = false; _bedMapCache = null;
-                        document.getElementById('bed-picker-panel').style.display = 'none';
-                        document.getElementById('bed-pick-chevron').style.transform = 'rotate(0deg)';
-                        updateBedPickToggle();
-                        showBookingSuccessModal(startVal, endVal, function() {
-                            document.getElementById('book-date').value = "";
-                            showTab('user');
-                        });
-                    }).catch(function(e){ clearTimeout(safetyTimer); loading.classList.add('hidden'); alert('Lỗi: '+e.message); });
+                        // Ghi pendingFee nếu có phí chọn bed
+                        var writePromises = [];
+                        if (finalPreferBedFee > 0) {
+                            writePromises.push(
+                                db.ref('customers/' + curPhone).once('value').then(function(cs) {
+                                    const existing = (cs.val() && cs.val().pendingFee) ? cs.val().pendingFee : 0;
+                                    return db.ref('customers/' + curPhone).update({
+                                        pendingFee: existing + finalPreferBedFee,
+                                        pendingFeeReason: 'Phí chọn ô bed ' + finalPreferredBed
+                                    });
+                                })
+                            );
+                        }
+
+                        Promise.all(writePromises).then(function() {
+                            clearTimeout(safetyTimer); loading.classList.add('hidden');
+                            _selectedBed = 0; _bedPickerOpen = false; _isBedPickFree = false; _bedMapCache = null;
+                            document.getElementById('bed-picker-panel').style.display = 'none';
+                            document.getElementById('bed-pick-chevron').style.transform = 'rotate(0deg)';
+                            updateBedPickToggle();
+                            showBookingSuccessModal(startVal, endVal, function() {
+                                document.getElementById('book-date').value = "";
+                                showTab('user');
+                            });
+                        }).catch(function(e){ clearTimeout(safetyTimer); loading.classList.add('hidden'); alert('Lỗi: '+e.message); });
+                    });
 
                 } else {
                     // ---> HẾT CHỖ: GỢI Ý THÔNG MINH
@@ -1832,18 +1969,29 @@ function applyAutoBook(timeRange) {
 }
 // --- 6. QUÀ & LỊCH SỬ ---
 function loadRewards() {
-    db.ref('rewards').on('value', snap => {
-        const list = document.getElementById('rewards-list');
+    const list = document.getElementById('rewards-list');
+    list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Đang tải...</div>';
+
+    // Rewards lưu trên Firestore (đồng bộ với POS)
+    fstore.collection('rewards').get().then(function(snapshot) {
         list.innerHTML = "";
-        const rewards = snap.val();
-        
-        if (!rewards) { 
-            list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Chưa có quà.</div>'; 
-            return; 
+        if (snapshot.empty) {
+            list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Chưa có quà.</div>';
+            return;
         }
-        
-        // Lưu cache để dùng khi mở modal chi tiết
-        _cachedGiftList = Object.values(rewards);
+
+        // Lưu cache, chỉ lấy reward đang active
+        _cachedGiftList = [];
+        snapshot.forEach(function(doc) {
+            var item = doc.data();
+            item._docId = doc.id;
+            if (item.active !== false) _cachedGiftList.push(item);
+        });
+
+        if (_cachedGiftList.length === 0) {
+            list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Chưa có quà.</div>';
+            return;
+        }
 
         _cachedGiftList.forEach((item, index) => {
             list.innerHTML += `
@@ -1853,6 +2001,8 @@ function loadRewards() {
                 <div class="shrink-0 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-[#006241] group-hover:text-white transition-colors">➜</div>
             </div>`;
         });
+    }).catch(function(err) {
+        list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Lỗi tải quà: ' + err.message + '</div>';
     });
 }
 
@@ -2009,14 +2159,13 @@ function openHistory() {
     activeDiv.classList.add('hidden'); // Mặc định ẩn trước
 
     // Lấy dữ liệu
-    db.ref('bedBookings').orderByChild('phone').equalTo(curPhone).once('value', snap => {
+    _fetchBookingsByPhone(curPhone, function(bookingsList) {
         document.getElementById('history-loading').classList.add('hidden');
         
         // 1. CẬP NHẬT BIẾN TOÀN CỤC (QUAN TRỌNG NHẤT)
-        _historyCache = []; 
-        snap.forEach(c => { 
-            const val = c.val(); 
-            if(val) _historyCache.push({key: c.key, ...val}); 
+        _historyCache = [];
+        bookingsList.forEach(v => {
+            if(v) _historyCache.push(v);
         });
 
         // 2. Sắp xếp ngay trên biến _historyCache
@@ -2195,7 +2344,8 @@ function cancelBooking(key) {
     if (minsLeft > 5) {
         if (!confirm("Bạn chắc chắn muốn hủy lịch này?")) return;
         document.getElementById('loading-overlay').classList.remove('hidden');
-        db.ref('bedBookings/' + key).update({
+        var _cancelPath = (function(){ var b=_historyCache.find(function(x){return x.key===key;}); return b?_getBedBookingRTPath(b):('bedBookings/'+key); })();
+        db.ref(_cancelPath).update({
             status: 'đã hủy', cancelType: 'customer', note: 'Khách tự hủy qua App'
         }, (err) => {
             document.getElementById('loading-overlay').classList.add('hidden');
@@ -2254,7 +2404,8 @@ function showLateCancelModal(key, timeMsg) {
         m.style.display = 'none';
         document.getElementById('loading-overlay').classList.remove('hidden');
         const phone = (localStorage.getItem('member_phone') || '').replace(/[^0-9]/g, '');
-        db.ref('bedBookings/' + key).update({
+        var _lateCancelPath = (function(){ var b=_historyCache.find(function(x){return x.key===key;}); return b?_getBedBookingRTPath(b):('bedBookings/'+key); })();
+        db.ref(_lateCancelPath).update({
             status: 'đã hủy', cancelType: 'late_cancel',
             note: 'Khách hủy muộn qua App — phí 10K lần sau'
         }, (err) => {
@@ -2351,7 +2502,9 @@ function showHistoryDetail(key) {
 
     const warnKey = (curPhone || '').replace(/[^0-9]/g, '') || key;
 
-    db.ref('bedBookings/' + key).once('value', function(bSnap) {
+    var _penaltyBooking = _historyCache.find(function(x){return x.key===key;});
+    var _penaltyPath = _penaltyBooking ? _getBedBookingRTPath(_penaltyBooking) : ('bedBookings/'+key);
+    db.ref(_penaltyPath).once('value', function(bSnap) {
         const bData  = bSnap.val() || {};
         const hasFee = bData.hasPenalty === true;
         const feeAmt = bData.penaltyAmount || 0;
@@ -2432,7 +2585,9 @@ function openRescheduleModal(key) {
     }
 
     // Đọc REALTIME từ Firebase để lấy rescheduleCount chính xác (tránh dùng cache cũ)
-    db.ref('bedBookings/' + key).once('value', snap => {
+    var _reshCached = _historyCache.find(function(x){return x.key===key;});
+    var _reshPath = _reshCached ? _getBedBookingRTPath(_reshCached) : ('bedBookings/'+key);
+    db.ref(_reshPath).once('value', snap => {
         const booking = snap.val();
         if (!booking) return alert("Không tìm thấy dữ liệu!");
 
@@ -2469,7 +2624,9 @@ function submitReschedule() {
     if (!editingBookingKey) return;
 
     // Luôn đọc từ Firebase để lấy rescheduleCount thật, không dùng cache
-    db.ref('bedBookings/' + editingBookingKey).once('value', snap => {
+    var _liveCached = _historyCache.find(function(x){return x.key===editingBookingKey;});
+    var _livePath = _liveCached ? _getBedBookingRTPath(_liveCached) : ('bedBookings/'+editingBookingKey);
+    db.ref(_livePath).once('value', snap => {
         const liveBooking = snap.val();
         const changeCount = liveBooking ? (liveBooking.rescheduleCount || 0) : 0;
 
@@ -2502,11 +2659,10 @@ function _doSubmitReschedule(changeCount) {
     const p = dateVal.split('-');
     const dateStr = `${p[2]}/${p[1]}/${p[0]}`;
 
-    db.ref('bedBookings').orderByChild('date').equalTo(dateStr).once('value', snap => {
+    _fetchBedDayBookings(dateStr).then(function(dayBookings) {
         let overlapCount = 0;
-        snap.forEach(c => {
-            const v = c.val();
-            if (c.key !== editingBookingKey && v.status !== 'đã hủy' && v.status !== 'đã xong') {
+        dayBookings.forEach(v => {
+            if (v.key !== editingBookingKey && v.status !== 'đã hủy' && v.status !== 'đã xong') {
                 const bs = parseInt(v.start.split(':')[0])*60 + parseInt(v.start.split(':')[1]);
                 const be = parseInt(v.end.split(':')[0])*60 + parseInt(v.end.split(':')[1]);
                 if (Math.max(sMin, bs) < Math.min(eMin, be)) overlapCount++;
@@ -2515,7 +2671,10 @@ function _doSubmitReschedule(changeCount) {
 
         if (overlapCount < 4) {
             const newCount = changeCount + 1;
-            db.ref('bedBookings/' + editingBookingKey).update({
+            // Lấy path đúng từ _historyCache
+            var _editCached = _historyCache.find(function(b){ return b.key === editingBookingKey; });
+            var _editPath = _editCached ? _getBedBookingRTPath(_editCached) : ('bedBookings/' + editingBookingKey);
+            db.ref(_editPath).update({
                 date: dateStr, start: start, end: end,
                 status: 'chờ xếp bed', bedId: "",
                 rescheduleCount: newCount
@@ -3238,14 +3397,10 @@ function poApplyVoucher(){
     var msg  = document.getElementById('po-voucher-msg');
     msg.classList.add('hidden');
     if (!code) return;
-    db.ref('rewards').once('value', function(snap){
-        var all = snap.val();
-        if (!all){ msg.textContent='Mã không hợp lệ.'; msg.classList.remove('hidden'); return; }
-        var found = null;
-        Object.values(all).forEach(function(v){
-            if (v && String(v.code||'').toUpperCase()===code) found=v;
-        });
-        if (!found){ msg.textContent='Mã không tồn tại.'; msg.classList.remove('hidden'); return; }
+    // Rewards lưu trên Firestore — query theo code
+    fstore.collection('rewards').where('code', '==', code).limit(1).get().then(function(snap) {
+        if (snap.empty) { msg.textContent='Mã không tồn tại.'; msg.classList.remove('hidden'); return; }
+        var found = snap.docs[0].data();
         if (found.active===false){ msg.textContent='Mã đã hết hạn.'; msg.classList.remove('hidden'); return; }
         var food  = _poItems.reduce(function(s,i){return s+i.price*i.qty;},0);
         var disc  = 0, label = found.label||found.name||code;
@@ -3257,7 +3412,7 @@ function poApplyVoucher(){
         document.getElementById('po-voucher-row').style.display    = 'none';
         msg.classList.add('hidden');
         poRenderReview();
-    });
+    }).catch(function(){ msg.textContent='Lỗi kiểm tra mã.'; msg.classList.remove('hidden'); });
 }
 function poRemoveVoucher(){
     _poAppliedVoucher=null;
@@ -3272,7 +3427,12 @@ function poConfirm(){
     if (!_poItems.length){ poClose(); showTab('user'); return; }
     var key = _poBookingKey;
     if (!key){ poClose(); showTab('user'); return; }
-    db.ref('bedBookings/'+key+'/preorder').set({
+    var _prePath = (function(){
+        var d = _poBookingData && _poBookingData.date ? _poBookingData.date : null;
+        if (d) { var pd=_parseBedDateKey(d); if(pd) return 'bedBookings/'+pd.year+'/'+pd.month+'/'+pd.day+'/'+key+'/preorder'; }
+        return 'bedBookings/'+key+'/preorder';
+    })();
+    db.ref(_prePath).set({
         items     : _poItems,
         savedAt   : new Date().toISOString(),
         bookingDate : _poBookingData.date||'',
