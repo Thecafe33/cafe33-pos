@@ -4625,28 +4625,56 @@ function _loadBedBookingsForDays(days, callback) {
     var results = [];
     var pending = days.length;
     if (pending === 0) { callback([]); return; }
+
+    function _pushItems(data, year, month, day) {
+        Object.keys(data).forEach(function(k) {
+            var item = data[k];
+            var rawDate = item.date || item.bookingDate || (day + '/' + month + '/' + year);
+            if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
+                var p2 = rawDate.split('-');
+                rawDate = p2[2] + '/' + p2[1] + '/' + p2[0];
+            }
+            results.push({
+                id: k,
+                ...item,
+                start: item.start || item.startTime || '--:--',
+                end:   item.end   || item.endTime   || '--:--',
+                displayDate: rawDate
+            });
+        });
+    }
+
     days.forEach(function(dayStr) {
         var p = dayStr.split('-');
         var year = p[0], month = p[1], day = p[2];
+        var dateKey = year + '-' + month + '-' + day; // YYYY-MM-DD cho Firestore
+
         db.ref('bedBookings/' + year + '/' + month + '/' + day).once('value', function(snap) {
-            var data = snap.val() || {};
-            Object.keys(data).forEach(function(k) {
-                var item = data[k];
-                var rawDate = item.date || item.bookingDate || (day + '/' + month + '/' + year);
-                if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
-                    var p2 = rawDate.split('-');
-                    rawDate = p2[2] + '/' + p2[1] + '/' + p2[0];
-                }
-                results.push({
-                    id: k,
-                    ...item,
-                    start: item.start || item.startTime || '--:--',
-                    end:   item.end   || item.endTime   || '--:--',
-                    displayDate: rawDate
+            var data = snap.val();
+            if (data && Object.keys(data).length > 0) {
+                // RT có data → dùng RT như bình thường
+                _pushItems(data, year, month, day);
+                pending--;
+                if (pending === 0) callback(results);
+            } else {
+                // RT không có → fallback đọc Firestore archive
+                fstore.collection('bedBookings_archive').doc(dateKey).get().then(function(doc) {
+                    if (doc.exists) {
+                        var archiveData = doc.data();
+                        // Cấu trúc Firestore: { bookings: { id: {...} }, archivedAt: ... }
+                        var bookings = archiveData.bookings || archiveData;
+                        if (bookings && typeof bookings === 'object') {
+                            _pushItems(bookings, year, month, day);
+                        }
+                    }
+                    pending--;
+                    if (pending === 0) callback(results);
+                }).catch(function(err) {
+                    console.warn('[loadBedBookings] Lỗi đọc Firestore archive ' + dateKey + ':', err.message);
+                    pending--;
+                    if (pending === 0) callback(results);
                 });
-            });
-            pending--;
-            if (pending === 0) callback(results);
+            }
         });
     });
 }
