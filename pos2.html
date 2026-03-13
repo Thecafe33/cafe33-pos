@@ -9211,8 +9211,6 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
                 if (targetIdx < 0 && !ci._vKey && !ci._discountId)
                     if (ci.name.toLowerCase().indexOf(target) !== -1) targetIdx = idx;
             });
-            // DEBUG - xoa sau khi tim ra loi
-            showAppModal('Debug qua tang', 'targetItem: [' + target + '] | Cart: [' + cart.map(function(c){return c.name;}).join(', ') + '] | Found idx: ' + targetIdx, '🔍');
             if (targetIdx < 0) {
                 _giftVoucherKey = null; _giftVoucherPhone = null; renderCart();
                 if (typeof showAppModal === 'function')
@@ -9222,14 +9220,13 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
             var item = cart[targetIdx];
             var origPrice = item.price, origName = item.name;
             var newPrice = Math.max(0, origPrice - (r.value || 0));
-            if (item.qty > 1) {
-                item.qty -= 1;
-                cart.splice(targetIdx + 1, 0, { name: origName, size: item.size, price: newPrice, qty: 1,
-                    _vKey: key, _giftType: 'item', _giftLabel: code, _originalPrice: origPrice, _originalName: origName });
-            } else {
-                item.price = newPrice; item._vKey = key; item._giftType = 'item';
-                item._giftLabel = code; item._originalPrice = origPrice; item._originalName = origName;
-            }
+            // Luon ap giam gia truc tiep vao item, khong tach
+            item.price = newPrice;
+            item._vKey = key;
+            item._giftType = 'item';
+            item._giftLabel = code;
+            item._originalPrice = origPrice;
+            item._originalName = origName;
             renderCart();
 
         } else if (r.type === 'item_free' || r.type === 'item_upsize') {
