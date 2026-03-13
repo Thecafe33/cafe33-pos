@@ -2456,10 +2456,48 @@ function autoLoginPOS() {
             // Chạy archive sau khi đăng nhập thành công
             setTimeout(runAutoArchive, 5000);
             setTimeout(syncRewardsToRT, 10000);
+            setTimeout(bootstrapPhoneIndex, 15000);
         })
         .catch((error) => {
             alert("Lỗi: Không thể đăng nhập vào hệ thống! Kiểm tra lại Email/Pass trong code.");
         });
+}
+
+// Bootstrap: đọc toàn bộ bedBookings_archive từ Firestore → ghi RT phone index
+// Chỉ cần chạy 1 lần sau khi deploy, tự bỏ qua nếu đã có data
+function bootstrapPhoneIndex() {
+    db.ref('bedBookings_by_phone').once('value', function(existSnap) {
+        var alreadyHasData = existSnap.exists() && existSnap.val() && Object.keys(existSnap.val()).length > 0;
+        if (alreadyHasData) {
+            console.log('[Bootstrap] bedBookings_by_phone đã có data, bỏ qua.');
+            return;
+        }
+        console.log('[Bootstrap] Bắt đầu tạo phone index từ Firestore archive...');
+        fstore.collection('bedBookings_archive').get().then(function(snapshot) {
+            var writeCount = 0;
+            var batch = {};
+            snapshot.forEach(function(doc) {
+                var dateKey = doc.id; // YYYY-MM-DD
+                var data = doc.data() && doc.data().bookings;
+                if (!data) return;
+                Object.keys(data).forEach(function(k) {
+                    var b = data[k];
+                    if (!b || !b.phone) return;
+                    var phone = b.phone.replace(/[^0-9]/g, '');
+                    if (!batch[phone]) batch[phone] = {};
+                    batch[phone][k] = Object.assign({}, b, { _archiveKey: dateKey, key: k });
+                    writeCount++;
+                });
+            });
+            // Ghi tất cả vào RT
+            db.ref('bedBookings_by_phone').set(batch, function(err) {
+                if (err) console.warn('[Bootstrap] Lỗi ghi phone index:', err.message);
+                else console.log('[Bootstrap] Đã tạo phone index cho', writeCount, 'bookings,', Object.keys(batch).length, 'khách.');
+            });
+        }).catch(function(err) {
+            console.warn('[Bootstrap] Lỗi đọc Firestore archive:', err.message);
+        });
+    });
 }
 
 // Sync rewards từ Firestore → RT mirror (cho app khách đọc không cần Firestore auth)
