@@ -2473,27 +2473,51 @@ function bootstrapPhoneIndex() {
             return;
         }
         console.log('[Bootstrap] Bắt đầu tạo phone index từ Firestore archive...');
-        fstore.collection('bedBookings_archive').get().then(function(snapshot) {
+        // Đọc nested: bedBookings_archive/{year} → {month} → {day}
+        fstore.collection('bedBookings_archive').get().then(function(yearSnaps) {
             var writeCount = 0;
             var batch = {};
-            snapshot.forEach(function(doc) {
-                var dateKey = doc.id; // YYYY-MM-DD
-                var data = doc.data() && doc.data().bookings;
-                if (!data) return;
-                Object.keys(data).forEach(function(k) {
-                    var b = data[k];
-                    if (!b || !b.phone) return;
-                    var phone = b.phone.replace(/[^0-9]/g, '');
-                    if (!batch[phone]) batch[phone] = {};
-                    batch[phone][k] = Object.assign({}, b, { _archiveKey: dateKey, key: k });
-                    writeCount++;
+            var yearDocs = [];
+            yearSnaps.forEach(function(y) { yearDocs.push(y.id); });
+
+            var pending = 0;
+            function finish() {
+                if (--pending > 0) return;
+                db.ref('bedBookings_by_phone').set(batch, function(err) {
+                    if (err) console.warn('[Bootstrap] Lỗi ghi phone index:', err.message);
+                    else console.log('[Bootstrap] Đã tạo phone index cho', writeCount, 'bookings,', Object.keys(batch).length, 'khách.');
                 });
+            }
+
+            yearDocs.forEach(function(year) {
+                pending++;
+                fstore.collection('bedBookings_archive').doc(year)
+                    .listCollections().then(function(monthCols) {
+                        var mPending = monthCols.length || 0;
+                        if (mPending === 0) { finish(); return; }
+                        monthCols.forEach(function(monthCol) {
+                            monthCol.get().then(function(daySnaps) {
+                                daySnaps.forEach(function(dayDoc) {
+                                    var archiveKey = year + '/' + monthCol.id + '/' + dayDoc.id;
+                                    var data = dayDoc.data() && dayDoc.data().bookings;
+                                    if (!data) return;
+                                    Object.keys(data).forEach(function(k) {
+                                        var b = data[k];
+                                        if (!b || !b.phone) return;
+                                        var phone = b.phone.replace(/[^0-9]/g, '');
+                                        if (!batch[phone]) batch[phone] = {};
+                                        batch[phone][k] = Object.assign({}, b, { _archiveKey: archiveKey, key: k });
+                                        writeCount++;
+                                    });
+                                });
+                                if (--mPending === 0) finish();
+                            });
+                        });
+                    }).catch(function() { finish(); });
             });
-            // Ghi tất cả vào RT
-            db.ref('bedBookings_by_phone').set(batch, function(err) {
-                if (err) console.warn('[Bootstrap] Lỗi ghi phone index:', err.message);
-                else console.log('[Bootstrap] Đã tạo phone index cho', writeCount, 'bookings,', Object.keys(batch).length, 'khách.');
-            });
+            if (yearDocs.length === 0) {
+                console.log('[Bootstrap] Không có data trong Firestore archive.');
+            }
         }).catch(function(err) {
             console.warn('[Bootstrap] Lỗi đọc Firestore archive:', err.message);
         });
@@ -2545,16 +2569,19 @@ function runAutoArchive() {
             var data = snap.val();
             var keys = Object.keys(data);
 
-            // Ghi toàn bộ ngày này vào Firestore bedBookings_archive/{YYYY-MM-DD}
-            var dateKey = d.year + '-' + d.month + '-' + d.day;
-            fstore.collection('bedBookings_archive').doc(dateKey).set({ bookings: data, archivedAt: new Date().toISOString() })
+            // Ghi vào Firestore bedBookings_archive/{year}/{month}/{day}
+            // Cấu trúc nested giống RT → đọc cùng logic, không cần xử lý riêng
+            var fsDocRef = fstore
+                .collection('bedBookings_archive').doc(d.year)
+                .collection(d.month).doc(d.day);
+            fsDocRef.set({ bookings: data, archivedAt: new Date().toISOString() })
                 .then(function() {
-                    // Ghi RT index theo phone để app khách đọc không cần Firestore
+                    // Ghi RT index theo phone để app khách tra cứu nhanh
                     Object.keys(data).forEach(function(k) {
                         var b = data[k];
                         if (b && b.phone) {
                             db.ref('bedBookings_by_phone/' + b.phone.replace(/[^0-9]/g,'') + '/' + k)
-                              .set(Object.assign({}, b, { _archiveKey: dateKey, key: k }));
+                              .set(Object.assign({}, b, { _archiveKey: d.year + '/' + d.month + '/' + d.day, key: k }));
                         }
                     });
                     // Xóa khỏi Realtime sau khi archive thành công
@@ -2563,7 +2590,7 @@ function runAutoArchive() {
                     processNext(idx + 1);
                 })
                 .catch(function(err) {
-                    console.warn('[AutoArchive] Lỗi archive ' + dateKey + ':', err.message);
+                    console.warn('[AutoArchive] Lỗi archive ' + d.year+'/'+d.month+'/'+d.day + ':', err.message);
                     processNext(idx + 1);
                 });
         });
@@ -4647,33 +4674,28 @@ function _loadBedBookingsForDays(days, callback) {
     days.forEach(function(dayStr) {
         var p = dayStr.split('-');
         var year = p[0], month = p[1], day = p[2];
-        var dateKey = year + '-' + month + '-' + day; // YYYY-MM-DD cho Firestore
 
         db.ref('bedBookings/' + year + '/' + month + '/' + day).once('value', function(snap) {
             var data = snap.val();
             if (data && Object.keys(data).length > 0) {
-                // RT có data → dùng RT như bình thường
                 _pushItems(data, year, month, day);
                 pending--;
                 if (pending === 0) callback(results);
             } else {
-                // RT không có → fallback đọc Firestore archive
-                fstore.collection('bedBookings_archive').doc(dateKey).get().then(function(doc) {
-                    if (doc.exists) {
-                        var archiveData = doc.data();
-                        // Cấu trúc Firestore: { bookings: { id: {...} }, archivedAt: ... }
-                        var bookings = archiveData.bookings || archiveData;
-                        if (bookings && typeof bookings === 'object') {
-                            _pushItems(bookings, year, month, day);
+                // Fallback Firestore nested: bedBookings_archive/{year}/{month}/{day}
+                fstore.collection('bedBookings_archive').doc(year)
+                    .collection(month).doc(day).get()
+                    .then(function(doc) {
+                        if (doc.exists) {
+                            _pushItems(doc.data().bookings || {}, year, month, day);
                         }
-                    }
-                    pending--;
-                    if (pending === 0) callback(results);
-                }).catch(function(err) {
-                    console.warn('[loadBedBookings] Lỗi đọc Firestore archive ' + dateKey + ':', err.message);
-                    pending--;
-                    if (pending === 0) callback(results);
-                });
+                        pending--;
+                        if (pending === 0) callback(results);
+                    }).catch(function(err) {
+                        console.warn('[loadBedBookings] Firestore loi ' + dayStr + ':', err.message);
+                        pending--;
+                        if (pending === 0) callback(results);
+                    });
             }
         });
     });
