@@ -2463,53 +2463,71 @@ function autoLoginPOS() {
 }
 
 // ── Auto-archive bedBookings cũ hơn 3 ngày sang Firestore, rồi xóa khỏi RT ──
+// Logic: quét toàn bộ cây bedBookings trên RT, bất kỳ ngày nào cũ hơn 3 ngày → archive
 function runAutoArchive() {
     var now = new Date();
     now.setHours(0, 0, 0, 0);
 
-    // Build danh sách ngày cần kiểm tra: từ 180 ngày trước đến 4 ngày trước
-    var days = [];
-    for (var i = 180; i >= 4; i--) {
-        var d = new Date(now);
-        d.setDate(d.getDate() - i);
-        var y = d.getFullYear();
-        var m = String(d.getMonth() + 1).padStart(2, '0');
-        var dd = String(d.getDate()).padStart(2, '0');
-        days.push({ year: String(y), month: m, day: dd });
-    }
+    // Ngưỡng: chỉ giữ lại 3 ngày gần nhất trên RT
+    var cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - 3); // ngày < cutoff → cần archive
 
-    var processed = 0;
     var archived = 0;
 
-    function processNext(idx) {
-        if (idx >= days.length) {
-            if (archived > 0) console.log('[AutoArchive] Đã archive ' + archived + ' ngày bedBookings sang Firestore.');
+    // Đọc toàn bộ cây bedBookings 1 lần duy nhất → tự tìm ngày cần archive
+    db.ref('bedBookings').once('value', function(rootSnap) {
+        if (!rootSnap.exists()) return;
+
+        var tasks = []; // { rtPath, dateKey, data }
+
+        rootSnap.forEach(function(yearSnap) {
+            var year = yearSnap.key;
+            yearSnap.forEach(function(monthSnap) {
+                var month = monthSnap.key;
+                monthSnap.forEach(function(daySnap) {
+                    var day = daySnap.key;
+                    var dateObj = new Date(Number(year), Number(month) - 1, Number(day));
+                    dateObj.setHours(0, 0, 0, 0);
+
+                    if (dateObj < cutoff && daySnap.exists()) {
+                        tasks.push({
+                            rtPath: 'bedBookings/' + year + '/' + month + '/' + day,
+                            dateKey: year + '-' + month + '-' + day,
+                            data: daySnap.val()
+                        });
+                    }
+                });
+            });
+        });
+
+        if (tasks.length === 0) {
+            console.log('[AutoArchive] Không có ngày nào cần archive.');
             return;
         }
-        var d = days[idx];
-        var rtPath = 'bedBookings/' + d.year + '/' + d.month + '/' + d.day;
-        db.ref(rtPath).once('value', function(snap) {
-            if (!snap.exists()) { processNext(idx + 1); return; }
-            var data = snap.val();
-            var keys = Object.keys(data);
 
-            // Ghi toàn bộ ngày này vào Firestore bedBookings_archive/{YYYY-MM-DD}
-            var dateKey = d.year + '-' + d.month + '-' + d.day;
-            fstore.collection('bedBookings_archive').doc(dateKey).set({ bookings: data, archivedAt: new Date().toISOString() })
+        console.log('[AutoArchive] Tìm thấy ' + tasks.length + ' ngày cần archive...');
+
+        function processNext(idx) {
+            if (idx >= tasks.length) {
+                console.log('[AutoArchive] Hoàn tất: đã archive ' + archived + '/' + tasks.length + ' ngày.');
+                return;
+            }
+            var t = tasks[idx];
+            fstore.collection('bedBookings_archive').doc(t.dateKey)
+                .set({ bookings: t.data, archivedAt: new Date().toISOString() })
                 .then(function() {
-                    // Xóa khỏi Realtime sau khi archive thành công
-                    db.ref(rtPath).remove();
+                    db.ref(t.rtPath).remove();
                     archived++;
                     processNext(idx + 1);
                 })
                 .catch(function(err) {
-                    console.warn('[AutoArchive] Lỗi archive ' + dateKey + ':', err.message);
+                    console.warn('[AutoArchive] Lỗi archive ' + t.dateKey + ':', err.message);
                     processNext(idx + 1);
                 });
-        });
-    }
+        }
 
-    processNext(0);
+        processNext(0);
+    });
 }
 
 autoLoginPOS();
