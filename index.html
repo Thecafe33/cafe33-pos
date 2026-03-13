@@ -14,6 +14,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
@@ -596,6 +597,13 @@ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDrZmGgIC3c-
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const fstore = firebase.firestore();
+const auth = firebase.auth();
+
+// Firestore ready — gọi callback ngay (rules phải cho phép public read)
+var _firestoreReady = true;
+var _firestoreReadyCallbacks = [];
+function _onFirestoreReady(cb) { cb(); }
+
 
 // ── Giờ đóng cửa Bed — sync realtime từ Firebase (POS set) ─────
 var _bedClosingTime = '20:50';
@@ -646,14 +654,19 @@ function _fetchBedDayBookings(dateStr) {
         if (snap.exists() && snap.val()) {
             return _snapToBookingList(snap.val());
         }
-        // Fallback Firestore
-        return fstore.collection('bedBookings_archive').doc(archiveKey).get()
+        // Fallback Firestore — đợi auth sẵn sàng
+        return new Promise(function(resolve) {
+            _onFirestoreReady(function() {
+                fstore.collection('bedBookings_archive').doc(archiveKey).get()
             .then(function(doc) {
                 if (doc.exists && doc.data() && doc.data().bookings)
                     return _snapToBookingList(doc.data().bookings);
                 return [];
             })
-            .catch(function() { return []; });
+            .catch(function() { return []; })
+                .then(resolve);
+            });
+        });
     });
 }
 
@@ -671,103 +684,47 @@ function _getBedBookingRTPath(booking) {
     return null;
 }
 
-// Fetch tất cả bookings của 1 phone — quét RT + có thể cả archive nếu cần
-// Fetch bookings của 1 phone — đọc RT tree 1 lần, chỉ Firestore những ngày thực sự cần
+// Fetch tất cả bookings của 1 phone — RT live tree + RT phone index (archive)
 function _fetchBookingsByPhone(phone, callback) {
-    var allBookings = [];
+    var cleanPhone = (phone || '').replace(/[^0-9]/g, '');
 
-    // Bước 1: quét RT tree để tìm ngày có booking của user
+    // Bước 1: quét RT live tree
     db.ref('bedBookings').once('value', function(rootSnap) {
-        if (!rootSnap.exists()) {
-            _fetchBookingsByPhoneFromArchive(phone, callback);
-            return;
-        }
-
         var rtBookings = [];
-        var rtDatesFound = new Set();
+        var rtKeys = new Set();
 
-        rootSnap.forEach(function(yearSnap) {
-            yearSnap.forEach(function(monthSnap) {
-                monthSnap.forEach(function(daySnap) {
-                    daySnap.forEach(function(bookingSnap) {
-                        var b = bookingSnap.val();
-                        if (b && b.phone === phone) {
-                            rtBookings.push(Object.assign({ key: bookingSnap.key }, b));
-                        }
+        if (rootSnap.exists() && rootSnap.val()) {
+            rootSnap.forEach(function(yearSnap) {
+                yearSnap.forEach(function(monthSnap) {
+                    monthSnap.forEach(function(daySnap) {
+                        daySnap.forEach(function(bookingSnap) {
+                            var b = bookingSnap.val();
+                            if (b && b.phone && b.phone.replace(/[^0-9]/g,'') === cleanPhone) {
+                                var entry = Object.assign({ key: bookingSnap.key }, b);
+                                rtBookings.push(entry);
+                                rtKeys.add(bookingSnap.key);
+                            }
+                        });
                     });
-                    // Ghi lại ngày nào đã có trong RT (kể cả không có booking của user)
-                    var year = yearSnap.key, month = monthSnap.key, day = daySnap.key;
-                    rtDatesFound.add(year + '-' + month + '-' + day);
                 });
-            });
-        });
-
-        allBookings = rtBookings;
-
-        // Bước 2: Firestore archive — chỉ cần nếu RT không có ngày nào gần đây
-        // (nếu RT có data, user chưa có booking lâu năm trong archive cũng không cần thiết)
-        // Chỉ check archive nếu user không có booking active trên RT
-        var hasActiveOnRT = rtBookings.some(function(b) {
-            var st = (b.status || '').toLowerCase();
-            return st !== 'đã hủy' && st !== 'đã xong';
-        });
-
-        if (hasActiveOnRT) {
-            callback(allBookings);
-        } else {
-            // Không có active → check archive để lấy lịch sử đầy đủ
-            _fetchBookingsByPhoneFromArchive(phone, function(archiveBookings) {
-                // Merge, tránh trùng key
-                var rtKeys = new Set(rtBookings.map(function(b){ return b.key; }));
-                archiveBookings.forEach(function(b) {
-                    if (!rtKeys.has(b.key)) allBookings.push(b);
-                });
-                callback(allBookings);
             });
         }
+
+        // Bước 2: đọc RT phone index (được POS ghi khi archive)
+        db.ref('bedBookings_by_phone/' + cleanPhone).once('value', function(idxSnap) {
+            if (idxSnap.exists() && idxSnap.val()) {
+                idxSnap.forEach(function(child) {
+                    if (!rtKeys.has(child.key)) {
+                        rtBookings.push(Object.assign({ key: child.key }, child.val()));
+                        rtKeys.add(child.key);
+                    }
+                });
+            }
+            callback(rtBookings);
+        });
     });
 }
 
-// Fetch bookings của phone từ Firestore archive (dùng khi không có active trên RT)
-function _fetchBookingsByPhoneFromArchive(phone, callback) {
-    var now = new Date();
-    var archiveDays = [];
-    // Chỉ cần 90 ngày gần nhất trong archive (đủ cho lịch sử + mission)
-    for (var i = 90; i >= 4; i--) {
-        var d = new Date(now);
-        d.setDate(d.getDate() - i);
-        archiveDays.push(
-            d.getFullYear() + '-' +
-            String(d.getMonth()+1).padStart(2,'0') + '-' +
-            String(d.getDate()).padStart(2,'0')
-        );
-    }
-
-    var results = [];
-    var pending = archiveDays.length;
-    if (pending === 0) { callback([]); return; }
-
-    archiveDays.forEach(function(dateKey) {
-        fstore.collection('bedBookings_archive').doc(dateKey).get()
-            .then(function(doc) {
-                if (doc.exists && doc.data() && doc.data().bookings) {
-                    var bookings = doc.data().bookings;
-                    Object.keys(bookings).forEach(function(k) {
-                        var b = bookings[k];
-                        if (b && b.phone === phone) {
-                            results.push(Object.assign({ key: k }, b));
-                        }
-                    });
-                }
-                pending--;
-                if (pending === 0) callback(results);
-            })
-            .catch(function() {
-                pending--;
-                if (pending === 0) callback(results);
-            });
-    });
-}
 
 // Ghi booking mới vào nested path RT
 function _pushNewBedBooking(bookingData, callback, presetKey) {
@@ -1972,27 +1929,24 @@ function loadRewards() {
     const list = document.getElementById('rewards-list');
     list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Đang tải...</div>';
 
-    // Rewards lưu trên Firestore (đồng bộ với POS)
-    fstore.collection('rewards').get().then(function(snapshot) {
-        list.innerHTML = "";
-        if (snapshot.empty) {
+    // Đọc từ RT rewards_mirror (POS tự sync, không cần Firestore auth)
+    db.ref('rewards_mirror').once('value', function(snap) {
+        list.innerHTML = '';
+        var data = snap.val();
+        if (!data) {
             list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Chưa có quà.</div>';
             return;
         }
-
-        // Lưu cache, chỉ lấy reward đang active
         _cachedGiftList = [];
-        snapshot.forEach(function(doc) {
-            var item = doc.data();
-            item._docId = doc.id;
+        Object.keys(data).forEach(function(k) {
+            var item = data[k];
+            item._docId = item._docId || k;
             if (item.active !== false) _cachedGiftList.push(item);
         });
-
         if (_cachedGiftList.length === 0) {
             list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Chưa có quà.</div>';
             return;
         }
-
         _cachedGiftList.forEach((item, index) => {
             list.innerHTML += `
             <div onclick="openGiftDetail(${index})" class="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4 mb-3 relative overflow-hidden group active:scale-[0.98] transition-transform cursor-pointer hover:shadow-md">
@@ -2001,8 +1955,6 @@ function loadRewards() {
                 <div class="shrink-0 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-[#006241] group-hover:text-white transition-colors">➜</div>
             </div>`;
         });
-    }).catch(function(err) {
-        list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Lỗi tải quà: ' + err.message + '</div>';
     });
 }
 
