@@ -2437,7 +2437,6 @@ function _fetchBedBookingsForStats(mode, startVal, endVal, callback) {
 
     _loadBedBookingsForDays(days, callback);
 }
-
 function _isBedBookingRecent(dateStr) {
     var d = _parseDateKey(dateStr);
     if (!d) return true; // không parse được → coi như gần, giữ RT
@@ -2456,153 +2455,83 @@ function autoLoginPOS() {
         .then((userCredential) => {
             // Chạy archive sau khi đăng nhập thành công
             setTimeout(runAutoArchive, 5000);
-            setTimeout(runAutoArchiveOrders, 8000);
+            setTimeout(syncRewardsToRT, 10000);
         })
         .catch((error) => {
             alert("Lỗi: Không thể đăng nhập vào hệ thống! Kiểm tra lại Email/Pass trong code.");
         });
 }
 
+// Sync rewards từ Firestore → RT mirror (cho app khách đọc không cần Firestore auth)
+function syncRewardsToRT() {
+    fstore.collection('rewards').get().then(function(snapshot) {
+        var batch = {};
+        snapshot.forEach(function(doc) {
+            batch[doc.id] = Object.assign({}, doc.data(), { _docId: doc.id });
+        });
+        db.ref('rewards_mirror').set(batch);
+        console.log('[Sync] Đã mirror', Object.keys(batch).length, 'rewards sang RT');
+    }).catch(function(err) {
+        console.warn('[Sync] Lỗi mirror rewards:', err.message);
+    });
+}
+
 // ── Auto-archive bedBookings cũ hơn 3 ngày sang Firestore, rồi xóa khỏi RT ──
-// Logic: quét toàn bộ cây bedBookings trên RT, bất kỳ ngày nào cũ hơn 3 ngày → archive
 function runAutoArchive() {
     var now = new Date();
     now.setHours(0, 0, 0, 0);
 
-    // Ngưỡng: chỉ giữ lại 3 ngày gần nhất trên RT
-    var cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - 3); // ngày < cutoff → cần archive
+    // Build danh sách ngày cần kiểm tra: từ 180 ngày trước đến 4 ngày trước
+    var days = [];
+    for (var i = 180; i >= 4; i--) {
+        var d = new Date(now);
+        d.setDate(d.getDate() - i);
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var dd = String(d.getDate()).padStart(2, '0');
+        days.push({ year: String(y), month: m, day: dd });
+    }
 
+    var processed = 0;
     var archived = 0;
 
-    // Đọc toàn bộ cây bedBookings 1 lần duy nhất → tự tìm ngày cần archive
-    db.ref('bedBookings').once('value', function(rootSnap) {
-        if (!rootSnap.exists()) return;
-
-        var tasks = []; // { rtPath, dateKey, data }
-
-        rootSnap.forEach(function(yearSnap) {
-            var year = yearSnap.key;
-            yearSnap.forEach(function(monthSnap) {
-                var month = monthSnap.key;
-                monthSnap.forEach(function(daySnap) {
-                    var day = daySnap.key;
-                    var dateObj = new Date(Number(year), Number(month) - 1, Number(day));
-                    dateObj.setHours(0, 0, 0, 0);
-
-                    if (dateObj < cutoff && daySnap.exists()) {
-                        tasks.push({
-                            rtPath: 'bedBookings/' + year + '/' + month + '/' + day,
-                            dateKey: year + '-' + month + '-' + day,
-                            data: daySnap.val()
-                        });
-                    }
-                });
-            });
-        });
-
-        if (tasks.length === 0) {
-            console.log('[AutoArchive] Không có ngày nào cần archive.');
+    function processNext(idx) {
+        if (idx >= days.length) {
+            if (archived > 0) console.log('[AutoArchive] Đã archive ' + archived + ' ngày bedBookings sang Firestore.');
             return;
         }
+        var d = days[idx];
+        var rtPath = 'bedBookings/' + d.year + '/' + d.month + '/' + d.day;
+        db.ref(rtPath).once('value', function(snap) {
+            if (!snap.exists()) { processNext(idx + 1); return; }
+            var data = snap.val();
+            var keys = Object.keys(data);
 
-        console.log('[AutoArchive] Tìm thấy ' + tasks.length + ' ngày cần archive...');
-
-        function processNext(idx) {
-            if (idx >= tasks.length) {
-                console.log('[AutoArchive] Hoàn tất: đã archive ' + archived + '/' + tasks.length + ' ngày.');
-                return;
-            }
-            var t = tasks[idx];
-            fstore.collection('bedBookings_archive').doc(t.dateKey)
-                .set({ bookings: t.data, archivedAt: new Date().toISOString() })
+            // Ghi toàn bộ ngày này vào Firestore bedBookings_archive/{YYYY-MM-DD}
+            var dateKey = d.year + '-' + d.month + '-' + d.day;
+            fstore.collection('bedBookings_archive').doc(dateKey).set({ bookings: data, archivedAt: new Date().toISOString() })
                 .then(function() {
-                    db.ref(t.rtPath).remove();
+                    // Ghi RT index theo phone để app khách đọc không cần Firestore
+                    Object.keys(data).forEach(function(k) {
+                        var b = data[k];
+                        if (b && b.phone) {
+                            db.ref('bedBookings_by_phone/' + b.phone.replace(/[^0-9]/g,'') + '/' + k)
+                              .set(Object.assign({}, b, { _archiveKey: dateKey, key: k }));
+                        }
+                    });
+                    // Xóa khỏi Realtime sau khi archive thành công
+                    db.ref(rtPath).remove();
                     archived++;
                     processNext(idx + 1);
                 })
                 .catch(function(err) {
-                    console.warn('[AutoArchive] Lỗi archive ' + t.dateKey + ':', err.message);
+                    console.warn('[AutoArchive] Lỗi archive ' + dateKey + ':', err.message);
                     processNext(idx + 1);
                 });
-        }
-
-        processNext(0);
-    });
-}
-
-
-// ── Auto-archive orders cũ hơn 3 ngày sang Firestore orders_archive ──
-// Giữ lại 3 ngày gần nhất trên RT, còn lại archive sang Firestore
-function runAutoArchiveOrders() {
-    var now = new Date();
-    now.setHours(0, 0, 0, 0);
-    var cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - 3);
-
-    // Map tên tháng → số để so sánh ngày
-    var MONTH_NUM = { jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',
-                      jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12' };
-
-    var archived = 0;
-
-    db.ref('orders').once('value', function(rootSnap) {
-        if (!rootSnap.exists()) return;
-
-        var tasks = [];
-
-        rootSnap.forEach(function(yearSnap) {
-            var year = yearSnap.key;
-            // Bỏ qua node 'order' cũ (flat key không phải năm số)
-            if (!/^\d{4}$/.test(year)) return;
-            yearSnap.forEach(function(monthSnap) {
-                var monthName = monthSnap.key; // 'jan','feb'...
-                var monthNum = MONTH_NUM[monthName];
-                if (!monthNum) return;
-                monthSnap.forEach(function(daySnap) {
-                    var day = daySnap.key; // '01'..'31'
-                    var dateObj = new Date(Number(year), Number(monthNum) - 1, Number(day));
-                    dateObj.setHours(0, 0, 0, 0);
-
-                    if (dateObj < cutoff && daySnap.exists()) {
-                        tasks.push({
-                            rtPath: 'orders/' + year + '/' + monthName + '/' + day,
-                            dateKey: year + '-' + monthNum + '-' + day,
-                            data: daySnap.val()
-                        });
-                    }
-                });
-            });
         });
+    }
 
-        if (tasks.length === 0) {
-            console.log('[ArchiveOrders] Không có ngày nào cần archive.');
-            return;
-        }
-
-        console.log('[ArchiveOrders] Tìm thấy ' + tasks.length + ' ngày cần archive...');
-
-        function processNext(idx) {
-            if (idx >= tasks.length) {
-                console.log('[ArchiveOrders] Hoàn tất: đã archive ' + archived + '/' + tasks.length + ' ngày.');
-                return;
-            }
-            var t = tasks[idx];
-            fstore.collection('orders_archive').doc(t.dateKey)
-                .set({ orders: t.data, archivedAt: new Date().toISOString() })
-                .then(function() {
-                    db.ref(t.rtPath).remove();
-                    archived++;
-                    processNext(idx + 1);
-                })
-                .catch(function(err) {
-                    console.warn('[ArchiveOrders] Lỗi archive ' + t.dateKey + ':', err.message);
-                    processNext(idx + 1);
-                });
-        }
-
-        processNext(0);
-    });
+    processNext(0);
 }
 
 autoLoginPOS();
@@ -3221,38 +3150,6 @@ function addToCart(name, size, price) {
     updateCartPadding();
 }
 
-// ── Helper: tính fetchStart/fetchEnd đúng theo mode ──
-// Dùng chung cho openRevenue và fetchRevenueDataMobile
-function getDateRangeForMode(mode, startVal, endVal) {
-    var now = new Date();
-    now.setHours(0, 0, 0, 0);
-    var start, end;
-
-    if (mode === 'day') {
-        start = new Date(now);
-        end = new Date(now);
-    } else if (mode === 'week') {
-        var dow = now.getDay() || 7; // 1=Mon..7=Sun
-        start = new Date(now); start.setDate(now.getDate() - dow + 1);
-        end = new Date(start); end.setDate(start.getDate() + 6);
-    } else if (mode === 'month') {
-        start = new Date(now.getFullYear(), now.getMonth(), 1);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    } else if (mode === 'year') {
-        start = new Date(now.getFullYear(), 0, 1);
-        end = new Date(now.getFullYear(), 11, 31);
-    } else if (mode === 'custom' && startVal && endVal) {
-        start = new Date(startVal);
-        end = new Date(endVal);
-    } else {
-        // fallback: 30 ngày gần nhất
-        start = new Date(now); start.setDate(now.getDate() - 30);
-        end = new Date(now);
-    }
-    return { start: start, end: end };
-}
-
-
 // ===== ORDERS SHARDING BY DATE (cấu trúc: orders/năm/tháng/ngày) =====
 const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
@@ -3272,58 +3169,33 @@ function getOrdersRef(date) {
 }
 
 // Fetch orders trong khoảng ngày, gom từ orders/năm/tháng/ngày
-// Helper: YYYY-MM-DD từ Date object
-function _dateToArchiveKey(d) {
-    return d.getFullYear() + '-' +
-           String(d.getMonth() + 1).padStart(2, '0') + '-' +
-           String(d.getDate()).padStart(2, '0');
-}
-
-// Fetch orders 1 ngày: thử RT trước, fallback Firestore orders_archive nếu trống
-async function _fetchOrdersForDay(dateObj) {
-    const { year, month, day } = getOrderParts(new Date(dateObj));
-    const snap = await db.ref(`orders/${year}/${month}/${day}`).once('value');
-    if (snap.exists() && snap.val()) {
-        return Object.values(snap.val());
-    }
-    // Không có trên RT → thử Firestore archive
-    try {
-        const dateKey = _dateToArchiveKey(dateObj);
-        const doc = await fstore.collection('orders_archive').doc(dateKey).get();
-        if (doc.exists && doc.data() && doc.data().orders) {
-            return Object.values(doc.data().orders);
-        }
-    } catch(err) {
-        console.warn('[fetchOrders] Lỗi đọc archive ' + _dateToArchiveKey(dateObj) + ':', err.message);
-    }
-    return [];
-}
-
-// Fetch orders trong khoảng ngày — hybrid RT + Firestore archive
 async function fetchOrdersByDateRange(startDate, endDate) {
+    const allOrders = [];
     const cur = new Date(startDate);
     cur.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
-    end.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
 
-    const promises = [];
+    const refs = [];
     while (cur <= end) {
-        promises.push(_fetchOrdersForDay(new Date(cur)));
+        const { year, month, day } = getOrderParts(new Date(cur));
+        refs.push(db.ref(`orders/${year}/${month}/${day}`).once('value'));
         cur.setDate(cur.getDate() + 1);
     }
-    // Tương thích node cũ (flat 'order')
-    promises.push(
-        db.ref('order').once('value').then(snap => {
-            if (snap.exists() && snap.val()) return Object.values(snap.val());
-            return [];
-        })
-    );
+    // Tương thích node cũ
+    refs.push(db.ref('order').once('value'));
 
-    const results = await Promise.all(promises);
-    return results.flat();
+    const snaps = await Promise.all(refs);
+    snaps.forEach(snap => {
+        if (snap.exists()) {
+            const val = snap.val();
+            if (val) Object.values(val).forEach(o => allOrders.push(o));
+        }
+    });
+    return allOrders;
 }
 
-// Fetch orders hôm nay (luôn trên RT, không cần fallback)
+// Fetch orders hôm nay
 async function fetchTodayOrders() {
     const today = new Date();
     const { year, month, day } = getOrderParts(today);
@@ -3341,7 +3213,6 @@ async function fetchTodayOrders() {
     return allOrders;
 }
 // ===== END ORDERS SHARDING =====
-
 
 function renderCart() {
     const list = document.getElementById('cart-list');
@@ -4200,13 +4071,9 @@ function openRevenue(mode) {
     var startVal = startEl ? startEl.value : null;
     var endVal = endEl ? endEl.value : null;
 
-    // Xác định khoảng ngày cần fetch đúng theo mode
-    var _range = getDateRangeForMode(mode, startVal, endVal);
-    var fetchStart = _range.start;
-    var fetchEnd   = _range.end;
-
-
-
+    // Xác định khoảng ngày cần fetch
+    var fetchStart = startVal ? new Date(startVal) : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
+    var fetchEnd = endVal ? new Date(endVal) : new Date();
 
     fetchOrdersByDateRange(fetchStart, fetchEnd).then(function(allOrders) {
 
@@ -4720,51 +4587,28 @@ function _loadBedBookingsForDays(days, callback) {
     var results = [];
     var pending = days.length;
     if (pending === 0) { callback([]); return; }
-
-    function processBookingsData(data, year, month, day) {
-        Object.keys(data).forEach(function(k) {
-            var item = data[k];
-            var rawDate = item.date || item.bookingDate || (day + '/' + month + '/' + year);
-            if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
-                var p2 = rawDate.split('-');
-                rawDate = p2[2] + '/' + p2[1] + '/' + p2[0];
-            }
-            results.push({
-                id: k,
-                ...item,
-                start: item.start || item.startTime || '--:--',
-                end:   item.end   || item.endTime   || '--:--',
-                displayDate: rawDate
-            });
-        });
-    }
-
     days.forEach(function(dayStr) {
         var p = dayStr.split('-');
         var year = p[0], month = p[1], day = p[2];
         db.ref('bedBookings/' + year + '/' + month + '/' + day).once('value', function(snap) {
-            if (snap.exists() && snap.val()) {
-                // Có data trên Realtime DB → dùng luôn
-                processBookingsData(snap.val(), year, month, day);
-                pending--;
-                if (pending === 0) callback(results);
-            } else {
-                // Không có trên RT → fallback đọc từ Firestore archive
-                var dateKey = year + '-' + month + '-' + day;
-                fstore.collection('bedBookings_archive').doc(dateKey).get()
-                    .then(function(doc) {
-                        if (doc.exists && doc.data() && doc.data().bookings) {
-                            processBookingsData(doc.data().bookings, year, month, day);
-                        }
-                        pending--;
-                        if (pending === 0) callback(results);
-                    })
-                    .catch(function(err) {
-                        console.warn('[loadBedBookings] Lỗi đọc archive ' + dateKey + ':', err.message);
-                        pending--;
-                        if (pending === 0) callback(results);
-                    });
-            }
+            var data = snap.val() || {};
+            Object.keys(data).forEach(function(k) {
+                var item = data[k];
+                var rawDate = item.date || item.bookingDate || (day + '/' + month + '/' + year);
+                if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
+                    var p2 = rawDate.split('-');
+                    rawDate = p2[2] + '/' + p2[1] + '/' + p2[0];
+                }
+                results.push({
+                    id: k,
+                    ...item,
+                    start: item.start || item.startTime || '--:--',
+                    end:   item.end   || item.endTime   || '--:--',
+                    displayDate: rawDate
+                });
+            });
+            pending--;
+            if (pending === 0) callback(results);
         });
     });
 }
@@ -8132,13 +7976,9 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
         return;
     }
 
-    // Xác định khoảng ngày cần fetch đúng theo mode
-    var _mobRange = getDateRangeForMode(mode, startVal, endVal);
-    var mobFetchStart = _mobRange.start;
-    var mobFetchEnd   = _mobRange.end;
-
-
-
+    // Xác định khoảng ngày cần fetch cho mobile stats
+    var mobFetchStart = startVal ? new Date(startVal) : (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d; })();
+    var mobFetchEnd = endVal ? new Date(endVal) : new Date();
 
     fetchOrdersByDateRange(mobFetchStart, mobFetchEnd).then(orders => {
 
@@ -10343,6 +10183,8 @@ function discountFormSave() {
                 record.conditionMinPrice = existingData.conditionMinPrice;
         }
         fstore.collection('rewards').doc(key).set(record).then(function() {
+            // Mirror to RT for customer app (index.html) to read without Firestore auth
+            db.ref('rewards_mirror/' + key).set(Object.assign({}, record, {_docId: key}));
             showAppModal(isNew ? 'Đã tạo' : 'Đã lưu', 'Quà <b>' + label + '</b> ' + (isNew ? 'đã được tạo!' : 'đã được cập nhật!'), '🎁');
             discountFormClear();
             renderDiscountList();
@@ -10364,6 +10206,8 @@ function discountFormDelete() {
     var label = document.getElementById('df-label').value;
     if (!editKey || !confirm('Xóa "' + label + '"?')) return;
     fstore.collection('rewards').doc(editKey).delete().then(function() {
+        // Remove from RT mirror too
+        db.ref('rewards_mirror/' + editKey).remove();
         showAppModal('Đã xóa', 'Đã xóa <b>' + label + '</b>!', '🗑️');
         discountFormClear();
         renderDiscountList();
