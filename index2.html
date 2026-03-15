@@ -1860,17 +1860,18 @@ function handleBooking() {
                             }
 
                             if (_poPreOrderItems && _poPreOrderItems.length > 0) {
-                                // Có pre-order → origEnd là giờ gốc (trước +5p), newEnd là giờ đã +5p (đã ghi vào form)
+                                // Có pre-order → dùng _poBookingKey (global) thay vì _tempKey (local var)
                                 var origEnd = (_poPreFormData && _poPreFormData.origEndVal) ? _poPreFormData.origEndVal : endVal;
-                                var newEnd  = endVal; // form đã được cập nhật +5p khi poConfirm PREFORM
+                                var newEnd  = endVal;
+                                var _bkKey  = _poBookingKey; // snapshot global key vào closure này
 
                                 var pd = _parseBedDateKey(dateStr);
                                 var poPath = pd
-                                    ? 'bedBookings/'+pd.year+'/'+pd.month+'/'+pd.day+'/'+_tempKey+'/preorder'
-                                    : 'bedBookings/'+_tempKey+'/preorder';
+                                    ? 'bedBookings/'+pd.year+'/'+pd.month+'/'+pd.day+'/'+_bkKey+'/preorder'
+                                    : 'bedBookings/'+_bkKey+'/preorder';
                                 var bkPath = pd
-                                    ? 'bedBookings/'+pd.year+'/'+pd.month+'/'+pd.day+'/'+_tempKey
-                                    : 'bedBookings/'+_tempKey;
+                                    ? 'bedBookings/'+pd.year+'/'+pd.month+'/'+pd.day+'/'+_bkKey
+                                    : 'bedBookings/'+_bkKey;
 
                                 db.ref(poPath).set({
                                     items: _poPreOrderItems,
