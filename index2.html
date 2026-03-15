@@ -1843,10 +1843,46 @@ function handleBooking() {
                             document.getElementById('bed-picker-panel').style.display = 'none';
                             document.getElementById('bed-pick-chevron').style.transform = 'rotate(0deg)';
                             updateBedPickToggle();
-                            showBookingSuccessModal(startVal, endVal, function() {
-                                document.getElementById('book-date').value = "";
+
+                            function _afterBookingSuccess() {
+                                document.getElementById('book-date').value = '';
+                                document.getElementById('book-end').value  = '';
+                                document.getElementById('book-start').value= '';
+                                refreshPreorderSummary(); // reset panel
                                 showTab('user');
-                            });
+                            }
+
+                            if (_poPreOrderItems && _poPreOrderItems.length > 0) {
+                                // Có pre-order → tính +5 phút rồi lưu RT → popup VÀNG
+                                var origEnd = endVal;
+                                var newEnd  = origEnd;
+                                var ep = origEnd.split(':');
+                                var eMin = parseInt(ep[0])*60 + parseInt(ep[1]) + 5;
+                                newEnd = String(Math.floor(eMin/60)).padStart(2,'0') + ':' + String(eMin%60).padStart(2,'0');
+
+                                var pd = _parseBedDateKey(dateStr);
+                                var poPath = pd
+                                    ? 'bedBookings/'+pd.year+'/'+pd.month+'/'+pd.day+'/'+_tempKey+'/preorder'
+                                    : 'bedBookings/'+_tempKey+'/preorder';
+                                var bkPath = pd
+                                    ? 'bedBookings/'+pd.year+'/'+pd.month+'/'+pd.day+'/'+_tempKey
+                                    : 'bedBookings/'+_tempKey;
+
+                                db.ref(poPath).set({
+                                    items: _poPreOrderItems,
+                                    savedAt: new Date().toISOString(),
+                                    bookingDate: dateStr, bookingStart: startVal, bookingEnd: newEnd,
+                                    origEnd: origEnd, voucher: _poPreOrderVoucher||null, status: 'pending'
+                                }, function() {
+                                    db.ref(bkPath).update({ end: newEnd, bonusMin: 5, bonusReason: 'Pre-order' });
+                                    var savedItems = _poPreOrderItems.slice();
+                                    _poPreOrderItems = []; _poPreOrderVoucher = null; _poPreFormData = null;
+                                    showBookingSuccessYellow(startVal, origEnd, newEnd, savedItems, _afterBookingSuccess);
+                                });
+                            } else {
+                                // Không có pre-order → popup XANH bình thường
+                                showBookingSuccessModal(startVal, endVal, _afterBookingSuccess);
+                            }
                         }).catch(function(e){ clearTimeout(safetyTimer); loading.classList.add('hidden'); alert('Lỗi: '+e.message); });
                     });
 
@@ -1881,6 +1917,39 @@ function showBookingSuccessModal(startVal, endVal, cb) {
         overlay.querySelector('.bs-card').classList.add('bs-enter');
     };
     document.getElementById('bs-confirm-btn').onclick = () => { closeBS(); if (cb) cb(); };
+}
+
+// --- POPUP VÀNG: ĐẶT BED THÀNH CÔNG + CÓ PRE-ORDER ---
+function showBookingSuccessYellow(startVal, origEnd, newEnd, items, cb) {
+    var el = document.getElementById('booking-success-yellow');
+    if (!el) return;
+
+    document.getElementById('bsy-orig-time').textContent = startVal + ' – ' + origEnd;
+    document.getElementById('bsy-new-time').textContent  = startVal + ' – ' + newEnd;
+
+    var total = items.reduce(function(s,i){return s+i.price*i.qty;},0);
+    document.getElementById('bsy-items').innerHTML = items.map(function(i){
+        var sL = (i.size && i.size !== 'M') ? ' ('+i.size+')' : '';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #fde68a;">'
+            + '<span style="font-size:13px;font-weight:700;color:#78350f;">'+i.name+sL+'</span>'
+            + '<span style="font-size:13px;font-weight:900;color:#d97706;">'+( i.price*i.qty).toLocaleString()+'đ</span>'
+            + '</div>';
+    }).join('') + '<div style="display:flex;justify-content:space-between;padding:8px 0 0;">'
+        + '<span style="font-size:12px;font-weight:800;color:#92400e;text-transform:uppercase;">Tổng đồ uống</span>'
+        + '<span style="font-size:15px;font-weight:900;color:#d97706;">'+total.toLocaleString()+'đ</span>'
+        + '</div>';
+
+    var ov = document.getElementById('booking-success-yellow');
+    ov.style.display = 'flex';
+    setTimeout(function(){
+        var card = ov.querySelector('.bsy-card');
+        if (card) { card.style.opacity='1'; card.style.transform='scale(1) translateY(0)'; }
+    }, 10);
+
+    document.getElementById('bsy-confirm-btn').onclick = function(){
+        ov.style.display = 'none';
+        if (cb) cb();
+    };
 }
 
 // ── Hàm mở Pre-Order từ nút trên trang đặt bed ────────────────
@@ -3006,6 +3075,54 @@ window.handleLogout = function() {
   </div>
 </div>
 
+
+<!-- ===== POPUP VÀNG: ĐẶT BED THÀNH CÔNG + CÓ PRE-ORDER ===== -->
+<div id="booking-success-yellow"
+     style="display:none;position:fixed;inset:0;z-index:155;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,0.55);backdrop-filter:blur(12px);">
+  <div class="bsy-card" style="width:100%;max-width:380px;background:#fffbeb;border-radius:36px;overflow:hidden;box-shadow:0 30px 80px rgba(180,130,20,0.4);opacity:0;transform:scale(0.9) translateY(16px);transition:opacity 0.3s ease,transform 0.35s cubic-bezier(0.34,1.4,0.64,1);max-height:88vh;display:flex;flex-direction:column;">
+
+    <!-- Header vàng -->
+    <div style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:22px 22px 18px;position:relative;overflow:hidden;flex-shrink:0;">
+      <div style="position:absolute;top:-30px;right:-30px;width:110px;height:110px;background:rgba(255,255,255,0.08);border-radius:50%;"></div>
+      <p style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.65);letter-spacing:0.16em;text-transform:uppercase;margin:0 0 4px;position:relative;z-index:1;">The cafe 33 · Cafe in Bed</p>
+      <h2 style="font-family:'League Spartan',sans-serif;font-size:22px;font-weight:900;color:#fff;margin:0 0 10px;position:relative;z-index:1;">Đặt thành công! 🎉</h2>
+      <!-- Khung giờ cũ → mới -->
+      <div style="background:rgba(255,255,255,0.2);border-radius:16px;padding:10px 14px;border:1px solid rgba(255,255,255,0.25);position:relative;z-index:1;">
+        <p style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 5px;">⏱️ +5 phút đã được thêm vào giờ của bạn</p>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <p id="bsy-orig-time" style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.55);text-decoration:line-through;margin:0;font-family:'League Spartan',sans-serif;">--:-- – --:--</p>
+          <span style="color:rgba(255,255,255,0.6);font-size:14px;">→</span>
+          <p id="bsy-new-time" style="font-size:16px;font-weight:900;color:#fff;margin:0;font-family:'League Spartan',sans-serif;">--:-- – --:--</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Body: cảnh báo + danh sách món -->
+    <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;padding:16px 18px;">
+      <!-- Nhắc giờ -->
+      <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:12px 14px;border:1px solid #fde68a;margin-bottom:14px;">
+        <span style="font-size:18px;">⏰</span>
+        <p style="font-size:12px;font-weight:700;color:#92400e;line-height:1.5;margin:0;">Nhớ đi đúng giờ nhé! Sau <b>30 phút</b> không có mặt, lịch sẽ tự động hủy.</p>
+      </div>
+
+      <!-- Danh sách pre-order -->
+      <div style="background:#fff;border-radius:18px;padding:14px 16px;border:1.5px solid #fde68a;">
+        <p style="font-size:10px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px;">🍵 Đơn Pre-order của bạn</p>
+        <div id="bsy-items"></div>
+      </div>
+    </div>
+
+    <!-- Footer nút -->
+    <div style="flex-shrink:0;padding:14px 18px 20px;">
+      <button id="bsy-confirm-btn"
+        style="width:100%;padding:16px;border-radius:20px;border:none;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-family:'League Spartan',sans-serif;font-size:15px;font-weight:900;letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;box-shadow:0 6px 20px rgba(217,119,6,0.3);"
+        ontouchstart="this.style.opacity='0.85'" ontouchend="this.style.opacity='1'">
+        Tuyệt! Hẹn gặp bạn 🎉
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== WELCOME POPUP (ẢNH ĐẬU XE KHI MỞ APP) ===== -->
 <div id="welcome-popup" class="fixed inset-0 z-[180] hidden items-center justify-center p-4" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(14px);">
   <div class="welcome-animate w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.4)] bg-white">
@@ -3535,77 +3652,23 @@ function poConfirm(){
     if (!key){ poClose(); return; }
 
     // ── PREFORM: pre-order TRƯỚC khi đặt bed ───────────────
+    // Chỉ lưu tạm vào RAM, cập nhật form +5 phút, hiện panel
+    // KHÔNG lưu RT, KHÔNG hiện popup — chờ khách bấm "Đặt chỗ"
     if (key === '__PREFORM__') {
-        // Tính giờ kết thúc mới +5 phút
         var origEnd = _poBookingData.end || '';
         var newEndTime = origEnd;
         if (origEnd && /^\d{2}:\d{2}$/.test(origEnd)) {
-            var parts = origEnd.split(':');
-            var totalMin = parseInt(parts[0])*60 + parseInt(parts[1]) + 5;
-            var newH = Math.floor(totalMin/60) % 24;
-            var newM = totalMin % 60;
-            newEndTime = String(newH).padStart(2,'0') + ':' + String(newM).padStart(2,'0');
+            var ep = origEnd.split(':');
+            var eMin = parseInt(ep[0])*60 + parseInt(ep[1]) + 5;
+            newEndTime = String(Math.floor(eMin/60)).padStart(2,'0') + ':' + String(eMin%60).padStart(2,'0');
         }
-        // Lưu tạm
         _poPreOrderItems   = _poItems.slice();
         _poPreOrderVoucher = _poAppliedVoucher;
-        // Cập nhật ô giờ trên form
-        if (_poPreFormData) {
-            document.getElementById('book-end').value = newEndTime;
-        }
+        document.getElementById('book-end').value = newEndTime;
         poClose();
         refreshPreorderSummary();
-        // Hiện popup vàng
-        setTimeout(function(){
-            showPreOrderSuccessModal(_poPreOrderItems.length, newEndTime);
-        }, 350);
-        return;
+        return; // Xong — không popup, không lưu RT
     }
-
-    // ── FLOW THƯỜNG: pre-order SAU KHI đặt bed ─────────────
-    var _prePath = (function(){
-        var d = _poBookingData && _poBookingData.date ? _poBookingData.date : null;
-        if (d) { var pd=_parseBedDateKey(d); if(pd) return 'bedBookings/'+pd.year+'/'+pd.month+'/'+pd.day+'/'+key+'/preorder'; }
-        return 'bedBookings/'+key+'/preorder';
-    })();
-
-    // Tính +5 phút cho booking đã tồn tại
-    var origEnd2 = _poBookingData.end || '';
-    var newEndTime2 = origEnd2;
-    if (origEnd2 && /^\d{2}:\d{2}$/.test(origEnd2)) {
-        var parts2 = origEnd2.split(':');
-        var totalMin2 = parseInt(parts2[0])*60 + parseInt(parts2[1]) + 5;
-        var newH2 = Math.floor(totalMin2/60) % 24;
-        var newM2 = totalMin2 % 60;
-        newEndTime2 = String(newH2).padStart(2,'0') + ':' + String(newM2).padStart(2,'0');
-    }
-
-    var _bookingPath = (function(){
-        var d = _poBookingData && _poBookingData.date ? _poBookingData.date : null;
-        if (d) { var pd=_parseBedDateKey(d); if(pd) return 'bedBookings/'+pd.year+'/'+pd.month+'/'+pd.day+'/'+key; }
-        return 'bedBookings/'+key;
-    })();
-
-    db.ref(_prePath).set({
-        items       : _poItems,
-        savedAt     : new Date().toISOString(),
-        bookingDate : _poBookingData.date||'',
-        bookingStart: _poBookingData.start||'',
-        bookingEnd  : newEndTime2,
-        origEnd     : origEnd2,
-        voucher     : _poAppliedVoucher||null,
-        status      : 'pending'
-    }, function(err){
-        if (err){ alert('Lỗi: '+err.message); return; }
-        db.ref(_bookingPath).update({ end: newEndTime2, bonusMin: 5, bonusReason: 'Pre-order' });
-        var total = _poItems.reduce(function(s,i){return s+i.qty;},0);
-        var savedNewEnd = newEndTime2;
-        _poBookingKey=null; _poAppliedVoucher=null;
-        poClose();
-        setTimeout(function(){
-            showPreOrderSuccessModal(total, savedNewEnd);
-        }, 350);
-    });
 }
 </script>
 
