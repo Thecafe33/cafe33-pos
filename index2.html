@@ -744,10 +744,10 @@ function _fetchBookingsByPhone(phone, callback) {
     var results = [];
     var rtKeys = new Set();
 
-    // Build danh sách ngày: từ 180 ngày trước đến hôm nay
+    // Build danh sách ngày: từ 180 ngày trước đến 60 ngày tương lai
     var days = [];
     var now = new Date(); now.setHours(0,0,0,0);
-    for (var i = 0; i <= 180; i++) {
+    for (var i = -60; i <= 180; i++) {
         var d = new Date(now);
         d.setDate(now.getDate() - i);
         var y = d.getFullYear();
@@ -1823,9 +1823,11 @@ function handleBooking() {
                     }
 
                     // Ghi vào nested path bedBookings/YYYY/MM/DD, chờ callback xong mới hiện success
-                    var _tempKey = db.ref('bedBookings').push().key; // tạo key duy nhất
-                    _poBookingKey = _tempKey;
-                    _pushNewBedBooking(bookingData, function(err) {
+                    // Không pre-generate key — để Firebase tự tạo, lấy realKey từ callback
+                    _poBookingKey = null;
+                    _pushNewBedBooking(bookingData, function(err, realKey) {
+                        var _tempKey = realKey; // key thật Firebase tạo
+                        _poBookingKey = _tempKey;
                         if (err) { clearTimeout(safetyTimer); loading.classList.add('hidden'); alert('Lỗi ghi booking: ' + err.message); return; }
 
                         // Ghi pendingFee nếu có phí chọn bed
@@ -1858,12 +1860,9 @@ function handleBooking() {
                             }
 
                             if (_poPreOrderItems && _poPreOrderItems.length > 0) {
-                                // Có pre-order → tính +5 phút rồi lưu RT → popup VÀNG
-                                var origEnd = endVal;
-                                var newEnd  = origEnd;
-                                var ep = origEnd.split(':');
-                                var eMin = parseInt(ep[0])*60 + parseInt(ep[1]) + 5;
-                                newEnd = String(Math.floor(eMin/60)).padStart(2,'0') + ':' + String(eMin%60).padStart(2,'0');
+                                // Có pre-order → origEnd là giờ gốc (trước +5p), newEnd là giờ đã +5p (đã ghi vào form)
+                                var origEnd = (_poPreFormData && _poPreFormData.origEndVal) ? _poPreFormData.origEndVal : endVal;
+                                var newEnd  = endVal; // form đã được cập nhật +5p khi poConfirm PREFORM
 
                                 var pd = _parseBedDateKey(dateStr);
                                 var poPath = pd
@@ -1974,7 +1973,7 @@ function openPreOrderFromBed() {
     if (diff <= 0) diff += 1440;
     _poBookingData = { start: startVal, end: endVal, date: dateStr, hours: Math.ceil(diff/60) };
     _poBookingKey  = '__PREFORM__';
-    _poPreFormData = { dateVal: dateVal, startVal: startVal, endVal: endVal };
+    _poPreFormData = { dateVal: dateVal, startVal: startVal, endVal: endVal, origEndVal: endVal };
     poOpen();
     // Khôi phục items cũ SAU khi poOpen() đã reset (poOpen kiểm tra keepItems)
     if (_poPreOrderItems && _poPreOrderItems.length > 0) {
@@ -2342,12 +2341,24 @@ function openHistory() {
         const todayStr1 = `${d}/${m}/${y}`;
         const todayStr2 = `${y}-${m}-${d}`;
 
-        // Tìm đơn hôm nay
+        // Tìm đơn hôm nay VÀ đơn tương lai (đặt trước)
         let todayBooking = _historyCache.find(h => {
             const s = (h.status || "").toLowerCase();
             const isActive = (s !== 'đã hủy' && s !== 'đã xong');
             const isToday = (h.date === todayStr1 || h.date === todayStr2);
             return isActive && isToday;
+        });
+
+        // Đơn tương lai (active, ngày sau hôm nay)
+        let upcomingBookings = _historyCache.filter(h => {
+            const s = (h.status || "").toLowerCase();
+            const isActive = (s !== 'đã hủy' && s !== 'đã xong');
+            const isToday = (h.date === todayStr1 || h.date === todayStr2);
+            if (!isActive || isToday) return false;
+            // So sánh ngày
+            var dp = h.date.includes('/') ? h.date.split('/').reverse().join('') : h.date.replace(/-/g,'');
+            var tp = todayStr2.replace(/-/g,'');
+            return dp > tp;
         });
 
         // Vẽ thẻ Active (Hôm nay)
@@ -2412,14 +2423,34 @@ function openHistory() {
                 + '<button onclick="document.getElementById(&quot;history-modal&quot;).classList.add(&quot;hidden&quot;); showTab(&quot;bed&quot;)" class="mt-3 text-[10px] font-bold text-[#006241] uppercase hover:underline">Đặt ngay +</button>'
                 + '</div>';
         }
-        activeDiv.innerHTML = `<h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1">Lịch trình hôm nay</h3>` + activeContent;
+        // Thêm section upcoming nếu có
+        var upcomingHtml = '';
+        if (upcomingBookings.length > 0) {
+            upcomingHtml = '<h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1 mt-5">Lịch đã đặt trước</h3>';
+            upcomingBookings.forEach(function(h) {
+                var bedTxt2 = h.bedId ? 'Bed ' + h.bedId : 'Chờ xếp bed';
+                upcomingHtml += '<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:20px;padding:14px 16px;margin-bottom:8px;">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                    + '<div>'
+                    + '<p style="font-size:10px;font-weight:800;color:#16a34a;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 2px;">📅 ' + (h.date||'') + '</p>'
+                    + '<p style="font-size:19px;font-weight:900;color:#1e3932;margin:0;line-height:1;">' + (h.start||'--') + ' – ' + (h.end||'--') + '</p>'
+                    + '<p style="font-size:11px;color:#16a34a;font-weight:700;margin:3px 0 0;">' + bedTxt2 + '</p>'
+                    + '</div>'
+                    + '<span style="background:#dcfce7;color:#16a34a;font-size:9px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;padding:5px 12px;border-radius:99px;">Đặt trước</span>'
+                    + '</div></div>';
+            });
+        }
+
+        activeDiv.innerHTML = '<h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1">Lịch trình hôm nay</h3>' + activeContent + upcomingHtml;
 
         // Vẽ danh sách lịch sử cũ
+        var upcomingKeys = new Set(upcomingBookings.map(function(h){ return h.key; }));
         if (_historyCache.length === 0) {
             listDiv.innerHTML = '<div style="text-align:center;padding:40px 0;color:#9ca3af;font-size:13px;">Chưa có lịch sử nào.</div>';
         } else {
             _historyCache.forEach(h => {
                 if (todayBooking && h.key === todayBooking.key) return;
+                if (upcomingKeys.has(h.key)) return;
 
                 const st = (h.status || '').toLowerCase();
                 const isDone      = st.includes('xong');
