@@ -665,6 +665,10 @@ db.ref('bed_closing_time').on('value', function(snap) {
 
 let curPhone = localStorage.getItem('member_phone');
 let userData = {};
+// Pre-order shared state (used across both script blocks)
+var _poPreOrderItems   = [];
+var _poPreOrderVoucher = null;
+var _poPreFormData     = null;
 let _cachedGiftList = []; // Thêm biến cache danh sách quà
 
 // ══════════════════════════════════════════════════════════════
@@ -1896,11 +1900,13 @@ function openPreOrderFromBed() {
     _poBookingData = { start: startVal, end: endVal, date: dateStr, hours: Math.ceil(diff/60) };
     _poBookingKey  = '__PREFORM__';
     _poPreFormData = { dateVal: dateVal, startVal: startVal, endVal: endVal };
-    // Khôi phục items cũ nếu đã pre-order trước
+    poOpen();
+    // Khôi phục items cũ SAU khi poOpen() đã reset (poOpen kiểm tra keepItems)
     if (_poPreOrderItems && _poPreOrderItems.length > 0) {
         _poItems = _poPreOrderItems.slice();
+        poUpdateBtn1();
+        poRenderMenu(_poCurCat, '');
     }
-    poOpen();
 }
 
 // ── Refresh panel tóm tắt pre-order trên trang đặt bed ────────
@@ -3212,14 +3218,14 @@ window.handleLogout = function() {
 <!-- ═══════════════════════════════════════════════════════ -->
 <script>
 // ── State ──────────────────────────────────────────────────
-var _poItems       = [];
-var _poMenuData    = [];
-var _poBookingKey  = null;
-var _poBookingData = {};
-var _poCurCat      = 'all';
-var _poBlanketItem = null;
+var _poItems          = [];
+var _poMenuData       = [];
+var _poBookingKey     = null;
+var _poBookingData    = {};
+var _poCurCat         = 'all';
+var _poBlanketItem    = null;
 var _poAppliedVoucher = null;
-var _poSizeCurrent = null; // {name, priceM, priceL}
+var _poSizeCurrent    = null;
 
 // ── Open ───────────────────────────────────────────────────
 function poOpen() {
