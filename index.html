@@ -1905,11 +1905,11 @@ function handleBooking() {
                         bookingData.preferBedFee    = finalPreferBedFee;
                     }
 
-                    // Ghi vào nested path bedBookings/YYYY/MM/DD, chờ callback xong mới hiện success
-                    var _tempKey = db.ref('bedBookings').push().key; // tạo key duy nhất
-                    _poBookingKey = _tempKey;
-                    _pushNewBedBooking(bookingData, function(err) {
+                    // Ghi vào nested path bedBookings/YYYY/MM/DD
+                    // callback nhận (err, realKey) — key thực tế từ Firebase
+                    _pushNewBedBooking(bookingData, function(err, realKey) {
                         if (err) { clearTimeout(safetyTimer); loading.classList.add('hidden'); alert('Lỗi ghi booking: ' + err.message); return; }
+                        _poBookingKey = realKey; // lưu key thực để pre-order dùng
 
                         // Ghi pendingFee nếu có phí chọn bed
                         var writePromises = [];
@@ -1932,17 +1932,17 @@ function handleBooking() {
                             document.getElementById('bed-pick-chevron').style.transform = 'rotate(0deg)';
                             updateBedPickToggle();
 
-                            // Ghi pre-order lên RT nếu khách đã pre-order trước
+                            // Ghi pre-order lên RT (dưới đúng key thực của booking)
                             if (_poPendingPreorder && _poPendingPreorder.items && _poPendingPreorder.items.length) {
-                                _poFlushToRT(_tempKey, dateStr);
-                                // +5 phút: cộng thêm vào endVal rồi update RT
+                                _poFlushToRT(realKey, dateStr);
+                                // +5 phút thưởng: update end time trên RT
                                 (function() {
                                     var ep = endVal.split(':');
                                     var eM = parseInt(ep[0])*60 + parseInt(ep[1]) + 5;
                                     var newEnd = String(Math.floor(eM/60)).padStart(2,'0') + ':' + String(eM%60).padStart(2,'0');
                                     var d2 = _parseBedDateKey(dateStr);
                                     if (d2) {
-                                        var path = 'bedBookings/' + d2.year + '/' + d2.month + '/' + d2.day + '/' + _tempKey;
+                                        var path = 'bedBookings/' + d2.year + '/' + d2.month + '/' + d2.day + '/' + realKey;
                                         db.ref(path).update({ end: newEnd, preorderBonus: 5 });
                                     }
                                 })();
