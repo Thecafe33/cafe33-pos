@@ -699,7 +699,8 @@ db.ref('bed_closing_time').on('value', function(snap) {
 // ───────────────────────────────────────────────────────────────
 
 let curPhone = localStorage.getItem('member_phone');
-var _pendingRescheduleKey = null; // lưu tạm key booking khi hiện modal thay đổi giờ
+var _pendingRescheduleKey     = null;
+var _pendingRescheduleDateYMD = null;
 let userData = {};
 let _cachedGiftList = []; // Thêm biến cache danh sách quà
 
@@ -1860,6 +1861,7 @@ function handleBooking() {
                 if (loadingText) loadingText.textContent = 'Đang kết nối...';
                 // Lưu key vào biến tạm rồi dùng DOM để tạo nút (tránh xung đột nháy)
                 _pendingRescheduleKey = existingKey;
+                _pendingRescheduleDateYMD = dateVal; // lưu YYYY-MM-DD để showReschedule dùng
                 showAppModal("Bạn đã có lịch ngày này!", "Bạn đã có lịch đặt vào ngày này rồi.", "📅", null, false);
                 setTimeout(function() {
                     var btnMain = document.getElementById('modal-btn-main');
@@ -1877,7 +1879,7 @@ function handleBooking() {
                         btn.style.cssText = 'width:100%;padding:14px;background:linear-gradient(135deg,#006241,#005235);color:white;border:none;border-radius:16px;font-weight:900;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 14px rgba(0,98,65,0.3);margin-bottom:8px;';
                         btn.onclick = function() {
                             document.getElementById('modal-overlay').classList.add('hidden');
-                            showReschedule(_pendingRescheduleKey);
+                            showReschedule(_pendingRescheduleKey, _pendingRescheduleDateYMD);
                         };
                         actions.insertBefore(btn, actions.firstChild);
                     }
@@ -2742,6 +2744,62 @@ function closeHistoryDetail() {
 
 // stub để không crash code cũ
 function toggleViolationDetail() {}
+
+// Mở modal đổi giờ từ màn hình đặt bed (không cần _historyCache)
+// key: booking key, dateYMD: format YYYY-MM-DD
+function showReschedule(key, dateYMD) {
+    if (!key) return;
+    var d = dateYMD ? dateYMD.split('-') : null;
+    var rtPath = d
+        ? 'bedBookings/' + d[0] + '/' + d[1] + '/' + d[2] + '/' + key
+        : 'bedBookings/' + key;
+
+    db.ref(rtPath).once('value', function(snap) {
+        var booking = snap.val();
+        if (!booking) { alert("Không tìm thấy dữ liệu lịch!"); return; }
+
+        // Check rescheduleCount
+        var changeCount = booking.rescheduleCount || 0;
+        if (changeCount >= 2) {
+            showAppModal("Hết lượt đổi giờ", "Mỗi lịch đặt chỉ được đổi giờ tối đa <b>2 lần</b>.", "🚫");
+            return;
+        }
+
+        // Check giờ bắt đầu còn > 10 phút không
+        var minsLeft = minutesUntilStart(booking);
+        if (minsLeft <= 10) {
+            var msg = minsLeft > 0
+                ? 'Lịch sẽ bắt đầu sau <b>' + minsLeft + ' phút nữa</b>, không thể đổi giờ.'
+                : 'Lịch đã bắt đầu, không thể đổi giờ.';
+            showAppModal("Không thể đổi giờ", msg, "🔒");
+            return;
+        }
+
+        editingBookingKey = key;
+
+        // Điền vào form reschedule
+        var p = (booking.date || '').split('/');
+        if (p.length === 3) {
+            document.getElementById('re-date').value = p[2] + '-' + p[1] + '-' + p[0];
+        } else if (dateYMD) {
+            document.getElementById('re-date').value = dateYMD;
+        }
+        document.getElementById('re-start').value = booking.start || '';
+        document.getElementById('re-end').value   = booking.end   || '';
+
+        var today = new Date().toISOString().split('T')[0];
+        document.getElementById('re-date').setAttribute('min', today);
+
+        var hint = document.getElementById('reschedule-hint');
+        if (hint) {
+            var remaining = 2 - changeCount;
+            hint.innerText = 'Còn ' + remaining + ' lần đổi giờ cho lịch này';
+            hint.style.color = remaining === 1 ? '#f59e0b' : '#006241';
+        }
+
+        document.getElementById('reschedule-modal').classList.remove('hidden');
+    });
+}
   // =========================================================
 // LOGIC ĐỔI GIỜ (RESCHEDULE)
 // =========================================================
