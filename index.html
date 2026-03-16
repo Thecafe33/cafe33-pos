@@ -701,6 +701,7 @@ db.ref('bed_closing_time').on('value', function(snap) {
 let curPhone = localStorage.getItem('member_phone');
 var _pendingRescheduleKey     = null;
 var _pendingRescheduleDateYMD = null;
+var _editingBookingPath       = null; // RT path đầy đủ của booking đang reschedule
 let userData = {};
 let _cachedGiftList = []; // Thêm biến cache danh sách quà
 
@@ -2775,7 +2776,8 @@ function showReschedule(key, dateYMD) {
             return;
         }
 
-        editingBookingKey = key;
+        editingBookingKey    = key;
+        _editingBookingPath = rtPath; // lưu path đúng, không phụ thuộc _historyCache
 
         // Điền vào form reschedule
         var p = (booking.date || '').split('/');
@@ -2859,9 +2861,8 @@ function openRescheduleModal(key) {
 function submitReschedule() {
     if (!editingBookingKey) return;
 
-    // Luôn đọc từ Firebase để lấy rescheduleCount thật, không dùng cache
-    var _liveCached = _historyCache.find(function(x){return x.key===editingBookingKey;});
-    var _livePath = _liveCached ? _getBedBookingRTPath(_liveCached) : ('bedBookings/'+editingBookingKey);
+    // Dùng _editingBookingPath đã lưu sẵn — đúng path, không cần cache
+    var _livePath = _editingBookingPath || ('bedBookings/' + editingBookingKey);
     db.ref(_livePath).once('value', snap => {
         const liveBooking = snap.val();
         const changeCount = liveBooking ? (liveBooking.rescheduleCount || 0) : 0;
@@ -2907,9 +2908,8 @@ function _doSubmitReschedule(changeCount) {
 
         if (overlapCount < 4) {
             const newCount = changeCount + 1;
-            // Lấy path đúng từ _historyCache
-            var _editCached = _historyCache.find(function(b){ return b.key === editingBookingKey; });
-            var _editPath = _editCached ? _getBedBookingRTPath(_editCached) : ('bedBookings/' + editingBookingKey);
+            // Dùng _editingBookingPath đã lưu sẵn — đúng path, không cần cache
+            var _editPath = _editingBookingPath || ('bedBookings/' + editingBookingKey);
             db.ref(_editPath).update({
                 date: dateStr, start: start, end: end,
                 status: 'chờ xếp bed', bedId: "",
