@@ -699,6 +699,7 @@ db.ref('bed_closing_time').on('value', function(snap) {
 // ───────────────────────────────────────────────────────────────
 
 let curPhone = localStorage.getItem('member_phone');
+var _pendingRescheduleKey = null; // lưu tạm key booking khi hiện modal thay đổi giờ
 let userData = {};
 let _cachedGiftList = []; // Thêm biến cache danh sách quà
 
@@ -1728,6 +1729,28 @@ function updateBedPickToggle() {
 // LOGIC ĐẶT BED: CÓ CHECK 5 PHÚT CHUẨN BỊ (PREP BUFFER)
 // =============================================================
 
+// Kiểm tra xem phone có lịch đang active không — chỉ quét 7 ngày (nhanh hơn 180x)
+// Kiểm tra khách đã có lịch vào đúng ngày đang chọn chưa — 1 request duy nhất
+// callback(bookingKey) — trả về key nếu có lịch active, null nếu không
+function _checkActiveBooking(phone, dateYMD, callback) {
+    var cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+    var p = dateYMD.split('-'); // format YYYY-MM-DD
+    db.ref('bedBookings/' + p[0] + '/' + p[1] + '/' + p[2]).once('value', function(snap) {
+        var data = snap.val();
+        var foundKey = null;
+        if (data) {
+            Object.keys(data).forEach(function(k) {
+                var b = data[k];
+                if (!b || !b.phone) return;
+                if (b.phone.replace(/[^0-9]/g,'') !== cleanPhone) return;
+                var st = (b.status || '').toLowerCase();
+                if (st !== 'đã hủy' && st !== 'đã xong') foundKey = k;
+            });
+        }
+        callback(foundKey);
+    });
+}
+
 function handleBooking() {
     // A. Validate Input (Giữ nguyên)
     if (!document.getElementById('agree-rules').checked) return alert("Vui lòng đồng ý nội quy!");
@@ -1793,7 +1816,15 @@ function handleBooking() {
 
     // --- CÁC BƯỚC TIẾP THEO (LOGIC CŨ) ---
     loading.classList.remove('hidden');
-    const safetyTimer = setTimeout(() => { if (!loading.classList.contains('hidden')) loading.classList.add('hidden'); }, 5000);
+    // Safety timer tăng lên 30s — flow cần quét 180 ngày booking nên chậm hơn 5s
+    var loadingText = document.getElementById('loading-text');
+    if (loadingText) loadingText.textContent = 'Đang kiểm tra lịch...';
+    const safetyTimer = setTimeout(() => {
+        if (!loading.classList.contains('hidden')) {
+            loading.classList.add('hidden');
+            if (loadingText) loadingText.textContent = 'Đang kết nối...';
+        }
+    }, 30000);
 
     // B. Check Store OFF
     db.ref('store_status').once('value', (statusSnap) => {
@@ -1822,12 +1853,35 @@ function handleBooking() {
         }
 
         // D. Check Active Booking
-        _fetchBookingsByPhone(curPhone, function(userBookings) {
-            let hasActive = false;
-            userBookings.forEach(v => { const st = (v.status||"").toLowerCase(); if(st!=='đã hủy' && st!=='đã xong') hasActive=true; });
-            if(hasActive) {
+        if (loadingText) loadingText.textContent = 'Kiểm tra lịch cũ...';
+        _checkActiveBooking(curPhone, dateVal, function(existingKey) {
+            if (existingKey) {
                 clearTimeout(safetyTimer); loading.classList.add('hidden');
-                showAppModal("Bạn đã có lịch đặt!", "Vui lòng kiểm tra lại.", "⚠️", () => { showTab('user'); openHistory(); });
+                if (loadingText) loadingText.textContent = 'Đang kết nối...';
+                // Lưu key vào biến tạm rồi dùng DOM để tạo nút (tránh xung đột nháy)
+                _pendingRescheduleKey = existingKey;
+                showAppModal("Bạn đã có lịch ngày này!", "Bạn đã có lịch đặt vào ngày này rồi.", "📅", null, false);
+                setTimeout(function() {
+                    var btnMain = document.getElementById('modal-btn-main');
+                    if (btnMain) {
+                        btnMain.textContent = 'Không thay đổi';
+                        btnMain.style.cssText = 'width:100%;padding:14px;background:transparent;color:#9ca3af;border:none;border-radius:16px;font-weight:700;font-size:12px;cursor:pointer;letter-spacing:0.04em;text-transform:uppercase;';
+                    }
+                    var actions = document.getElementById('modal-actions');
+                    var oldBtn = document.getElementById('btn-reschedule-now');
+                    if (oldBtn) oldBtn.remove();
+                    if (actions) {
+                        var btn = document.createElement('button');
+                        btn.id = 'btn-reschedule-now';
+                        btn.textContent = 'Thay đổi ngay';
+                        btn.style.cssText = 'width:100%;padding:14px;background:linear-gradient(135deg,#006241,#005235);color:white;border:none;border-radius:16px;font-weight:900;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;box-shadow:0 4px 14px rgba(0,98,65,0.3);margin-bottom:8px;';
+                        btn.onclick = function() {
+                            document.getElementById('modal-overlay').classList.add('hidden');
+                            showReschedule(_pendingRescheduleKey);
+                        };
+                        actions.insertBefore(btn, actions.firstChild);
+                    }
+                }, 20);
                 return;
             }
 
@@ -1835,6 +1889,7 @@ function handleBooking() {
             const p = dateVal.split('-');
             const dateStr = `${p[2]}/${p[1]}/${p[0]}`; 
 
+            if (loadingText) loadingText.textContent = 'Kiểm tra slot khả dụng...';
             _fetchBedDayBookings(dateStr).then(function(dayBookings) {
                 let bookedSlots = [];
                 let overlapCount = 0;
@@ -1912,6 +1967,7 @@ function handleBooking() {
                         bookingData.preferBedFee    = finalPreferBedFee;
                     }
 
+                    if (loadingText) loadingText.textContent = 'Đang xác nhận đặt chỗ...';
                     // Ghi vào nested path bedBookings/YYYY/MM/DD
                     // callback nhận (err, realKey) — key thực tế từ Firebase
                     _pushNewBedBooking(bookingData, function(err, realKey) {
@@ -1933,7 +1989,9 @@ function handleBooking() {
                         }
 
                         Promise.all(writePromises).then(function() {
-                            clearTimeout(safetyTimer); loading.classList.add('hidden');
+                            clearTimeout(safetyTimer);
+                            loading.classList.add('hidden');
+                            if (loadingText) loadingText.textContent = 'Đang kết nối...';
                             _selectedBed = 0; _bedPickerOpen = false; _isBedPickFree = false; _bedMapCache = null;
                             document.getElementById('bed-picker-panel').style.display = 'none';
                             document.getElementById('bed-pick-chevron').style.transform = 'rotate(0deg)';
