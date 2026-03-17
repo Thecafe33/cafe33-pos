@@ -6525,8 +6525,6 @@ function loadPreorderToCart(bookingKey) {
         });
 
         renderCart();
-        var _statusRef = _bk ? _bedBookingRef(_bk, 'preorder/status') : db.ref('bedBookings/' + bookingKey + '/preorder/status');
-        _statusRef.set('loaded');
 
         if (totalAdded > 0 && typeof showToast === 'function') {
             showToast('🍜 Đã thêm ' + totalAdded + ' món pre-order vào giỏ!');
@@ -7144,6 +7142,15 @@ function saveOrderToFirebase(method) {
             const pcStatusLabel = document.getElementById('sdt-status');
             if (pcStatusLabel) pcStatusLabel.innerText = "";
             clearDebtAfterPayment();
+
+            // Ghi preorder/status = 'loaded' SAU KHI thanh toán thành công
+            if (currentBooking && _hasActivePreorder(currentBooking)) {
+                var _bkForStatus = (globalAllBookings || []).find(function(b){ return (b.id||b.key) === (currentBooking.id||currentBooking.key); });
+                var _statusRef = _bkForStatus
+                    ? _bedBookingRef(_bkForStatus, 'preorder/status')
+                    : db.ref('bedBookings/' + (currentBooking.id||currentBooking.key) + '/preorder/status');
+                _statusRef.set('loaded');
+            }
             giftVoucherMarkUsedAndReset();
             resetDiscountState(true);
             if(document.getElementById('qr-modal')) document.getElementById('qr-modal').classList.add('hidden');
