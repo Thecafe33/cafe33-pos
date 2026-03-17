@@ -2003,7 +2003,7 @@ luv u</textarea>
         <div id="app-modal-icon" class="text-5xl mb-4"></div>
         <h3 id="app-modal-title" class="brand-font text-xl text-[#006241] mb-2 uppercase font-black text-center tracking-wide">Thông báo</h3>
         <div id="app-modal-msg" class="text-sm text-gray-600 font-medium mb-8 leading-relaxed px-2"></div>
-        <button onclick="document.getElementById('app-modal').classList.add('hidden')"
+        <button onclick="closeAppModal()"
             class="w-full py-4 bg-[#006241] text-white font-black rounded-[32px] uppercase shadow-lg shadow-green-900/20 active:scale-95 transition-all">
             Đã hiểu
         </button>
@@ -5471,6 +5471,57 @@ function handleMobileBedOrder(bookingId) {
     _doShowBedDetail(booking, bedId);
 }
 
+// Popup khuyến mãi đặc biệt từ slot gợi ý (bookingBonus)
+function showBonusPopup(booking) {
+    var bonus = (booking.bookingBonus || '').trim();
+    if (!bonus) return;
+
+    var hasBlanket = bonus.indexOf('chăn') !== -1 || bonus.indexOf('Free chăn') !== -1;
+    var has5k      = bonus.indexOf('5k') !== -1 || bonus.indexOf('Giảm 5k') !== -1;
+
+    var bonusLabel = bonus.replace(/✨\s*/g, '');
+
+    // Build HTML mô tả khuyến mãi
+    var details = '<ul style="text-align:left;margin:8px 0 0;padding:0 0 0 18px;font-size:13px;color:#1e3932;">';
+    if (hasBlanket) details += '<li style="margin-bottom:4px;"><b>Chăn bed</b> miễn phí (thêm vào cart 0đ)</li>';
+    if (has5k)      details += '<li><b>Giảm 5.000đ</b> tổng bill (tự động áp)</li>';
+    details += '</ul>';
+
+    var html = '<p style="font-size:13px;color:#374151;margin-bottom:6px;">Khách được hưởng:</p>'
+             + '<div style="background:#f0fdf4;border:1.5px solid #6ee7b7;border-radius:12px;padding:10px 14px;margin-bottom:12px;">'
+             + '<p style="font-weight:900;color:#006241;font-size:13px;margin:0 0 4px;">✨ ' + bonusLabel + '</p>'
+             + details
+             + '</div>'
+             + '<div style="display:flex;gap:8px;margin-top:4px;">'
+             + '<button onclick="closeAppModal()" '
+             +   'style="flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;background:white;font-weight:700;font-size:12px;cursor:pointer;color:#6b7280;">Bỏ qua</button>'
+             + '<button onclick="_applyBonusToCart(' + JSON.stringify({hasBlanket:hasBlanket,has5k:has5k}) + ');closeAppModal()" '
+             +   'style="flex:2;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#006241,#005235);color:white;font-weight:900;font-size:12px;cursor:pointer;">Thêm vào cart</button>'
+             + '</div>';
+
+    showAppModal('🎁 Khuyến mãi đặc biệt', html, '');
+}
+
+// Áp dụng bonus vào cart
+function _applyBonusToCart(opts) {
+    if (opts.hasBlanket) {
+        // Tìm item "Chăn bed" trong menu, add với giá 0đ
+        var blanket = menu.find(function(m) { return m.name.toLowerCase() === 'chăn bed'; });
+        if (blanket) {
+            var ex = cart.find(function(c) { return c.name === blanket.name; });
+            if (ex) ex.qty++;
+            else cart.push({ name: blanket.name, size: 'M', price: 0, qty: 1 });
+        }
+    }
+    if (opts.has5k) {
+        // Thêm discount 5k vào cart dưới dạng item âm
+        var ex5k = cart.find(function(c) { return c.name === 'Khuyến mãi đặc biệt'; });
+        if (!ex5k) cart.push({ name: 'Khuyến mãi đặc biệt', size: 'M', price: -5000, qty: 1 });
+    }
+    renderCart();
+    if (typeof showToast === 'function') showToast('🎁 Đã áp khuyến mãi vào cart!');
+}
+
 function _doShowBedDetail(booking, bedId) {
    if (booking.phone) {
         scanAndAddDebt(booking.phone);
@@ -5490,6 +5541,20 @@ function _doShowBedDetail(booking, bedId) {
     }
 
     if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
+
+    // Hiện popup khuyến mãi nếu lịch có bookingBonus
+    // Nếu có nợ → chờ nhân viên đóng modal nợ rồi mới hiện (tránh đè modal)
+    if (booking.bookingBonus) {
+        var phone = booking.phone;
+        var key = typeof normalizePhone === 'function' ? normalizePhone(phone||'') : (phone||'');
+        var cust = customerMap && customerMap[key];
+        var hasDebt = cust && cust.pendingFee > 0;
+        if (hasDebt) {
+            _onModalClose = function() { showBonusPopup(booking); };
+        } else {
+            setTimeout(function() { showBonusPopup(booking); }, 400);
+        }
+    }
 
     var _preorderKey = booking.key || booking.id;
     if (_preorderKey && _hasActivePreorder(booking)) {
@@ -5793,7 +5858,23 @@ renderCustomerSuggestions(sdt, 'pc');
        syncToCustomerDisplay('cart', { customerName: "Khách mới", customerPoints: 0 });
     }
 }
-function showAppModal(title, msg, icon = '') { document.getElementById('app-modal-title').innerText = title; document.getElementById('app-modal-msg').innerHTML = msg; document.getElementById('app-modal-icon').innerText = icon; document.getElementById('app-modal').classList.remove('hidden'); }
+var _onModalClose = null; // callback chạy sau khi đóng app-modal
+function showAppModal(title, msg, icon, onClose) {
+    icon = icon || '';
+    document.getElementById('app-modal-title').innerText = title;
+    document.getElementById('app-modal-msg').innerHTML = msg;
+    document.getElementById('app-modal-icon').innerText = icon;
+    document.getElementById('app-modal').classList.remove('hidden');
+    _onModalClose = onClose || null;
+}
+function closeAppModal() {
+    document.getElementById('app-modal').classList.add('hidden');
+    if (typeof _onModalClose === 'function') {
+        var cb = _onModalClose;
+        _onModalClose = null;
+        cb();
+    }
+}
 function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); var parts = timeStr.split(':'); d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0); return d; }
 function startPanelCountdown(endTimeStr) { stopPanelCountdown(); var clockEl = document.getElementById('detail-countdown'); if(!clockEl) return; var timeParts = endTimeStr.split(':'); if(timeParts.length < 2) return; var endDate = new Date(); endDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0); bedCountdownInterval = setInterval(function() { var diff = endDate - new Date(); var isOver = diff < 0; diff = Math.abs(diff); var h = Math.floor(diff / 3600000); var m = Math.floor((diff % 3600000) / 60000); var s = Math.floor((diff % 60000) / 1000); var fmt = v => v < 10 ? "0"+v : v; clockEl.innerText = (isOver ? '-' : '') + fmt(h) + ":" + fmt(m) + ":" + fmt(s); clockEl.className = isOver ? "text-3xl font-black text-red-500 font-mono tracking-tighter" : "text-3xl font-black text-[#006241] font-mono tracking-tighter"; }, 1000); }
 function stopPanelCountdown() { if (bedCountdownInterval) clearInterval(bedCountdownInterval); }
@@ -6519,6 +6600,8 @@ function autoAddBedItems(booking) {
             var endMins   = parseInt(pe[0]) * 60 + parseInt(pe[1]);
             var diffMins  = endMins - startMins;
             if (diffMins <= 0) diffMins += 24 * 60;
+            // Có pre-order → giờ kết thúc đã được cộng +5p thưởng → trừ lại để tính phí đúng
+            if (booking.preorder && Object.keys(booking.preorder).length > 0) diffMins -= 5;
             totalHours = Math.ceil(diffMins / 60);
         } catch(e) { totalHours = 0; }
     }
