@@ -6584,24 +6584,11 @@ function showPreorderModal(data, bookingId) {
             modal.classList.add('hidden');
             pendingBedOrder = data;
             activeOrderingBedId = data.bedId || 'WAITING';
-
-            // Điền SĐT
-            var sdtInput = document.getElementById('kh-sdt');
-            if (sdtInput && data.phone) {
-                sdtInput.value = data.phone;
-                if (typeof checkSdtLive === 'function') checkSdtLive();
-            }
-
-            // Add phí bed vào cart
-            if (typeof autoAddBedItems === 'function') autoAddBedItems(data);
-
-            // Add các món pre-order vào cart
+            // _doShowBedDetail lo toàn bộ: SĐT, phí bed, dynamic island, session display, switchView
+            // Preorder được load riêng ngay sau (không còn auto-load trong _doShowBedDetail)
+            _doShowBedDetail(data, data.bedId);
             var bkKey = data.id || data.key;
-            if (bkKey) loadPreorderToCart(bkKey);
-
-            switchView('menu');
-            var sidebar = document.getElementById('sidebar-cart');
-            if (sidebar) sidebar.classList.remove('hidden');
+            if (bkKey) setTimeout(function() { loadPreorderToCart(bkKey); }, 200);
         };
     });
 }
