@@ -5409,6 +5409,12 @@ function handleMobileBedOrder(bookingId) {
     activeOrderingBedId = booking.bedId || "WAITING";
     pendingBedOrder = booking;
 
+    // Nếu có pre-order chưa load → hiện modal xem trước, không vào menu thẳng
+    if (_hasActivePreorder(booking)) {
+        showPreorderModal(booking, bookingId);
+        return;
+    }
+
     var sdtInput = document.getElementById('kh-sdt');
     if (sdtInput && booking.phone) {
         sdtInput.value = booking.phone;
@@ -5556,10 +5562,8 @@ function _doShowBedDetail(booking, bedId) {
         }
     }
 
-    var _preorderKey = booking.key || booking.id;
-    if (_preorderKey && _hasActivePreorder(booking)) {
-        loadPreorderToCart(_preorderKey);
-    }
+    // Preorder KHÔNG auto add vào cart ở đây nữa
+    // Nhân viên bấm nút vàng "Pre-order" → showPreorderModal → xem xong mới confirm add
 
     if (booking) {
         const rawPhone = booking.phone || "";
@@ -6582,7 +6586,24 @@ function showPreorderModal(data, bookingId) {
             modal.classList.add('hidden');
             pendingBedOrder = data;
             activeOrderingBedId = data.bedId || 'WAITING';
-            _doShowBedDetail(data, data.bedId);
+
+            // Điền SĐT
+            var sdtInput = document.getElementById('kh-sdt');
+            if (sdtInput && data.phone) {
+                sdtInput.value = data.phone;
+                if (typeof checkSdtLive === 'function') checkSdtLive();
+            }
+
+            // Add phí bed vào cart
+            if (typeof autoAddBedItems === 'function') autoAddBedItems(data);
+
+            // Add các món pre-order vào cart
+            var bkKey = data.id || data.key;
+            if (bkKey) loadPreorderToCart(bkKey);
+
+            switchView('menu');
+            var sidebar = document.getElementById('sidebar-cart');
+            if (sidebar) sidebar.classList.remove('hidden');
         };
     });
 }
