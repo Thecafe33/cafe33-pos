@@ -700,6 +700,7 @@ db.ref('bed_closing_time').on('value', function(snap) {
 
 let curPhone = localStorage.getItem('member_phone');
 var _pendingRescheduleKey     = null;
+var _pendingBonus             = null; // bonus từ slot gợi ý, lưu tạm cho đến khi booking thành công
 var _pendingRescheduleDateYMD = null;
 var _editingBookingPath       = null; // RT path đầy đủ của booking đang reschedule
 let userData = {};
@@ -1969,6 +1970,9 @@ function handleBooking() {
                         bookingData.preferredBed    = finalPreferredBed;
                         bookingData.preferBedFee    = finalPreferBedFee;
                     }
+                    if (_pendingBonus) {
+                        bookingData.bookingBonus = _pendingBonus;
+                    }
 
                     if (loadingText) loadingText.textContent = 'Đang xác nhận đặt chỗ...';
                     // Ghi vào nested path bedBookings/YYYY/MM/DD
@@ -2007,6 +2011,7 @@ function handleBooking() {
                             // Reset inline pre-order card
                             _poPendingPreorder = null;
                             _poItems = [];
+                            _pendingBonus = null;
                             poInlineReset();
 
                             showBookingSuccessModal(startVal, endVal, function() {
@@ -2081,7 +2086,7 @@ function showSuggestionUI(suggestions) {
                 Giờ bạn chọn vừa kín, nhưng <b>The cafe 33</b> tìm thấy một khung giờ <b>hoàn hảo</b> ngay sát bên cho bạn đây:
             </p>
             
-            <div onclick="applyAutoBook('${timeStr}')" class="suggestion-box cursor-pointer group" style="border: 2px solid #006241; background: #f0fdf9;">
+            <div onclick="applyAutoBook('${timeStr}', ${JSON.stringify(s.bonus||null)})" class="suggestion-box cursor-pointer group" style="border: 2px solid #006241; background: #f0fdf9;">
                 <div class="suggestion-left">
                     <div class="suggestion-time" style="color: #006241; font-size: 18px;">${timeStr}</div>
                     <div class="suggestion-note text-[#006241] font-bold">✅ ${s.note}</div>
@@ -2114,7 +2119,7 @@ function showSuggestionUI(suggestions) {
                 : `<div class="suggestion-note">✅ ${s.note}</div>`;
 
             html += `
-            <div onclick="applyAutoBook('${timeStr}')" class="suggestion-box cursor-pointer group">
+            <div onclick="applyAutoBook('${timeStr}', ${JSON.stringify(s.bonus||null)})" class="suggestion-box cursor-pointer group">
                 <div class="suggestion-left"><div class="suggestion-time">${timeStr}</div>${bonusHtml}</div>
                 <div class="btn-pick-now group-active:scale-95 transition-transform">DÙNG GIỜ NÀY</div>
             </div>`;
@@ -2127,10 +2132,13 @@ function showSuggestionUI(suggestions) {
 // 5. AUTO BOOK KHI KHÁCH CHỌN GỢI Ý
 // 2. SỬA LẠI HÀM "CHỌN GIỜ" (QUAN TRỌNG NHẤT)
 // Chỉ điền giờ -> Không đặt ngay -> Nhắc khách bấm nút
-function applyAutoBook(timeRange) {
+function applyAutoBook(timeRange, bonus) {
     const s = timeRange.split(' - ')[0];
     const e = timeRange.split(' - ')[1];
-    
+
+    // Lưu bonus tạm — sẽ ghi vào Firebase khi booking thành công
+    _pendingBonus = bonus || null;
+
     // 1. Điền giờ mới vào ô nhập liệu
     document.getElementById('book-start').value = s;
     document.getElementById('book-end').value = e;
