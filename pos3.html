@@ -2310,6 +2310,32 @@ luv u</textarea>
     </div>
 </div>
 
+<!-- Modal Bill theo Booking -->
+<div id="modal-bill-detail" class="hidden fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-3 pb-6 sm:p-6" onclick="if(event.target===this)closeBillModal()">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+        <div class="px-6 pt-6 pb-4 border-b border-dashed border-gray-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">HOÁ ĐƠN</p>
+                    <p id="bill-modal-guest" class="font-black text-[#1e3932] text-base"></p>
+                </div>
+                <button onclick="closeBillModal()" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+        </div>
+        <div id="bill-modal-body" class="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+            <div class="text-center py-8 text-gray-300 text-sm">Đang tải...</div>
+        </div>
+        <div class="px-6 pb-6 pt-3 border-t border-dashed border-gray-100">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-black uppercase tracking-widest text-gray-400">Tổng</span>
+                <span id="bill-modal-total" class="text-2xl font-black text-[#006241]">--</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="modal-waiting-rules" class="hidden fixed inset-0 z-[100001] flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
     <div class="text-center">
         <div class="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
@@ -4894,15 +4920,11 @@ const sortedPCList = [...currentBedList].map((item, idx) => ({...item, originalI
                 <span>${timeDisplay}</span>
                 ${b.totalSpend ? `<span class="bg-black/10 px-1.5 rounded text-[9px]">${Number(b.totalSpend).toLocaleString()}đ</span>` : ''}
             </div>
-            ${_hasActivePreorder(b)
+            ${(b.preorder && (_hasActivePreorder(b) || b.preorder.status === 'loaded'))
                 ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:${isSelected?'rgba(255,255,255,0.2)':'#fef9c3'};border:1px solid ${isSelected?'rgba(255,255,255,0.3)':'#fde047'};border-radius:8px;padding:3px 8px;">
-                    <span style="font-size:0.6rem;font-weight:900;color:${isSelected?'white':'#854d0e'};">PRE-ORDER · ${_countPreorderQty(b.preorder)} món</span>
+                    <span style="font-size:0.6rem;font-weight:900;color:${isSelected?'white':'#854d0e'};">🍜 Pre-order</span>
                   </div>`
-                : (b.preorder && b.preorder.status === 'loaded'
-                    ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:${isSelected?'rgba(255,255,255,0.15)':'#f0fdf4'};border:1px solid ${isSelected?'rgba(255,255,255,0.25)':'#86efac'};border-radius:8px;padding:3px 8px;">
-                        <span style="font-size:0.6rem;font-weight:900;color:${isSelected?'white':'#166534'};">✅ Pre-order đã load</span>
-                      </div>`
-                    : '')
+                : ''
             }
             ${b.preferredBed
                 ? `<div style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;background:${isSelected?'rgba(255,255,255,0.2)':'#e0f2fe'};border:1px solid ${isSelected?'rgba(255,255,255,0.3)':'#7dd3fc'};border-radius:8px;padding:3px 8px;">
@@ -5278,8 +5300,8 @@ function selectBedItem(index) {
                                     <span class="text-xs font-bold opacity-60 text-[#065F46]">VNĐ</span>
                                 </div>
                             </div>
-                            <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-[#065F46]">
-                                <span class="material-symbols-outlined">payments</span>
+                            <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-[#065F46] cursor-pointer active:scale-90 transition-transform" onclick="showBillModal('${bookingId}')" title="Xem hoá đơn">
+                                <span class="material-symbols-outlined">receipt_long</span>
                             </div>
                         </div>
 
@@ -5651,11 +5673,16 @@ function finalizeBedCheckIn(bedId) {
 
         var originalDurationMins = (bookEnd - bookStart) / 60000;
 
-        var originalBlocks = Math.ceil(originalDurationMins / 60);
+        // Nếu có pre-order → end đã bị cộng +5p bonus → trừ lại trước khi ceil
+        // để originalBlocks phản ánh đúng số tiếng khách thực sự đặt
+        var hasPreorder = pendingBedOrder.preorder && Object.keys(pendingBedOrder.preorder).length > 0;
+        var originalDurationForBlock = hasPreorder ? originalDurationMins - 5 : originalDurationMins;
+        var originalBlocks = Math.ceil(originalDurationForBlock / 60);
 
+        // Thời gian thực tế nếu khách đến sớm — cũng trừ 5p để so sánh cùng đơn vị
         var newTotalMins = originalDurationMins + diffMinutes;
-
-        var newBlocks = Math.ceil(newTotalMins / 60);
+        var newTotalForBlock = hasPreorder ? newTotalMins - 5 : newTotalMins;
+        var newBlocks = Math.ceil(newTotalForBlock / 60);
 
         if (newBlocks > originalBlocks) {
             var newEndDate = new Date(bookEnd.getTime() - (diffMinutes * 60000));
@@ -7170,6 +7197,95 @@ function saveOrderToFirebase(method) {
         }
     });
 }
+function closeBillModal() {
+    document.getElementById('modal-bill-detail').classList.add('hidden');
+}
+
+function showBillModal(bookingId) {
+    var booking = (globalAllBookings || []).find(function(b) { return (b.id || b.key) === bookingId; });
+    if (!booking) return;
+
+    var modal = document.getElementById('modal-bill-detail');
+    var guestEl = document.getElementById('bill-modal-guest');
+    var bodyEl = document.getElementById('bill-modal-body');
+    var totalEl = document.getElementById('bill-modal-total');
+
+    guestEl.innerText = (booking.name || 'Khách') + (booking.bedId ? ' · Bed 0' + booking.bedId : '');
+    bodyEl.innerHTML = '<div class="text-center py-8 text-gray-300 text-sm">Đang tải...</div>';
+    totalEl.innerText = '--';
+    modal.classList.remove('hidden');
+
+    // Query orders hôm nay theo bedId và phone
+    getOrdersRef().once('value', function(snap) {
+        var data = snap.val();
+        var orders = [];
+        if (data) {
+            Object.keys(data).forEach(function(k) {
+                var o = data[k];
+                var matchBed   = booking.bedId && o.bedId && String(o.bedId) === String(booking.bedId);
+                var matchPhone = booking.phone && o.sdt && o.sdt.replace(/[^0-9]/g,'') === booking.phone.replace(/[^0-9]/g,'');
+                if (matchBed || matchPhone) orders.push(o);
+            });
+        }
+
+        if (!orders.length) {
+            bodyEl.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">Chưa có hoá đơn nào.</div>';
+            return;
+        }
+
+        // Gom tất cả items từ các order
+        var itemMap = {};
+        var grandTotal = 0;
+        orders.forEach(function(o) {
+            grandTotal += Number(o.total || 0);
+            var items = [];
+            if (o.itemsArray && Array.isArray(o.itemsArray)) {
+                items = o.itemsArray;
+            } else if (o.items) {
+                o.items.split(',').forEach(function(s) {
+                    var raw = s.trim();
+                    var lastX = raw.lastIndexOf('x');
+                    if (lastX === -1) return;
+                    var namePart = raw.substring(0, lastX).trim();
+                    var qty = parseInt(raw.substring(lastX + 1)) || 1;
+                    var name = namePart, size = 'M';
+                    if (namePart.includes('(')) {
+                        var p = namePart.split('(');
+                        name = p[0].trim();
+                        size = p[1].replace(')', '').trim();
+                    }
+                    items.push({ name: name, size: size, qty: qty, price: 0 });
+                });
+            }
+            items.forEach(function(it) {
+                if (!it || !it.name) return;
+                var key = it.name + '|' + (it.size || 'M');
+                if (itemMap[key]) {
+                    itemMap[key].qty += (parseInt(it.qty) || 1);
+                } else {
+                    itemMap[key] = { name: it.name, size: it.size || 'M', price: it.price || 0, qty: parseInt(it.qty) || 1 };
+                }
+            });
+        });
+
+        var html = '';
+        Object.values(itemMap).forEach(function(it) {
+            var sub = it.price * it.qty;
+            html += '<div class="flex items-center justify-between py-2.5 border-b border-dashed border-gray-100 last:border-0">'
+                + '<div class="flex items-center gap-3">'
+                + '<span class="w-7 h-7 rounded-full bg-[#006241] text-white text-xs font-black flex items-center justify-center shrink-0">' + it.qty + '</span>'
+                + '<div><p class="text-sm font-black text-gray-800">' + it.name + '</p>'
+                + '<p class="text-[11px] text-gray-400 font-bold">' + it.size + (it.price > 0 ? ' · ' + it.price.toLocaleString() + 'đ' : '') + '</p></div>'
+                + '</div>'
+                + (sub > 0 ? '<span class="text-sm font-black text-[#006241]">' + sub.toLocaleString() + 'đ</span>' : '')
+                + '</div>';
+        });
+
+        bodyEl.innerHTML = html;
+        totalEl.innerText = grandTotal.toLocaleString() + 'đ';
+    });
+}
+
 function completeOrder() {
     if (pendingBedOrder && pendingBedOrder.isWalkIn && !pendingBedOrder.rulesAgreed) {
         document.getElementById('modal-rules-check').classList.remove('hidden');
