@@ -655,39 +655,22 @@ input, button, select, textarea { font-size: 1rem; }
     to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* FIX: Mobile layout cho view-discount (tab Quản lý) */
+/* Mobile Manager - ẩn desktop cols trên mobile */
 @media only screen and (max-width: 768px) {
-    /* Ẩn cột A sidebar trên mobile, dùng bottom tab bar thay thế */
-    #mgr-col-a {
-        display: none !important;
-    }
-    /* Ẩn cột B trên mobile (danh sách con) - chỉ hiện cột C (form chính) */
-    #mgr-col-b-wrap {
-        display: none !important;
-    }
-    /* Cột C chiếm toàn bộ màn hình */
-    #mgr-col-c {
-        width: 100% !important;
-        min-width: 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        overflow: hidden !important;
-    }
-    /* Thêm mobile tab bar cho view-discount */
-    #mgr-mobile-tabbar {
-        display: flex !important;
-    }
+    #mgr-col-a { display: none !important; }
+    #mgr-col-b-wrap { display: none !important; }
+    #mgr-col-c { display: none !important; }
+    /* view-discount cần relative để hub/screen overlay hoạt động */
+    #view-discount { position: relative !important; overflow: hidden !important; }
 }
 @media only screen and (min-width: 769px) {
-    #mgr-mobile-tabbar {
-        display: none !important;
-    }
-    /* Đảm bảo 2 tab Tem in / Máy in hiển thị đúng trên desktop */
-    #mgr-tab-sticker,
-    #mgr-tab-label {
-        display: flex !important;
-    }
+    #mob-mgr-hub, #mob-mgr-screen, #mob-mgr-edit-sheet { display: none !important; }
+    #mgr-tab-sticker, #mgr-tab-label { display: flex !important; }
 }
+/* Edit sheet show/hide */
+#mob-mgr-edit-sheet.sheet-open { display: flex !important; }
+/* Sub-screen slide animation */
+#mob-mgr-screen.slide-in { transform: translateX(0) !important; }
 </style>
 </head>
 <body class="flex text-left">
@@ -994,27 +977,157 @@ input, button, select, textarea { font-size: 1rem; }
 </div>
 
         <div id="view-discount" class="hidden flex-1 flex flex-col" style="background:white;overflow:hidden;">
-    <!-- Mobile tab bar (chỉ hiện trên mobile) -->
-    <div id="mgr-mobile-tabbar" style="display:none;flex-shrink:0;background:#F7F7F8;border-bottom:1px solid rgba(0,0,0,0.07);padding:10px 12px 8px;gap:6px;overflow-x:auto;align-items:center;">
-        <button onclick="switchView('menu')" style="flex-shrink:0;padding:8px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:#1f2937;color:white;display:flex;align-items:center;gap:5px;white-space:nowrap;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>Menu
+    <!-- Mobile Manager Hub (iOS26 style) - chỉ hiện trên mobile -->
+    <div id="mob-mgr-hub" class="md:hidden absolute inset-0 z-10 flex flex-col bg-[#F2F2F7]">
+      <!-- Header -->
+      <div class="flex items-center justify-between px-5 pt-12 pb-6 bg-[#F2F2F7]">
+        <button onclick="switchView('menu')" class="w-11 h-11 rounded-full bg-white shadow-sm flex items-center justify-center active:scale-90 transition-transform">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
         </button>
-        <div style="width:1px;height:22px;background:rgba(0,0,0,0.1);flex-shrink:0;"></div>
-        <button onclick="switchMgrTab('menueditor')" id="mgr-mob-tab-menueditor" style="flex-shrink:0;padding:8px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:#006241;color:white;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,98,65,0.2);white-space:nowrap;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2z"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/></svg>Menu
+        <h1 class="text-2xl font-black text-[#1f2937] tracking-tight">Quản lý</h1>
+        <div class="w-11"></div>
+      </div>
+      <!-- Grid cards -->
+      <div class="flex-1 overflow-y-auto px-4 pb-10">
+        <div class="grid grid-cols-2 gap-4">
+
+          <!-- Menu card -->
+          <div onclick="mobMgrOpenTab('menueditor')" class="bg-white rounded-[28px] p-5 flex flex-col gap-3 shadow-sm active:scale-95 transition-all cursor-pointer border border-white/60" style="min-height:140px;">
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background:rgba(0,98,65,0.1);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#006241" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2z"/><circle cx="7" cy="7" r="1.5" fill="#006241"/></svg>
+            </div>
+            <div>
+              <p class="text-[17px] font-black text-[#1f2937] leading-tight">Menu</p>
+              <p class="text-[12px] text-gray-400 font-semibold mt-0.5">Thêm & sửa món</p>
+            </div>
+            <div class="mt-auto flex justify-end">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- Quà tặng card -->
+          <div onclick="mobMgrOpenTab('gift')" class="bg-white rounded-[28px] p-5 flex flex-col gap-3 shadow-sm active:scale-95 transition-all cursor-pointer border border-white/60" style="min-height:140px;">
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background:rgba(251,146,60,0.1);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            </div>
+            <div>
+              <p class="text-[17px] font-black text-[#1f2937] leading-tight">Quà tặng</p>
+              <p class="text-[12px] text-gray-400 font-semibold mt-0.5">Voucher & ưu đãi</p>
+            </div>
+            <div class="mt-auto flex justify-end">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- In tem card -->
+          <div onclick="mobMgrOpenTab('sticker')" class="bg-white rounded-[28px] p-5 flex flex-col gap-3 shadow-sm active:scale-95 transition-all cursor-pointer border border-white/60" style="min-height:140px;">
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background:rgba(139,92,246,0.1);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/></svg>
+            </div>
+            <div>
+              <p class="text-[17px] font-black text-[#1f2937] leading-tight">In tem</p>
+              <p class="text-[12px] text-gray-400 font-semibold mt-0.5">Thiết kế & in</p>
+            </div>
+            <div class="mt-auto flex justify-end">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <!-- Máy in card -->
+          <div onclick="mobMgrOpenTab('label')" class="bg-white rounded-[28px] p-5 flex flex-col gap-3 shadow-sm active:scale-95 transition-all cursor-pointer border border-white/60" style="min-height:140px;">
+            <div class="w-12 h-12 rounded-2xl flex items-center justify-center" style="background:rgba(59,130,246,0.1);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+            </div>
+            <div>
+              <p class="text-[17px] font-black text-[#1f2937] leading-tight">Máy in</p>
+              <p class="text-[12px] text-gray-400 font-semibold mt-0.5">Cài đặt máy in</p>
+            </div>
+            <div class="mt-auto flex justify-end">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Manager Sub-screens (screen 2) - slide in from right -->
+    <div id="mob-mgr-screen" class="md:hidden absolute inset-0 z-20 bg-[#F2F2F7] transform translate-x-full transition-transform duration-300 ease-out flex flex-col" style="will-change:transform;">
+      <!-- Sub-header -->
+      <div class="flex items-center justify-between px-5 pt-12 pb-4 bg-[#F2F2F7] shrink-0">
+        <button onclick="mobMgrBack()" class="w-11 h-11 rounded-full bg-white shadow-sm flex items-center justify-center active:scale-90 transition-transform">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>
         </button>
-        <button onclick="switchMgrTab('gift')" id="mgr-mob-tab-gift" style="flex-shrink:0;padding:8px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:transparent;color:#6b7280;display:flex;align-items:center;gap:6px;white-space:nowrap;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/></svg>Quà tặng
+        <h2 id="mob-mgr-screen-title" class="text-xl font-black text-[#1f2937] tracking-tight">Menu</h2>
+        <button id="mob-mgr-add-btn" onclick="mobMgrAddNew()" class="w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-transform hidden" style="background:#006241;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         </button>
-        <button onclick="switchMgrTab('screen')" id="mgr-mob-tab-screen" style="flex-shrink:0;padding:8px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:transparent;color:#6b7280;display:flex;align-items:center;gap:6px;white-space:nowrap;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>2nd Screen
-        </button>
-        <button onclick="switchMgrTab('sticker')" id="mgr-mob-tab-sticker" style="flex-shrink:0;padding:8px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:transparent;color:#6b7280;display:flex;align-items:center;gap:6px;white-space:nowrap;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9.5" y1="14.5" x2="14.5" y2="14.5"/></svg>Tem in
-        </button>
-        <button onclick="switchMgrTab('label')" id="mgr-mob-tab-label" style="flex-shrink:0;padding:8px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:transparent;color:#6b7280;display:flex;align-items:center;gap:6px;white-space:nowrap;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>Máy in
-        </button>
+        <div id="mob-mgr-add-placeholder" class="w-11"></div>
+      </div>
+
+      <!-- Content area (list + detail stacked) -->
+      <div id="mob-mgr-content" class="flex-1 overflow-y-auto px-4 pb-8 space-y-3">
+        <!-- injected dynamically -->
+      </div>
+    </div>
+
+    <!-- Mobile Item Edit Sheet -->
+    <div id="mob-mgr-edit-sheet" class="md:hidden fixed inset-0 z-[200] flex flex-col justify-end" style="display:none!important;">
+      <div onclick="mobMgrCloseEdit()" class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"></div>
+      <div class="relative bg-white rounded-t-[32px] max-h-[92vh] flex flex-col shadow-2xl">
+        <!-- Sheet handle -->
+        <div class="flex justify-center pt-3 pb-1 shrink-0">
+          <div class="w-10 h-1 rounded-full bg-gray-200"></div>
+        </div>
+        <div class="flex items-center justify-between px-5 py-3 shrink-0 border-b border-gray-100">
+          <h3 id="mob-edit-sheet-title" class="text-lg font-black text-[#1f2937]">Thêm món mới</h3>
+          <button onclick="mobMgrCloseEdit()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold active:scale-90">✕</button>
+        </div>
+        <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+          <input type="hidden" id="mob-edit-key">
+
+          <div>
+            <label class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">Tên món *</label>
+            <input id="mob-edit-name" type="text" placeholder="VD: Cà phê sữa đá"
+              class="w-full px-4 py-3.5 bg-gray-50 rounded-2xl text-base font-bold border-2 border-transparent focus:border-[#006241] focus:bg-white outline-none transition-all">
+          </div>
+
+          <div>
+            <label class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">Danh mục</label>
+            <input id="mob-edit-type" type="text" placeholder="VD: Cà phê, Trà, Ăn vặt..."
+              class="w-full px-4 py-3.5 bg-gray-50 rounded-2xl text-base font-bold border-2 border-transparent focus:border-[#006241] focus:bg-white outline-none transition-all">
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">Giá M (đ)</label>
+              <input id="mob-edit-pricem" type="number" placeholder="35000"
+                class="w-full px-4 py-3.5 bg-gray-50 rounded-2xl text-base font-bold border-2 border-transparent focus:border-[#006241] focus:bg-white outline-none transition-all">
+            </div>
+            <div>
+              <label class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">Giá L (đ)</label>
+              <input id="mob-edit-pricel" type="number" placeholder="40000"
+                class="w-full px-4 py-3.5 bg-gray-50 rounded-2xl text-base font-bold border-2 border-transparent focus:border-[#006241] focus:bg-white outline-none transition-all">
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 block">Màu thẻ</label>
+            <div class="flex gap-2 flex-wrap">
+              <div id="mob-color-swatches" class="flex gap-2 flex-wrap"></div>
+            </div>
+            <input type="hidden" id="mob-edit-color" value="#006241">
+          </div>
+        </div>
+        <div class="px-5 pb-8 pt-3 shrink-0 flex gap-3">
+          <button id="mob-edit-delete-btn" onclick="mobMgrDeleteItem()" class="hidden px-5 py-4 bg-red-50 text-red-500 rounded-2xl font-black text-sm active:scale-95 transition-all border border-red-100">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+          <button onclick="mobMgrSaveItem()" class="flex-1 py-4 rounded-2xl font-black text-white text-base uppercase tracking-wider active:scale-95 transition-all shadow-lg" style="background:#006241;">
+            Lưu lại
+          </button>
+        </div>
+      </div>
     </div>
     <div style="display:flex;flex:1;overflow:hidden;min-height:0;">
 
@@ -6189,10 +6302,296 @@ function giftVoucherMarkUsedAndReset(resetOnly) {
 var _dfType = 'item';
 var _dfActive = true;
 
+/* ── MOBILE MANAGER HUB ─────────────────────────────────── */
+var _mobMgrCurrentTab = '';
+var _mobMgrEditingKey = null;
+var _mobMgrColors = ['#006241','#1e3932','#065F46','#064E3B','#f97316','#8b5cf6','#3b82f6','#ef4444','#ec4899','#eab308','#14b8a6','#6b7280'];
+
+function mobMgrOpenTab(tab) {
+    _mobMgrCurrentTab = tab;
+    var screen = document.getElementById('mob-mgr-screen');
+    var titleEl = document.getElementById('mob-mgr-screen-title');
+    var addBtn = document.getElementById('mob-mgr-add-btn');
+    var addPh  = document.getElementById('mob-mgr-add-placeholder');
+    var tabNames = { menueditor:'Menu', gift:'Quà tặng', sticker:'In tem', label:'Máy in' };
+    if (titleEl) titleEl.innerText = tabNames[tab] || tab;
+
+    // Show + button only for menu & gift
+    var hasAdd = (tab === 'menueditor' || tab === 'gift');
+    if (addBtn) addBtn.classList.toggle('hidden', !hasAdd);
+    if (addPh)  addPh.classList.toggle('hidden', hasAdd);
+
+    // Slide in
+    if (screen) {
+        screen.style.transform = 'translateX(100%)';
+        screen.style.display = 'flex';
+        requestAnimationFrame(function() {
+            screen.style.transition = 'transform 0.3s cubic-bezier(0.16,1,0.3,1)';
+            screen.style.transform = 'translateX(0)';
+        });
+    }
+
+    // Load content
+    if (tab === 'menueditor') mobMgrLoadMenu();
+    else if (tab === 'gift')  mobMgrLoadGift();
+    else if (tab === 'sticker') mobMgrLoadSticker();
+    else if (tab === 'label')   mobMgrLoadLabel();
+}
+
+function mobMgrBack() {
+    var screen = document.getElementById('mob-mgr-screen');
+    if (screen) {
+        screen.style.transition = 'transform 0.28s cubic-bezier(0.4,0,1,1)';
+        screen.style.transform = 'translateX(100%)';
+        setTimeout(function() { screen.style.display = 'none'; }, 290);
+    }
+}
+
+function mobMgrAddNew() {
+    if (_mobMgrCurrentTab === 'menueditor') mobMgrOpenEdit(null, null);
+    else if (_mobMgrCurrentTab === 'gift')  { discountFormClear(); switchMgrTab('gift'); }
+}
+
+/* ── MENU LIST (mobile) ──────────────────────────────────── */
+function mobMgrLoadMenu() {
+    var el = document.getElementById('mob-mgr-content');
+    if (!el) return;
+    el.innerHTML = '<div class="flex items-center justify-center py-10"><div class="w-7 h-7 border-3 border-[#006241] border-t-transparent rounded-full animate-spin"></div></div>';
+    db.ref('menu_xolifa').once('value', function(snap) {
+        var data = snap.val() || {};
+        var items = [];
+        if (Array.isArray(data)) {
+            data.forEach(function(v,i){ if(v) items.push({key:'idx_'+i, val:v}); });
+        } else {
+            Object.keys(data).forEach(function(k){ items.push({key:k, val:data[k]}); });
+        }
+        if (!items.length) {
+            el.innerHTML = '<div class="text-center py-16 text-gray-300"><p class="font-black text-lg">Chưa có món nào</p><p class="text-sm mt-1">Bấm + để thêm món mới</p></div>';
+            return;
+        }
+        // Group by type
+        var groups = {};
+        items.forEach(function(item) {
+            var t = item.val.type || 'Khác';
+            if (!groups[t]) groups[t] = [];
+            groups[t].push(item);
+        });
+        var html = '';
+        Object.keys(groups).forEach(function(type) {
+            html += '<div class="mb-1"><p class="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1 mb-2">' + type + '</p>';
+            html += '<div class="bg-white rounded-[20px] overflow-hidden shadow-sm border border-gray-100">';
+            groups[type].forEach(function(item, idx) {
+                var m = item.val;
+                var color = m.color || '#006241';
+                var priceStr = m.priceM > 0 ? (m.priceM/1000).toFixed(0)+'k' : (m.priceL > 0 ? (m.priceL/1000).toFixed(0)+'k' : 'Tự nhập');
+                var border = idx < groups[type].length-1 ? 'border-b border-gray-50' : '';
+                html += '<div onclick="mobMgrOpenEdit(\'' + item.key + '\', ' + JSON.stringify(m).replace(/'/g,"&#39;") + ')" '
+                      + 'class="flex items-center gap-3 px-4 py-3.5 active:bg-gray-50 transition-colors cursor-pointer ' + border + '">'
+                      + '<div class="w-3 h-3 rounded-full flex-shrink-0" style="background:' + color + '"></div>'
+                      + '<div class="flex-1 min-w-0">'
+                      + '<p class="text-[15px] font-bold text-[#1f2937] leading-tight">' + m.name + '</p>'
+                      + '<p class="text-[12px] text-gray-400 font-semibold mt-0.5">' + priceStr + '</p>'
+                      + '</div>'
+                      + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>'
+                      + '</div>';
+            });
+            html += '</div></div>';
+        });
+        el.innerHTML = html;
+    });
+}
+
+/* ── MENU EDIT SHEET (mobile) ───────────────────────────── */
+function mobMgrOpenEdit(key, m) {
+    _mobMgrEditingKey = key;
+    var sheet = document.getElementById('mob-mgr-edit-sheet');
+    var titleEl = document.getElementById('mob-edit-sheet-title');
+    var deleteBtn = document.getElementById('mob-edit-delete-btn');
+
+    document.getElementById('mob-edit-key').value = key || '';
+    document.getElementById('mob-edit-name').value  = m ? (m.name  || '') : '';
+    document.getElementById('mob-edit-type').value  = m ? (m.type  || '') : '';
+    document.getElementById('mob-edit-pricem').value = m ? (m.priceM || '') : '';
+    document.getElementById('mob-edit-pricel').value = m ? (m.priceL || '') : '';
+    document.getElementById('mob-edit-color').value = m ? (m.color || '#006241') : '#006241';
+
+    if (titleEl) titleEl.innerText = key ? 'Sửa món' : 'Thêm mới';
+    if (deleteBtn) deleteBtn.classList.toggle('hidden', !key);
+
+    // Render color swatches
+    var swatchEl = document.getElementById('mob-color-swatches');
+    if (swatchEl) {
+        var currentColor = m ? (m.color || '#006241') : '#006241';
+        swatchEl.innerHTML = _mobMgrColors.map(function(c) {
+            var active = c === currentColor ? 'ring-2 ring-offset-2 ring-[#006241]' : '';
+            return '<div onclick="document.getElementById(\'mob-edit-color\').value=\'' + c + '\';mobMgrRenderSwatches(\'' + c + '\')" '
+                 + 'class="w-8 h-8 rounded-full cursor-pointer active:scale-90 transition-all ' + active + '" style="background:' + c + '"></div>';
+        }).join('');
+    }
+
+    if (sheet) {
+        sheet.style.display = 'flex';
+        requestAnimationFrame(function() {
+            sheet.classList.add('sheet-open');
+        });
+    }
+}
+
+function mobMgrRenderSwatches(selectedColor) {
+    var swatchEl = document.getElementById('mob-color-swatches');
+    if (!swatchEl) return;
+    swatchEl.innerHTML = _mobMgrColors.map(function(c) {
+        var active = c === selectedColor ? 'ring-2 ring-offset-2 ring-[#006241] scale-110' : '';
+        return '<div onclick="document.getElementById(\'mob-edit-color\').value=\'' + c + '\';mobMgrRenderSwatches(\'' + c + '\')" '
+             + 'class="w-8 h-8 rounded-full cursor-pointer active:scale-90 transition-all ' + active + '" style="background:' + c + '"></div>';
+    }).join('');
+}
+
+function mobMgrCloseEdit() {
+    var sheet = document.getElementById('mob-mgr-edit-sheet');
+    if (sheet) {
+        sheet.classList.remove('sheet-open');
+        setTimeout(function() { sheet.style.display = 'none'; }, 250);
+    }
+}
+
+function mobMgrSaveItem() {
+    var name   = (document.getElementById('mob-edit-name').value || '').trim();
+    var type   = (document.getElementById('mob-edit-type').value || '').trim();
+    var priceM = parseInt(document.getElementById('mob-edit-pricem').value) || 0;
+    var priceL = parseInt(document.getElementById('mob-edit-pricel').value) || 0;
+    var color  = document.getElementById('mob-edit-color').value || '#006241';
+    var key    = document.getElementById('mob-edit-key').value;
+
+    if (!name) { alert('Vui lòng nhập tên món!'); return; }
+
+    var itemData = { name: name, type: type, priceM: priceM, priceL: priceL, color: color };
+    var saveBtn = document.querySelector('#mob-mgr-edit-sheet button[onclick="mobMgrSaveItem()"]');
+    if (saveBtn) saveBtn.innerText = 'Đang lưu...';
+
+    if (key && !key.startsWith('idx_')) {
+        db.ref('menu_xolifa/' + key).update(itemData, function(err) {
+            if (err) { alert('Lỗi: ' + err.message); }
+            else {
+                mobMgrCloseEdit();
+                setTimeout(function() { mobMgrLoadMenu(); menu = []; loadMenu(); }, 300);
+            }
+            if (saveBtn) saveBtn.innerText = 'Lưu lại';
+        });
+    } else {
+        // New item or array-indexed: push new
+        db.ref('menu_xolifa').once('value', function(snap) {
+            var data = snap.val() || {};
+            var arr = Array.isArray(data) ? data : Object.values(data);
+            arr.push(itemData);
+            db.ref('menu_xolifa').set(arr, function(err) {
+                if (err) { alert('Lỗi: ' + err.message); }
+                else {
+                    mobMgrCloseEdit();
+                    setTimeout(function() { mobMgrLoadMenu(); menu = []; loadMenu(); }, 300);
+                }
+                if (saveBtn) saveBtn.innerText = 'Lưu lại';
+            });
+        });
+    }
+}
+
+function mobMgrDeleteItem() {
+    var key = document.getElementById('mob-edit-key').value;
+    var name = document.getElementById('mob-edit-name').value;
+    if (!key) return;
+    if (!confirm('Xóa món "' + name + '"?')) return;
+
+    if (key.startsWith('idx_')) {
+        var idx = parseInt(key.replace('idx_', ''));
+        db.ref('menu_xolifa').once('value', function(snap) {
+            var arr = snap.val() || [];
+            if (Array.isArray(arr)) arr.splice(idx, 1);
+            db.ref('menu_xolifa').set(arr, function(err) {
+                if (!err) { mobMgrCloseEdit(); setTimeout(function() { mobMgrLoadMenu(); menu=[]; loadMenu(); }, 300); }
+                else alert('Lỗi: ' + err.message);
+            });
+        });
+    } else {
+        db.ref('menu_xolifa/' + key).remove(function(err) {
+            if (!err) { mobMgrCloseEdit(); setTimeout(function() { mobMgrLoadMenu(); menu=[]; loadMenu(); }, 300); }
+            else alert('Lỗi: ' + err.message);
+        });
+    }
+}
+
+/* ── GIFT / STICKER / LABEL (mobile) ───────────────────── */
+function mobMgrLoadGift() {
+    var el = document.getElementById('mob-mgr-content');
+    if (!el) return;
+    // Reuse desktop gift list but render mobile-friendly
+    el.innerHTML = '<div class="bg-white rounded-[20px] p-4 text-center text-gray-400"><p class="font-bold text-sm">Đang tải danh sách quà tặng...</p></div>';
+    // Load from Firestore
+    fstore.collection('rewards_xolifa').get().then(function(snap) {
+        if (snap.empty) {
+            el.innerHTML = '<div class="text-center py-16 text-gray-300"><p class="font-black text-lg">Chưa có voucher</p><p class="text-sm mt-1">Bấm + để thêm</p></div>';
+            return;
+        }
+        var html = '<div class="bg-white rounded-[20px] overflow-hidden shadow-sm border border-gray-100">';
+        var docs = [];
+        snap.forEach(function(doc) { docs.push({id:doc.id, d:doc.data()}); });
+        docs.forEach(function(item, idx) {
+            var d = item.d;
+            var border = idx < docs.length-1 ? 'border-b border-gray-50' : '';
+            html += '<div class="flex items-center gap-3 px-4 py-3.5 ' + border + '">'
+                  + '<div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0 text-lg">' + (d.icon || '🎁') + '</div>'
+                  + '<div class="flex-1 min-w-0">'
+                  + '<p class="text-[15px] font-bold text-[#1f2937] leading-tight">' + (d.label || d.name || 'Voucher') + '</p>'
+                  + '<p class="text-[12px] text-gray-400 font-semibold mt-0.5">' + (d.code || '') + (d.discount ? ' · -' + (d.discount/1000).toFixed(0) + 'k' : '') + '</p>'
+                  + '</div></div>';
+        });
+        html += '</div><p class="text-[11px] text-gray-400 text-center mt-3 font-semibold">Chỉnh sửa chi tiết trên máy tính</p>';
+        el.innerHTML = html;
+    }).catch(function() {
+        el.innerHTML = '<div class="text-center py-10 text-gray-300"><p class="font-bold">Không tải được dữ liệu</p></div>';
+    });
+}
+
+function mobMgrLoadSticker() {
+    var el = document.getElementById('mob-mgr-content');
+    if (!el) return;
+    el.innerHTML = '<div class="bg-white rounded-[20px] p-6 text-center shadow-sm">'
+        + '<div class="text-5xl mb-3">🏷️</div>'
+        + '<p class="font-black text-[#1f2937] text-lg mb-1">In tem</p>'
+        + '<p class="text-gray-400 text-sm font-semibold mb-6">Thiết kế và in tem nhãn sản phẩm</p>'
+        + '<button onclick="switchMgrTab(\'sticker\')" class="px-6 py-3 rounded-2xl font-black text-white text-sm active:scale-95 transition-all" style="background:#006241;">Mở trên máy tính</button>'
+        + '</div>'
+        + '<div class="bg-white rounded-[20px] p-5 mt-3 shadow-sm">'
+        + '<p class="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3">In nhanh</p>'
+        + '<button onclick="if(typeof printSticker===\'function\') printSticker()" class="w-full py-3.5 rounded-xl font-black text-[#006241] bg-green-50 text-sm active:scale-95 transition-all border border-green-100">🖨️ In tem ngay</button>'
+        + '</div>';
+}
+
+function mobMgrLoadLabel() {
+    var el = document.getElementById('mob-mgr-content');
+    if (!el) return;
+    el.innerHTML = '<div class="bg-white rounded-[20px] p-6 text-center shadow-sm">'
+        + '<div class="text-5xl mb-3">🖨️</div>'
+        + '<p class="font-black text-[#1f2937] text-lg mb-1">Máy in</p>'
+        + '<p class="text-gray-400 text-sm font-semibold mb-6">Cài đặt kết nối máy in bill</p>'
+        + '<button onclick="switchMgrTab(\'label\')" class="px-6 py-3 rounded-2xl font-black text-white text-sm active:scale-95 transition-all" style="background:#3b82f6;">Cài đặt chi tiết</button>'
+        + '</div>'
+        + '<div class="bg-white rounded-[20px] p-5 mt-3 shadow-sm space-y-3">'
+        + '<p class="text-[11px] font-black text-gray-400 uppercase tracking-widest">Thao tác nhanh</p>'
+        + '<button onclick="if(typeof printTest===\'function\') printTest()" class="w-full py-3.5 rounded-xl font-black text-[#3b82f6] bg-blue-50 text-sm active:scale-95 transition-all border border-blue-100">🖨️ In thử</button>'
+        + '</div>';
+}
+
 function openDiscountManager() {
     switchView('discount');
     setActiveNavBtn('btn-nav-discount');
-    switchMgrTab('menueditor');
+    var isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        var screen = document.getElementById('mob-mgr-screen');
+        if (screen) { screen.style.display = 'none'; screen.style.transform = 'translateX(100%)'; }
+    } else {
+        switchMgrTab('menueditor');
+    }
 }
 
 function switchMgrTab(tab) {
