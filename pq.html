@@ -129,7 +129,9 @@ body{
 .map-bg iframe{
   width:100%;height:100%;border:none;
   filter:invert(100%) hue-rotate(180deg) brightness(68%) contrast(108%) saturate(130%);
-  opacity:.85;pointer-events:none;
+  opacity:.85;
+  /* allow touch/click interaction */
+  pointer-events:auto;
 }
 /* gradient overlays */
 .map-bg::after{
@@ -139,6 +141,7 @@ body{
     linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,.05) 40%, rgba(0,0,0,.05) 60%, rgba(0,0,0,.7) 100%);
   pointer-events:none;z-index:1;
 }
+/* ensure home-top overlay cards don't block the map area behind them */
 
 /* Stacked cards container — anchored to BOTTOM of the map */
 .home-top{
@@ -541,15 +544,14 @@ body{
 .actual-val{font-size:16px;font-weight:600;color:rgba(255,255,255,.9)}
 .actual-val.over{color:var(--red)}
 
-/* edit actual button — group-hover opacity */
+/* edit actual button — always visible on mobile, no hover-gate */
 .edit-actual-btn{
   width:32px;height:32px;background:none;border:none;
   display:flex;align-items:center;justify-content:center;
   color:var(--zinc-500);border-radius:12px;cursor:pointer;
-  opacity:0;transition:opacity .2s,background .2s,color .2s;
+  opacity:1;transition:background .2s,color .2s;
 }
-.cost-item:hover .edit-actual-btn{opacity:1}
-.edit-actual-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.edit-actual-btn:hover,.edit-actual-btn:active{background:rgba(255,255,255,.08);color:#fff}
 .edit-actual-btn svg{width:15px;height:15px}
 
 .actual-edit-row{display:flex;align-items:center;gap:8px}
@@ -661,36 +663,19 @@ body{
 
     <!-- PLAN TAB -->
     <div id="tab-plan" class="tab-panel">
-      <!-- Hotel info -->
+      <!-- Hotel info — JS-rendered so it can be edited -->
       <div class="plan-section">
-        <h2 class="sec-title">Thông tin lưu trú</h2>
-        <div class="hotel-card">
-          <div class="hotel-top">
-            <div>
-              <div class="hotel-name">Premier Residences Phu Quoc</div>
-              <div class="hotel-addr">Emerald Bay, An Thới, Phú Quốc</div>
-            </div>
-            <span class="badge">Đã đặt</span>
-          </div>
-          <div class="hotel-grid">
-            <div class="hotel-cell">
-              <div class="hotel-cell-lbl">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Check-in
-              </div>
-              <div class="hotel-cell-time">14:00</div>
-              <div class="hotel-cell-date">31/03/2026</div>
-            </div>
-            <div class="hotel-cell">
-              <div class="hotel-cell-lbl">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Check-out
-              </div>
-              <div class="hotel-cell-time">12:00</div>
-              <div class="hotel-cell-date">02/04/2026</div>
-            </div>
-          </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <h2 class="sec-title" style="margin-bottom:0">Thông tin lưu trú</h2>
+          <button class="edit-toggle" onclick="openHotelEdit()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Sửa
+          </button>
         </div>
+        <div id="hotel-card-render"></div>
       </div>
 
       <!-- Packing list -->
@@ -785,6 +770,58 @@ body{
       </button>
     </div>
     <div class="edit-body" id="edit-body"></div>
+  </div>
+
+  <!-- ─── HOTEL EDIT OVERLAY ─── -->
+  <div class="edit-overlay" id="hotel-overlay">
+    <div class="edit-hdr">
+      <h2>Thông tin lưu trú</h2>
+      <button class="close-btn" onclick="closeHotelEdit()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label class="edit-label">Tên khách sạn</label>
+        <input class="edit-input" id="h-name" type="text" oninput="updHotel()"/>
+      </div>
+      <div>
+        <label class="edit-label">Địa chỉ</label>
+        <input class="edit-input" id="h-addr" type="text" oninput="updHotel()"/>
+      </div>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <label class="edit-label">Giờ check-in</label>
+          <input class="edit-input" id="h-cin-time" type="time" oninput="updHotel()" style="color-scheme:dark"/>
+        </div>
+        <div style="flex:1">
+          <label class="edit-label">Ngày check-in</label>
+          <input class="edit-input" id="h-cin-date" type="date" oninput="updHotel()" style="color-scheme:dark"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <label class="edit-label">Giờ check-out</label>
+          <input class="edit-input" id="h-cout-time" type="time" oninput="updHotel()" style="color-scheme:dark"/>
+        </div>
+        <div style="flex:1">
+          <label class="edit-label">Ngày check-out</label>
+          <input class="edit-input" id="h-cout-date" type="date" oninput="updHotel()" style="color-scheme:dark"/>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;padding-top:4px">
+        <div style="flex:1">
+          <label class="edit-label">Trạng thái</label>
+          <select class="add-select" id="h-status" onchange="updHotel()">
+            <option value="Đã đặt">Đã đặt</option>
+            <option value="Chờ xác nhận">Chờ xác nhận</option>
+            <option value="Chưa đặt">Chưa đặt</option>
+          </select>
+        </div>
+      </div>
+    </div>
   </div>
 
 </div><!-- #app -->
@@ -1138,10 +1175,136 @@ function saveEditCost(id){
 }
 
 /* ═══════════════════════════════════════
+   HOTEL DATA
+═══════════════════════════════════════ */
+const DEFAULT_HOTEL = {
+  name: 'Premier Residences Phu Quoc',
+  addr: 'Emerald Bay, An Thới, Phú Quốc',
+  cinTime: '14:00', cinDate: '2026-03-31',
+  coutTime: '12:00', coutDate: '2026-04-02',
+  status: 'Đã đặt'
+};
+let hotel = DEFAULT_HOTEL;
+
+function renderHotel(){
+  const clockSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+  const cinDateFmt = hotel.cinDate ? hotel.cinDate.split('-').reverse().join('/') : '—';
+  const coutDateFmt = hotel.coutDate ? hotel.coutDate.split('-').reverse().join('/') : '—';
+  const statusColor = hotel.status==='Đã đặt' ? 'var(--indigo-dim)' : hotel.status==='Chờ xác nhận' ? 'rgba(234,179,8,.15)' : 'rgba(239,68,68,.15)';
+  const statusBorder = hotel.status==='Đã đặt' ? 'var(--indigo-border)' : hotel.status==='Chờ xác nhận' ? 'rgba(234,179,8,.3)' : 'var(--red-border)';
+  const statusText = hotel.status==='Đã đặt' ? '#c7d2fe' : hotel.status==='Chờ xác nhận' ? '#fde047' : '#fca5a5';
+  document.getElementById('hotel-card-render').innerHTML = `
+    <div class="hotel-card">
+      <div class="hotel-top">
+        <div>
+          <div class="hotel-name">${esc(hotel.name)}</div>
+          <div class="hotel-addr">${esc(hotel.addr)}</div>
+        </div>
+        <span class="badge" style="background:${statusColor};border-color:${statusBorder};color:${statusText}">${esc(hotel.status)}</span>
+      </div>
+      <div class="hotel-grid">
+        <div class="hotel-cell">
+          <div class="hotel-cell-lbl">${clockSvg} Check-in</div>
+          <div class="hotel-cell-time">${esc(hotel.cinTime)}</div>
+          <div class="hotel-cell-date">${cinDateFmt}</div>
+        </div>
+        <div class="hotel-cell">
+          <div class="hotel-cell-lbl">${clockSvg} Check-out</div>
+          <div class="hotel-cell-time">${esc(hotel.coutTime)}</div>
+          <div class="hotel-cell-date">${coutDateFmt}</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openHotelEdit(){
+  document.getElementById('h-name').value = hotel.name;
+  document.getElementById('h-addr').value = hotel.addr;
+  document.getElementById('h-cin-time').value = hotel.cinTime;
+  document.getElementById('h-cin-date').value = hotel.cinDate;
+  document.getElementById('h-cout-time').value = hotel.coutTime;
+  document.getElementById('h-cout-date').value = hotel.coutDate;
+  document.getElementById('h-status').value = hotel.status;
+  document.getElementById('hotel-overlay').classList.add('open');
+}
+function closeHotelEdit(){
+  document.getElementById('hotel-overlay').classList.remove('open');
+}
+function updHotel(){
+  hotel.name  = document.getElementById('h-name').value || hotel.name;
+  hotel.addr  = document.getElementById('h-addr').value;
+  hotel.cinTime  = document.getElementById('h-cin-time').value;
+  hotel.cinDate  = document.getElementById('h-cin-date').value;
+  hotel.coutTime = document.getElementById('h-cout-time').value;
+  hotel.coutDate = document.getElementById('h-cout-date').value;
+  hotel.status   = document.getElementById('h-status').value;
+  renderHotel();
+  save();
+}
+
+/* ═══════════════════════════════════════
+   LOCALSTORAGE — persist everything
+   Data lưu trong trình duyệt (localStorage)
+   → tồn tại qua reload, nhưng mất khi
+     xóa cache / dùng browser khác.
+═══════════════════════════════════════ */
+const STORAGE_KEY = 'trip_phuquoc_2026_v1';
+
+function save(){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      itinerary, packingList, costs, hotel
+    }));
+  } catch(e){ console.warn('localStorage unavailable', e); }
+}
+
+function load(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(d.itinerary)   itinerary   = d.itinerary;
+    if(d.packingList) packingList = d.packingList;
+    if(d.costs)       costs       = d.costs;
+    if(d.hotel)       hotel       = {...DEFAULT_HOTEL, ...d.hotel};
+  } catch(e){ console.warn('Failed to load from localStorage', e); }
+}
+
+/* Wrap all mutation functions to auto-save */
+const _origMarkDone = markDone;
+markDone = id => { _origMarkDone(id); save(); };
+
+const _origToggleStatus = toggleStatus;
+toggleStatus = id => { _origToggleStatus(id); save(); };
+
+const _origUpdAct = updAct;
+updAct = (id,field,val) => { _origUpdAct(id,field,val); save(); };
+
+const _origToggleItem = toggleItem;
+toggleItem = id => { _origToggleItem(id); save(); };
+
+const _origDelItem = delItem;
+delItem = id => { _origDelItem(id); save(); };
+
+const _origAddItem = addItem;
+addItem = () => {
+  const n=document.getElementById('add-name');
+  const c=document.getElementById('add-cat');
+  if(!n.value.trim()) return;
+  packingList.push({id:'p'+Date.now(),name:n.value.trim(),category:c.value,checked:false});
+  n.value=''; renderPacking(); save();
+};
+
+const _origSaveEditCost = saveEditCost;
+saveEditCost = id => { _origSaveEditCost(id); save(); };
+
+/* ═══════════════════════════════════════
    INIT
 ═══════════════════════════════════════ */
+load();
 renderHome();
 renderPacking();
+renderHotel();
 renderCost();
 </script>
 </body>
