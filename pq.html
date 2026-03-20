@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#000000"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Phu Quoc 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap" rel="stylesheet"/>
+<style>
+/* ── RESET ────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overscroll-behavior:none}
+
+/* ── BASE — mirrors App.tsx body & globals ── */
+body{
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  background:#000;
+  background-image:
+    radial-gradient(circle at 15% 50%, rgba(79,70,229,.08) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(147,51,234,.08) 0%, transparent 50%);
+  background-attachment:fixed;
+  color:#fff;
+  min-height:100dvh;
+}
+
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:10px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.2)}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+
+/* ── TOKENS ──────────────────────────────── */
+:root{
+  --zinc-900:#18181b;
+  --zinc-800:#27272a;
+  --zinc-700:#3f3f46;
+  --zinc-500:#71717a;
+  --zinc-400:#a1a1aa;
+  --zinc-300:#d4d4d8;
+  --indigo:#6366f1;
+  --indigo-dim:rgba(99,102,241,.2);
+  --indigo-border:rgba(99,102,241,.2);
+  --purple:#a855f7;
+  --emerald:#10b981;
+  --emerald-dim:rgba(16,185,129,.1);
+  --emerald-border:rgba(16,185,129,.2);
+  --rose:#f43f5e;
+  --red:#ef4444;
+  --red-dim:rgba(239,68,68,.1);
+  --red-border:rgba(239,68,68,.2);
+  --border:rgba(255,255,255,.05);
+  --border2:rgba(255,255,255,.1);
+  --blur:blur(24px);
+}
+
+/* ── LAYOUT ──────────────────────────────── */
+/* mirrors: min-h-screen bg-black text-white font-sans */
+#app{min-height:100dvh;display:flex;flex-direction:column}
+
+/* ── HEADER ──────────────────────────────── */
+/* mirrors: sticky top-0 z-40 bg-black/50 backdrop-blur-2xl border-b border-white/5 px-6 py-4 */
+#header{
+  position:sticky;top:0;z-index:40;
+  background:rgba(0,0,0,.5);
+  backdrop-filter:blur(32px);
+  border-bottom:1px solid rgba(255,255,255,.05);
+  padding:16px 24px;
+}
+/* mirrors: text-2xl font-semibold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-white/60 */
+#header h1{
+  font-size:24px;font-weight:600;letter-spacing:-.025em;
+  background:linear-gradient(to right,#fff,rgba(255,255,255,.6));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+/* mirrors: text-xs font-medium text-white/40 uppercase tracking-widest mt-1 */
+#header p{
+  font-size:12px;font-weight:500;color:rgba(255,255,255,.4);
+  text-transform:uppercase;letter-spacing:.1em;margin-top:4px;
+}
+
+/* ── MAIN ──────────────────────────────── */
+/* mirrors: pb-32 px-4 pt-6 max-w-2xl mx-auto */
+#main{
+  padding:24px 16px 128px;
+  max-width:672px;
+  margin:0 auto;
+  width:100%;
+  flex:1;
+}
+
+/* tab panels — AnimatePresence simulation */
+.tab-panel{display:none;opacity:0;transform:translateY(10px);filter:blur(10px)}
+.tab-panel.active{
+  display:block;
+  animation:tabIn .3s cubic-bezier(.22,1,.36,1) forwards;
+}
+@keyframes tabIn{
+  to{opacity:1;transform:translateY(0);filter:blur(0)}
+}
+
+/* ══════════════════════════════════════════
+   HOME TAB — HomeTab.tsx
+══════════════════════════════════════════ */
+
+/* Map container — relative h-[calc(100dvh-140px)] -mx-4 -mt-6 overflow-hidden rounded-b-3xl */
+.home-map-wrap{
+  position:relative;
+  height:calc(100dvh - 140px);
+  margin:-24px -16px 0;
+  overflow:hidden;
+  border-radius:0 0 24px 24px;
+}
+
+/* Map bg */
+.map-bg{
+  position:absolute;inset:0;z-index:0;
+  background:#0d1117;
+}
+.map-bg iframe{
+  width:100%;height:100%;border:none;
+  filter:invert(100%) hue-rotate(180deg) brightness(68%) contrast(108%) saturate(130%);
+  opacity:.85;pointer-events:none;
+}
+/* gradient overlays */
+.map-bg::after{
+  content:'';position:absolute;inset:0;
+  /* Lighter gradient so map is visible through the middle */
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,.05) 40%, rgba(0,0,0,.05) 60%, rgba(0,0,0,.7) 100%);
+  pointer-events:none;z-index:1;
+}
+
+/* Stacked cards container — anchored to BOTTOM of the map */
+.home-top{
+  position:absolute;
+  bottom:28px;
+  left:16px;right:16px;
+  z-index:10;
+  display:flex;
+  flex-direction:column;
+  gap:0;
+}
+
+/* ── NEXT card (shown ABOVE current, smaller + dimmed) ── */
+.next-card-wrap{
+  /* sits above current via order, but visually appears smaller/behind */
+  order:0;
+  padding:0 10px; /* horizontal inset = looks narrower */
+  margin-bottom:-18px; /* overlaps current card below it */
+  position:relative;
+  z-index:1;
+  pointer-events:none;
+}
+.next-card{
+  background:rgba(30,30,34,.65);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:20px;
+  padding:12px 16px;
+  display:flex;align-items:center;gap:10px;
+  /* scale down + shift up slightly for depth */
+  transform:scale(0.93) translateY(4px);
+  transform-origin:bottom center;
+  opacity:.6;
+  box-shadow:0 4px 24px rgba(0,0,0,.35);
+  transition:transform .4s cubic-bezier(.22,1,.36,1), opacity .4s;
+}
+.next-card svg{width:15px;height:15px;color:var(--zinc-400);flex-shrink:0}
+.next-card-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--zinc-500)}
+.next-card-name{font-size:14px;font-weight:500;color:rgba(255,255,255,.65);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.next-card-time{font-size:12px;font-weight:500;color:var(--zinc-500);margin-left:auto;white-space:nowrap;flex-shrink:0}
+
+/* ── CURRENT card (foreground, full size) ── */
+.current-card{
+  order:1;
+  background:rgba(18,18,20,.88);
+  backdrop-filter:blur(32px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:24px;
+  padding:20px;
+  box-shadow:0 32px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04) inset;
+  position:relative;z-index:2;
+  animation:cardSlideUp .45s cubic-bezier(.22,1,.36,1);
+}
+
+@keyframes cardSlideUp{
+  from{opacity:0;transform:translateY(24px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* "Đang diễn ra" pill */
+.nav-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(99,102,241,.2);
+  color:#a5b4fc;
+  border:1px solid rgba(99,102,241,.2);
+  border-radius:999px;
+  padding:4px 12px;
+  font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+}
+.nav-badge svg{width:14px;height:14px}
+
+/* time chip */
+.time-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:rgba(0,0,0,.4);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:999px;
+  padding:4px 12px;
+  font-size:14px;font-weight:500;color:#fff;
+  font-variant-numeric:tabular-nums;
+}
+.time-chip svg{width:14px;height:14px;color:var(--zinc-400)}
+
+/* Activity title */
+.act-title{font-size:22px;font-weight:600;line-height:1.25;color:#fff;margin:10px 0 6px}
+
+/* location row */
+.loc-row{display:flex;align-items:center;gap:8px;color:var(--zinc-300);font-size:14px;font-weight:500;margin-bottom:10px}
+.loc-row svg{width:16px;height:16px;color:var(--rose);flex-shrink:0}
+
+/* meta row */
+.meta-row{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--zinc-500);margin-bottom:16px}
+
+/* Done button */
+.done-btn{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  background:linear-gradient(135deg,var(--indigo),var(--purple));
+  color:#fff;border:none;border-radius:999px;
+  padding:13px;font-size:14px;font-weight:700;font-family:inherit;
+  cursor:pointer;
+  box-shadow:0 8px 24px rgba(99,102,241,.28);
+  transition:opacity .15s,transform .15s;
+}
+.done-btn:active{opacity:.85;transform:scale(.98)}
+.done-btn svg{width:20px;height:20px}
+
+/* Completed card */
+.completed-card{
+  background:var(--emerald-dim);
+  border:1px solid var(--emerald-border);
+  border-radius:24px;
+  padding:32px 24px;
+  text-align:center;
+  animation:tabIn .4s ease;
+}
+.completed-icon{
+  width:52px;height:52px;background:rgba(16,185,129,.2);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;
+}
+.completed-icon svg{width:26px;height:26px;color:var(--emerald)}
+.completed-title{font-size:20px;font-weight:600;color:#6ee7b7;margin-bottom:4px}
+.completed-sub{font-size:13px;color:rgba(110,231,183,.75)}
+
+/* Edit FAB — absolute bottom-6 right-4 */
+.edit-fab{
+  position:absolute;bottom:24px;right:16px;z-index:20;
+  width:46px;height:46px;border-radius:50%;
+  background:rgba(0,0,0,.8);
+  backdrop-filter:var(--blur);
+  border:1px solid rgba(255,255,255,.1);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:rgba(255,255,255,.88);
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  transition:background .2s;
+}
+.edit-fab:hover{background:rgba(255,255,255,.1)}
+.edit-fab svg{width:18px;height:18px}
+
+/* Edit overlay — full-screen slide up */
+.edit-overlay{
+  position:fixed;inset:0;z-index:999;
+  background:rgba(0,0,0,.96);
+  backdrop-filter:blur(32px);
+  overflow-y:auto;
+  transform:translateY(100%);
+  transition:transform .35s cubic-bezier(.32,.72,0,1);
+  -webkit-overflow-scrolling:touch;
+}
+.edit-overlay.open{transform:translateY(0)}
+
+.edit-hdr{
+  position:sticky;top:0;z-index:10;
+  background:rgba(0,0,0,.8);backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--border);
+  padding:16px;display:flex;align-items:center;justify-content:space-between;
+}
+.edit-hdr h2{font-size:18px;font-weight:600;color:#fff}
+
+.close-btn{
+  width:36px;height:36px;background:rgba(255,255,255,.08);
+  border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:#fff;transition:background .2s;
+}
+.close-btn:hover{background:rgba(255,255,255,.15)}
+.close-btn svg{width:18px;height:18px}
+
+.edit-body{padding:16px;padding-bottom:100px;display:flex;flex-direction:column;gap:12px}
+
+/* edit item cards — bg-zinc-900/50 border-white/10 rounded-3xl */
+.edit-item{
+  background:rgba(24,24,27,.5);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:24px;
+  padding:16px;display:flex;flex-direction:column;gap:12px;
+  box-shadow:0 4px 16px rgba(0,0,0,.15);
+}
+.edit-label{
+  display:block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--zinc-500);margin-bottom:4px;
+}
+.edit-input{
+  width:100%;
+  background:rgba(0,0,0,.5);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;
+  padding:10px 14px;
+  font-size:14px;font-family:'Inter',system-ui,sans-serif;
+  color:#fff;outline:none;
+  transition:border-color .2s;
+}
+.edit-input:focus{border-color:var(--indigo)}
+.edit-input[type="time"]{color-scheme:dark}
+.edit-row{display:flex;gap:10px}
+.edit-row > div{flex:1}
+
+.status-btn{
+  font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:8px 16px;border-radius:999px;border:1px solid;cursor:pointer;
+  font-family:'Inter',system-ui,sans-serif;
+  transition:background .2s;
+}
+.status-btn.done{background:var(--emerald-dim);color:#6ee7b7;border-color:var(--emerald-border)}
+.status-btn.done:hover{background:rgba(16,185,129,.2)}
+.status-btn.pending{background:var(--zinc-800);color:var(--zinc-400);border-color:var(--border)}
+.status-btn.pending:hover{background:var(--zinc-700)}
+
+/* ══════════════════════════════════════════
+   PLAN TAB — PlanTab.tsx
+══════════════════════════════════════════ */
+
+/* space-y-8 equivalent */
+.plan-section{margin-bottom:32px}
+
+/* section heading — text-xl font-semibold tracking-tight text-white/90 */
+.sec-title{font-size:20px;font-weight:600;letter-spacing:-.01em;color:rgba(255,255,255,.9);margin-bottom:16px}
+
+/* hotel card — p-6 rounded-3xl bg-zinc-900/40 backdrop-blur-md border-white/5 */
+.hotel-card{
+  background:rgba(24,24,27,.4);
+  backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.05);
+  border-radius:24px;
+  padding:24px;
+  box-shadow:0 20px 40px rgba(0,0,0,.2);
+}
+.hotel-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.hotel-name{font-size:17px;font-weight:500;color:rgba(255,255,255,.9)}
+.hotel-addr{font-size:13px;color:var(--zinc-400);margin-top:4px}
+
+/* badge — bg-indigo-500/20 text-indigo-300 rounded-full border-indigo-500/20 */
+.badge{
+  display:inline-block;
+  background:var(--indigo-dim);color:#c7d2fe;
+  border:1px solid var(--indigo-border);
+  border-radius:999px;padding:3px 12px;
+  font-size:12px;font-weight:500;white-space:nowrap;
+}
+
+/* hotel grid — grid-cols-2 */
+.hotel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hotel-cell{
+  background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.05);
+  border-radius:16px;padding:14px;
+}
+.hotel-cell-lbl{
+  display:flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--zinc-400);margin-bottom:8px;
+}
+.hotel-cell-lbl svg{width:14px;height:14px}
+.hotel-cell-time{font-size:15px;font-weight:500;color:rgba(255,255,255,.9)}
+.hotel-cell-date{font-size:13px;color:var(--zinc-500);margin-top:2px}
+
+/* packing header row */
+.pack-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
+
+/* edit toggle link — text-indigo-400 bg-indigo-500/10 rounded-full */
+.edit-toggle{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:13px;font-weight:500;color:#818cf8;
+  background:var(--indigo-dim);
+  border:none;border-radius:999px;
+  padding:6px 14px;cursor:pointer;font-family:'Inter',system-ui,sans-serif;
+  transition:color .2s,background .2s;
+}
+.edit-toggle:hover{color:#a5b4fc;background:rgba(99,102,241,.28)}
+.edit-toggle svg{width:14px;height:14px}
+
+/* progress bar */
+.progress-wrap{height:8px;background:var(--zinc-900);border-radius:4px;overflow:hidden;border:1px solid rgba(255,255,255,.05);margin-bottom:24px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--indigo),var(--purple));border-radius:4px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+
+/* pack group — p-5 rounded-3xl bg-zinc-900/40 backdrop-blur-md border-white/5 */
+.pack-group{
+  background:rgba(24,24,27,.4);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.05);
+  border-radius:24px;padding:20px;margin-bottom:12px;
+}
+.pack-cat{font-size:12px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--zinc-400);margin-bottom:16px}
+
+/* pack row */
+.pack-row{display:flex;align-items:center;gap:12px;padding:2px 0;cursor:pointer}
+.pack-row + .pack-row{margin-top:12px}
+.pack-check-btn{
+  flex-shrink:0;width:22px;height:22px;background:none;border:none;
+  padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--zinc-500);transition:color .2s;
+}
+.pack-check-btn.checked{color:var(--emerald)}
+.pack-check-btn svg{width:20px;height:20px}
+
+/* item name — text-base */
+.pack-name{font-size:15px;color:rgba(255,255,255,.82);flex:1;transition:color .2s;cursor:pointer}
+.pack-name.done{color:var(--zinc-500);text-decoration:line-through}
+
+.pack-del-btn{
+  background:none;border:none;padding:4px;
+  color:rgba(239,68,68,.55);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .2s,color .2s;
+}
+.pack-del-btn svg{width:15px;height:15px}
+.pack-del-btn:hover{color:var(--red)}
+.pack-row:hover .pack-del-btn,.pack-row.edit-mode .pack-del-btn{opacity:1}
+
+/* add form — bg-indigo-500/5 border-indigo-500/20 dashed */
+.add-form{
+  background:rgba(99,102,241,.04);
+  border:1.5px dashed rgba(99,102,241,.2);
+  border-radius:24px;padding:20px;margin-top:4px;
+  display:none;
+}
+.add-form.open{display:block;animation:tabIn .25s ease}
+.add-form-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:#818cf8;margin-bottom:16px}
+.add-form-title svg{width:15px;height:15px}
+.add-row{display:flex;gap:10px;margin-top:10px}
+.add-select{
+  flex:1;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1);
+  border-radius:12px;padding:12px 14px;
+  font-size:13px;font-family:'Inter',system-ui,sans-serif;color:#fff;
+  outline:none;appearance:none;transition:border-color .2s;
+}
+.add-select:focus{border-color:var(--indigo)}
+.add-btn{
+  background:var(--indigo);color:#fff;border:none;border-radius:12px;
+  padding:10px 20px;font-size:13px;font-weight:600;font-family:'Inter',system-ui,sans-serif;
+  cursor:pointer;transition:filter .2s,opacity .2s;
+}
+.add-btn:hover{filter:brightness(1.1)}
+.add-btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+
+/* ══════════════════════════════════════════
+   COST TAB — CostTab.tsx
+══════════════════════════════════════════ */
+
+/* summary grid — grid-cols-2 gap-4 */
+.cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
+
+/* card — p-5 rounded-3xl bg-zinc-900/40 backdrop-blur-md border-white/5 */
+.cost-card{
+  background:rgba(24,24,27,.4);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.05);
+  border-radius:24px;padding:20px;
+  box-shadow:0 20px 40px rgba(0,0,0,.2);
+}
+.cost-card.full{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}
+.cost-card.over{background:var(--red-dim);border-color:var(--red-border)}
+.cost-card.under{background:var(--emerald-dim);border-color:var(--emerald-border)}
+
+/* card label — flex items-center gap-2 text-zinc-400 mb-2 text-xs font-medium uppercase tracking-wider */
+.cost-lbl{display:flex;align-items:center;gap:8px;color:var(--zinc-400);margin-bottom:8px;font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.cost-lbl.indigo{color:rgba(165,180,252,.8)}
+.cost-lbl svg{width:14px;height:14px}
+
+.cost-val{font-size:19px;font-weight:600;color:rgba(255,255,255,.9)}
+
+/* diff section */
+.diff-wrap{display:flex;align-items:center;gap:14px}
+.diff-icon{
+  width:40px;height:40px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.diff-icon.over{background:rgba(239,68,68,.2);color:var(--red)}
+.diff-icon.under{background:rgba(16,185,129,.2);color:var(--emerald)}
+.diff-icon svg{width:20px;height:20px}
+.diff-lbl{font-size:13px;font-weight:500;margin-bottom:2px}
+.diff-lbl.over{color:rgba(239,68,68,.8)}
+.diff-lbl.under{color:rgba(52,211,153,.8)}
+.diff-val{font-size:20px;font-weight:600}
+.diff-val.over{color:var(--red)}
+.diff-val.under{color:var(--emerald)}
+
+/* cost list items — space-y-4 */
+.cost-item{
+  background:rgba(24,24,27,.4);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.05);
+  border-radius:24px;padding:20px;
+  margin-bottom:16px;
+  animation:tabIn .3s ease;
+}
+.cost-item-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.cost-item-name{font-size:15px;font-weight:500;color:rgba(255,255,255,.9)}
+.cost-item-cat{
+  display:inline-block;margin-top:6px;
+  padding:3px 10px;background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);border-radius:999px;
+  font-size:11px;font-weight:500;color:var(--zinc-400);
+}
+.cost-est-lbl{font-size:11px;color:var(--zinc-500);margin-bottom:2px;text-align:right}
+.cost-est-val{font-size:13px;font-weight:500;color:var(--zinc-400);text-align:right}
+
+.cost-item-bot{
+  display:flex;align-items:center;justify-content:space-between;
+  padding-top:16px;border-top:1px solid rgba(255,255,255,.05);
+}
+.actual-label{font-size:13px;color:var(--zinc-400)}
+.actual-display{display:flex;align-items:center;gap:8px}
+
+.actual-val{font-size:16px;font-weight:600;color:rgba(255,255,255,.9)}
+.actual-val.over{color:var(--red)}
+
+/* edit actual button — group-hover opacity */
+.edit-actual-btn{
+  width:32px;height:32px;background:none;border:none;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--zinc-500);border-radius:12px;cursor:pointer;
+  opacity:0;transition:opacity .2s,background .2s,color .2s;
+}
+.cost-item:hover .edit-actual-btn{opacity:1}
+.edit-actual-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.edit-actual-btn svg{width:15px;height:15px}
+
+.actual-edit-row{display:flex;align-items:center;gap:8px}
+.actual-input{
+  width:130px;background:rgba(0,0,0,.5);
+  border:1px solid rgba(99,102,241,.5);border-radius:12px;
+  padding:8px 12px;text-align:right;
+  font-size:13px;font-family:'Inter',monospace;color:#fff;outline:none;
+}
+.actual-input:focus{border-color:var(--indigo)}
+.actual-save-btn{
+  width:34px;height:34px;background:var(--indigo-dim);color:#818cf8;
+  border:none;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:background .2s;
+}
+.actual-save-btn:hover{background:rgba(99,102,241,.3)}
+.actual-save-btn svg{width:15px;height:15px}
+
+/* ══════════════════════════════════════════
+   BOTTOM NAV — BottomNav.tsx
+══════════════════════════════════════════ */
+/* mirrors: fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none */
+.bottom-nav{
+  position:fixed;bottom:24px;left:0;right:0;z-index:50;
+  display:flex;justify-content:center;padding:0 16px;
+  pointer-events:none;
+}
+
+/* mirrors: flex items-center gap-2 p-2 bg-zinc-900/80 backdrop-blur-3xl border-white/10 rounded-full shadow-2xl */
+.nav-bar{
+  display:flex;align-items:center;gap:8px;
+  padding:8px;
+  background:rgba(24,24,27,.82);
+  backdrop-filter:blur(48px);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:999px;
+  box-shadow:0 25px 50px rgba(0,0,0,.5);
+  pointer-events:auto;
+}
+
+/* mirrors: relative flex items-center justify-center px-5 py-3 rounded-full */
+.nav-btn{
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+  padding:10px 20px;border-radius:999px;
+  border:none;background:transparent;
+  color:var(--zinc-500);cursor:pointer;font-family:'Inter',system-ui,sans-serif;
+  gap:8px;white-space:nowrap;
+  transition:color .25s;
+}
+.nav-btn:hover{color:var(--zinc-300)}
+.nav-btn.active{color:#fff}
+
+/* active bg — motion.div layoutId="active-tab-bg" bg-white/10 rounded-full */
+.nav-btn-bg{
+  position:absolute;inset:0;
+  background:rgba(255,255,255,.1);
+  border-radius:999px;
+  opacity:0;transition:opacity .3s;
+}
+.nav-btn.active .nav-btn-bg{opacity:1}
+
+.nav-btn svg{width:20px;height:20px;position:relative;z-index:1;flex-shrink:0}
+
+/* label — initial opacity:0 width:0 → active width:auto */
+.nav-label{
+  font-size:14px;font-weight:500;
+  position:relative;z-index:1;
+  max-width:0;overflow:hidden;opacity:0;
+  transition:max-width .35s cubic-bezier(.4,0,.2,1),opacity .25s;
+}
+.nav-btn.active .nav-label{max-width:90px;opacity:1}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ─── HEADER ──────────────────────── -->
+  <header id="header">
+    <h1>Phu Quoc 2026</h1>
+    <p>Nam Đảo · 31/03 - 02/04</p>
+  </header>
+
+  <!-- ─── MAIN ────────────────────────── -->
+  <main id="main">
+
+    <!-- HOME TAB -->
+    <div id="tab-home" class="tab-panel active">
+      <div class="home-map-wrap">
+        <!-- Map background -->
+        <div class="map-bg">
+          <iframe
+            src="https://www.openstreetmap.org/export/embed.html?bbox=103.84%2C9.99%2C104.10%2C10.22&layer=mapnik"
+            scrolling="no" marginheight="0" marginwidth="0" title="map"
+          ></iframe>
+        </div>
+        <!-- Activity overlay -->
+        <div class="home-top" id="home-overlay"></div>
+        <!-- Edit FAB — absolute bottom-6 right-4 -->
+        <button class="edit-fab" id="edit-fab" onclick="openEditOverlay()" title="Chỉnh sửa lịch trình">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- PLAN TAB -->
+    <div id="tab-plan" class="tab-panel">
+      <!-- Hotel info -->
+      <div class="plan-section">
+        <h2 class="sec-title">Thông tin lưu trú</h2>
+        <div class="hotel-card">
+          <div class="hotel-top">
+            <div>
+              <div class="hotel-name">Premier Residences Phu Quoc</div>
+              <div class="hotel-addr">Emerald Bay, An Thới, Phú Quốc</div>
+            </div>
+            <span class="badge">Đã đặt</span>
+          </div>
+          <div class="hotel-grid">
+            <div class="hotel-cell">
+              <div class="hotel-cell-lbl">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Check-in
+              </div>
+              <div class="hotel-cell-time">14:00</div>
+              <div class="hotel-cell-date">31/03/2026</div>
+            </div>
+            <div class="hotel-cell">
+              <div class="hotel-cell-lbl">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Check-out
+              </div>
+              <div class="hotel-cell-time">12:00</div>
+              <div class="hotel-cell-date">02/04/2026</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Packing list -->
+      <div class="plan-section">
+        <div class="pack-head">
+          <h2 class="sec-title" style="margin-bottom:0">Hành trang</h2>
+          <button class="edit-toggle" id="pack-toggle" onclick="togglePackEdit()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="pack-toggle-icon">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            <span id="pack-toggle-txt">Sửa</span>
+          </button>
+        </div>
+        <div class="progress-wrap" id="progress-wrap">
+          <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+        </div>
+        <div id="packing-container"></div>
+        <!-- Add form -->
+        <div class="add-form" id="add-form">
+          <div class="add-form-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Thêm món đồ mới
+          </div>
+          <input class="edit-input" type="text" id="add-name" placeholder="Tên món đồ…" onkeydown="if(event.key==='Enter')addItem()"/>
+          <div class="add-row">
+            <select class="add-select" id="add-cat">
+              <option>Quần áo</option><option>Giấy tờ</option>
+              <option>Điện tử</option><option>Y tế</option>
+              <option>Cá nhân</option><option>Khác</option>
+            </select>
+            <button class="add-btn" onclick="addItem()">Thêm</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COST TAB -->
+    <div id="tab-cost" class="tab-panel">
+      <div class="cost-grid" id="cost-summary"></div>
+      <h2 class="sec-title">Chi tiết chi phí</h2>
+      <div id="cost-list"></div>
+    </div>
+
+  </main>
+
+  <!-- ─── BOTTOM NAV ───────────────────── -->
+  <nav class="bottom-nav">
+    <div class="nav-bar">
+      <button class="nav-btn active" id="nav-home" onclick="setTab('home')">
+        <div class="nav-btn-bg"></div>
+        <!-- Map icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+          <line x1="8" y1="2" x2="8" y2="18"/>
+          <line x1="16" y1="6" x2="16" y2="22"/>
+        </svg>
+        <span class="nav-label">Lịch trình</span>
+      </button>
+      <button class="nav-btn" id="nav-plan" onclick="setTab('plan')">
+        <div class="nav-btn-bg"></div>
+        <!-- Calendar icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span class="nav-label">Kế hoạch</span>
+      </button>
+      <button class="nav-btn" id="nav-cost" onclick="setTab('cost')">
+        <div class="nav-btn-bg"></div>
+        <!-- Wallet icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 12V22H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14l4 4v4z"/>
+          <line x1="12" y1="12" x2="12" y2="18"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+        <span class="nav-label">Chi phí</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ─── EDIT OVERLAY (HomeTab) ─────── -->
+  <div class="edit-overlay" id="edit-overlay">
+    <div class="edit-hdr">
+      <h2>Chỉnh sửa Lịch trình</h2>
+      <button class="close-btn" onclick="closeEditOverlay()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="edit-body" id="edit-body"></div>
+  </div>
+
+</div><!-- #app -->
+
+<script>
+/* ═══════════════════════════════════════
+   DATA  (mirrors data.ts / initialXxx)
+═══════════════════════════════════════ */
+let itinerary = [
+  {id:'a1',day:'Ngày 1 · 31/03',title:'Bay từ TP.HCM → Phú Quốc',location:'Sân bay Tân Sơn Nhất',startTime:'05:30',distance:'~550 km',travelTime:'1h 15p',status:'pending'},
+  {id:'a2',day:'Ngày 1 · 31/03',title:'Đến Phú Quốc — nhận phòng',location:'Sân bay Phú Quốc (PQC)',startTime:'07:15',travelTime:'30p về KS',status:'pending'},
+  {id:'a3',day:'Ngày 1 · 31/03',title:'Check-in & tắm biển buổi sáng',location:'Premier Residences Phu Quoc',startTime:'09:00',status:'pending'},
+  {id:'a4',day:'Ngày 1 · 31/03',title:'Trưa: Hải sản Gành Dầu',location:'Bến Gành Dầu, Phú Quốc',startTime:'12:00',distance:'18 km',travelTime:'30p',status:'pending'},
+  {id:'a5',day:'Ngày 1 · 31/03',title:'Hoàng hôn Mũi Ông Đội',location:'Mũi Ông Đội, An Thới',startTime:'17:00',distance:'5 km',travelTime:'12p',status:'pending'},
+  {id:'a6',day:'Ngày 1 · 31/03',title:'Tối: Chợ đêm Phú Quốc',location:'Chợ đêm Dinh Cậu',startTime:'19:30',distance:'25 km',travelTime:'40p',status:'pending'},
+  {id:'b1',day:'Ngày 2 · 01/04',title:'Sáng: Câu cá & lặn biển',location:'Quần đảo An Thới',startTime:'07:30',distance:'2 km',travelTime:'15p tàu',status:'pending'},
+  {id:'b2',day:'Ngày 2 · 01/04',title:'Trưa: Bún quậy Kiên Giang',location:'Dương Đông, Phú Quốc',startTime:'12:30',status:'pending'},
+  {id:'b3',day:'Ngày 2 · 01/04',title:'Vinpearl Safari',location:'Vinpearl Safari Phú Quốc',startTime:'14:00',distance:'12 km',travelTime:'20p',status:'pending'},
+  {id:'b4',day:'Ngày 2 · 01/04',title:'Tối: Sunset Sanato Beach Club',location:'Sanato Beach, Phú Quốc',startTime:'18:30',distance:'6 km',travelTime:'15p',status:'pending'},
+  {id:'c1',day:'Ngày 3 · 02/04',title:'Sáng: Nhum biển bãi Sao',location:'Bãi Sao, An Thới',startTime:'08:00',distance:'8 km',travelTime:'15p',status:'pending'},
+  {id:'c2',day:'Ngày 3 · 02/04',title:'Mua đặc sản & tiêu Phú Quốc',location:'Chợ Dương Đông',startTime:'11:00',distance:'20 km',travelTime:'30p',status:'pending'},
+  {id:'c3',day:'Ngày 3 · 02/04',title:'Check-out & ra sân bay',location:'Premier Residences Phu Quoc',startTime:'12:00',status:'pending'},
+  {id:'c4',day:'Ngày 3 · 02/04',title:'Bay về TP.HCM',location:'Sân bay Phú Quốc (PQC)',startTime:'15:30',travelTime:'1h 10p',status:'pending'},
+];
+
+let packingList = [
+  {id:'p1',name:'Áo phông × 3',category:'Quần áo',checked:false},
+  {id:'p2',name:'Đồ bơi',category:'Quần áo',checked:false},
+  {id:'p3',name:'Dép xỏ ngón',category:'Quần áo',checked:false},
+  {id:'p4',name:'Váy / Quần lửng',category:'Quần áo',checked:false},
+  {id:'p5',name:'Mũ / Nón rộng vành',category:'Quần áo',checked:false},
+  {id:'p6',name:'Kính mát',category:'Quần áo',checked:false},
+  {id:'p7',name:'CCCD / Hộ chiếu',category:'Giấy tờ',checked:false},
+  {id:'p8',name:'Vé máy bay (in / e-ticket)',category:'Giấy tờ',checked:false},
+  {id:'p9',name:'Booking khách sạn',category:'Giấy tờ',checked:false},
+  {id:'p10',name:'Thẻ ATM / Tiền mặt',category:'Giấy tờ',checked:false},
+  {id:'p11',name:'Sạc điện thoại',category:'Điện tử',checked:false},
+  {id:'p12',name:'Pin dự phòng',category:'Điện tử',checked:false},
+  {id:'p13',name:'Máy ảnh / GoPro',category:'Điện tử',checked:false},
+  {id:'p14',name:'Tai nghe chống nước',category:'Điện tử',checked:false},
+  {id:'p15',name:'Kem chống nắng SPF 50+',category:'Y tế',checked:false},
+  {id:'p16',name:'Thuốc say sóng / cơ bản',category:'Y tế',checked:false},
+  {id:'p17',name:'Kem chống muỗi',category:'Y tế',checked:false},
+  {id:'p18',name:'Băng gạc',category:'Y tế',checked:false},
+  {id:'p19',name:'Sữa tắm, Dầu gội',category:'Cá nhân',checked:false},
+  {id:'p20',name:'Bàn chải & Kem đánh răng',category:'Cá nhân',checked:false},
+  {id:'p21',name:'Ô / Áo mưa',category:'Khác',checked:false},
+  {id:'p22',name:'Khóa hành lý',category:'Khác',checked:false},
+];
+
+let costs = [
+  {id:'c1',name:'Vé máy bay khứ hồi',category:'Di chuyển',estimated:2400000,actual:2400000},
+  {id:'c2',name:'Khách sạn (2 đêm)',category:'Lưu trú',estimated:3200000,actual:3200000},
+  {id:'c3',name:'Di chuyển nội đảo',category:'Di chuyển',estimated:500000,actual:0},
+  {id:'c4',name:'Ẩm thực & ăn uống',category:'Ăn uống',estimated:1500000,actual:0},
+  {id:'c5',name:'Vinpearl Safari (2 vé)',category:'Tham quan',estimated:1200000,actual:0},
+  {id:'c6',name:'Lặn biển & câu cá',category:'Hoạt động',estimated:600000,actual:0},
+  {id:'c7',name:'Mua sắm & đặc sản',category:'Mua sắm',estimated:500000,actual:0},
+  {id:'c8',name:'Dự phòng',category:'Khác',estimated:300000,actual:0},
+];
+
+let packEditMode = false;
+
+/* ═══════════════════════════════════════
+   SVG ICONS
+═══════════════════════════════════════ */
+const I = {
+  navigation:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>`,
+  clock:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+  mapPin:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  checkCircle:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+  check:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  circle:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>`,
+  trash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`,
+  edit:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  route:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>`,
+  trendUp:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  trendDown:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>`,
+  wallet:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14l4 4v4z"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>`,
+  plus:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+};
+
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmt = n => new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND'}).format(n);
+
+/* ═══════════════════════════════════════
+   TAB SWITCHING
+═══════════════════════════════════════ */
+function setTab(tab){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('nav-'+tab).classList.add('active');
+}
+
+/* ═══════════════════════════════════════
+   HOME TAB
+═══════════════════════════════════════ */
+function renderHome(){
+  const el = document.getElementById('home-overlay');
+  const idx = itinerary.findIndex(a=>a.status!=='completed');
+  const cur = idx >= 0 ? itinerary[idx] : null;
+  const nxt = cur && idx+1 < itinerary.length ? itinerary[idx+1] : null;
+
+  if(!cur){
+    el.innerHTML = `
+      <div class="completed-card" style="order:1">
+        <div class="completed-icon">${I.checkCircle}</div>
+        <div class="completed-title">Chuyến đi hoàn tất!</div>
+        <div class="completed-sub">Bạn đã hoàn thành tất cả lịch trình. 🌊</div>
+      </div>`;
+    return;
+  }
+
+  const meta = [cur.distance, cur.travelTime].filter(Boolean).join(' · ');
+
+  // Next card sits ABOVE (order:0) current card (order:1)
+  // margin-bottom:-18px on wrapper + scale(0.93) gives depth illusion
+  const nextHtml = nxt ? `
+    <div class="next-card-wrap">
+      <div class="next-card">
+        ${I.route}
+        <div style="min-width:0;flex:1">
+          <div class="next-card-label">Tiếp theo</div>
+          <div class="next-card-name">${esc(nxt.title)}</div>
+        </div>
+        <div class="next-card-time">${nxt.startTime}</div>
+      </div>
+    </div>` : '';
+
+  el.innerHTML = nextHtml + `
+    <div class="current-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="nav-badge">${I.navigation} Đang diễn ra</div>
+        <div style="text-align:right">
+          <div class="time-chip">${I.clock} ${cur.startTime}</div>
+          <div style="font-size:10px;color:var(--zinc-500);margin-top:4px">${cur.day}</div>
+        </div>
+      </div>
+      <div class="act-title">${esc(cur.title)}</div>
+      <div class="loc-row">${I.mapPin} ${esc(cur.location)}</div>
+      ${meta ? `<div class="meta-row">${esc(meta)}</div>` : ''}
+      <button class="done-btn" onclick="markDone('${cur.id}')">
+        ${I.checkCircle} Hoàn thành &amp; Tiếp tục
+      </button>
+    </div>`;
+}
+
+function markDone(id){
+  const a = itinerary.find(x=>x.id===id);
+  if(a) a.status='completed';
+  renderHome();
+  if(document.getElementById('edit-overlay').classList.contains('open')) renderEditBody();
+}
+
+/* ─── Edit overlay ─── */
+function openEditOverlay(){
+  renderEditBody();
+  document.getElementById('edit-overlay').classList.add('open');
+}
+function closeEditOverlay(){
+  document.getElementById('edit-overlay').classList.remove('open');
+}
+function renderEditBody(){
+  document.getElementById('edit-body').innerHTML = itinerary.map(a=>`
+    <div class="edit-item">
+      <div>
+        <label class="edit-label">Tiêu đề</label>
+        <input class="edit-input" type="text" value="${esc(a.title)}"
+          onchange="updAct('${a.id}','title',this.value)"/>
+      </div>
+      <div class="edit-row">
+        <div>
+          <label class="edit-label">Bắt đầu</label>
+          <input class="edit-input" type="time" value="${a.startTime}"
+            onchange="updAct('${a.id}','startTime',this.value)"/>
+        </div>
+        <div>
+          <label class="edit-label">Địa điểm</label>
+          <input class="edit-input" type="text" value="${esc(a.location)}"
+            onchange="updAct('${a.id}','location',this.value)"/>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid rgba(255,255,255,.05)">
+        <span style="font-size:12px;color:var(--zinc-500)">${a.day}</span>
+        <button class="status-btn ${a.status==='completed'?'done':'pending'}"
+          onclick="toggleStatus('${a.id}')">
+          ${a.status==='completed'?'✓ Đã xong':'Chưa xong'}
+        </button>
+      </div>
+    </div>`).join('');
+}
+function updAct(id,field,val){
+  const a=itinerary.find(x=>x.id===id);
+  if(a){a[field]=val;renderHome();}
+}
+function toggleStatus(id){
+  const a=itinerary.find(x=>x.id===id);
+  if(a){a.status=a.status==='completed'?'pending':'completed';renderEditBody();renderHome();}
+}
+
+/* ═══════════════════════════════════════
+   PLAN TAB
+═══════════════════════════════════════ */
+function renderPacking(){
+  const groups={};
+  packingList.forEach(p=>{(groups[p.category]=groups[p.category]||[]).push(p)});
+
+  document.getElementById('packing-container').innerHTML =
+    Object.entries(groups).map(([cat,items])=>`
+      <div class="pack-group">
+        <div class="pack-cat">${cat}</div>
+        ${items.map(item=>`
+          <div class="pack-row${packEditMode?' edit-mode':''}" id="pr-${item.id}">
+            ${packEditMode
+              ? `<button class="pack-check-btn" onclick="delItem('${item.id}')" style="color:rgba(239,68,68,.6)">${I.trash}</button>`
+              : `<button class="pack-check-btn${item.checked?' checked':''}" onclick="toggleItem('${item.id}')">
+                  ${item.checked ? I.checkCircle : I.circle}
+                </button>`
+            }
+            <span class="pack-name${item.checked&&!packEditMode?' done':''}"
+              onclick="${packEditMode?`startRename('${item.id}')`:``}"
+              >${esc(item.name)}</span>
+          </div>`).join('')}
+      </div>`).join('');
+
+  // progress
+  const done = packingList.filter(p=>p.checked).length;
+  const pct = packingList.length ? Math.round(done/packingList.length*100) : 0;
+  document.getElementById('progress-fill').style.width = pct+'%';
+  document.getElementById('progress-wrap').style.display = packEditMode ? 'none' : 'block';
+}
+
+function toggleItem(id){
+  const p=packingList.find(x=>x.id===id);
+  if(p){p.checked=!p.checked;renderPacking();}
+}
+function delItem(id){
+  packingList=packingList.filter(x=>x.id!==id);
+  renderPacking();
+}
+function startRename(id){
+  const p=packingList.find(x=>x.id===id);
+  if(!p) return;
+  const row=document.getElementById('pr-'+id);
+  const span=row.querySelector('.pack-name');
+  const inp=document.createElement('input');
+  inp.className='edit-input';inp.value=p.name;
+  inp.style.cssText='flex:1;padding:6px 10px;font-size:14px';
+  span.replaceWith(inp);inp.focus();
+  const save=()=>{if(inp.value.trim())p.name=inp.value.trim();renderPacking();};
+  inp.addEventListener('blur',save);
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')save();if(e.key==='Escape')renderPacking();});
+}
+function addItem(){
+  const n=document.getElementById('add-name');
+  const c=document.getElementById('add-cat');
+  if(!n.value.trim()) return;
+  packingList.push({id:'p'+Date.now(),name:n.value.trim(),category:c.value,checked:false});
+  n.value='';renderPacking();
+}
+function togglePackEdit(){
+  packEditMode=!packEditMode;
+  const txt=document.getElementById('pack-toggle-txt');
+  const ico=document.getElementById('pack-toggle-icon');
+  const form=document.getElementById('add-form');
+  if(packEditMode){
+    txt.textContent='Xong';
+    ico.innerHTML='<polyline points="20 6 9 17 4 12"/>';
+    form.classList.add('open');
+  } else {
+    txt.textContent='Sửa';
+    ico.innerHTML='<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>';
+    form.classList.remove('open');
+  }
+  renderPacking();
+}
+
+/* ═══════════════════════════════════════
+   COST TAB
+═══════════════════════════════════════ */
+function renderCost(){
+  const totEst=costs.reduce((s,c)=>s+c.estimated,0);
+  const totAct=costs.reduce((s,c)=>s+c.actual,0);
+  const diff=totEst-totAct;
+  const over=diff<0;
+
+  document.getElementById('cost-summary').innerHTML=`
+    <div class="cost-card">
+      <div class="cost-lbl">${I.wallet} Dự kiến</div>
+      <div class="cost-val">${fmt(totEst)}</div>
+    </div>
+    <div class="cost-card">
+      <div class="cost-lbl indigo">${I.wallet} Thực tế</div>
+      <div class="cost-val">${fmt(totAct)}</div>
+    </div>
+    <div class="cost-card full ${over?'over':'under'}">
+      <div class="diff-wrap">
+        <div class="diff-icon ${over?'over':'under'}">${over?I.trendUp:I.trendDown}</div>
+        <div>
+          <div class="diff-lbl ${over?'over':'under'}">${over?'Vượt ngân sách':'Tiết kiệm được'}</div>
+          <div class="diff-val ${over?'over':'under'}">${fmt(Math.abs(diff))}</div>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('cost-list').innerHTML=costs.map((c,i)=>`
+    <div class="cost-item" style="animation-delay:${i*.04}s" id="ci-${c.id}">
+      <div class="cost-item-top">
+        <div>
+          <div class="cost-item-name">${esc(c.name)}</div>
+          <span class="cost-item-cat">${c.category}</span>
+        </div>
+        <div>
+          <div class="cost-est-lbl">Dự kiến</div>
+          <div class="cost-est-val">${fmt(c.estimated)}</div>
+        </div>
+      </div>
+      <div class="cost-item-bot">
+        <span class="actual-label">Thực tế</span>
+        <div id="ad-${c.id}">
+          <div class="actual-display">
+            <span class="actual-val${c.actual>c.estimated?' over':''}">${fmt(c.actual)}</span>
+            <button class="edit-actual-btn" onclick="startEditCost('${c.id}')">${I.edit}</button>
+          </div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function startEditCost(id){
+  const c=costs.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('ad-'+id).innerHTML=`
+    <div class="actual-edit-row">
+      <input class="actual-input" type="text" id="ai-${id}" value="${c.actual}"
+        onkeydown="if(event.key==='Enter')saveEditCost('${id}')"/>
+      <button class="actual-save-btn" onclick="saveEditCost('${id}')">${I.check}</button>
+    </div>`;
+  const inp=document.getElementById('ai-'+id);
+  inp.focus();inp.select();
+  inp.addEventListener('blur',()=>setTimeout(()=>saveEditCost(id),120));
+}
+function saveEditCost(id){
+  const inp=document.getElementById('ai-'+id);
+  if(!inp) return;
+  const val=parseInt(inp.value.replace(/\D/g,''),10);
+  const c=costs.find(x=>x.id===id);
+  if(c&&!isNaN(val)) c.actual=val;
+  renderCost();
+}
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+renderHome();
+renderPacking();
+renderCost();
+</script>
+</body>
+</html>
