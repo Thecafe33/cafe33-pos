@@ -22,6 +22,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1" rel="stylesheet" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -351,6 +352,7 @@ input, button, select, textarea { font-size: 1rem; }
     #menu-grid {
         grid-template-columns: repeat(3, 1fr) !important;
         gap: 20px !important;
+        padding-top: 20px !important;
         padding-bottom: 20px !important;
     }
     #menu-grid > div {
@@ -389,7 +391,7 @@ input, button, select, textarea { font-size: 1rem; }
     font-weight: 900 !important;
     line-height: 1.3 !important;
     letter-spacing: -0.2px !important;
-    color: #1e293b !important;
+    color: white;
     margin-bottom: 4px !important;
     text-align: center !important;
     padding: 0 8px !important;
@@ -403,12 +405,10 @@ input, button, select, textarea { font-size: 1rem; }
     font-size: 12.5px !important;
     font-weight: 800 !important;
     color: white !important;
-    background: rgba(0, 98, 65, 0.9) !important;
-    backdrop-blur-sm !important;
+    background: rgba(0, 0, 0, 0.18) !important;
     padding: 6px 10px !important;
     border-radius: 999px !important;
     align-self: center !important;
-    box-shadow: 0 2px 8px rgba(0, 98, 65, 0.2) !important;
     min-width: 70px;
 }
 
@@ -419,13 +419,21 @@ input, button, select, textarea { font-size: 1rem; }
 
 @media only screen and (min-width: 769px) {
     #menu-grid p.menu-name {
-        font-size: 1.8rem !important;
+        font-size: 1.3rem !important;
         line-height: 1.2 !important;
-        padding: 0 20px !important;
+        padding: 0 12px !important;
+        color: white !important;
     }
     #menu-grid p.menu-price {
-        font-size: 1.4rem !important;
-        padding: 10px 20px !important;
+        font-size: 14px !important;
+        padding: 6px 16px !important;
+        color: white !important;
+    }
+    #view-menu {
+        background: white !important;
+    }
+    #view-menu-content {
+        background: white !important;
     }
 }
 
@@ -771,30 +779,11 @@ input, button, select, textarea { font-size: 1rem; }
             <span class="material-symbols-outlined text-gray-300">chevron_right</span>
         </div>
 
-        <div class="bg-white p-5 rounded-[2rem] flex items-center justify-between shadow-[0_10px_30px_-5px_rgba(0,0,0,0.05)] active:scale-95 transition-all cursor-pointer border border-white opacity-60 grayscale">
-            <div class="flex items-center gap-4">
-                <div class="w-14 h-14 bg-[#ecfdf3] flex items-center justify-center rounded-[1.25rem]">
-                    <span class="material-symbols-outlined text-[#0fbd49] text-3xl" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
-                </div>
-                <div>
-                    <p class="text-gray-900 text-lg font-extrabold leading-none">Kho hàng</p>
-                    <p class="text-gray-400 text-[11px] mt-1.5 font-bold">Sắp ra mắt</p>
-                </div>
-            </div>
-            </div>
+
 
     </div>
 
-    <div class="p-6 pb-10 flex flex-col gap-2 shrink-0 bg-[#F2F2F7]">
-        <div onclick="syncDataFromSheet()" class="flex items-center gap-4 bg-gray-200/50 px-5 py-4 rounded-[2rem] active:bg-gray-200 transition-colors cursor-pointer group">
-    <span id="sync-icon" class="material-symbols-outlined text-gray-500">sync</span>
-    <p class="text-gray-600 text-base font-bold flex-1">Cập nhật dữ liệu</p>
-</div>
-        <div class="flex items-center gap-4 px-5 py-4 rounded-[2rem] active:bg-red-50 transition-colors cursor-pointer group text-gray-400 hover:text-red-500">
-            <span class="material-symbols-outlined transition-colors">logout</span>
-            <p class="text-base font-bold flex-1 transition-colors">Đăng xuất</p>
-        </div>
-    </div>
+
 </div>
 <div id="mobile-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-black/60 z-[9990] hidden backdrop-blur-[2px] transition-opacity"></div>
 
@@ -805,14 +794,14 @@ input, button, select, textarea { font-size: 1rem; }
 </div>
 
 <div class="flex-1 bg-white rounded-[2.5rem] shadow-xl overflow-hidden flex flex-col relative border-2 border-white transition-colors duration-500" id="main-container">
-  <div class="md:hidden px-5 py-4 flex items-center justify-between sticky top-0 z-50 transition-all duration-300"
-     style="background: #F2F2F7; border-bottom: 1px solid rgba(0,0,0,0.05);"> <button onclick="toggleMobileMenu()" class="w-12 h-12 rounded-full bg-white shadow-sm border border-white flex items-center justify-center text-[#006241] active:scale-90 transition-transform">
+  <div class="md:hidden px-5 py-4 flex items-center justify-between sticky top-0 z-50 transition-all duration-300 relative"
+     style="background: #F2F2F7; border-bottom: 1px solid rgba(0,0,0,0.05);"> <button onclick="toggleMobileMenu()" class="w-12 h-12 rounded-full bg-white shadow-sm border border-white flex items-center justify-center text-[#006241] active:scale-90 transition-transform relative z-10">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="12" y2="18"></line></svg>
     </button>
 
-    <h2 class="brand-font text-3xl font-black text-[#006241] tracking-tighter cursor-pointer" onclick="switchView('menu')">The cafe 33</h2>
+    <h2 class="brand-font text-3xl font-black text-[#006241] tracking-tighter cursor-pointer absolute left-1/2 -translate-x-1/2" onclick="switchView('menu')">The cafe 33</h2>
 
-    <button onclick="openBedManager()" class="h-12 pl-4 pr-5 bg-[#006241] rounded-full shadow-[0_8px_20px_-5px_rgba(0,98,65,0.4)] flex items-center gap-2 active:scale-95 transition-all border border-white/10">
+    <button onclick="openBedManager()" class="h-12 pl-4 pr-5 bg-[#006241] rounded-full shadow-[0_8px_20px_-5px_rgba(0,98,65,0.4)] flex items-center gap-2 active:scale-95 transition-all border border-white/10 relative z-10">
         <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 9.5V20M3 20H21M3 20V21M21 20V9.5M21 20V21M3 9.5C3 8.39543 3.89543 7.5 5 7.5H9C10.1046 7.5 11 8.39543 11 9.5V11H3V9.5ZM21 9.5C21 8.39543 20.1046 7.5 19 7.5H15C13.8954 7.5 13 8.39543 13 9.5V11H21V9.5Z"/>
             <path d="M3 11H21V16H3V11Z"/>
@@ -1056,7 +1045,10 @@ input, button, select, textarea { font-size: 1rem; }
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 5l-7 7 7 7"/></svg>Menu
         </button>
         <div style="width:1px;height:22px;background:rgba(0,0,0,0.1);flex-shrink:0;"></div>
-        <button onclick="switchMgrTab('gift')" id="mgr-mob-tab-gift" style="flex-shrink:0;padding:8px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:#006241;color:white;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,98,65,0.2);white-space:nowrap;">
+        <button onclick="switchMgrTab('menueditor')" id="mgr-mob-tab-menueditor" style="flex-shrink:0;padding:8px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:#006241;color:white;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(0,98,65,0.2);white-space:nowrap;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2z"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/></svg>Menu
+        </button>
+        <button onclick="switchMgrTab('gift')" id="mgr-mob-tab-gift" style="flex-shrink:0;padding:8px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:transparent;color:#6b7280;display:flex;align-items:center;gap:6px;white-space:nowrap;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/></svg>Quà tặng
         </button>
         <button onclick="switchMgrTab('screen')" id="mgr-mob-tab-screen" style="flex-shrink:0;padding:8px 14px;border-radius:20px;font-size:0.75rem;font-weight:700;border:none;cursor:pointer;background:transparent;color:#6b7280;display:flex;align-items:center;gap:6px;white-space:nowrap;">
@@ -1074,7 +1066,11 @@ input, button, select, textarea { font-size: 1rem; }
         <div id="mgr-col-a" style="width:20%;min-width:160px;max-width:220px;display:flex;flex-direction:column;background:#F7F7F8;border-right:1px solid rgba(0,0,0,0.07);flex-shrink:0;">
             <div style="padding:24px 16px 16px;">
                 <p style="font-size:0.58rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.15em;margin:0 0 14px 4px;">Quản lý</p>
-                <button id="mgr-tab-gift" onclick="switchMgrTab('gift')" style="width:100%;padding:11px 14px;border-radius:22px;font-size:0.8rem;font-weight:700;text-align:left;border:none;cursor:pointer;background:#006241;color:white;margin-bottom:4px;display:flex;align-items:center;gap:9px;transition:all 0.18s;box-shadow:0 2px 10px rgba(0,98,65,0.2);">
+                <button id="mgr-tab-menueditor" onclick="switchMgrTab('menueditor')" style="width:100%;padding:11px 14px;border-radius:22px;font-size:0.8rem;font-weight:700;text-align:left;border:none;cursor:pointer;background:#006241;color:white;margin-bottom:4px;display:flex;align-items:center;gap:9px;transition:all 0.18s;box-shadow:0 2px 10px rgba(0,98,65,0.2);">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2z"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/></svg>
+                    Menu
+                </button>
+                <button id="mgr-tab-gift" onclick="switchMgrTab('gift')" style="width:100%;padding:11px 14px;border-radius:22px;font-size:0.8rem;font-weight:700;text-align:left;border:none;cursor:pointer;background:transparent;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;gap:9px;transition:all 0.18s;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
                     Quà tặng
                 </button>
@@ -1161,6 +1157,19 @@ input, button, select, textarea { font-size: 1rem; }
 
             </div>
             <div id="mgr-b-sticker" style="display:none;"></div>
+            <div id="mgr-b-menueditor" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;">
+                <div style="padding:18px 14px 10px;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                        <span style="font-size:0.62rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;">Danh sách</span>
+                        <span id="menu-editor-count" style="font-size:0.62rem;font-weight:800;color:#006241;background:#F0FDF4;padding:2px 7px;border-radius:999px;border:1px solid #bbf7d0;">0</span>
+                    </div>
+                    <button onclick="menuEditorNewItem()" style="width:100%;padding:9px 12px;border-radius:11px;background:#006241;color:white;font-size:0.76rem;font-weight:800;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 2px 8px rgba(0,98,65,0.2);" class="active:scale-95">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                        Thêm mới
+                    </button>
+                </div>
+                <div id="menu-editor-list" style="flex:1;overflow-y:auto;padding:0 8px 10px;" class="custom-scrollbar"></div>
+            </div>
         </div>
 
         <div id="mgr-col-c" style="flex:1;display:flex;flex-direction:column;min-height:0;min-width:0;background:white;">
@@ -1513,6 +1522,62 @@ luv u</textarea>
 
                 </div>
             </div>
+            <div id="mgr-c-menueditor" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px 14px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <div style="width:5px;height:5px;border-radius:50%;background:#006241;flex-shrink:0;"></div>
+                        <span id="menu-editor-form-title" style="font-weight:900;font-size:0.95rem;color:#111827;">Thêm món mới</span>
+                    </div>
+                    <button id="menu-editor-delete-btn" onclick="menuEditorDeleteItem()" style="display:none;font-size:0.68rem;font-weight:800;color:white;background:#ef4444;border:none;padding:6px 14px;border-radius:9px;cursor:pointer;display:none;align-items:center;gap:4px;" class="active:scale-95">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>Xóa
+                    </button>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px;min-height:0;" class="custom-scrollbar">
+                    <!-- Tên món -->
+                    <div>
+                        <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:8px;">Tên món</label>
+                        <input id="me-name" type="text" placeholder="VD: Cà phê sữa đá" style="width:100%;padding:12px 16px;border-radius:14px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.95rem;font-weight:700;color:#111827;box-sizing:border-box;transition:border-color 0.2s;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
+                    </div>
+                    <!-- Phân loại -->
+                    <div style="position:relative;">
+                        <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:8px;">Phân loại</label>
+                        <div style="position:relative;">
+                            <input id="me-type" type="text" placeholder="VD: Cà phê, Trà, Ăn vặt..." style="width:100%;padding:12px 16px;border-radius:14px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.9rem;font-weight:700;color:#111827;box-sizing:border-box;transition:border-color 0.2s;cursor:pointer;" onfocus="this.style.borderColor='#006241';menuEditorShowTypeDropdown()" onblur="setTimeout(menuEditorHideTypeDropdown,200)">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);pointer-events:none;"><path d="M6 9l6 6 6-6"/></svg>
+                        </div>
+                        <div id="me-type-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.1);z-index:100;max-height:160px;overflow-y:auto;margin-top:4px;" class="custom-scrollbar"></div>
+                    </div>
+                    <!-- Giá Size M -->
+                    <div>
+                        <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:8px;">Giá Size M <span style="font-weight:500;text-transform:none;color:#d1d5db;">(để trống = không có size M)</span></label>
+                        <input id="me-price-m" type="number" placeholder="VD: 35000" min="0" style="width:100%;padding:12px 16px;border-radius:14px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.95rem;font-weight:700;color:#111827;box-sizing:border-box;transition:border-color 0.2s;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
+                    </div>
+                    <!-- Giá Size L -->
+                    <div>
+                        <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:8px;">Giá Size L <span style="font-weight:500;text-transform:none;color:#d1d5db;">(để trống = không có size L)</span></label>
+                        <input id="me-price-l" type="number" placeholder="VD: 40000" min="0" style="width:100%;padding:12px 16px;border-radius:14px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.95rem;font-weight:700;color:#111827;box-sizing:border-box;transition:border-color 0.2s;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
+                        <p style="font-size:0.68rem;color:#9ca3af;margin-top:6px;">💡 Nếu cả 2 giá đều trống → khi order sẽ hiện bàn phím để nhập giá tay</p>
+                    </div>
+                    <!-- Màu ô menu -->
+                    <div>
+                        <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:10px;">Màu ô menu</label>
+                        <div id="me-color-swatches" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+                        <label style="display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 14px;background:#F8F8F8;border-radius:14px;cursor:pointer;border:2px solid transparent;transition:border-color 0.2s;" id="me-custom-color-label">
+                            <span style="font-size:0.78rem;font-weight:700;color:#374151;">🎨 Màu tùy chỉnh</span>
+                            <div id="me-custom-color-preview" style="width:28px;height:28px;border-radius:8px;background:#006241;border:2px solid rgba(0,0,0,0.1);flex-shrink:0;margin-left:auto;"></div>
+                            <input type="color" id="me-color-custom" value="#006241" onchange="menuEditorSetCustomColor(this.value)" style="width:0;height:0;opacity:0;position:absolute;">
+                        </label>
+                        <input id="me-color-value" type="hidden" value="#006241">
+                    </div>
+                </div>
+                <!-- Save button -->
+                <div style="padding:16px 24px 20px;flex-shrink:0;border-top:1px solid #f3f4f6;">
+                    <button onclick="menuEditorSave()" style="width:100%;padding:14px;border-radius:14px;background:#006241;color:white;font-size:0.9rem;font-weight:800;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(0,98,65,0.25);" class="active:scale-95">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Lưu món
+                    </button>
+                </div>
+            </div>
     </div>
 </div>
 </div>
@@ -1675,10 +1740,10 @@ luv u</textarea>
 
         <div id="mob-detail-header-container"></div>
 
-        <main id="mob-bed-detail-content" class="flex-1 overflow-y-auto px-5 pt-2 pb-32 space-y-5 custom-scrollbar">
+        <main id="mob-bed-detail-content" class="flex-1 overflow-y-auto px-5 pt-2 pb-3 space-y-3 custom-scrollbar">
             </main>
 
-        <div id="mob-detail-actions" class="absolute bottom-0 left-0 right-0 p-5 bg-[#F2F2F7]/90 backdrop-blur-xl border-t border-white/50 z-40 pb-8">
+        <div id="mob-detail-actions" class="shrink-0">
             </div>
     </div>
 </div>
@@ -1919,7 +1984,7 @@ luv u</textarea>
         <div id="app-modal-icon" class="text-5xl mb-4"></div>
         <h3 id="app-modal-title" class="brand-font text-xl text-[#006241] mb-2 uppercase font-black text-center tracking-wide">Thông báo</h3>
         <div id="app-modal-msg" class="text-sm text-gray-600 font-medium mb-8 leading-relaxed px-2"></div>
-        <button onclick="document.getElementById('app-modal').classList.add('hidden')"
+        <button onclick="closeAppModal()"
             class="w-full py-4 bg-[#006241] text-white font-black rounded-[32px] uppercase shadow-lg shadow-green-900/20 active:scale-95 transition-all">
             Đã hiểu
         </button>
@@ -1964,6 +2029,38 @@ luv u</textarea>
                 <span class="block font-black text-xl uppercase text-[#006241]">SIZE L</span>
                 <span id="price-l" class="text-[#006241] font-bold mt-2 text-2xl">--</span>
             </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal bàn phím nhập giá tay -->
+<div id="price-keypad-modal" class="fixed inset-0 bg-black/50 z-[110] hidden items-center justify-center p-4 backdrop-blur-[6px]" onclick="closePriceKeypad()">
+    <div class="bg-white w-full max-w-[520px] rounded-[40px] overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.3)]" onclick="event.stopPropagation()">
+        <div class="px-10 pt-8 pb-5 text-center">
+            <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">Nhập giá cho</p>
+            <h3 id="keypad-item-name" class="brand-font text-2xl text-[#006241] font-black uppercase leading-tight mb-5">Tên món</h3>
+            <div style="background:#F8F8F8;border-radius:22px;padding:16px 24px;min-height:68px;display:flex;align-items:center;justify-content:flex-end;">
+                <span id="keypad-display" style="font-size:2.6rem;font-weight:900;color:#111827;font-family:monospace;letter-spacing:-2px;">0</span>
+                <span style="font-size:1.2rem;font-weight:700;color:#9ca3af;margin-left:6px;">đ</span>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 16px 6px;">
+            <button onclick="keypadPress('7')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">7</button>
+            <button onclick="keypadPress('8')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">8</button>
+            <button onclick="keypadPress('9')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">9</button>
+            <button onclick="keypadPress('4')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">4</button>
+            <button onclick="keypadPress('5')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">5</button>
+            <button onclick="keypadPress('6')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">6</button>
+            <button onclick="keypadPress('1')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">1</button>
+            <button onclick="keypadPress('2')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">2</button>
+            <button onclick="keypadPress('3')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">3</button>
+            <button onclick="keypadPress('000')" style="padding:22px 10px;font-size:1.2rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#6b7280;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">000</button>
+            <button onclick="keypadPress('0')" style="padding:22px 10px;font-size:1.8rem;font-weight:800;background:#F8F8F8;border:none;cursor:pointer;border-radius:18px;color:#111827;transition:background 0.1s;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#F8F8F8'">0</button>
+            <button onclick="keypadBackspace()" style="padding:22px 10px;font-size:1.6rem;font-weight:800;background:#FEF2F2;border:none;cursor:pointer;border-radius:18px;color:#ef4444;transition:background 0.1s;" ontouchstart="this.style.background='#fecaca'" ontouchend="this.style.background='#FEF2F2'">⌫</button>
+        </div>
+        <div style="padding:10px 16px 24px;display:grid;grid-template-columns:1fr 2fr;gap:10px;">
+            <button onclick="closePriceKeypad()" style="padding:20px;background:#f3f4f6;color:#6b7280;font-size:1rem;font-weight:800;border:none;cursor:pointer;border-radius:22px;" ontouchstart="this.style.background='#e5e7eb'" ontouchend="this.style.background='#f3f4f6'">Huỷ</button>
+            <button onclick="keypadConfirm()" style="padding:20px;background:#006241;color:white;font-size:1rem;font-weight:800;border:none;cursor:pointer;border-radius:22px;box-shadow:0 4px 16px rgba(0,98,65,0.3);" ontouchstart="this.style.background='#004f32'" ontouchend="this.style.background='#006241'">✓ Xác nhận giá</button>
         </div>
     </div>
 </div>
@@ -2194,6 +2291,32 @@ luv u</textarea>
     </div>
 </div>
 
+<!-- Modal Bill theo Booking -->
+<div id="modal-bill-detail" class="hidden fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-3 pb-6 sm:p-6" onclick="if(event.target===this)closeBillModal()">
+    <div class="bg-white w-full max-w-sm rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+        <div class="px-6 pt-6 pb-4 border-b border-dashed border-gray-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">HOÁ ĐƠN</p>
+                    <p id="bill-modal-guest" class="font-black text-[#1e3932] text-base"></p>
+                </div>
+                <button onclick="closeBillModal()" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+        </div>
+        <div id="bill-modal-body" class="flex-1 overflow-y-auto px-6 py-4 space-y-2">
+            <div class="text-center py-8 text-gray-300 text-sm">Đang tải...</div>
+        </div>
+        <div class="px-6 pb-6 pt-3 border-t border-dashed border-gray-100">
+            <div class="flex justify-between items-center">
+                <span class="text-xs font-black uppercase tracking-widest text-gray-400">Tổng</span>
+                <span id="bill-modal-total" class="text-2xl font-black text-[#006241]">--</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="modal-waiting-rules" class="hidden fixed inset-0 z-[100001] flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
     <div class="text-center">
         <div class="w-20 h-20 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
@@ -2236,7 +2359,100 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.database();
+const fstore = firebase.firestore();
 const auth = firebase.auth();
+
+// ── bedBookings path helpers ──────────────────────────────────────────────
+// Parse dateStr: DD/MM/YYYY hoặc YYYY-MM-DD → { year, month, day }
+function _parseDateKey(dateStr) {
+    if (!dateStr) return null;
+    var s = dateStr.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+        var p = s.split('-');
+        return { year: p[0], month: p[1], day: p[2] };
+    }
+    var sep = s.includes('/') ? '/' : '-';
+    var p = s.split(sep);
+    if (p.length >= 3 && p[2].length === 4) return { year: p[2], month: p[1].padStart(2,'0'), day: p[0].padStart(2,'0') };
+    return null;
+}
+
+// Lấy path RT của booking (ưu tiên field .path nếu có, fallback tự tính)
+function _getBedBookingPath(booking) {
+    if (booking.path) return booking.path;
+    var d = _parseDateKey(booking.date);
+    if (d) return 'bedBookings/' + d.year + '/' + d.month + '/' + d.day + '/' + booking.id;
+    return null;
+}
+
+// Update booking qua path đúng, kèm callback(err)
+function _updateBedBooking(booking, data, callback) {
+    var path = _getBedBookingPath(booking);
+    if (!path) { if (callback) callback(new Error('Không tìm được path cho booking ' + booking.id)); return; }
+    db.ref(path).update(data, callback);
+}
+
+// Lấy RT ref theo path đúng (dùng cho sub-path như /preorder, /moveHistory)
+function _bedBookingRef(booking, subPath) {
+    var base = _getBedBookingPath(booking);
+    if (!base) return null;
+    return subPath ? db.ref(base + '/' + subPath) : db.ref(base);
+}
+
+// Fetch bookings cho stats/report — đọc 3 tháng gần nhất từ RT theo cấu trúc YYYY/MM/DD
+// mode: 'week'|'month'|'year'|'day'|'custom', startVal/endVal: 'YYYY-MM-DD' string
+// callback(bookings[])
+function _fetchBedBookingsForStats(mode, startVal, endVal, callback) {
+    var now = new Date();
+    var startDate, endDate;
+
+    if (mode === 'week') {
+        var day = now.getDay() || 7;
+        startDate = new Date(now); startDate.setDate(now.getDate() - day + 1); startDate.setHours(0,0,0,0);
+        endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
+    } else if (mode === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (mode === 'year') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+        endDate = new Date(now.getFullYear(), 11, 31);
+    } else if (mode === 'custom' && startVal && endVal) {
+        startDate = new Date(startVal);
+        endDate = new Date(endVal);
+    } else {
+        // day hoặc fallback: chỉ hôm nay
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(startDate);
+    }
+
+    // Build danh sách ngày YYYY-MM-DD trong khoảng
+    var days = [];
+    var cur = new Date(startDate);
+    cur.setHours(0,0,0,0);
+    var end = new Date(endDate);
+    end.setHours(0,0,0,0);
+    while (cur <= end) {
+        var y = cur.getFullYear();
+        var m = String(cur.getMonth() + 1).padStart(2,'0');
+        var d = String(cur.getDate()).padStart(2,'0');
+        days.push(y + '-' + m + '-' + d);
+        cur.setDate(cur.getDate() + 1);
+    }
+
+    // Giới hạn tối đa 366 ngày để tránh quá nhiều reads
+    if (days.length > 366) days = days.slice(0, 366);
+
+    _loadBedBookingsForDays(days, callback);
+}
+function _isBedBookingRecent(dateStr) {
+    var d = _parseDateKey(dateStr);
+    if (!d) return true; // không parse được → coi như gần, giữ RT
+    var bookingDate = new Date(+d.year, +d.month - 1, +d.day);
+    var today = new Date(); today.setHours(0,0,0,0);
+    var diff = (today - bookingDate) / (1000 * 60 * 60 * 24);
+    return diff <= 3;
+}
+// ─────────────────────────────────────────────────────────────────────────
 
 function autoLoginPOS() {
     const email = "elio@thecafe33.com";
@@ -2244,10 +2460,145 @@ function autoLoginPOS() {
 
     auth.signInWithEmailAndPassword(email, pass)
         .then((userCredential) => {
+            // Chạy archive sau khi đăng nhập thành công
+            setTimeout(runAutoArchive, 5000);
+            setTimeout(runAutoArchiveOrders, 7000);
+            setTimeout(syncRewardsToRT, 10000);
         })
         .catch((error) => {
             alert("Lỗi: Không thể đăng nhập vào hệ thống! Kiểm tra lại Email/Pass trong code.");
         });
+}
+
+
+// Sync rewards từ Firestore → RT mirror (cho app khách đọc không cần Firestore auth)
+function syncRewardsToRT() {
+    fstore.collection('rewards').get().then(function(snapshot) {
+        var batch = {};
+        snapshot.forEach(function(doc) {
+            batch[doc.id] = Object.assign({}, doc.data(), { _docId: doc.id });
+        });
+        db.ref('rewards_mirror').set(batch);
+        console.log('[Sync] Đã mirror', Object.keys(batch).length, 'rewards sang RT');
+    }).catch(function(err) {
+        console.warn('[Sync] Lỗi mirror rewards:', err.message);
+    });
+}
+
+// ── Auto-archive bedBookings cũ hơn 3 ngày sang Firestore, rồi xóa khỏi RT ──
+function runAutoArchive() {
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // Build danh sách ngày cần kiểm tra: từ 180 ngày trước đến 4 ngày trước
+    var days = [];
+    for (var i = 180; i >= 4; i--) {
+        var d = new Date(now);
+        d.setDate(d.getDate() - i);
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var dd = String(d.getDate()).padStart(2, '0');
+        days.push({ year: String(y), month: m, day: dd });
+    }
+
+    var processed = 0;
+    var archived = 0;
+
+    function processNext(idx) {
+        if (idx >= days.length) {
+            if (archived > 0) console.log('[AutoArchive] Đã archive ' + archived + ' ngày bedBookings sang Firestore.');
+            return;
+        }
+        var d = days[idx];
+        var rtPath = 'bedBookings/' + d.year + '/' + d.month + '/' + d.day;
+        db.ref(rtPath).once('value', function(snap) {
+            if (!snap.exists()) { processNext(idx + 1); return; }
+            var data = snap.val();
+            var keys = Object.keys(data);
+
+            // Ghi vào Firestore bedBookings_archive/{year}/{month}/{day}
+            // Cấu trúc nested giống RT → đọc cùng logic, không cần xử lý riêng
+            var fsDocRef = fstore
+                .collection('bedBookings_archive').doc(d.year)
+                .collection(d.month).doc(d.day);
+            fsDocRef.set({ bookings: data, archivedAt: new Date().toISOString() })
+                .then(function() {
+                    // Xóa khỏi Realtime sau khi archive thành công
+                    db.ref(rtPath).remove();
+                    archived++;
+                    processNext(idx + 1);
+                })
+                .catch(function(err) {
+                    console.warn('[AutoArchive] Lỗi archive ' + d.year+'/'+d.month+'/'+d.day + ':', err.message);
+                    processNext(idx + 1);
+                });
+        });
+    }
+
+    processNext(0);
+}
+
+// ── Auto-archive orders cũ hơn 3 ngày sang Firestore orders_archive ──────────
+function runAutoArchiveOrders() {
+    var now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    // Build danh sách ngày cần kiểm tra: từ 180 ngày trước đến 4 ngày trước
+    var days = [];
+    for (var i = 180; i >= 4; i--) {
+        var d = new Date(now);
+        d.setDate(d.getDate() - i);
+        var parts = getOrderParts(d); // { year, month(jan/feb...), day }
+        days.push(parts);
+    }
+
+    var archived = 0;
+
+    function processNext(idx) {
+        if (idx >= days.length) {
+            if (archived > 0) console.log('[AutoArchiveOrders] Da archive ' + archived + ' ngay orders sang Firestore.');
+            return;
+        }
+        var d = days[idx];
+        var rtPath = 'orders/' + d.year + '/' + d.month + '/' + d.day;
+
+        db.ref(rtPath).once('value', function(snap) {
+            if (!snap.exists() || !snap.val()) { processNext(idx + 1); return; }
+            var data = snap.val();
+
+            // Ghi vào Firestore orders_archive/{year}/{month}/{day}
+            // Cùng cấu trúc với RT → đọc đồng nhất
+            fstore.collection('orders_archive').doc(d.year)
+                .collection(d.month).doc(d.day)
+                .set({ orders: data, archivedAt: new Date().toISOString() })
+                .then(function() {
+                    db.ref(rtPath).remove();
+                    archived++;
+                    processNext(idx + 1);
+                })
+                .catch(function(err) {
+                    console.warn('[AutoArchiveOrders] Loi archive ' + d.year+'/'+d.month+'/'+d.day + ':', err.message);
+                    processNext(idx + 1);
+                });
+        });
+    }
+
+    processNext(0);
+
+    // Xóa payment_events cũ hơn hôm nay khỏi RT (không cần lưu lại)
+    var cutoff = now.getTime(); // now đã setHours(0,0,0,0) ở trên
+    db.ref('payment_events').once('value', function(snap) {
+        if (!snap.exists()) return;
+        var removed = 0;
+        snap.forEach(function(child) {
+            var createdAt = child.val().createdAt;
+            if (createdAt && Number(createdAt) < cutoff) {
+                child.ref.remove();
+                removed++;
+            }
+        });
+        if (removed > 0) console.log('[AutoArchiveOrders] Da xoa ' + removed + ' payment_events cu khoi RT.');
+    });
 }
 
 autoLoginPOS();
@@ -2377,15 +2728,10 @@ async function checkAndSyncDailyRevenue() {
     const yyyy = yesterday.getFullYear();
 
     try {
-        const snap = await db.ref('orders').once('value');
-        const ordersData = snap.val() || {};
-        const orders = Object.values(ordersData);
+        const orders = await fetchOrdersByDateRange(yesterday, yesterday);
 
         let drinkTotal = 0;
         orders.forEach(o => {
-            const d = new Date(o.createdAt || 0);
-            const dateKey = d.toLocaleDateString('en-GB');
-            if (dateKey !== yesterdayStr_GB) return;
             const amount = Number(o.total) || 0;
             if (amount <= 0) return;
 
@@ -2797,24 +3143,39 @@ function renderMenu() {
         return;
     }
 
-    grid.innerHTML = filtered.map(m =>
-        `<div onclick="handleItemClick('${m.name}', ${m.priceM}, ${m.priceL})"
-            class="bg-white border border-gray-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between items-center text-center cursor-pointer transition-all active:scale-95 relative overflow-hidden group aspect-square p-3 rounded-[2.2rem] md:aspect-auto md:h-32 md:p-5 md:rounded-[2rem] md:border-2 md:border-gray-50 md:shadow-sm md:justify-center">
-
+    grid.innerHTML = filtered.map(m => {
+        const color = m.color || '#006241';
+        const priceLabel = m.priceM > 0 ? (m.priceM/1000)+'k' : (m.priceL > 0 ? (m.priceL/1000)+'k' : '···');
+        return `<div onclick="handleItemClick('${m.name}', ${m.priceM||0}, ${m.priceL||0})"
+            class="menu-card flex flex-col justify-between items-center text-center cursor-pointer transition-all active:scale-95 relative overflow-hidden aspect-square p-3 rounded-[2.2rem] md:aspect-auto md:h-32 md:p-5 md:rounded-[2rem] md:justify-center md:hover:brightness-90 md:hover:scale-[1.03] md:active:scale-95"
+            data-color="${color}">
             <div class="flex-1 flex items-center justify-center w-full overflow-hidden">
-                <p class="font-black text-[#1e3932] uppercase break-words leading-none group-hover:text-[#006241] transition-colors text-lg line-clamp-2 md:text-[1rem] md:line-clamp-3">
+                <p class="menu-name font-black uppercase break-words leading-none transition-colors text-lg line-clamp-2 md:text-[1.3rem] md:line-clamp-3 md:leading-tight">
                     ${m.name}
                 </p>
             </div>
-
             <div class="w-full pt-1 flex justify-center md:mt-2 md:pb-0 shrink-0">
-                <p class="font-extrabold text-[#006241] tracking-tight shadow-sm bg-[#E6F4F1] px-5 py-2 rounded-full text-base md:text-[11px] md:bg-transparent md:p-0 md:rounded-none md:shadow-none">
-                    ${m.priceM > 0 ? (m.priceM/1000) + 'k' : (m.priceL/1000) + 'k'}
+                <p class="menu-price font-extrabold tracking-tight px-5 py-2 rounded-full text-base md:text-[14px] md:px-4 md:py-1.5 md:font-black">
+                    ${priceLabel}
                 </p>
             </div>
+        </div>`;
+    }).join('');
 
-        </div>`
-    ).join('');
+    // Apply màu nền cho cả mobile lẫn PC
+    grid.querySelectorAll('.menu-card').forEach(function(card) {
+        const color = card.getAttribute('data-color') || '#006241';
+        card.style.background = color;
+        card.style.boxShadow = '0 6px 20px ' + color + '44';
+        card.querySelector('.menu-name').style.color = 'white';
+        const priceEl = card.querySelector('.menu-price');
+        priceEl.style.color = 'white';
+        if (window.innerWidth >= 769) {
+            priceEl.style.background = 'rgba(255,255,255,0.25)';
+        } else {
+            priceEl.style.background = 'rgba(255,255,255,0.2)';
+        }
+    });
 }
 function handleItemClick(name, pM, pL) {
     if(isPaymentMode) return;
@@ -2836,6 +3197,9 @@ function handleItemClick(name, pM, pL) {
         addToCart(name, 'M', vM);
     } else if (vL > 0) {
         addToCart(name, 'L', vL);
+    } else {
+        // Không có giá → mở bàn phím nhập giá tay
+        openPriceKeypad(name);
     }
 }
 
@@ -2854,6 +3218,89 @@ function addToCart(name, size, price) {
     closeSize();
     updateCartPadding();
 }
+
+// ===== ORDERS SHARDING BY DATE (cấu trúc: orders/năm/tháng/ngày) =====
+const MONTHS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
+function getOrderParts(date) {
+    const d = date || new Date();
+    return {
+        year: String(d.getFullYear()),
+        month: MONTHS[d.getMonth()],
+        day: String(d.getDate()).padStart(2, '0')
+    };
+}
+
+// Ref ghi đơn mới: orders/2026/mar/13
+function getOrdersRef(date) {
+    const { year, month, day } = getOrderParts(date || new Date());
+    return db.ref(`orders/${year}/${month}/${day}`);
+}
+
+// Fetch orders trong khoảng ngày — RT trước, fallback Firestore orders_archive
+async function fetchOrdersByDateRange(startDate, endDate) {
+    const allOrders = [];
+    const cur = new Date(startDate);
+    cur.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    // Build danh sách ngày cần đọc
+    const days = [];
+    while (cur <= end) {
+        const { year, month, day } = getOrderParts(new Date(cur));
+        days.push({ year, month, day });
+        cur.setDate(cur.getDate() + 1);
+    }
+
+    // Đọc từng ngày: RT trước → fallback Firestore orders_archive/{year}/{month}/{day}
+    await Promise.all(days.map(async ({ year, month, day }) => {
+        const snap = await db.ref(`orders/${year}/${month}/${day}`).once('value');
+        if (snap.exists() && snap.val()) {
+            Object.values(snap.val()).forEach(o => allOrders.push(o));
+        } else {
+            // RT trống → đọc Firestore orders_archive (cùng cấu trúc year/month/day)
+            try {
+                const doc = await fstore
+                    .collection('orders_archive').doc(year)
+                    .collection(month).doc(day).get();
+                if (doc.exists && doc.data() && doc.data().orders) {
+                    Object.values(doc.data().orders).forEach(o => allOrders.push(o));
+                }
+            } catch(e) {
+                console.warn('[fetchOrders] Firestore loi ' + year+'/'+month+'/'+day + ':', e.message);
+            }
+        }
+    }));
+
+    // Tương thích node cũ
+    try {
+        const oldSnap = await db.ref('order').once('value');
+        if (oldSnap.exists() && oldSnap.val())
+            Object.values(oldSnap.val()).forEach(o => allOrders.push(o));
+    } catch(e) {}
+
+    return allOrders;
+}
+
+// Fetch orders hôm nay
+async function fetchTodayOrders() {
+    const today = new Date();
+    const { year, month, day } = getOrderParts(today);
+    const snaps = await Promise.all([
+        db.ref(`orders/${year}/${month}/${day}`).once('value'),
+        db.ref('order').once('value')
+    ]);
+    const allOrders = [];
+    snaps.forEach(snap => {
+        if (snap.exists()) {
+            const val = snap.val();
+            if (val) Object.values(val).forEach(o => allOrders.push(o));
+        }
+    });
+    return allOrders;
+}
+// ===== END ORDERS SHARDING =====
 
 function renderCart() {
     const list = document.getElementById('cart-list');
@@ -2974,7 +3421,31 @@ function updateQty(idx, d) {
 }
 
 function removeCartItem(idx) {
-    cart.splice(idx, 1);
+    var removedItem = cart[idx];
+    // Neu xoa mon qua tang -> reset button trong gift panel + reset _giftVoucherKey
+    if (removedItem && removedItem._vKey) {
+        // Gop lai item goc neu co
+        var origName = removedItem._originalName || removedItem.name;
+        var prevItem = (idx > 0 && cart[idx-1].name === origName && !cart[idx-1]._vKey) ? cart[idx-1] : null;
+        var nextItem = (idx < cart.length-1 && cart[idx+1] && cart[idx+1].name === origName && !cart[idx+1]._vKey) ? cart[idx+1] : null;
+        if (prevItem) prevItem.qty += 1;
+        else if (nextItem) nextItem.qty += 1;
+        cart.splice(idx, 1);
+
+        // Reset gift panel button
+        _giftVoucherKey = null;
+        _giftVoucherPhone = null;
+        var list = document.getElementById('gift-panel-list');
+        if (list) {
+            list.querySelectorAll('button').forEach(function(btn) {
+                btn.disabled = false;
+                btn.innerText = '+ Bill';
+                btn.className = 'bg-green-700 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase active:scale-95';
+            });
+        }
+    } else {
+        cart.splice(idx, 1);
+    }
     renderCart();
 }
 
@@ -3013,7 +3484,7 @@ function completeOrder_OLD() {
         status: "pending_sync"
     };
 
-    db.ref('orders').push(orderData, (error) => {
+    getOrdersRef().push(orderData, (error) => {
         document.getElementById('loading-overlay').style.display = 'none';
 
         if(error) alert("Lỗi Firebase: " + error.message);
@@ -3033,12 +3504,12 @@ function completeOrder_OLD() {
 
             if (isCheckoutFlow && bookingKeyToClose) {
                 var checkoutTotal = (typeof currentTotal !== 'undefined') ? currentTotal : 0;
-
-                db.ref('bedBookings/' + bookingKeyToClose).update({
-                    status: 'đã xong',
-                    realEndTime: new Date().toLocaleTimeString('en-GB'),
-                    totalSpend: checkoutTotal
-                });
+                var _bk = globalAllBookings.find(function(b){ return (b.id || b.key) === bookingKeyToClose; });
+                if (_bk) {
+                    _updateBedBooking(_bk, { status: 'đã xong', realEndTime: new Date().toLocaleTimeString('en-GB'), totalSpend: checkoutTotal });
+                } else {
+                    db.ref('bedBookings/' + bookingKeyToClose).update({ status: 'đã xong', realEndTime: new Date().toLocaleTimeString('en-GB'), totalSpend: checkoutTotal });
+                }
                 isCheckoutFlow = false;
                 pendingBedOrder = null;
                 openBedManager();
@@ -3194,13 +3665,20 @@ function openHistory() {
     document.getElementById('loading-overlay').style.display = 'flex';
     switchView('history');
 
-    db.ref('orders').limitToLast(100).once('value', snap => {
-        if(!snap.exists()) {
-             db.ref('order').limitToLast(100).once('value', snap2 => {
-                 processHistoryData(snap2.val());
-             });
+    // Lấy 7 ngày gần nhất + node cũ
+    const today = new Date();
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    fetchOrdersByDateRange(weekAgo, today).then(allOrders => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        if (!allOrders.length) {
+            historyData = [];
+            document.getElementById('history-container').innerHTML = "<div class='text-center text-gray-400 mt-10'>Chưa có đơn hàng nào</div>";
         } else {
-             processHistoryData(snap.val());
+            // Chuyển về dạng object giả để tương thích processHistoryData
+            const fakeData = {};
+            allOrders.forEach((o, i) => { fakeData[i] = o; });
+            processHistoryData(fakeData);
         }
     });
 }
@@ -3681,25 +4159,34 @@ function openRevenue(mode) {
     var startVal = startEl ? startEl.value : null;
     var endVal = endEl ? endEl.value : null;
 
-    Promise.all([
-        db.ref('orders').once('value'),
-        db.ref('order').once('value')
-    ]).then(function(snapshots) {
+    // Xác định khoảng ngày fetch đúng theo mode
+    var now = new Date();
+    var fetchStart, fetchEnd;
+    if (startVal && endVal) {
+        // Custom range từ date picker
+        fetchStart = new Date(startVal);
+        fetchEnd   = new Date(endVal);
+    } else if (mode === 'year') {
+        fetchStart = new Date(now.getFullYear(), 0, 1);
+        fetchEnd   = new Date(now.getFullYear(), 11, 31);
+    } else if (mode === 'month') {
+        fetchStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        fetchEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (mode === 'week') {
+        var dow = now.getDay() || 7;
+        fetchStart = new Date(now); fetchStart.setDate(now.getDate() - dow + 1); fetchStart.setHours(0,0,0,0);
+        fetchEnd   = new Date(fetchStart); fetchEnd.setDate(fetchStart.getDate() + 6);
+    } else {
+        // day hoặc fallback
+        fetchStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        fetchEnd   = new Date(fetchStart);
+    }
+
+    fetchOrdersByDateRange(fetchStart, fetchEnd).then(function(allOrders) {
 
         document.getElementById('loading-overlay').style.display = 'none';
 
         try {
-            var allOrders = [];
-            snapshots.forEach(function(snap) {
-                if(snap.exists()) {
-                    var val = snap.val();
-                    if (val) {
-                        Object.keys(val).forEach(function(k) {
-                            allOrders.push(val[k]);
-                        });
-                    }
-                }
-            });
 
             var stats = calculateStats(allOrders, mode, startVal, endVal);
 
@@ -4144,7 +4631,7 @@ function switchView(v) {
     }
     else if (v === 'discount') {
         document.getElementById('view-discount').classList.remove('hidden');
-        switchMgrTab('gift'); // reset về tab mặc định, ẩn hết mgr-c-label/sticker
+        switchMgrTab('menueditor'); // reset về tab mặc định
         let btn = document.getElementById('btn-nav-discount');
         if(btn) btn.className = 'sb-green text-white px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tab-active';
     }
@@ -4200,6 +4687,62 @@ if (v === 'payment') {
 var globalAllBookings = [];
 var currentFilterDateStr = "";
 
+// Load bookings cho 1 hoặc nhiều ngày từ RT path YYYY/MM/DD
+// days: mảng string "YYYY-MM-DD"
+// callback(bookings)
+function _loadBedBookingsForDays(days, callback) {
+    var results = [];
+    var pending = days.length;
+    if (pending === 0) { callback([]); return; }
+
+    function _pushItems(data, year, month, day) {
+        Object.keys(data).forEach(function(k) {
+            var item = data[k];
+            var rawDate = item.date || item.bookingDate || (day + '/' + month + '/' + year);
+            if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
+                var p2 = rawDate.split('-');
+                rawDate = p2[2] + '/' + p2[1] + '/' + p2[0];
+            }
+            results.push({
+                id: k,
+                ...item,
+                start: item.start || item.startTime || '--:--',
+                end:   item.end   || item.endTime   || '--:--',
+                displayDate: rawDate
+            });
+        });
+    }
+
+    days.forEach(function(dayStr) {
+        var p = dayStr.split('-');
+        var year = p[0], month = p[1], day = p[2];
+
+        db.ref('bedBookings/' + year + '/' + month + '/' + day).once('value', function(snap) {
+            var data = snap.val();
+            if (data && Object.keys(data).length > 0) {
+                _pushItems(data, year, month, day);
+                pending--;
+                if (pending === 0) callback(results);
+            } else {
+                // Fallback Firestore nested: bedBookings_archive/{year}/{month}/{day}
+                fstore.collection('bedBookings_archive').doc(year)
+                    .collection(month).doc(day).get()
+                    .then(function(doc) {
+                        if (doc.exists) {
+                            _pushItems(doc.data().bookings || {}, year, month, day);
+                        }
+                        pending--;
+                        if (pending === 0) callback(results);
+                    }).catch(function(err) {
+                        console.warn('[loadBedBookings] Firestore loi ' + dayStr + ':', err.message);
+                        pending--;
+                        if (pending === 0) callback(results);
+                    });
+            }
+        });
+    });
+}
+
 function openBedManager() {
     document.getElementById('loading-overlay').style.display = 'flex';
     switchView('bed');
@@ -4213,30 +4756,13 @@ function openBedManager() {
     const picker = document.getElementById('date-picker-btn');
     if(picker) picker.value = todayInputFormat;
 
-    db.ref('bedBookings').on('value', snap => {
-        const data = snap.val() || {};
-
-        globalAllBookings = Object.keys(data).map(k => {
-            const item = data[k];
-
-            let rawDate = item.date || item.bookingDate || "";
-            if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
-                const p = rawDate.split('-');
-                rawDate = `${p[2]}/${p[1]}/${p[0]}`;
-            }
-
-            return {
-                id: k,
-                ...item,
-                start: item.start || item.startTime || "--:--",
-                end: item.end || item.endTime || "--:--",
-                displayDate: rawDate
-            };
+    db.ref('bedBookings/' + yyyy + '/' + mm + '/' + dd).on('value', snap => {
+        // Load ngày được chọn. globalAllBookings sẽ được build từ multi-day load khi changeBedDate gọi
+        _loadBedBookingsForDays([todayInputFormat], function(bookings) {
+            globalAllBookings = bookings;
+            document.getElementById('loading-overlay').style.display = 'none';
+            changeBedDate(picker ? picker.value : todayInputFormat);
         });
-
-        document.getElementById('loading-overlay').style.display = 'none';
-
-        changeBedDate(picker ? picker.value : todayInputFormat);
     });
 }
 
@@ -4245,20 +4771,20 @@ function changeBedDate(dateInputValue) {
 
     const parts = dateInputValue.split('-');
     const targetDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
-
     currentFilterDateStr = targetDateStr;
 
-    currentBedList = globalAllBookings.filter(b => {
+    _loadBedBookingsForDays([dateInputValue], function(bookings) {
+        // Merge vào globalAllBookings (replace entries của ngày này)
+        globalAllBookings = globalAllBookings.filter(b => b.displayDate !== targetDateStr);
+        globalAllBookings = globalAllBookings.concat(bookings);
+
         const isToday = (targetDateStr === new Date().toLocaleDateString('en-GB'));
-
-        if (isToday) {
-             return b.displayDate === targetDateStr || (b.status && b.status.includes('active'));
-        } else {
-             return b.displayDate === targetDateStr;
-        }
+        currentBedList = bookings.filter(b => {
+            if (isToday) return b.displayDate === targetDateStr || (b.status && b.status.includes('active'));
+            return b.displayDate === targetDateStr;
+        });
+        renderBedBookings(currentBedList);
     });
-
-    renderBedBookings(currentBedList);
 }
 function renderBedBookings(list) {
     const now = new Date();
@@ -4283,7 +4809,7 @@ function renderBedBookings(list) {
                             let bookingId = booking.id || booking.key;
 
                             if (bookingId) {
-                                db.ref('bedBookings/' + bookingId).update({
+                                _updateBedBooking(booking, {
                                     status: 'đã hủy',
                                     cancelType: 'auto_timeout',
                                     note: 'Hủy tự động (Quá 50p)'
@@ -4392,15 +4918,11 @@ const sortedPCList = [...currentBedList].map((item, idx) => ({...item, originalI
                 <span>${timeDisplay}</span>
                 ${b.totalSpend ? `<span class="bg-black/10 px-1.5 rounded text-[9px]">${Number(b.totalSpend).toLocaleString()}đ</span>` : ''}
             </div>
-            ${_hasActivePreorder(b)
+            ${(b.preorder && (_hasActivePreorder(b) || b.preorder.status === 'loaded'))
                 ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:${isSelected?'rgba(255,255,255,0.2)':'#fef9c3'};border:1px solid ${isSelected?'rgba(255,255,255,0.3)':'#fde047'};border-radius:8px;padding:3px 8px;">
-                    <span style="font-size:0.6rem;font-weight:900;color:${isSelected?'white':'#854d0e'};">PRE-ORDER · ${_countPreorderQty(b.preorder)} món</span>
+                    <span style="font-size:0.6rem;font-weight:900;color:${isSelected?'white':'#854d0e'};">🍜 Pre-order</span>
                   </div>`
-                : (b.preorder && b.preorder.status === 'loaded'
-                    ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:4px;background:${isSelected?'rgba(255,255,255,0.15)':'#f0fdf4'};border:1px solid ${isSelected?'rgba(255,255,255,0.25)':'#86efac'};border-radius:8px;padding:3px 8px;">
-                        <span style="font-size:0.6rem;font-weight:900;color:${isSelected?'white':'#166534'};">✅ Pre-order đã load</span>
-                      </div>`
-                    : '')
+                : ''
             }
             ${b.preferredBed
                 ? `<div style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;background:${isSelected?'rgba(255,255,255,0.2)':'#e0f2fe'};border:1px solid ${isSelected?'rgba(255,255,255,0.3)':'#7dd3fc'};border-radius:8px;padding:3px 8px;">
@@ -4578,7 +5100,7 @@ function selectBedItem(index) {
             </div>
         </div>
 
-        <div class="flex-1 overflow-y-auto px-8 pb-32 hide-scroll space-y-4">
+        <div class="flex-1 overflow-y-auto px-8 pb-4 hide-scroll space-y-4">
 
             <div class="grid grid-cols-2 gap-4">
                 <div class="p-4 glass-card-inner rounded-[2rem] flex flex-col justify-center">
@@ -4625,13 +5147,13 @@ function selectBedItem(index) {
             </div>
         </div>
 
-        <div id="detail-action-buttons" class="absolute bottom-6 left-6 right-6 z-20">
-            <div class="bg-white/90 backdrop-blur-xl p-3 rounded-[2rem] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.15)] border border-white flex items-center gap-3">
+        <div id="detail-action-buttons" class="px-6 pb-6 pt-2">
+            <div class="bg-white/90 backdrop-blur-xl p-3 rounded-[2rem] shadow-[0_8px_24px_-6px_rgba(0,0,0,0.12)] border border-white flex items-center gap-3">
                 <button id="btn-action-order" class="flex-1 h-14 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-[2rem] font-black text-sm uppercase flex items-center justify-center gap-2 transition-all active:scale-95 shadow-inner">
                     <span class="material-symbols-outlined">restaurant</span>
                     Gọi Món
                 </button>
-                <button id="btn-action-checkout" class="flex-[1.5] h-14 bg-[#065F46] hover:bg-[#044e39] text-white rounded-[2rem] font-black text-sm uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20 transition-all active:scale-95">
+                <button id="btn-action-checkout" class="flex-1 h-14 bg-[#065F46] hover:bg-[#044e39] text-white rounded-[2rem] font-black text-sm uppercase flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/20 transition-all active:scale-95">
                     <span class="material-symbols-outlined">meeting_room</span>
                     Xếp Bed Ngay
                 </button>
@@ -4776,8 +5298,8 @@ function selectBedItem(index) {
                                     <span class="text-xs font-bold opacity-60 text-[#065F46]">VNĐ</span>
                                 </div>
                             </div>
-                            <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-[#065F46]">
-                                <span class="material-symbols-outlined">payments</span>
+                            <div class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-[#065F46] cursor-pointer active:scale-90 transition-transform" onclick="showBillModal('${bookingId}')" title="Xem hoá đơn">
+                                <span class="material-symbols-outlined">receipt_long</span>
                             </div>
                         </div>
 
@@ -4907,6 +5429,12 @@ function handleMobileBedOrder(bookingId) {
     activeOrderingBedId = booking.bedId || "WAITING";
     pendingBedOrder = booking;
 
+    // Nếu có pre-order chưa load → hiện modal xem trước, không vào menu thẳng
+    if (_hasActivePreorder(booking)) {
+        showPreorderModal(booking, bookingId);
+        return;
+    }
+
     var sdtInput = document.getElementById('kh-sdt');
     if (sdtInput && booking.phone) {
         sdtInput.value = booking.phone;
@@ -4969,6 +5497,57 @@ function handleMobileBedOrder(bookingId) {
     _doShowBedDetail(booking, bedId);
 }
 
+// Popup khuyến mãi đặc biệt từ slot gợi ý (bookingBonus)
+function showBonusPopup(booking) {
+    var bonus = (booking.bookingBonus || '').trim();
+    if (!bonus) return;
+
+    var hasBlanket = bonus.indexOf('chăn') !== -1 || bonus.indexOf('Free chăn') !== -1;
+    var has5k      = bonus.indexOf('5k') !== -1 || bonus.indexOf('Giảm 5k') !== -1;
+
+    var bonusLabel = bonus.replace(/✨\s*/g, '');
+
+    // Build HTML mô tả khuyến mãi
+    var details = '<ul style="text-align:left;margin:8px 0 0;padding:0 0 0 18px;font-size:13px;color:#1e3932;">';
+    if (hasBlanket) details += '<li style="margin-bottom:4px;"><b>Chăn bed</b> miễn phí (thêm vào cart 0đ)</li>';
+    if (has5k)      details += '<li><b>Giảm 5.000đ</b> tổng bill (tự động áp)</li>';
+    details += '</ul>';
+
+    var html = '<p style="font-size:13px;color:#374151;margin-bottom:6px;">Khách được hưởng:</p>'
+             + '<div style="background:#f0fdf4;border:1.5px solid #6ee7b7;border-radius:12px;padding:10px 14px;margin-bottom:12px;">'
+             + '<p style="font-weight:900;color:#006241;font-size:13px;margin:0 0 4px;">✨ ' + bonusLabel + '</p>'
+             + details
+             + '</div>'
+             + '<div style="display:flex;gap:8px;margin-top:4px;">'
+             + '<button onclick="closeAppModal()" '
+             +   'style="flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;background:white;font-weight:700;font-size:12px;cursor:pointer;color:#6b7280;">Bỏ qua</button>'
+             + '<button onclick="_applyBonusToCart(' + JSON.stringify({hasBlanket:hasBlanket,has5k:has5k}) + ');closeAppModal()" '
+             +   'style="flex:2;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#006241,#005235);color:white;font-weight:900;font-size:12px;cursor:pointer;">Thêm vào cart</button>'
+             + '</div>';
+
+    showAppModal('🎁 Khuyến mãi đặc biệt', html, '');
+}
+
+// Áp dụng bonus vào cart
+function _applyBonusToCart(opts) {
+    if (opts.hasBlanket) {
+        // Tìm item "Chăn bed" trong menu, add với giá 0đ
+        var blanket = menu.find(function(m) { return m.name.toLowerCase() === 'chăn bed'; });
+        if (blanket) {
+            var ex = cart.find(function(c) { return c.name === blanket.name; });
+            if (ex) ex.qty++;
+            else cart.push({ name: blanket.name, size: 'M', price: 0, qty: 1 });
+        }
+    }
+    if (opts.has5k) {
+        // Thêm discount 5k vào cart dưới dạng item âm
+        var ex5k = cart.find(function(c) { return c.name === 'Khuyến mãi đặc biệt'; });
+        if (!ex5k) cart.push({ name: 'Khuyến mãi đặc biệt', size: 'M', price: -5000, qty: 1 });
+    }
+    renderCart();
+    if (typeof showToast === 'function') showToast('🎁 Đã áp khuyến mãi vào cart!');
+}
+
 function _doShowBedDetail(booking, bedId) {
    if (booking.phone) {
         scanAndAddDebt(booking.phone);
@@ -4989,10 +5568,22 @@ function _doShowBedDetail(booking, bedId) {
 
     if (typeof autoAddBedItems === 'function') autoAddBedItems(booking);
 
-    var _preorderKey = booking.key || booking.id;
-    if (_preorderKey && _hasActivePreorder(booking)) {
-        loadPreorderToCart(_preorderKey);
+    // Hiện popup khuyến mãi nếu lịch có bookingBonus
+    // Nếu có nợ → chờ nhân viên đóng modal nợ rồi mới hiện (tránh đè modal)
+    if (booking.bookingBonus) {
+        var phone = booking.phone;
+        var key = typeof normalizePhone === 'function' ? normalizePhone(phone||'') : (phone||'');
+        var cust = customerMap && customerMap[key];
+        var hasDebt = cust && cust.pendingFee > 0;
+        if (hasDebt) {
+            _onModalClose = function() { showBonusPopup(booking); };
+        } else {
+            setTimeout(function() { showBonusPopup(booking); }, 400);
+        }
     }
+
+    // Preorder KHÔNG auto add vào cart ở đây nữa
+    // Nhân viên bấm nút vàng "Pre-order" → showPreorderModal → xem xong mới confirm add
 
     if (booking) {
         const rawPhone = booking.phone || "";
@@ -5080,11 +5671,16 @@ function finalizeBedCheckIn(bedId) {
 
         var originalDurationMins = (bookEnd - bookStart) / 60000;
 
-        var originalBlocks = Math.ceil(originalDurationMins / 60);
+        // Nếu có pre-order → end đã bị cộng +5p bonus → trừ lại trước khi ceil
+        // để originalBlocks phản ánh đúng số tiếng khách thực sự đặt
+        var hasPreorder = pendingBedOrder.preorder && Object.keys(pendingBedOrder.preorder).length > 0;
+        var originalDurationForBlock = hasPreorder ? originalDurationMins - 5 : originalDurationMins;
+        var originalBlocks = Math.ceil(originalDurationForBlock / 60);
 
+        // Thời gian thực tế nếu khách đến sớm — cũng trừ 5p để so sánh cùng đơn vị
         var newTotalMins = originalDurationMins + diffMinutes;
-
-        var newBlocks = Math.ceil(newTotalMins / 60);
+        var newTotalForBlock = hasPreorder ? newTotalMins - 5 : newTotalMins;
+        var newBlocks = Math.ceil(newTotalForBlock / 60);
 
         if (newBlocks > originalBlocks) {
             var newEndDate = new Date(bookEnd.getTime() - (diffMinutes * 60000));
@@ -5096,7 +5692,7 @@ function finalizeBedCheckIn(bedId) {
     document.getElementById('bed-select-modal').classList.add('hidden');
     document.getElementById('loading-overlay').style.display = 'flex';
 
-    db.ref('bedBookings/' + bookingId).update({
+    _updateBedBooking(pendingBedOrder, {
         status: 'active',
         bedId: bedId,
         checkInTime: finalStartStr,
@@ -5148,8 +5744,8 @@ function autoFillCustomer() {
 
         elName.value = customer.name || "";
 
-        if(elCompName) elCompName.value = customer.lastCompName || "";
-        if(elCompPhone) elCompPhone.value = customer.lastCompPhone || "";
+        if(elCompName) elCompName.value = customer.compName || "";
+        if(elCompPhone) elCompPhone.value = customer.compPhone || "";
 
         elName.classList.add('bg-green-50', 'text-green-700');
         setTimeout(() => elName.classList.remove('bg-green-50', 'text-green-700'), 1000);
@@ -5211,20 +5807,29 @@ function submitNewBooking() {
                 points: 0,
                 createdAt: new Date().toISOString(),
                 lastVisit: new Date().toISOString(),
-                lastCompName: compName || '',
-                lastCompPhone: compPhone || ''
+                compName: compName || '',
+                compPhone: compPhone || ''
             });
         } else {
             db.ref('customers/' + cleanPhone).update({
                 name: name,
                 lastVisit: new Date().toISOString(),
-                lastCompName: compName || '',
-                lastCompPhone: compPhone || ''
+                compName: compName || '',
+                compPhone: compPhone || ''
             });
         }
     }
 
-    db.ref('bedBookings').push({
+    var _d = _parseDateKey(dateStr);
+    var _datedRef = _d
+        ? db.ref('bedBookings/' + _d.year + '/' + _d.month + '/' + _d.day)
+        : db.ref('bedBookings/misc');
+    var _newRef = _datedRef.push();
+    var _newKey = _newRef.key;
+    var _fullPath = _newRef.toString().replace(/.*\.com\//, '').replace(/\.json$/, '');
+    // Dùng path tương đối
+    var _rtPath = 'bedBookings/' + (_d ? _d.year + '/' + _d.month + '/' + _d.day : 'misc') + '/' + _newKey;
+    _newRef.set({
         phone: phone,
         name: name,
         date: dateStr,
@@ -5236,7 +5841,9 @@ function submitNewBooking() {
         bedId: "",
         type: "walk-in",
         isWalkIn: true,
-        rulesAgreed: false
+        rulesAgreed: false,
+        dateKey: _d ? (_d.year + '-' + _d.month + '-' + _d.day) : '',
+        path: _rtPath
     }, (err) => {
         if(btn) { btn.innerHTML = "TẠO LỊCH & CHỜ XẾP"; btn.disabled = false; }
 
@@ -5280,7 +5887,23 @@ renderCustomerSuggestions(sdt, 'pc');
        syncToCustomerDisplay('cart', { customerName: "Khách mới", customerPoints: 0 });
     }
 }
-function showAppModal(title, msg, icon = '') { document.getElementById('app-modal-title').innerText = title; document.getElementById('app-modal-msg').innerHTML = msg; document.getElementById('app-modal-icon').innerText = icon; document.getElementById('app-modal').classList.remove('hidden'); }
+var _onModalClose = null; // callback chạy sau khi đóng app-modal
+function showAppModal(title, msg, icon, onClose) {
+    icon = icon || '';
+    document.getElementById('app-modal-title').innerText = title;
+    document.getElementById('app-modal-msg').innerHTML = msg;
+    document.getElementById('app-modal-icon').innerText = icon;
+    document.getElementById('app-modal').classList.remove('hidden');
+    _onModalClose = onClose || null;
+}
+function closeAppModal() {
+    document.getElementById('app-modal').classList.add('hidden');
+    if (typeof _onModalClose === 'function') {
+        var cb = _onModalClose;
+        _onModalClose = null;
+        cb();
+    }
+}
 function parseTimeObj(timeStr) { if (!timeStr) return null; var d = new Date(); var parts = timeStr.split(':'); d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0); return d; }
 function startPanelCountdown(endTimeStr) { stopPanelCountdown(); var clockEl = document.getElementById('detail-countdown'); if(!clockEl) return; var timeParts = endTimeStr.split(':'); if(timeParts.length < 2) return; var endDate = new Date(); endDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0); bedCountdownInterval = setInterval(function() { var diff = endDate - new Date(); var isOver = diff < 0; diff = Math.abs(diff); var h = Math.floor(diff / 3600000); var m = Math.floor((diff % 3600000) / 60000); var s = Math.floor((diff % 60000) / 1000); var fmt = v => v < 10 ? "0"+v : v; clockEl.innerText = (isOver ? '-' : '') + fmt(h) + ":" + fmt(m) + ":" + fmt(s); clockEl.className = isOver ? "text-3xl font-black text-red-500 font-mono tracking-tighter" : "text-3xl font-black text-[#006241] font-mono tracking-tighter"; }, 1000); }
 function stopPanelCountdown() { if (bedCountdownInterval) clearInterval(bedCountdownInterval); }
@@ -5436,7 +6059,12 @@ function submitCancelBooking(type) {
     document.getElementById('modal-cancel-reason').classList.add('hidden');
     document.getElementById('loading-overlay').style.display = 'flex';
 
-    db.ref('bedBookings/' + bookingId).update({
+    if (!booking) {
+        alert('Lỗi: Không tìm thấy booking ' + bookingId + ' trong danh sách hiện tại.');
+        document.getElementById('loading-overlay').style.display = 'none';
+        return;
+    }
+    _updateBedBooking(booking, {
         status: 'đã hủy',
         cancelType: type,
         note: reasonText
@@ -5621,7 +6249,7 @@ function confirmExtendTime() {
 
     var bookingId = booking.id || booking.key;
     if (bookingId) {
-        db.ref('bedBookings/' + bookingId).update({ end: newEndStr });
+        _updateBedBooking(booking, { end: newEndStr });
         booking.end = newEndStr;
         if (window.currentMobileBooking && window.currentMobileBooking.id === bookingId) window.currentMobileBooking.end = newEndStr;
         if (window.currentPcBooking && window.currentPcBooking.id === bookingId) window.currentPcBooking.end = newEndStr;
@@ -5712,7 +6340,7 @@ function triggerBedAutoStop() {
     activeBookings.forEach(function(b) {
         var bookingId = b.id || b.key;
         if (bookingId) {
-            db.ref('bedBookings/' + bookingId).update({
+            _updateBedBooking(b, {
                 status: 'đã xong',
                 realEndTime: nowStr,
                 autoStopped: true,
@@ -5856,7 +6484,7 @@ function calculateAndSaveCheckout(booking, realTimeStr) {
 
         let bookingId = booking.id || booking.key;
 
-        db.ref('bedBookings/' + bookingId).update({
+        _updateBedBooking(booking, {
             status: 'đã xong',
             realEndTime: realTimeStr,
             totalSpend: total
@@ -5888,7 +6516,9 @@ function _countPreorderQty(preorder) {
 
 function loadPreorderToCart(bookingKey) {
     if (!bookingKey) return;
-    db.ref('bedBookings/' + bookingKey + '/preorder').once('value', function(snap) {
+    var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingKey; });
+    var _preRef = _bk ? _bedBookingRef(_bk, 'preorder') : db.ref('bedBookings/' + bookingKey + '/preorder');
+    _preRef.once('value', function(snap) {
         var preorder = snap.val();
         if (!preorder || !preorder.items) return;
 
@@ -5920,7 +6550,6 @@ function loadPreorderToCart(bookingKey) {
         });
 
         renderCart();
-        db.ref('bedBookings/' + bookingKey + '/preorder/status').set('loaded');
 
         if (totalAdded > 0 && typeof showToast === 'function') {
             showToast('🍜 Đã thêm ' + totalAdded + ' món pre-order vào giỏ!');
@@ -5940,7 +6569,9 @@ function showPreorderModal(data, bookingId) {
     totalEl.innerText = '...';
     modal.classList.remove('hidden');
 
-    db.ref('bedBookings/' + bookingId + '/preorder').once('value', function(snap) {
+    var _bkObj = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
+    var _preRef2 = _bkObj ? _bedBookingRef(_bkObj, 'preorder') : db.ref('bedBookings/' + bookingId + '/preorder');
+    _preRef2.once('value', function(snap) {
         var preorder = snap.val();
         var items = preorder ? _getPreorderItems(preorder) : [];
 
@@ -5978,7 +6609,11 @@ function showPreorderModal(data, bookingId) {
             modal.classList.add('hidden');
             pendingBedOrder = data;
             activeOrderingBedId = data.bedId || 'WAITING';
+            // _doShowBedDetail lo toàn bộ: SĐT, phí bed, dynamic island, session display, switchView
+            // Preorder được load riêng ngay sau (không còn auto-load trong _doShowBedDetail)
             _doShowBedDetail(data, data.bedId);
+            var bkKey = data.id || data.key;
+            if (bkKey) setTimeout(function() { loadPreorderToCart(bkKey); }, 200);
         };
     });
 }
@@ -5996,6 +6631,8 @@ function autoAddBedItems(booking) {
             var endMins   = parseInt(pe[0]) * 60 + parseInt(pe[1]);
             var diffMins  = endMins - startMins;
             if (diffMins <= 0) diffMins += 24 * 60;
+            // Có pre-order → giờ kết thúc đã được cộng +5p thưởng → trừ lại để tính phí đúng
+            if (booking.preorder && Object.keys(booking.preorder).length > 0) diffMins -= 5;
             totalHours = Math.ceil(diffMins / 60);
         } catch(e) { totalHours = 0; }
     }
@@ -6054,9 +6691,7 @@ function processCheckoutFirebase(booking) {
     let btnCheckout = document.getElementById('btn-action-checkout');
     if(btnCheckout) btnCheckout.innerHTML = 'Wait...';
 
-    let bookingId = booking.id || booking.key;
-
-    db.ref('bedBookings/' + bookingId).update({
+    _updateBedBooking(booking, {
         status: 'đã xong',
         realEndTime: new Date().toLocaleTimeString('en-GB')
     }, (err) => {
@@ -6145,23 +6780,20 @@ function calculateSessionSpend(phone, startTimeStr, endTimeStr) {
 
         if (endDate < startDate) endDate.setDate(endDate.getDate() + 1);
 
-        db.ref('orders').once('value', snap => {
+        fetchOrdersByDateRange(startDate, endDate).then(orders => {
             let total = 0;
-            if (snap.exists()) {
-                const orders = snap.val();
-                Object.values(orders).forEach(o => {
-                    if (normalizePhone(o.sdt) === normalizePhone(phone)) {
-                        var orderDate = new Date(o.createdAt);
+            orders.forEach(o => {
+                if (normalizePhone(o.sdt) === normalizePhone(phone)) {
+                    var orderDate = new Date(o.createdAt);
 
-                        var bufferStart = new Date(startDate.getTime() - 5*60000);
-                        var bufferEnd = new Date(endDate.getTime() + 5*60000);
+                    var bufferStart = new Date(startDate.getTime() - 5*60000);
+                    var bufferEnd = new Date(endDate.getTime() + 5*60000);
 
-                        if (orderDate >= bufferStart && orderDate <= bufferEnd) {
-                            total += Number(o.total || 0);
-                        }
+                    if (orderDate >= bufferStart && orderDate <= bufferEnd) {
+                        total += Number(o.total || 0);
                     }
-                });
-            }
+                }
+            });
             resolve(total);
         });
     });
@@ -6182,11 +6814,9 @@ function setCleaningFee(phone, amount, bookingId) {
                 statusEl.classList.remove('text-gray-400');
                 statusEl.classList.add('text-green-600', 'font-bold');
             }
-
-            db.ref('bedBookings/' + bookingId).update({
-                hasPenalty: true,
-                penaltyAmount: amount
-            });
+            var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
+            if (_bk) _updateBedBooking(_bk, { hasPenalty: true, penaltyAmount: amount });
+            else db.ref('bedBookings/' + bookingId).update({ hasPenalty: true, penaltyAmount: amount });
         }
     });
 }
@@ -6229,14 +6859,13 @@ function setCleaningFee(phone, amount, bookingId) {
             document.getElementById('loading-overlay').style.display = 'none';
             alert("Lỗi: " + error.message);
         } else {
-            db.ref('bedBookings/' + bookingId).update({
-                hasPenalty: true,
-                penaltyAmount: amount
-            }, () => {
+            var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
+            var _doUpdate = _bk
+                ? function(cb) { _updateBedBooking(_bk, { hasPenalty: true, penaltyAmount: amount }, cb); }
+                : function(cb) { db.ref('bedBookings/' + bookingId).update({ hasPenalty: true, penaltyAmount: amount }, cb); };
+            _doUpdate(() => {
                 document.getElementById('loading-overlay').style.display = 'none';
-
                 openBedManager();
-
                 setTimeout(() => {
                     showAppModal("Đã tính phí!", `Khách sẽ bị tính thêm ${amount.toLocaleString()}đ vào lần thanh toán sau.`, "✅");
                 }, 300);
@@ -6254,10 +6883,11 @@ function deletePenalty(phone, bookingId) {
             pendingFeeReason: null
         });
 
-        db.ref('bedBookings/' + bookingId).update({
-            hasPenalty: false,
-            penaltyAmount: 0
-        }, () => {
+        var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
+        var _doUpdate = _bk
+            ? function(cb) { _updateBedBooking(_bk, { hasPenalty: false, penaltyAmount: 0 }, cb); }
+            : function(cb) { db.ref('bedBookings/' + bookingId).update({ hasPenalty: false, penaltyAmount: 0 }, cb); };
+        _doUpdate(() => {
             document.getElementById('loading-overlay').style.display = 'none';
             openBedManager();
             setTimeout(() => { showAppModal("Đã xóa!", "Đã hủy bỏ khoản phí vệ sinh.", "🗑️"); }, 300);
@@ -6512,7 +7142,7 @@ function saveOrderToFirebase(method) {
         customerName: finalCustName
     };
 
-    db.ref('orders').push(orderData, (error) => {
+    getOrdersRef().push(orderData, (error) => {
         isSavingOrder = false;
         if (error) {
             alert("❌ Lỗi lưu đơn: " + error.message);
@@ -6524,6 +7154,15 @@ function saveOrderToFirebase(method) {
             const pcStatusLabel = document.getElementById('sdt-status');
             if (pcStatusLabel) pcStatusLabel.innerText = "";
             clearDebtAfterPayment();
+
+            // Ghi preorder/status = 'loaded' SAU KHI thanh toán thành công
+            if (currentBooking && _hasActivePreorder(currentBooking)) {
+                var _bkForStatus = (globalAllBookings || []).find(function(b){ return (b.id||b.key) === (currentBooking.id||currentBooking.key); });
+                var _statusRef = _bkForStatus
+                    ? _bedBookingRef(_bkForStatus, 'preorder/status')
+                    : db.ref('bedBookings/' + (currentBooking.id||currentBooking.key) + '/preorder/status');
+                _statusRef.set('loaded');
+            }
             giftVoucherMarkUsedAndReset();
             resetDiscountState(true);
             if(document.getElementById('qr-modal')) document.getElementById('qr-modal').classList.add('hidden');
@@ -6531,9 +7170,8 @@ function saveOrderToFirebase(method) {
             if (isCheckout && currentBooking) {
                 syncToCustomerDisplay('success');
 
-                let bookingId = currentBooking.id || currentBooking.key;
                 let realTime = new Date().toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-                db.ref('bedBookings/' + bookingId).update({ status: 'đã xong', realEndTime: realTime });
+                _updateBedBooking(currentBooking, { status: 'đã xong', realEndTime: realTime });
 
                 resetOrderingMode();
                 openBedManager();
@@ -6557,6 +7195,95 @@ function saveOrderToFirebase(method) {
         }
     });
 }
+function closeBillModal() {
+    document.getElementById('modal-bill-detail').classList.add('hidden');
+}
+
+function showBillModal(bookingId) {
+    var booking = (globalAllBookings || []).find(function(b) { return (b.id || b.key) === bookingId; });
+    if (!booking) return;
+
+    var modal = document.getElementById('modal-bill-detail');
+    var guestEl = document.getElementById('bill-modal-guest');
+    var bodyEl = document.getElementById('bill-modal-body');
+    var totalEl = document.getElementById('bill-modal-total');
+
+    guestEl.innerText = (booking.name || 'Khách') + (booking.bedId ? ' · Bed 0' + booking.bedId : '');
+    bodyEl.innerHTML = '<div class="text-center py-8 text-gray-300 text-sm">Đang tải...</div>';
+    totalEl.innerText = '--';
+    modal.classList.remove('hidden');
+
+    // Query orders hôm nay theo bedId và phone
+    getOrdersRef().once('value', function(snap) {
+        var data = snap.val();
+        var orders = [];
+        if (data) {
+            Object.keys(data).forEach(function(k) {
+                var o = data[k];
+                var matchBed   = booking.bedId && o.bedId && String(o.bedId) === String(booking.bedId);
+                var matchPhone = booking.phone && o.sdt && o.sdt.replace(/[^0-9]/g,'') === booking.phone.replace(/[^0-9]/g,'');
+                if (matchBed || matchPhone) orders.push(o);
+            });
+        }
+
+        if (!orders.length) {
+            bodyEl.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">Chưa có hoá đơn nào.</div>';
+            return;
+        }
+
+        // Gom tất cả items từ các order
+        var itemMap = {};
+        var grandTotal = 0;
+        orders.forEach(function(o) {
+            grandTotal += Number(o.total || 0);
+            var items = [];
+            if (o.itemsArray && Array.isArray(o.itemsArray)) {
+                items = o.itemsArray;
+            } else if (o.items) {
+                o.items.split(',').forEach(function(s) {
+                    var raw = s.trim();
+                    var lastX = raw.lastIndexOf('x');
+                    if (lastX === -1) return;
+                    var namePart = raw.substring(0, lastX).trim();
+                    var qty = parseInt(raw.substring(lastX + 1)) || 1;
+                    var name = namePart, size = 'M';
+                    if (namePart.includes('(')) {
+                        var p = namePart.split('(');
+                        name = p[0].trim();
+                        size = p[1].replace(')', '').trim();
+                    }
+                    items.push({ name: name, size: size, qty: qty, price: 0 });
+                });
+            }
+            items.forEach(function(it) {
+                if (!it || !it.name) return;
+                var key = it.name + '|' + (it.size || 'M');
+                if (itemMap[key]) {
+                    itemMap[key].qty += (parseInt(it.qty) || 1);
+                } else {
+                    itemMap[key] = { name: it.name, size: it.size || 'M', price: it.price || 0, qty: parseInt(it.qty) || 1 };
+                }
+            });
+        });
+
+        var html = '';
+        Object.values(itemMap).forEach(function(it) {
+            var sub = it.price * it.qty;
+            html += '<div class="flex items-center justify-between py-2.5 border-b border-dashed border-gray-100 last:border-0">'
+                + '<div class="flex items-center gap-3">'
+                + '<span class="w-7 h-7 rounded-full bg-[#006241] text-white text-xs font-black flex items-center justify-center shrink-0">' + it.qty + '</span>'
+                + '<div><p class="text-sm font-black text-gray-800">' + it.name + '</p>'
+                + '<p class="text-[11px] text-gray-400 font-bold">' + it.size + (it.price > 0 ? ' · ' + it.price.toLocaleString() + 'đ' : '') + '</p></div>'
+                + '</div>'
+                + (sub > 0 ? '<span class="text-sm font-black text-[#006241]">' + sub.toLocaleString() + 'đ</span>' : '')
+                + '</div>';
+        });
+
+        bodyEl.innerHTML = html;
+        totalEl.innerText = grandTotal.toLocaleString() + 'đ';
+    });
+}
+
 function completeOrder() {
     if (pendingBedOrder && pendingBedOrder.isWalkIn && !pendingBedOrder.rulesAgreed) {
         document.getElementById('modal-rules-check').classList.remove('hidden');
@@ -6741,30 +7468,18 @@ function openBedManagerMobile() {
     const picker = document.getElementById('mob-date-picker');
     if(picker && !picker.value) picker.value = today;
 
-    db.ref('bedBookings').on('value', snap => {
-        const data = snap.val() || {};
-        globalAllBookings = Object.keys(data).map(k => {
-            const item = data[k];
-            let rawDate = item.date || item.bookingDate || "";
-            if (rawDate.includes('-') && rawDate.split('-')[0].length === 4) {
-                const p = rawDate.split('-');
-                rawDate = `${p[2]}/${p[1]}/${p[0]}`;
-            }
-            return {
-                id: k, ...item,
-                start: item.start || "--:--",
-                end: item.end || "--:--",
-                displayDate: rawDate
-            };
+    const todayISO = new Date().toISOString().split('T')[0];
+    const todayParts = todayISO.split('-');
+
+    db.ref('bedBookings/' + todayParts[0] + '/' + todayParts[1] + '/' + todayParts[2]).on('value', snap => {
+        _loadBedBookingsForDays([todayISO], function(bookings) {
+            globalAllBookings = globalAllBookings.filter(b => b.displayDate !== new Date().toLocaleDateString('en-GB'));
+            globalAllBookings = globalAllBookings.concat(bookings);
+            runAutoCancelScan(globalAllBookings);
+            document.getElementById('loading-overlay').style.display = 'none';
+            const pickerEl = document.getElementById('mob-date-picker');
+            changeBedDateMobile(pickerEl && pickerEl.value ? pickerEl.value : todayISO);
         });
-
-        runAutoCancelScan(globalAllBookings);
-
-        document.getElementById('loading-overlay').style.display = 'none';
-
-        const picker = document.getElementById('mob-date-picker');
-        const todayISO = new Date().toISOString().split('T')[0];
-        changeBedDateMobile(picker && picker.value ? picker.value : todayISO);
     });
 }
 
@@ -6773,12 +7488,16 @@ function changeBedDateMobile(dateVal) {
     const parts = dateVal.split('-');
     const targetDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
-    const list = globalAllBookings.filter(b => {
+    _loadBedBookingsForDays([dateVal], function(bookings) {
+        globalAllBookings = globalAllBookings.filter(b => b.displayDate !== targetDateStr);
+        globalAllBookings = globalAllBookings.concat(bookings);
         const isToday = (targetDateStr === new Date().toLocaleDateString('en-GB'));
-        if (isToday) return b.displayDate === targetDateStr || (b.status && b.status.includes('active'));
-        return b.displayDate === targetDateStr;
+        const list = bookings.filter(b => {
+            if (isToday) return b.displayDate === targetDateStr || (b.status && b.status.includes('active'));
+            return b.displayDate === targetDateStr;
+        });
+        renderMobileBedList(list);
     });
-    renderMobileBedList(list);
 }
 
 function renderMobileBedList(list) {
@@ -6860,10 +7579,20 @@ function renderMobileBedList(list) {
     }).join('');
 }
 function showMobileBedDetail(bookingId) {
-    const booking = globalAllBookings.find(b => b.id === bookingId);
-    if(!booking) return;
-    window.currentMobileBooking = booking;
+    var booking = globalAllBookings.find(b => b.id === bookingId);
+    if (booking) {
+        _showMobileBedDetailRender(booking);
+        return;
+    }
+    // Fallback: tìm trong currentBedList trước, rồi đọc RT theo path nếu booking có dateKey
+    var fromList = (currentBedList || []).find(b => b.id === bookingId);
+    if (fromList) { _showMobileBedDetailRender(fromList); return; }
+    // Không có trong memory — không biết ngày, không thể load
+    console.warn('showMobileBedDetail: booking ' + bookingId + ' not found in memory');
+}
 
+function _showMobileBedDetailRender(booking) {
+    window.currentMobileBooking = booking;
     renderDetailContentMobile(booking);
 
     const isFinished = (booking.status === 'đã xong' || booking.status === 'đã hủy');
@@ -6938,179 +7667,206 @@ function renderDetailContentMobile(b) {
     const actionContainer = document.getElementById('mob-detail-actions');
 
     const isWaiting = !b.bedId || b.bedId == "WAITING";
-    const statusText = isWaiting ? "CHỜ XẾP" : `BED 0${b.bedId}`;
     const isDone = b.status === 'đã xong';
     const isCancelled = b.status === 'đã hủy';
     const isActive = (b.status === 'active' || (b.status && b.status.includes('active')) || (b.status && b.status.includes('đang dùng')));
+    const hasPreorder = _hasActivePreorder(b) || (b.preorder && b.preorder.status === 'loaded');
 
-    const countdown = isActive ? getCountdownStr(b.end) : { timeStr: b.start, label: "DỰ KIẾN", style: "bg-white/20" };
+    const countdown = isActive ? getCountdownStr(b.end) : null;
+
+    // --- Status badge ---
+    let statusBg, statusLabel;
+    if (isCancelled)    { statusBg = 'bg-red-100 text-red-600 border border-red-200';           statusLabel = 'Đã hủy'; }
+    else if (isDone)    { statusBg = 'bg-gray-100 text-gray-500 border border-gray-200';         statusLabel = 'Đã xong'; }
+    else if (isActive)  { statusBg = 'bg-emerald-100 text-emerald-700 border border-emerald-200'; statusLabel = 'Đang dùng'; }
+    else if (isWaiting) { statusBg = 'bg-amber-100 text-amber-700 border border-amber-200';      statusLabel = 'Chờ xếp bed'; }
+    else                { statusBg = 'bg-blue-100 text-blue-600 border border-blue-200';          statusLabel = 'Đã đặt'; }
+
+    const bedLabel = isWaiting ? 'WAITING' : `Bed 0${b.bedId}`;
 
     container.innerHTML = `
-    <div class="bg-primary squircle p-8 text-white relative overflow-hidden shadow-2xl shadow-[#006241]/20 min-h-[220px] flex flex-col justify-between">
-        <div class="relative z-10">
-            <p class="text-[11px] font-bold tracking-[0.2em] opacity-60 mb-1 uppercase">Trạng Thái</p>
-            <h2 class="text-5xl font-black tracking-tighter">${statusText}</h2>
-            ${isCancelled ? '<span class="inline-block mt-2 bg-red-500 px-3 py-1 rounded-full text-[10px] font-bold">ĐÃ HỦY</span>' : ''}
+    <!-- Header info block -->
+    <div class="bg-white rounded-[2rem] p-5 shadow-sm border border-gray-100">
+        <div class="flex items-start justify-between mb-4">
+            <div class="flex-1 min-w-0">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Khách hàng</p>
+                <h2 class="text-2xl font-black text-[#1e3932] truncate">${b.name || 'Khách'}</h2>
+                <p class="text-sm font-bold text-gray-500 mt-0.5">${b.phone || '--'}</p>
+            </div>
+            <div class="flex flex-col items-end gap-2 shrink-0 ml-3">
+                <span class="text-lg font-black text-[#006241]">${bedLabel}</span>
+                <span class="text-[10px] font-black uppercase px-2.5 py-1 rounded-full ${statusBg}">${statusLabel}</span>
+            </div>
+        </div>
+
+        <!-- Giờ bắt đầu / kết thúc -->
+        <div class="flex items-center justify-between bg-gray-50 rounded-[1.2rem] px-5 py-3">
+            <div class="text-center">
+                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Bắt đầu</p>
+                <p class="text-2xl font-black text-gray-800 tracking-tight">${b.start}</p>
+            </div>
+            <span class="material-symbols-outlined text-gray-300 text-2xl">arrow_forward</span>
+            <div class="text-center">
+                <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">${isDone ? 'Thực tế trả' : 'Kết thúc'}</p>
+                <p class="text-2xl font-black ${isDone ? 'text-rose-600' : 'text-gray-800'} tracking-tight">${isDone ? (b.realEndTime || b.end) : b.end}</p>
+            </div>
         </div>
 
         ${isActive ? `
-            <div class="relative z-10 flex items-baseline justify-between mt-4">
-                <div id="mob-live-timer" class="timer-font text-6xl font-medium tracking-tight">${countdown.timeStr}</div>
-                <div id="mob-live-badge" class="${countdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md transition-all">
-                    ${countdown.label}
-                </div>
-            </div>
-        ` : (isWaiting ? `
-            <div class="relative z-10 flex items-baseline justify-between mt-4 opacity-80">
-                <div class="timer-font text-5xl font-medium tracking-tight">${b.start}</div>
-                <div class="bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold backdrop-blur-md">
-                    CHỜ CHECK-IN
-                </div>
-            </div>
-        ` : '')}
-
-        <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-        <div class="absolute right-4 bottom-4 w-32 h-32 bg-black/10 rounded-full"></div>
+        <!-- Timer đếm ngược -->
+        <div class="mt-3 flex items-center justify-between px-1">
+            <div id="mob-live-badge" class="${countdown.style} px-3 py-1 rounded-full text-[11px] font-black">${countdown.label}</div>
+            <div id="mob-live-timer" class="timer-font text-3xl font-black text-[#006241] tracking-tight">${countdown.timeStr}</div>
+        </div>` : ''}
     </div>
 
-    <div class="grid grid-cols-2 gap-4 mt-2">
-        <div class="glass p-5 rounded-[28px] shadow-sm flex flex-col items-center text-center">
-            <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-3">
-                <span class="material-symbols-outlined text-[20px]">person</span>
-            </div>
-            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Khách Hàng</span>
-            <p class="text-[15px] font-bold leading-tight truncate w-full">${b.name}</p>
-            <p class="text-[12px] text-gray-500 mt-0.5 font-mono">${b.phone}</p>
+    <!-- Info grid: Đi cùng + Tags -->
+    <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white rounded-[1.5rem] p-4 shadow-sm border border-gray-100">
+            <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Đi cùng</p>
+            <p class="text-[14px] font-black text-gray-800 truncate">${b.compName || '--'}</p>
+            <p class="text-[11px] text-gray-400 font-bold mt-0.5">${b.compPhone || ''}</p>
         </div>
-        <div class="glass p-5 rounded-[28px] shadow-sm flex flex-col items-center text-center">
-            <div class="w-10 h-10 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-3">
-                <span class="material-symbols-outlined text-[20px]">group</span>
-            </div>
-            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Đi Cùng</span>
-            <p class="text-[15px] font-bold leading-tight truncate w-full">${b.compName || "--"}</p>
-            <p class="text-[12px] text-gray-500 mt-0.5 font-mono">${b.compPhone || "--"}</p>
+        <div class="bg-white rounded-[1.5rem] p-4 shadow-sm border border-gray-100">
+            <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Ngày đặt</p>
+            <p class="text-[13px] font-black text-gray-800">${b.date || b.displayDate || b.bookingDate || '--'}</p>
+            <p class="text-[11px] text-gray-400 mt-1">${b.source === 'app_index' ? '📱 App' : '🖥️ POS'}</p>
         </div>
     </div>
 
-    <div class="bg-white rounded-[28px] shadow-sm overflow-hidden border border-gray-50">
-        <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-emerald-50 text-emerald-500 rounded-xl flex items-center justify-center">
-                    <span class="material-symbols-outlined">schedule</span>
-                </div>
-                <span class="font-semibold text-[14px] text-gray-600">Bắt đầu</span>
-            </div>
-            <span class="text-lg font-bold text-gray-900">${b.start}</span>
+    <!-- Tags: preorder, preferredBed -->
+    ${(hasPreorder || b.preferredBed || b.bookingBonus) ? `
+    <div class="flex flex-wrap gap-2">
+        ${hasPreorder ? `<span class="text-[11px] font-black px-3 py-1.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">🍜 Pre-order</span>` : ''}
+        ${b.preferredBed ? `<span class="text-[11px] font-black px-3 py-1.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">⭐ Bed 0${b.preferredBed}</span>` : ''}
+        ${b.bookingBonus ? `<span class="text-[11px] font-black px-3 py-1.5 rounded-full bg-green-100 text-green-800 border border-green-200">🎁 Bonus</span>` : ''}
+    </div>` : ''}
+
+    <!-- Chi tiêu tạm tính -->
+    <div class="bg-white rounded-[1.5rem] px-5 py-4 shadow-sm border border-gray-100 flex items-center justify-between">
+        <div>
+            <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Chi tiêu tạm tính</p>
+            <span id="mob-detail-total-display" class="text-2xl font-black text-[#006241] tracking-tight">...</span>
         </div>
-        <div class="flex items-center justify-between px-6 py-5">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center">
-                    <span class="material-symbols-outlined">alarm_off</span>
-                </div>
-                <span class="font-semibold text-[14px] text-gray-600">${isDone ? "Thực tế trả" : "Kết thúc"}</span>
-            </div>
-            <span class="text-lg font-bold ${isDone ? 'text-rose-600' : 'text-gray-900'}">
-                ${isDone ? (b.realEndTime || b.end) : b.end}
-            </span>
-        </div>
+        <button onclick="showBillModal('${b.id}')" class="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-[#006241] active:scale-90 transition-transform cursor-pointer">
+            <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+        </button>
     </div>
 
-   <div class="flex items-end justify-between px-2 pt-2 pb-1">
-        <span class="text-[12px] font-bold text-gray-400 uppercase tracking-[0.1em]">Tổng chi tiêu</span>
-        <span id="mob-detail-total-display" class="text-4xl font-black text-primary tracking-tight">...</span>
-    </div>
-
+    <!-- Nút copy + cảnh báo (active) -->
     ${isActive ? `
-    <div class="flex justify-center gap-3 mt-2 pb-2">
+    <div class="flex gap-3">
         <button onclick="copyBedNotification('${b.end}')"
-            class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 shadow-sm active:scale-90 active:bg-[#006241] active:text-white transition-all">
-            <span class="material-symbols-outlined text-[20px]">content_copy</span>
+            class="flex-1 h-11 bg-white border border-gray-200 rounded-[1rem] flex items-center justify-center gap-2 text-gray-600 text-[12px] font-black uppercase active:scale-95 transition-transform shadow-sm">
+            <span class="material-symbols-outlined text-[17px]">content_copy</span>
+            Copy TB
         </button>
         <button onclick="sendWarning(this)" data-id="${b.id}" data-name="${b.name||'Khách hàng'}"
-            class="warn-mob-btn relative w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shadow-sm active:scale-90 border border-amber-300 transition-all">
-            <span class="material-symbols-outlined text-[20px]">warning</span>
+            class="warn-mob-btn relative flex-1 h-11 bg-amber-50 border border-amber-200 rounded-[1rem] flex items-center justify-center gap-2 text-amber-700 text-[12px] font-black uppercase active:scale-95 transition-transform shadow-sm">
+            <span class="material-symbols-outlined text-[17px]">warning</span>
+            Cảnh báo
             <span class="warn-mob-badge hidden absolute -top-1 -right-1 text-[9px] font-black text-white rounded-full w-4 h-4 flex items-center justify-center bg-red-500"></span>
         </button>
-    </div>
-    ` : ''}
+    </div>` : ''}
 
-    ${(!isActive && !isWaiting) ? `
-    <div class="glass-widget rounded-[32px] p-6 space-y-4 relative overflow-hidden animate-slide-up">
-        <div class="flex items-center justify-between px-1">
-            <span class="text-[14px] font-bold text-slate-800 tracking-tight">Phí vệ sinh</span>
-            <div class="flex items-center gap-1.5 py-1 px-2.5 rounded-full bg-orange-500/10 border border-orange-500/20">
-                <span class="material-symbols-outlined text-[14px] text-orange-600 font-bold">error</span>
-                <span class="text-[10px] font-black uppercase tracking-widest text-orange-600">Nợ sau</span>
+    <!-- Phí vệ sinh (done only, chưa tính) -->
+    ${(isDone && !isCancelled && !b.hasPenalty) ? `
+    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border border-gray-100">
+        <div class="flex items-center justify-between mb-3">
+            <span class="text-[13px] font-black text-gray-800">Phí vệ sinh</span>
+            <span class="text-[10px] font-black uppercase px-2 py-1 rounded-full bg-orange-100 text-orange-700 border border-orange-200">Nợ sau</span>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="submitCleaningFee(20000)" class="high-gloss-button flex-1 py-3 rounded-full text-[13px] font-bold text-slate-900">20K</button>
+            <button onclick="submitCleaningFee(30000)" class="high-gloss-button flex-1 py-3 rounded-full text-[13px] font-bold text-slate-900">30K</button>
+            <button onclick="submitCleaningFee(50000)" class="high-gloss-button flex-1 py-3 rounded-full text-[13px] font-bold text-slate-900">50K</button>
+        </div>
+    </div>` : ''}
+    ${(isDone && b.hasPenalty && b.penaltyAmount > 0) ? `
+    <div class="bg-red-50 rounded-[1.5rem] p-5 border border-red-100 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-red-100 rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-red-500 text-[18px]">cleaning_services</span>
             </div>
+            <span class="text-[13px] font-black text-red-700">Đã tính phí vệ sinh</span>
         </div>
-        <div class="flex gap-4">
-            <button onclick="submitCleaningFee(20000)" class="high-gloss-button flex-1 py-4 rounded-full text-[14px] font-bold text-slate-900 transition-all duration-200">20K</button>
-            <button onclick="submitCleaningFee(30000)" class="high-gloss-button flex-1 py-4 rounded-full text-[14px] font-bold text-slate-900 transition-all duration-200">30K</button>
-            <button onclick="submitCleaningFee(50000)" class="high-gloss-button flex-1 py-4 rounded-full text-[14px] font-bold text-slate-900 transition-all duration-200">50K</button>
-        </div>
-        <div class="absolute -bottom-4 -left-4 w-24 h-24 bg-white/40 rounded-full blur-2xl pointer-events-none"></div>
-    </div>
-    ` : ''}
+        <span class="text-[15px] font-black text-red-600">${Number(b.penaltyAmount).toLocaleString()}đ</span>
+    </div>` : ''}
     `;
 
+    // --- Action buttons ---
     let btnHtml = '';
-    if (isWaiting && !isCancelled) {
+    const orderStyle = _hasActivePreorder(b)
+        ? 'background:linear-gradient(135deg,#b45309,#d97706);color:white;border:none;'
+        : 'background:white;border:2px solid #006241;color:#006241;';
+    const orderLabel = _hasActivePreorder(b)
+        ? '🍜 Pre-order (' + _countPreorderQty(b.preorder) + ')'
+        : '☕ Gọi Món';
+
+    if (isCancelled || isDone) {
         btnHtml = `
-        <div class="fixed bottom-0 left-0 right-0 p-5 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
-            <div class="flex gap-3 mb-3">
+        <div class="p-4 pb-6">
+            <button onclick="closeMobileBedDetail()" class="w-full h-14 bg-gray-100 text-gray-500 rounded-[1.5rem] font-black text-[14px] uppercase active:scale-95 transition-transform">Đóng</button>
+        </div>`;
+    } else if (isWaiting) {
+        btnHtml = `
+        <div class="p-4 pb-6 space-y-3">
+            <div class="flex gap-3">
                 <button onclick="openExtendModal(window.currentMobileBooking, null)"
-                    class="w-full h-13 py-3 rounded-[20px] bg-white border-2 border-[#006241]/30 text-[#006241] font-black text-[13px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-[18px]">more_time</span>
-                    GIA HẠN THỜI GIAN
+                    class="flex-1 h-12 bg-white border-2 border-[#006241]/30 text-[#006241] rounded-[1.2rem] font-black text-[12px] uppercase active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-sm">
+                    <span class="material-symbols-outlined text-[17px]">more_time</span> Gia hạn
+                </button>
+                <button onclick="if(window.currentMobileBooking){var b=window.currentMobileBooking;document.getElementById('modal-cancel-reason').classList.remove('hidden');window.pendingCancelId=b.id;}"
+                    class="flex-1 h-12 bg-white border-2 border-red-200 text-red-500 rounded-[1.2rem] font-black text-[12px] uppercase active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-sm">
+                    <span class="material-symbols-outlined text-[17px]">cancel</span> Hủy
                 </button>
             </div>
             <div class="flex gap-3">
                 <button onclick="handleMobileBedOrder('${b.id}')"
-                    class="flex-1 h-14 rounded-[20px] font-black text-[14px] shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
-                    style="${_hasActivePreorder(b) ? 'background:linear-gradient(135deg,#b45309,#d97706);color:white;border:none;' : 'background:white;border:2px solid #006241;color:#006241;'}">
-                    ${_hasActivePreorder(b)
-                        ? '🍜 PRE-ORDER (' + _countPreorderQty(b.preorder) + ' món)'
-                        : 'GỌI MÓN'}
+                    class="flex-1 h-14 rounded-[1.5rem] font-black text-[14px] active:scale-95 transition-transform flex items-center justify-center gap-2 shadow-sm"
+                    style="${orderStyle}">${orderLabel}
                 </button>
-                <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');" class="flex-1 h-14 bg-[#006241] rounded-[20px] text-white font-black text-[14px] shadow-lg shadow-[#006241]/20 transition-all active:scale-95 uppercase">XẾP BED</button>
+                <button onclick="pendingBedOrder=window.currentMobileBooking; renderBedSelection(); document.getElementById('bed-select-modal').classList.remove('hidden');"
+                    class="flex-1 h-14 bg-[#006241] rounded-[1.5rem] text-white font-black text-[14px] shadow-lg shadow-[#006241]/20 active:scale-95 transition-transform uppercase">
+                    🛏️ Xếp Bed
+                </button>
             </div>
         </div>`;
-    } else if (isActive && !isCancelled) {
+    } else if (isActive) {
         btnHtml = `
-        <div class="fixed bottom-0 left-0 right-0 p-5 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
+        <div class="p-4 pb-6 space-y-3">
+            <div class="flex gap-3">
+                <button onclick="openExtendModal(window.currentMobileBooking, null)"
+                    class="flex-1 h-12 bg-white border-2 border-[#006241]/30 text-[#006241] rounded-[1.2rem] font-black text-[12px] uppercase active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-sm">
+                    <span class="material-symbols-outlined text-[17px]">more_time</span> Gia hạn
+                </button>
+                <button onclick="openMoveBedModal('${b.id}')"
+                    class="flex-1 h-12 bg-white border-2 border-amber-200 text-amber-600 rounded-[1.2rem] font-black text-[12px] uppercase active:scale-95 transition-transform flex items-center justify-center gap-1.5 shadow-sm">
+                    <span class="material-symbols-outlined text-[17px]">sync_alt</span> Đổi Bed
+                </button>
+            </div>
             <div class="flex gap-3">
                 <button onclick="handleMobileBedOrder('${b.id}')"
-                    class="flex-1 h-14 rounded-[20px] font-black text-[14px] shadow-sm uppercase active:scale-95 transition-transform flex items-center justify-center gap-2"
-                    style="${_hasActivePreorder(b) ? 'background:linear-gradient(135deg,#b45309,#d97706);color:white;border:none;' : 'background:white;border:2px solid #006241;color:#006241;'}">
-                    ${_hasActivePreorder(b)
-                        ? '🍜 PRE-ORDER (' + _countPreorderQty(b.preorder) + ' món)'
-                        : 'GỌI MÓN'}
+                    class="flex-1 h-14 rounded-[1.5rem] font-black text-[14px] active:scale-95 transition-transform flex items-center justify-center gap-2 shadow-sm"
+                    style="${orderStyle}">${orderLabel}
                 </button>
                 <button onclick="handleBedCheckout(window.currentMobileBooking)"
-                    class="flex-[1.5] h-14 bg-[#006241] rounded-[20px] text-white font-black text-[14px] shadow-xl shadow-emerald-900/20 uppercase active:scale-95 transition-transform flex items-center justify-center">
-                    TRẢ BED
+                    class="flex-1 h-14 bg-[#006241] rounded-[1.5rem] text-white font-black text-[14px] shadow-lg shadow-[#006241]/20 active:scale-95 transition-transform uppercase">
+                    🏁 Trả Bed
                 </button>
             </div>
-        </div>`;
-    } else {
-        btnHtml = `
-        <div class="fixed bottom-0 left-0 right-0 p-6 bg-[#F2F2F7]/90 backdrop-blur-lg z-50">
-            <button onclick="closeMobileBedDetail()" class="w-full h-16 bg-slate-200 text-slate-500 rounded-full font-bold text-[15px] uppercase">Đóng</button>
         </div>`;
     }
     actionContainer.innerHTML = btnHtml;
 
+    // --- Tính chi tiêu ---
     const priceEl = document.getElementById('mob-detail-total-display');
-
     if (priceEl && b.phone) {
         let savedTotal = b.totalSpend ? Number(b.totalSpend) : null;
-
         if (isDone && savedTotal !== null) {
             priceEl.innerText = savedTotal.toLocaleString() + 'đ';
-        }
-        else {
+        } else {
             let timeEndForCalc = isDone ? (b.realEndTime || b.end) : b.end;
-
             calculateSessionSpend(b.phone, b.start, timeEndForCalc).then(total => {
                 if (priceEl) {
                     priceEl.innerText = total.toLocaleString() + 'đ';
@@ -7121,16 +7877,14 @@ function renderDetailContentMobile(b) {
         }
     }
 
+    // --- Timer ---
     if (isActive) {
         mobileTimerInterval = setInterval(() => {
-            const currentCountdown = getCountdownStr(b.end);
+            const c = getCountdownStr(b.end);
             const tEl = document.getElementById('mob-live-timer');
             const bEl = document.getElementById('mob-live-badge');
-            if (tEl && bEl) {
-                tEl.innerText = currentCountdown.timeStr;
-                bEl.innerText = currentCountdown.label;
-                bEl.className = `${currentCountdown.style} px-3 py-1 rounded-full text-[12px] font-semibold backdrop-blur-md transition-colors`;
-            }
+            if (tEl) tEl.innerText = c.timeStr;
+            if (bEl) { bEl.innerText = c.label; bEl.className = `${c.style} px-3 py-1 rounded-full text-[11px] font-black`; }
         }, 1000);
     }
 }
@@ -7558,22 +8312,35 @@ function fetchRevenueDataMobile(mode, startVal, endVal) {
     document.getElementById('mob-rev-total').innerText = "...";
 
     if (currentRevenueView === 'bed') {
-        db.ref('bedBookings').once('value', snap => {
-            const data = snap.val();
-            let bookings = [];
-            if(data) bookings = Object.values(data);
-
+        _fetchBedBookingsForStats(mode, startVal, endVal, function(bookings) {
             const bedStats = calculateBedStats(bookings, mode, startVal, endVal);
-
             updateRevenueBedUI(bedStats);
         });
         return;
     }
 
-    db.ref('orders').once('value', snap => {
-        const data = snap.val();
-        let orders = [];
-        if(data) orders = Object.values(data);
+    // Xác định khoảng ngày fetch đúng theo mode (mobile)
+    var now = new Date();
+    var mobFetchStart, mobFetchEnd;
+    if (startVal && endVal) {
+        mobFetchStart = new Date(startVal);
+        mobFetchEnd   = new Date(endVal);
+    } else if (mode === 'year') {
+        mobFetchStart = new Date(now.getFullYear(), 0, 1);
+        mobFetchEnd   = new Date(now.getFullYear(), 11, 31);
+    } else if (mode === 'month') {
+        mobFetchStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        mobFetchEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } else if (mode === 'week') {
+        var dow = now.getDay() || 7;
+        mobFetchStart = new Date(now); mobFetchStart.setDate(now.getDate() - dow + 1); mobFetchStart.setHours(0,0,0,0);
+        mobFetchEnd   = new Date(mobFetchStart); mobFetchEnd.setDate(mobFetchStart.getDate() + 6);
+    } else {
+        mobFetchStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        mobFetchEnd   = new Date(mobFetchStart);
+    }
+
+    fetchOrdersByDateRange(mobFetchStart, mobFetchEnd).then(orders => {
 
         if (currentRevenueView === 'overview') {
             const chartBox = document.getElementById('mob-rev-chart-bars');
@@ -8238,7 +9005,7 @@ function runAutoCancelScan(list) {
 
                     let bookingId = booking.id || booking.key;
                     if (bookingId) {
-                        firebase.database().ref('bedBookings/' + bookingId).update({
+                        _updateBedBooking(booking, {
                             status: 'đã hủy',
                             cancelType: 'auto_timeout',
                             note: 'Hủy tự động (Quá 50p)'
@@ -8314,6 +9081,7 @@ function resetOrderingMode(isSilent = false) {
     if (sdtStatus) sdtStatus.innerText = "";
 
     giftVoucherMarkUsedAndReset(true);
+    resetDebtState();
     cart = [];
     renderCart();
 
@@ -8588,14 +9356,15 @@ function confirmMoveBed(newBedId) {
     document.getElementById('loading-overlay').style.display = 'flex';
     document.getElementById('modal-move-bed').classList.add('hidden');
 
-    db.ref('bedBookings/' + bookingId).update({
+    _updateBedBooking(bookingToMove, {
         bedId: newBedId
     }, (error) => {
         if (error) {
             document.getElementById('loading-overlay').style.display = 'none';
             alert("Lỗi: " + error.message);
         } else {
-            db.ref(`bedBookings/${bookingId}/moveHistory`).push({
+            var _mhRef = _bedBookingRef(bookingToMove, 'moveHistory');
+            if (_mhRef) _mhRef.push({
                 fromBed: oldBedId,
                 toBed: newBedId,
                 time: timeNow,
@@ -8810,9 +9579,10 @@ var _discountCache = {};
 var _appliedDiscountId = null;
 
 function loadDiscountCodes() {
-    db.ref('rewards').on('value', function(snap) {
-        _discountCache = snap.val() || {};
-    });
+    fstore.collection('rewards').onSnapshot(function(snapshot) {
+        _discountCache = {};
+        snapshot.forEach(function(doc) { _discountCache[doc.id] = doc.data(); });
+    }, function(err) { console.error('loadDiscountCodes error:', err); });
 }
 loadDiscountCodes();
 
@@ -8908,13 +9678,13 @@ function applyDiscountCode() {
     input.value = '';
 
     var newCount = (found.usedCount || 0) + 1;
-    db.ref('rewards/' + foundKey).update({ usedCount: newCount });
+    fstore.collection('rewards').doc(foundKey).update({ usedCount: newCount });
 }
 
 function resetDiscountState(noFirebase) {
     if (!noFirebase && _appliedDiscountId && _discountCache[_appliedDiscountId]) {
         var cur = _discountCache[_appliedDiscountId].usedCount || 0;
-        if (cur > 0) db.ref('rewards/' + _appliedDiscountId).update({ usedCount: cur - 1 });
+        if (cur > 0) fstore.collection('rewards').doc(_appliedDiscountId).update({ usedCount: cur - 1 });
     }
     _appliedDiscountId = null;
     var statusEl = document.getElementById('discount-status');
@@ -8994,11 +9764,17 @@ function giftVoucherResetOld() {
         var ci = cart[i];
         if (ci._vKey === _giftVoucherKey) {
             if (ci._giftType === 'item' || ci._giftType === 'item_free') {
-                ci.price = ci._originalPrice;
-                ci.name  = ci._originalName || ci.name;
-                if (i > 0 && cart[i-1].name === ci._originalName && !cart[i-1]._vKey) {
-                    cart[i-1].qty += 1; cart.splice(i, 1);
+                // Tim item goc ke truoc hoac ke sau de gop lai
+                var prevItem = (i > 0 && cart[i-1].name === (ci._originalName||ci.name) && !cart[i-1]._vKey) ? cart[i-1] : null;
+                var nextItem = (i < cart.length-1 && cart[i+1].name === (ci._originalName||ci.name) && !cart[i+1]._vKey) ? cart[i+1] : null;
+                if (prevItem) {
+                    prevItem.qty += 1; cart.splice(i, 1);
+                } else if (nextItem) {
+                    nextItem.qty += 1; cart.splice(i, 1);
                 } else {
+                    // Khong co item goc de gop -> khoi phuc lai item nay
+                    ci.price = ci._originalPrice;
+                    ci.name  = ci._originalName || ci.name;
                     delete ci._vKey; delete ci._originalPrice; delete ci._originalName;
                     delete ci._giftType; delete ci._giftLabel;
                 }
@@ -9033,15 +9809,24 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
                 return;
             }
             var item = cart[targetIdx];
-            var origPrice = item.price, origName = item.name;
+            var origPrice = item.price, origName = item.name, origSize = item.size;
             var newPrice = Math.max(0, origPrice - (r.value || 0));
             if (item.qty > 1) {
+                // Tach 1 cai giam ra, giu nguyen phan con lai
                 item.qty -= 1;
-                cart.splice(targetIdx + 1, 0, { name: origName, size: item.size, price: newPrice, qty: 1,
-                    _vKey: key, _giftType: 'item', _giftLabel: code, _originalPrice: origPrice, _originalName: origName });
+                cart.splice(targetIdx + 1, 0, {
+                    name: origName, size: origSize, price: newPrice, qty: 1,
+                    _vKey: key, _giftType: 'item', _giftLabel: code,
+                    _originalPrice: origPrice, _originalName: origName
+                });
             } else {
-                item.price = newPrice; item._vKey = key; item._giftType = 'item';
-                item._giftLabel = code; item._originalPrice = origPrice; item._originalName = origName;
+                // Chi co 1 mon, ap giam truc tiep
+                item.price = newPrice;
+                item._vKey = key;
+                item._giftType = 'item';
+                item._giftLabel = code;
+                item._originalPrice = origPrice;
+                item._originalName = origName;
             }
             renderCart();
 
@@ -9068,8 +9853,8 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
 
     if (rewardKey) {
         if (_discountCache[rewardKey]) { applyReward(_discountCache[rewardKey]); }
-        else { db.ref('rewards/' + rewardKey).once('value', function(snap) {
-            var r = snap.val(); if (r) _discountCache[rewardKey] = r; applyReward(r);
+        else { fstore.collection('rewards').doc(rewardKey).get().then(function(doc) {
+            var r = doc.exists ? doc.data() : null; if (r) _discountCache[rewardKey] = r; applyReward(r);
         }); }
     } else {
         var codeUp = (code || '').toUpperCase().trim(), found = null;
@@ -9077,9 +9862,9 @@ function giftVoucherAddToCart(phone, key, name, code, rewardKey) {
             if (!found && _discountCache[k].code && _discountCache[k].code.toUpperCase().trim() === codeUp) found = _discountCache[k];
         });
         if (found) { applyReward(found); }
-        else { db.ref('rewards').once('value', function(snap) {
+        else { fstore.collection('rewards').where('code', '==', codeUp).limit(1).get().then(function(snap) {
             var r2 = null;
-            snap.forEach(function(child) { var v = child.val(); if (!r2 && v.code && v.code.toUpperCase().trim() === codeUp) r2 = v; });
+            if (!snap.empty) r2 = snap.docs[0].data();
             applyReward(r2);
         }); }
     }
@@ -9217,11 +10002,11 @@ var _dfActive = true;
 function openDiscountManager() {
     switchView('discount');
     setActiveNavBtn('btn-nav-discount');
-    switchMgrTab('gift');
+    switchMgrTab('menueditor');
 }
 
 function switchMgrTab(tab) {
-    var tabs = ['gift','screen','label','sticker'];
+    var tabs = ['gift','screen','label','sticker','menueditor'];
 
     // Sticker tab: ẩn cột B, các tab khác: hiện cột B
     var bWrap = document.getElementById('mgr-col-b-wrap');
@@ -9253,9 +10038,10 @@ function switchMgrTab(tab) {
         }
     });
 
-    if (tab === 'gift')    renderDiscountList();
-    if (tab === 'screen')  screenLoadSlides();
-    if (tab === 'sticker') stickerLoadConfig();
+    if (tab === 'gift')       renderDiscountList();
+    if (tab === 'screen')     screenLoadSlides();
+    if (tab === 'sticker')    stickerLoadConfig();
+    if (tab === 'menueditor') menuEditorLoad();
 }
 
 function giftVoucherAddNewBtn() {
@@ -9277,9 +10063,13 @@ function screenLoadSlides() {
     var countEl = document.getElementById('slide-count');
     if (!listEl) return;
     listEl.innerHTML = '<div style="padding:24px;text-align:center;opacity:0.4;"><p style="font-size:0.72rem;font-weight:700;color:#9ca3af;">Đang tải...</p></div>';
-    db.ref('screen_slides').once('value', function(snap) {
-        _screenSlides = snap.val() || [];
+    fstore.collection('config').doc('screen_slides').get().then(function(doc) {
+        _screenSlides = (doc.exists && doc.data().slides) ? doc.data().slides : [];
         if (countEl) countEl.innerText = _screenSlides.length;
+        screenRenderList();
+    }).catch(function(err) {
+        console.error('screenLoadSlides Firestore error:', err);
+        _screenSlides = [];
         screenRenderList();
     });
 }
@@ -9401,9 +10191,10 @@ function screenAddSlide() {
 }
 
 function screenSaveSlides() {
-    db.ref('screen_slides').set(_screenSlides, function(err) {
-        if (err) { alert('Lỗi: ' + err.message); return; }
+    fstore.collection('config').doc('screen_slides').set({ slides: _screenSlides }).then(function() {
         alert('Đã lưu ' + _screenSlides.length + ' slides!');
+    }).catch(function(err) {
+        alert('Lỗi: ' + err.message);
     });
 }
 
@@ -9413,8 +10204,9 @@ function renderDiscountList() {
     if (!listEl) return;
     listEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;padding:48px 0;opacity:0.35;"><span style="font-size:2rem;margin-bottom:8px;">⏳</span><p style="font-size:0.8rem;font-weight:700;color:#9ca3af;">Đang tải...</p></div>';
 
-    db.ref('rewards').once('value', function(snap) {
-        var data = snap.val() || {};
+    fstore.collection('rewards').get().then(function(snapshot) {
+        var data = {};
+        snapshot.forEach(function(doc) { data[doc.id] = doc.data(); });
         var keys = Object.keys(data);
         if (countEl) countEl.innerText = keys.length + ' quà';
 
@@ -9475,6 +10267,8 @@ function renderDiscountList() {
             row.addEventListener('click', function() { discountFormLoad(k, d); });
             listEl.appendChild(row);
         });
+    }).catch(function(err) {
+        listEl.innerHTML = '<div style="padding:24px;text-align:center;color:#ef4444;"><p style="font-size:0.72rem;font-weight:700;">Lỗi tải rewards: ' + err.message + '</p></div>';
     });
 }
 
@@ -9749,17 +10543,18 @@ function discountFormSave() {
             if (!record.conditionMinPrice && existingData.conditionMinPrice)
                 record.conditionMinPrice = existingData.conditionMinPrice;
         }
-        db.ref('rewards/' + key).set(record, function(err) {
-            if (err) return alert('Lỗi: ' + err.message);
+        fstore.collection('rewards').doc(key).set(record).then(function() {
+            // Mirror to RT for customer app (index.html) to read without Firestore auth
+            db.ref('rewards_mirror/' + key).set(Object.assign({}, record, {_docId: key}));
             showAppModal(isNew ? 'Đã tạo' : 'Đã lưu', 'Quà <b>' + label + '</b> ' + (isNew ? 'đã được tạo!' : 'đã được cập nhật!'), '🎁');
             discountFormClear();
             renderDiscountList();
             _discountCache[key] = record;
-        });
+        }).catch(function(err) { alert('Lỗi: ' + err.message); });
     };
     if (!isNew) {
-        db.ref('rewards/' + editKey).once('value', function(snap) {
-            var existing = snap.val() || {};
+        fstore.collection('rewards').doc(editKey).get().then(function(doc) {
+            var existing = doc.exists ? doc.data() : {};
             save(existing.usedCount || 0, existing);
         });
     } else {
@@ -9771,13 +10566,14 @@ function discountFormDelete() {
     var editKey = document.getElementById('df-editing-key').value;
     var label = document.getElementById('df-label').value;
     if (!editKey || !confirm('Xóa "' + label + '"?')) return;
-    db.ref('rewards/' + editKey).remove(function(err) {
-        if (err) return alert('Lỗi: ' + err.message);
+    fstore.collection('rewards').doc(editKey).delete().then(function() {
+        // Remove from RT mirror too
+        db.ref('rewards_mirror/' + editKey).remove();
         showAppModal('Đã xóa', 'Đã xóa <b>' + label + '</b>!', '🗑️');
         discountFormClear();
         renderDiscountList();
         delete _discountCache[editKey];
-    });
+    }).catch(function(err) { alert('Lỗi: ' + err.message); });
 }
 </script>
 <div id="modal-cleaning-fee" class="fixed inset-0 bg-black/40 z-[9999] hidden flex items-center justify-center p-6 backdrop-blur-[4px]">
@@ -10475,7 +11271,8 @@ async function updateRepScore(phone, name, delta, reason, bookingId) {
             const bookingId = booking.id || booking.key;
             if (phone && bookingId) {
                 const snapWarn = await firebase.database().ref('bedWarnings/' + normalizePhone(phone) + '/' + bookingId).once('value');
-                const snapFee = await firebase.database().ref('bedBookings/' + bookingId + '/hasPenalty').once('value');
+                const _hpRef = _bedBookingRef(booking, 'hasPenalty') || firebase.database().ref('bedBookings/' + bookingId + '/hasPenalty');
+                const snapFee = await _hpRef.once('value');
                 if (!snapWarn.exists() && snapFee.val() !== true) {
                     updateRepScore(phone, booking.name || 'Khách hàng', +3, 'Hoàn thành không vi phạm', bookingId);
                 }
@@ -10649,29 +11446,29 @@ async function loadRepToday() {
 async function loadRepAll() {
     var content = document.getElementById('rep-tab-content');
     try {
-        var results = await Promise.all([
-            firebase.database().ref('bedBookings').once('value'),
-            firebase.database().ref('reputation').once('value')
-        ]);
-        var bookData = results[0].val() || {};
-        var repData = results[1].val() || {};
-        var phoneMap = {};
-        Object.values(bookData).forEach(function(b) {
-            if (!b.phone) return;
-            var p = normalizePhone(b.phone);
-            if (!phoneMap[p]) phoneMap[p] = b.name || 'Khách hàng';
+        var repSnap = await firebase.database().ref('reputation').once('value');
+        var repData = repSnap.val() || {};
+
+        // Đọc bookings 12 tháng gần nhất để lấy tên khách
+        _fetchBedBookingsForStats('year', null, null, function(bookings) {
+            var phoneMap = {};
+            bookings.forEach(function(b) {
+                if (!b.phone) return;
+                var p = normalizePhone(b.phone);
+                if (!phoneMap[p]) phoneMap[p] = b.name || 'Khách hàng';
+            });
+            var allPhones = {};
+            Object.keys(phoneMap).forEach(function(p){ allPhones[p] = true; });
+            Object.keys(repData).forEach(function(p){ allPhones[p] = true; });
+            repAllCache = Object.keys(allPhones).map(function(phone) {
+                var rep = repData[phone] || {};
+                var score = Math.max(0, Math.min(REP_MAX, rep.score != null ? rep.score : REP_DEFAULT));
+                var hist = rep.history ? Object.values(rep.history) : [];
+                return { phone: phone, name: rep.name || phoneMap[phone] || 'Khách hàng', score: score, history: hist };
+            });
+            repAllCache.sort(function(a,b){ return a.score - b.score; });
+            renderRepAllList('');
         });
-        var allPhones = {};
-        Object.keys(phoneMap).forEach(function(p){ allPhones[p] = true; });
-        Object.keys(repData).forEach(function(p){ allPhones[p] = true; });
-        repAllCache = Object.keys(allPhones).map(function(phone) {
-            var rep = repData[phone] || {};
-            var score = Math.max(0, Math.min(REP_MAX, rep.score != null ? rep.score : REP_DEFAULT));
-            var hist = rep.history ? Object.values(rep.history) : [];
-            return { phone: phone, name: rep.name || phoneMap[phone] || 'Khách hàng', score: score, history: hist };
-        });
-        repAllCache.sort(function(a,b){ return a.score - b.score; });
-        renderRepAllList('');
     } catch(e) {
         content.innerHTML = '<div style="padding:40px;color:#ef4444;">Lỗi: ' + e.message + '</div>';
     }
@@ -11298,10 +12095,10 @@ var stickerConfig = {
 var stickerFontTimer = null;
 var stickerSelectedPreviewItem = null;  // { name, size, price } — dùng để preview
 
-// ── Load config từ Firebase khi tab sticker active ──
+// ── Load config từ Firestore khi tab sticker active ──
 function stickerLoadConfig() {
-    db.ref('sticker_config').once('value', function(snap) {
-        var cfg = snap.val();
+    fstore.collection('config').doc('sticker_config').get().then(function(doc) {
+        var cfg = doc.exists ? doc.data() : null;
         if (cfg) {
             if (cfg.logoMode)    stickerConfig.logoMode    = cfg.logoMode;
             if (cfg.logoImgURL)  stickerConfig.logoImgURL  = cfg.logoImgURL;
@@ -11309,6 +12106,10 @@ function stickerLoadConfig() {
             if (cfg.fontName)    stickerConfig.fontName    = cfg.fontName;
             if (cfg.fontFooter)  stickerConfig.fontFooter  = cfg.fontFooter;
         }
+        stickerApplyConfigToUI();
+        stickerRefreshPreview();
+    }).catch(function(err) {
+        console.error('stickerLoadConfig Firestore error:', err);
         stickerApplyConfigToUI();
         stickerRefreshPreview();
     });
@@ -11562,11 +12363,11 @@ function stickerSaveConfig() {
         fontName:   stickerConfig.fontName,
         fontFooter: stickerConfig.fontFooter
     };
-    db.ref('sticker_config').set(cfg, function(err) {
-        if (!err) {
-            var btn = document.querySelector('[onclick="stickerSaveConfig()"]');
-            if (btn) { var orig = btn.textContent; btn.textContent = '✓ Đã lưu'; setTimeout(function(){ btn.textContent = orig; }, 1500); }
-        }
+    fstore.collection('config').doc('sticker_config').set(cfg).then(function() {
+        var btn = document.querySelector('[onclick="stickerSaveConfig()"]');
+        if (btn) { var orig = btn.textContent; btn.textContent = '✓ Đã lưu'; setTimeout(function(){ btn.textContent = orig; }, 1500); }
+    }).catch(function(err) {
+        alert('Lỗi lưu sticker config: ' + err.message);
     });
 }
 
@@ -11637,8 +12438,8 @@ function openPrintStickerModal(idx) {
     }
 
     // Load sticker_config trước rồi mở modal
-    db.ref('sticker_config').once('value', function(snap) {
-        var cfg = snap.val();
+    fstore.collection('config').doc('sticker_config').get().then(function(doc) {
+        var cfg = doc.exists ? doc.data() : null;
         if (cfg) {
             if (cfg.logoMode)    stickerConfig.logoMode    = cfg.logoMode;
             if (cfg.logoImgURL)  stickerConfig.logoImgURL  = cfg.logoImgURL;
@@ -11809,6 +12610,270 @@ document.getElementById('print-sticker-modal').addEventListener('click', functio
     });
   };
 })();
+</script>
+
+<script>
+// =============================================
+// MENU EDITOR
+// =============================================
+var _meEditingKey = null; // Firebase key đang sửa (null = thêm mới)
+
+var ME_COLORS = [
+    '#006241','#1a7a4a',  // 2 màu xanh thương hiệu
+    '#3B82F6','#8B5CF6','#EC4899','#F97316','#EAB308','#14B8A6','#64748B','#EF4444'
+];
+
+function menuEditorLoad() {
+    var listEl = document.getElementById('menu-editor-list');
+    var countEl = document.getElementById('menu-editor-count');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="padding:24px;text-align:center;opacity:0.4;"><p style="font-size:0.72rem;font-weight:700;color:#9ca3af;">Đang tải...</p></div>';
+
+    db.ref('menu').once('value', function(snap) {
+        var data = snap.val() || {};
+        var items = [];
+        if (Array.isArray(data)) {
+            data.forEach(function(v,i){ if(v){ items.push({key:'idx_'+i, val:v}); } });
+        } else {
+            Object.keys(data).forEach(function(k){ items.push({key:k, val:data[k]}); });
+        }
+        if (countEl) countEl.innerText = items.length;
+        if (items.length === 0) {
+            listEl.innerHTML = '<div style="padding:24px;text-align:center;opacity:0.4;"><p style="font-size:0.72rem;font-weight:700;color:#9ca3af;">Chưa có món nào</p></div>';
+            return;
+        }
+        listEl.innerHTML = '';
+        items.forEach(function(item) {
+            var m = item.val;
+            var color = m.color || '#006241';
+            var priceStr = m.priceM > 0 ? (m.priceM/1000)+'k' : (m.priceL > 0 ? (m.priceL/1000)+'k' : 'Nhập tay');
+            var row = document.createElement('div');
+            row.setAttribute('data-key', item.key);
+            row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:12px;cursor:pointer;margin-bottom:3px;border:1.5px solid transparent;transition:all 0.15s;';
+            row.innerHTML = '<div style="width:10px;height:10px;border-radius:50%;background:'+color+';flex-shrink:0;"></div>'
+                + '<div style="flex:1;min-width:0;">'
+                + '<p style="font-size:0.8rem;font-weight:800;color:#111827;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+m.name+'</p>'
+                + '<p style="font-size:0.65rem;color:#9ca3af;margin:0;font-weight:600;">'+m.type+' · '+priceStr+'</p>'
+                + '</div>';
+            row.onclick = function() {
+                document.querySelectorAll('#menu-editor-list > div[data-key]').forEach(function(r){
+                    r.style.background=''; r.style.borderColor='transparent';
+                });
+                row.style.background='#F0FDF4'; row.style.borderColor='#bbf7d0';
+                menuEditorEditItem(item.key, m);
+            };
+            listEl.appendChild(row);
+        });
+        // Init form với trạng thái thêm mới
+        menuEditorNewItem();
+    });
+    menuEditorInitColorSwatches();
+}
+
+function menuEditorInitColorSwatches() {
+    var el = document.getElementById('me-color-swatches');
+    if (!el) return;
+    el.innerHTML = '';
+    ME_COLORS.forEach(function(c) {
+        var btn = document.createElement('button');
+        btn.style.cssText = 'width:38px;height:38px;border-radius:12px;background:'+c+';border:3px solid transparent;cursor:pointer;transition:all 0.15s;flex-shrink:0;';
+        btn.onclick = function(e){ e.preventDefault(); menuEditorSetColor(c); };
+        btn.setAttribute('data-color', c);
+        el.appendChild(btn);
+    });
+}
+
+function menuEditorSetColor(hex) {
+    document.getElementById('me-color-value').value = hex;
+    document.querySelectorAll('#me-color-swatches button').forEach(function(b){
+        var active = b.getAttribute('data-color') === hex;
+        b.style.border = active ? '3px solid #111827' : '3px solid transparent';
+        b.style.transform = active ? 'scale(1.15)' : 'scale(1)';
+    });
+    // Reset custom label border
+    var lbl = document.getElementById('me-custom-color-label');
+    if (lbl) lbl.style.borderColor = 'transparent';
+}
+
+function menuEditorSetCustomColor(hex) {
+    document.getElementById('me-color-value').value = hex;
+    document.getElementById('me-color-custom').value = hex;
+    var preview = document.getElementById('me-custom-color-preview');
+    if (preview) preview.style.background = hex;
+    // Deactivate all swatches
+    document.querySelectorAll('#me-color-swatches button').forEach(function(b){
+        b.style.border = '3px solid transparent';
+        b.style.transform = 'scale(1)';
+    });
+    // Highlight custom label
+    var lbl = document.getElementById('me-custom-color-label');
+    if (lbl) lbl.style.borderColor = '#111827';
+}
+
+function menuEditorShowTypeDropdown() {
+    var el = document.getElementById('me-type-dropdown');
+    if (!el) return;
+    var cats = [];
+    (window._menuData || menu || []).forEach(function(m){ if(m.type && cats.indexOf(m.type)<0) cats.push(m.type); });
+    if (cats.length === 0) { el.style.display='none'; return; }
+    el.innerHTML = '';
+    cats.forEach(function(c){
+        var d = document.createElement('div');
+        d.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:0.85rem;font-weight:700;color:#374151;transition:background 0.1s;';
+        d.textContent = c;
+        d.onmouseenter = function(){ d.style.background='#F0FDF4'; };
+        d.onmouseleave = function(){ d.style.background=''; };
+        d.onmousedown = function(e){ e.preventDefault(); document.getElementById('me-type').value=c; menuEditorHideTypeDropdown(); };
+        el.appendChild(d);
+    });
+    el.style.display = 'block';
+}
+
+function menuEditorHideTypeDropdown() {
+    var el = document.getElementById('me-type-dropdown');
+    if (el) el.style.display = 'none';
+}
+
+function menuEditorNewItem() {
+    _meEditingKey = null;
+    document.getElementById('menu-editor-form-title').textContent = 'Thêm món mới';
+    var delBtn = document.getElementById('menu-editor-delete-btn');
+    if (delBtn) delBtn.style.display = 'none';
+    document.getElementById('me-name').value = '';
+    document.getElementById('me-type').value = '';
+    document.getElementById('me-price-m').value = '';
+    document.getElementById('me-price-l').value = '';
+    menuEditorSetColor('#006241');
+    document.querySelectorAll('#menu-editor-list > div[data-key]').forEach(function(r){
+        r.style.background=''; r.style.borderColor='transparent';
+    });
+}
+
+function menuEditorEditItem(key, m) {
+    _meEditingKey = key;
+    document.getElementById('menu-editor-form-title').textContent = 'Sửa: '+m.name;
+    var delBtn = document.getElementById('menu-editor-delete-btn');
+    if (delBtn) { delBtn.style.display='flex'; }
+    document.getElementById('me-name').value = m.name || '';
+    document.getElementById('me-type').value = m.type || '';
+    document.getElementById('me-price-m').value = m.priceM > 0 ? m.priceM : '';
+    document.getElementById('me-price-l').value = m.priceL > 0 ? m.priceL : '';
+    menuEditorSetColor(m.color || '#006241');
+    // Nếu màu không có trong preset → hiện ở custom
+    if (m.color && !ME_COLORS.includes(m.color)) {
+        menuEditorSetCustomColor(m.color);
+    }
+}
+
+function menuEditorSave() {
+    var name = (document.getElementById('me-name').value || '').trim();
+    var type = (document.getElementById('me-type').value || '').trim();
+    var pM = parseInt(document.getElementById('me-price-m').value) || 0;
+    var pL = parseInt(document.getElementById('me-price-l').value) || 0;
+    var color = document.getElementById('me-color-value').value || '#006241';
+
+    if (!name) { alert('Vui lòng nhập tên món!'); return; }
+    if (!type) { alert('Vui lòng nhập phân loại!'); return; }
+
+    var itemData = { name: name, type: type, priceM: pM, priceL: pL, color: color };
+
+    if (_meEditingKey && !_meEditingKey.startsWith('idx_')) {
+        // Sửa item có Firebase key thật
+        db.ref('menu/' + _meEditingKey).update(itemData, function(err){
+            if (err) { alert('Lỗi lưu: '+err.message); return; }
+            menuEditorLoad();
+        });
+    } else if (_meEditingKey && _meEditingKey.startsWith('idx_')) {
+        // Menu dạng array — cần đọc lại và viết toàn bộ
+        var idx = parseInt(_meEditingKey.replace('idx_',''));
+        db.ref('menu').once('value', function(snap){
+            var arr = snap.val() || [];
+            if (!Array.isArray(arr)) arr = Object.values(arr);
+            arr[idx] = itemData;
+            db.ref('menu').set(arr, function(err){
+                if (err) { alert('Lỗi lưu: '+err.message); return; }
+                menuEditorLoad();
+            });
+        });
+    } else {
+        // Thêm mới
+        db.ref('menu').push(itemData, function(err){
+            if (err) { alert('Lỗi lưu: '+err.message); return; }
+            menuEditorLoad();
+        });
+    }
+}
+
+function menuEditorDeleteItem() {
+    if (!_meEditingKey) return;
+    var name = document.getElementById('me-name').value || 'món này';
+    if (!confirm('Xóa "'+name+'" khỏi menu?')) return;
+
+    if (_meEditingKey.startsWith('idx_')) {
+        var idx = parseInt(_meEditingKey.replace('idx_',''));
+        db.ref('menu').once('value', function(snap){
+            var arr = snap.val() || [];
+            if (!Array.isArray(arr)) arr = Object.values(arr);
+            arr.splice(idx, 1);
+            db.ref('menu').set(arr, function(err){
+                if (err) { alert('Lỗi xóa: '+err.message); return; }
+                menuEditorLoad();
+            });
+        });
+    } else {
+        db.ref('menu/' + _meEditingKey).remove(function(err){
+            if (err) { alert('Lỗi xóa: '+err.message); return; }
+            menuEditorLoad();
+        });
+    }
+}
+
+// =============================================
+// PRICE KEYPAD (cho món không có giá)
+// =============================================
+var _keypadItemName = '';
+var _keypadValue = '0';
+
+function openPriceKeypad(name) {
+    _keypadItemName = name;
+    _keypadValue = '0';
+    document.getElementById('keypad-item-name').textContent = name;
+    document.getElementById('keypad-display').textContent = '0';
+    var modal = document.getElementById('price-keypad-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closePriceKeypad() {
+    var modal = document.getElementById('price-keypad-modal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+function keypadPress(digit) {
+    if (_keypadValue === '0') {
+        _keypadValue = digit;
+    } else {
+        if (_keypadValue.length >= 9) return;
+        _keypadValue += digit;
+    }
+    var num = parseInt(_keypadValue) || 0;
+    document.getElementById('keypad-display').textContent = num.toLocaleString('vi-VN');
+}
+
+function keypadBackspace() {
+    if (_keypadValue.length <= 1) { _keypadValue = '0'; }
+    else { _keypadValue = _keypadValue.slice(0, -1); }
+    var num = parseInt(_keypadValue) || 0;
+    document.getElementById('keypad-display').textContent = num.toLocaleString('vi-VN');
+}
+
+function keypadConfirm() {
+    var price = parseInt(_keypadValue.replace(/\./g,'')) || 0;
+    if (price <= 0) { alert('Vui lòng nhập giá!'); return; }
+    addToCart(_keypadItemName, 'M', price);
+    closePriceKeypad();
+}
 </script>
 
 
