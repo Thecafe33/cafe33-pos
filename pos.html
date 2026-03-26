@@ -7429,29 +7429,28 @@ function _renderSplitList(container) {
         const isPaid = paidIds.has(it.stableId);
         const isSel  = splitSelected.has(it.stableId);
         const grp    = splitGroups.find(g => g.ids.includes(it.stableId));
-
-        const badgeHTML = grp
-            ? `<span style="display:inline-block;margin-top:4px;font-size:11px;font-weight:800;color:${grp.method==='cash'?'#16a34a':'#4f46e5'};">${grp.method==='cash'?'💵 Đã thu · Tiền mặt':'📱 Đã thu · Chuyển khoản'}</span>`
+        const badgeColor = grp ? (grp.method === 'cash' ? '#16a34a' : '#1e3932') : '';
+        const badgeText  = grp ? (grp.method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản') : '';
+        const badgeHTML  = grp
+            ? `<span style="display:inline-block;margin-top:5px;font-size:11px;font-weight:900;color:${badgeColor};text-transform:uppercase;letter-spacing:.04em;">${badgeText}</span>`
             : '';
-
         const rowBg     = isPaid ? '#f9fafb' : isSel ? '#f0fdf4' : '#ffffff';
         const rowBorder = isPaid ? '2px solid #f3f4f6' : isSel ? '2px solid #006241' : '2px solid #f3f4f6';
-        const rowOpacity= isPaid ? '0.55' : '1';
-        const checkBg   = isSel  ? '#006241' : 'transparent';
-        const checkBdr  = isSel  ? '#006241' : '#d1d5db';
+        const rowOpacity= isPaid ? '0.5' : '1';
+        const checkBg   = isSel ? '#006241' : 'transparent';
+        const checkBdr  = isSel ? '#006241' : '#d1d5db';
         const checkMark = isSel
             ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>`
             : '';
-
         listHTML += `
         <div onclick="${isPaid ? '' : `toggleSplitItem('${it.stableId}')`}"
-             style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-radius:14px;border:${rowBorder};background:${rowBg};opacity:${rowOpacity};margin-bottom:8px;cursor:${isPaid?'default':'pointer'};transition:border-color 0.15s,background 0.15s;">
+             style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-radius:20px;border:${rowBorder};background:${rowBg};opacity:${rowOpacity};margin-bottom:10px;cursor:${isPaid?'default':'pointer'};">
             <div style="flex:1;min-width:0;">
-                <p style="margin:0;font-size:0.9rem;font-weight:800;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${it.name}</p>
-                <p style="margin:2px 0 0;font-size:0.8rem;font-weight:700;color:#006241;">${it.size ? it.size+' · ' : ''}${(it.price||0).toLocaleString()}đ</p>
+                <p style="margin:0;font-size:1.05rem;font-weight:900;color:#1e3932;">${it.name}</p>
+                <p style="margin:3px 0 0;font-size:0.88rem;font-weight:800;color:#006241;">${it.size ? it.size+' &middot; ' : ''}${(it.price||0).toLocaleString()}đ</p>
                 ${badgeHTML}
             </div>
-            ${!isPaid ? `<div style="width:22px;height:22px;border-radius:50%;border:2px solid ${checkBdr};background:${checkBg};flex-shrink:0;margin-left:12px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;">${checkMark}</div>` : ''}
+            ${!isPaid ? `<div style="width:24px;height:24px;border-radius:50%;border:2px solid ${checkBdr};background:${checkBg};flex-shrink:0;margin-left:14px;display:flex;align-items:center;justify-content:center;">${checkMark}</div>` : ''}
         </div>`;
     });
 
@@ -7463,27 +7462,27 @@ function _renderSplitList(container) {
     const hasSel = splitSelected.size > 0;
 
     const btnArea = hasSel ? `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px 10px;margin-bottom:2px;">
-            <span style="font-size:0.8rem;font-weight:700;color:#6b7280;">Đã chọn ${splitSelected.size} món:</span>
-            <span style="font-size:1.2rem;font-weight:900;color:#006241;">${selTotal.toLocaleString()}đ</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:0.95rem;font-weight:800;color:#374151;">Đã chọn ${splitSelected.size} món:</span>
+            <span style="font-size:1.4rem;font-weight:900;color:#006241;">${selTotal.toLocaleString()}đ</span>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <button onclick="renderSplitView('cash')"
-                style="padding:14px;background:#006241;color:white;border:none;border-radius:14px;font-size:0.85rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;transition:opacity 0.15s;"
-                onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">💵 Tiền mặt</button>
+                style="padding:16px;background:#006241;color:white;border:none;border-radius:20px;font-size:0.9rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:opacity .15s;"
+                onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">Tiền mặt</button>
             <button onclick="_initSplitQR()"
-                style="padding:14px;background:#4f46e5;color:white;border:none;border-radius:14px;font-size:0.85rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;transition:opacity 0.15s;"
-                onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">📱 Chuyển khoản</button>
-        </div>` : `<p style="text-align:center;color:#9ca3af;font-size:0.82rem;font-weight:700;padding:4px 0;">Chạm vào món để chọn</p>`;
+                style="padding:16px;background:#1e3932;color:white;border:none;border-radius:20px;font-size:0.9rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:opacity .15s;"
+                onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">Chuyển khoản</button>
+        </div>` : `<p style="text-align:center;color:#9ca3af;font-size:0.9rem;font-weight:700;padding:6px 0;">Nhấn vào từng món để chọn</p>`;
 
     const completeBtn = allPaid ? `
         <button onclick="renderSplitView('summary')"
-            style="width:100%;margin-top:10px;padding:15px;background:#f59e0b;color:white;border:none;border-radius:14px;font-size:0.95rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:0.5px;box-shadow:0 4px 14px rgba(245,158,11,0.3);transition:opacity 0.15s;"
-            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">✅ Xem tổng kết & Hoàn tất</button>` : '';
+            style="width:100%;margin-top:12px;padding:16px;background:#f59e0b;color:white;border:none;border-radius:20px;font-size:1rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;box-shadow:0 4px 16px rgba(245,158,11,.3);transition:opacity .15s;"
+            onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Xem tổng kết &amp; Hoàn tất</button>` : '';
 
     container.innerHTML = `
-        <div style="flex:1;overflow-y:auto;padding:16px 20px 8px;">${listHTML}</div>
-        <div style="padding:14px 20px 20px;border-top:1px solid #f3f4f6;flex-shrink:0;background:white;">
+        <div style="flex:1;overflow-y:auto;padding:20px 24px 8px;">${listHTML}</div>
+        <div style="padding:16px 24px 24px;border-top:1px solid #f3f4f6;flex-shrink:0;background:white;">
             ${btnArea}${completeBtn}
         </div>`;
 }
@@ -7494,7 +7493,6 @@ function toggleSplitItem(stableId) {
     renderSplitView('list');
 }
 
-// ─── VIEW: TIỀN MẶT ───────────────────────────────────────────
 function _renderSplitCash(container) {
     let subtotal = 0;
     const selItems = [];
@@ -7504,54 +7502,54 @@ function _renderSplitCash(container) {
     });
 
     const itemRows = selItems.map(it => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px dashed #f3f4f6;">
-            <span style="font-size:0.85rem;font-weight:700;color:#374151;">${it.name}${it.size ? ` <span style="color:#9ca3af;font-size:0.75rem;">${it.size}</span>` : ''}</span>
-            <span style="font-size:0.85rem;font-weight:900;color:#006241;">${(it.price||0).toLocaleString()}đ</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px dashed #f3f4f6;">
+            <span style="font-size:0.95rem;font-weight:800;color:#1e3932;">${it.name}${it.size ? ` <span style="color:#9ca3af;font-size:0.8rem;font-weight:700;">${it.size}</span>` : ''}</span>
+            <span style="font-size:0.95rem;font-weight:900;color:#006241;">${(it.price||0).toLocaleString()}đ</span>
         </div>`).join('');
 
     const shortcuts = [10000,20000,50000,100000,200000,500000].map(v =>
         `<button onclick="quickSplitCash(${v},${subtotal})"
-            style="flex:1;min-width:calc(33% - 6px);padding:10px 4px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;font-size:0.78rem;font-weight:800;color:#374151;cursor:pointer;transition:all 0.12s;"
-            onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#006241';" onmouseout="this.style.background='#f9fafb';this.style.borderColor='#e5e7eb';">
-            ${(v/1000).toFixed(0)}k
-        </button>`
+            style="flex:1;min-width:calc(33% - 8px);padding:11px 4px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:14px;font-size:0.85rem;font-weight:900;color:#374151;cursor:pointer;transition:all .12s;"
+            onmouseover="this.style.background='#f0fdf4';this.style.borderColor='#006241';"
+            onmouseout="this.style.background='#f9fafb';this.style.borderColor='#e5e7eb';">${(v/1000).toFixed(0)}k</button>`
     ).join('');
 
     container.innerHTML = `
-        <div style="flex:1;overflow-y:auto;padding:16px 20px 8px;">
-            <p style="font-size:0.68rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;">Các món thu lần này</p>
-            <div style="background:#f9fafb;border-radius:14px;padding:4px 14px 2px;">${itemRows}
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 6px;">
-                    <span style="font-size:0.75rem;font-weight:700;color:#6b7280;text-transform:uppercase;">Cần thu</span>
-                    <span style="font-size:1.15rem;font-weight:900;color:#006241;">${subtotal.toLocaleString()}đ</span>
+        <div style="flex:1;overflow-y:auto;padding:20px 24px 8px;">
+            <p style="font-size:0.68rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;margin:0 0 12px;">Các món thu lần này</p>
+            <div style="background:#f9fafb;border-radius:20px;padding:4px 16px 4px;">
+                ${itemRows}
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0 8px;">
+                    <span style="font-size:0.78rem;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">Cần thu</span>
+                    <span style="font-size:1.4rem;font-weight:900;color:#006241;">${subtotal.toLocaleString()}đ</span>
                 </div>
             </div>
 
-            <p style="font-size:0.68rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin:16px 0 8px;">Khách đưa</p>
-            <div style="background:white;border:2px solid #e5e7eb;border-radius:14px;padding:12px 16px;transition:border-color .2s;"
-                 onfocusin="this.style.borderColor='#006241'" onfocusout="this.style.borderColor='#e5e7eb'">
+            <p style="font-size:0.68rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;margin:18px 0 10px;">Khách đưa</p>
+            <div style="background:#F2F4F7;border-radius:20px;padding:14px 18px;transition:all .2s;"
+                 onfocusin="this.style.background='white';this.style.boxShadow='0 0 0 2px #006241';"
+                 onfocusout="this.style.background='#F2F4F7';this.style.boxShadow='none';">
                 <input id="split-cash-input" type="tel" inputmode="numeric"
                        value="${subtotal.toLocaleString('en-US')}"
                        oninput="formatSplitCashInput(this); _calcSplitChange(${subtotal})"
-                       style="width:100%;font-size:1.6rem;font-weight:900;color:#111827;background:transparent;border:none;outline:none;text-align:right;padding:0;">
+                       style="width:100%;font-size:1.8rem;font-weight:900;color:#1e3932;background:transparent;border:none;outline:none;text-align:right;padding:0;">
             </div>
 
-            <div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;">${shortcuts}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;">${shortcuts}</div>
 
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#eff6ff;border-radius:14px;">
-                <span style="font-size:0.82rem;font-weight:700;color:#6b7280;">Tiền thừa:</span>
-                <span id="split-change-display" style="font-size:1.3rem;font-weight:900;color:#2563eb;">0đ</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px;background:#eff6ff;border-radius:20px;">
+                <span style="font-size:0.9rem;font-weight:800;color:#374151;">Tiền thừa:</span>
+                <span id="split-change-display" style="font-size:1.5rem;font-weight:900;color:#2563eb;">0đ</span>
             </div>
         </div>
-        <div style="padding:14px 20px 20px;border-top:1px solid #f3f4f6;display:flex;gap:10px;flex-shrink:0;background:white;">
+        <div style="padding:16px 24px 24px;border-top:1px solid #f3f4f6;display:flex;gap:12px;flex-shrink:0;background:white;">
             <button onclick="renderSplitView('list')"
-                style="padding:14px 18px;border:2px solid #e5e7eb;background:white;color:#6b7280;border-radius:14px;font-size:0.85rem;font-weight:900;cursor:pointer;transition:all 0.15s;"
-                onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">← Quay lại</button>
+                style="padding:16px 20px;border:2px solid #e5e7eb;background:white;color:#6b7280;border-radius:20px;font-size:0.9rem;font-weight:900;cursor:pointer;transition:all .15s;"
+                onmouseover="this.style.background='#f9fafb';" onmouseout="this.style.background='white';">Quay lại</button>
             <button onclick="_confirmSplitCash(${subtotal})"
-                style="flex:1;padding:14px;background:#006241;color:white;border:none;border-radius:14px;font-size:0.9rem;font-weight:900;cursor:pointer;text-transform:uppercase;transition:opacity 0.15s;"
-                onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Xác nhận thu tiền</button>
+                style="flex:1;padding:16px;background:#006241;color:white;border:none;border-radius:20px;font-size:0.95rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;transition:opacity .15s;"
+                onmouseover="this.style.opacity='.85';" onmouseout="this.style.opacity='1';">Xác nhận</button>
         </div>`;
-
     _calcSplitChange(subtotal);
 }
 
@@ -7563,7 +7561,7 @@ function _calcSplitChange(subtotal) {
     const raw = (document.getElementById('split-cash-input')?.value||'').replace(/,/g,'');
     const change = Math.max(0, (Number(raw)||0) - subtotal);
     const el = document.getElementById('split-change-display');
-    if (el) { el.innerText = change.toLocaleString() + 'đ'; el.style.color = change > 0 ? '#2563eb' : '#9ca3af'; }
+    if (el) { el.innerText = change.toLocaleString()+'đ'; el.style.color = change > 0 ? '#2563eb' : '#9ca3af'; }
 }
 function quickSplitCash(val, subtotal) {
     const el = document.getElementById('split-cash-input');
@@ -7573,12 +7571,90 @@ function _confirmSplitCash(subtotal) {
     const raw = (document.getElementById('split-cash-input')?.value||'').replace(/,/g,'');
     const paid = Number(raw) || subtotal;
     if (paid < subtotal) { alert('Tiền khách đưa chưa đủ!'); return; }
-    splitGroups.push({ ids: Array.from(splitSelected), method: 'cash', subtotal, paid, change: Math.max(0,paid-subtotal) });
+    splitGroups.push({ ids: Array.from(splitSelected), method:'cash', subtotal, paid, change:Math.max(0,paid-subtotal) });
     splitSelected.clear();
     _checkSplitAllPaid();
 }
 
-// ─── VIEW: CHUYỂN KHOẢN ───────────────────────────────────────
+// ─── CHECK ALL PAID ───────────────────────────────────────────
+function _checkSplitAllPaid() {
+    const paidIds = _getPaidIds();
+    const allPaid = splitExpandedCart.length > 0 &&
+                    splitExpandedCart.every(it => paidIds.has(it.stableId));
+    if (allPaid) renderSplitView('summary');
+    else renderSplitView('list');
+}
+
+// ─── QR FLOW ──────────────────────────────────────────────────
+function _initSplitQR() {
+    let subtotal = 0;
+    const pendingIds = Array.from(splitSelected);
+    pendingIds.forEach(id => {
+        const it = splitExpandedCart.find(x => x.stableId === id);
+        if (it) subtotal += it.price || 0;
+    });
+    renderSplitView('qr');
+    _startSplitQR(subtotal, pendingIds);
+}
+
+function _startSplitQR(subtotal, pendingIds) {
+    const API_URL = "https://us-central1-the-cafe-33.cloudfunctions.net/createPayment";
+    fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ amount: subtotal }) })
+    .then(r => r.json())
+    .then(result => {
+        if (result.status === 'success') {
+            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=' + encodeURIComponent(result.qrCode);
+            const wrap = document.getElementById('split-qr-img-wrap');
+            if (wrap) wrap.innerHTML = '<img src="'+qrUrl+'" style="width:100%;height:100%;object-fit:contain;border-radius:18px;">';
+            const codeEl = document.getElementById('split-qr-code-text');
+            if (codeEl) codeEl.textContent = result.orderCodeFull || '';
+            _listenSplitQR(subtotal, pendingIds, result.orderCodeFull);
+        } else {
+            const s = document.getElementById('split-qr-status');
+            if (s) s.innerHTML = '<span style="color:#ef4444;">Lỗi tạo QR — thử lại!</span>';
+        }
+    })
+    .catch(() => {
+        const s = document.getElementById('split-qr-status');
+        if (s) s.innerHTML = '<span style="color:#ef4444;">Lỗi kết nối!</span>';
+    });
+}
+
+function _listenSplitQR(subtotal, pendingIds, code) {
+    if (_splitQRUnsubscribe) { try { db.ref('payment_events').off(); } catch(e){} }
+    splitQRListening = true;
+    _splitQRUnsubscribe = db.ref('payment_events').limitToLast(5).on('value', snap => {
+        if (!snap.val()) return;
+        Object.values(snap.val()).forEach(data => {
+            const amt = Number(data.amount || 0);
+            const dc  = String(data.orderCode || '').trim();
+            const isCodeMatch = code
+                ? (dc === code || (data.description||'').includes(code) || (data.content||'').includes(code))
+                : amt >= subtotal;
+            if (isCodeMatch && amt >= subtotal) _onSplitQRSuccess(subtotal, pendingIds);
+        });
+    });
+}
+
+function _onSplitQRSuccess(subtotal, pendingIds) {
+    if (!splitQRListening) return;
+    splitQRListening = false;
+    try { db.ref('payment_events').off(); } catch(e){}
+    _splitQRUnsubscribe = null;
+    splitGroups.push({ ids: pendingIds, method: 'bank', subtotal, paid: subtotal, change: 0 });
+    const s = document.getElementById('split-qr-status');
+    if (s) { s.style.color = '#16a34a'; s.textContent = 'Da nhan tien!'; }
+    splitSelected.clear();
+    setTimeout(_checkSplitAllPaid, 1200);
+}
+
+function _cancelSplitQR() {
+    splitQRListening = false;
+    try { db.ref('payment_events').off(); } catch(e){}
+    _splitQRUnsubscribe = null;
+    renderSplitView('list');
+}
+
 function _renderSplitQR(container) {
     let subtotal = 0;
     splitSelected.forEach(id => {
@@ -7586,23 +7662,22 @@ function _renderSplitQR(container) {
         if (it) subtotal += it.price || 0;
     });
     container.innerHTML = `
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;gap:16px;">
-            <p style="margin:0;font-size:0.7rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;">Chuyển khoản · ${subtotal.toLocaleString()}đ</p>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;">
+            <p style="margin:0;font-size:0.72rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;">Chuyển khoản &middot; ${subtotal.toLocaleString()}đ</p>
             <div id="split-qr-img-wrap"
-                 style="width:200px;height:200px;border-radius:20px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid #e5e7eb;">
+                 style="width:200px;height:200px;border-radius:24px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid #e5e7eb;">
                 <div style="width:32px;height:32px;border:4px solid #e5e7eb;border-top-color:#006241;border-radius:50%;animation:spin .7s linear infinite;"></div>
             </div>
-            <p id="split-qr-code-text" style="margin:0;font-size:0.7rem;font-family:monospace;color:#9ca3af;letter-spacing:.1em;">Đang tạo mã...</p>
-            <div id="split-qr-status" style="font-size:0.9rem;font-weight:800;color:#f59e0b;">⏳ Đang chờ thanh toán...</div>
+            <p id="split-qr-code-text" style="margin:0;font-size:0.72rem;font-family:monospace;color:#9ca3af;letter-spacing:.1em;">Đang tạo mã...</p>
+            <div id="split-qr-status" style="font-size:0.95rem;font-weight:800;color:#f59e0b;">Đang chờ thanh toán...</div>
         </div>
-        <div style="padding:14px 20px 20px;border-top:1px solid #f3f4f6;flex-shrink:0;background:white;">
+        <div style="padding:16px 24px 24px;border-top:1px solid #f3f4f6;flex-shrink:0;background:white;">
             <button onclick="_cancelSplitQR()"
-                style="width:100%;padding:14px;border:2px solid #e5e7eb;background:white;color:#6b7280;border-radius:14px;font-size:0.85rem;font-weight:900;cursor:pointer;transition:all 0.15s;"
-                onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">← Huỷ, chọn lại</button>
+                style="width:100%;padding:16px;border:2px solid #e5e7eb;background:white;color:#6b7280;border-radius:20px;font-size:0.9rem;font-weight:900;cursor:pointer;transition:all .15s;"
+                onmouseover="this.style.background='#f9fafb';" onmouseout="this.style.background='white';">Huỷ, chọn lại</button>
         </div>`;
 }
 
-// ─── VIEW: TỔNG KẾT ───────────────────────────────────────────
 function _renderSplitSummary(container) {
     let grandTotal = 0;
     const usedMethods = new Set();
@@ -7613,57 +7688,54 @@ function _renderSplitSummary(container) {
     let groupsHTML = '';
     splitGroups.forEach((g, gi) => {
         const isCash    = g.method === 'cash';
-        const accentClr = isCash ? '#16a34a' : '#4f46e5';
-        const lightBg   = isCash ? '#f0fdf4' : '#eef2ff';
-        const borderClr = isCash ? '#bbf7d0' : '#c7d2fe';
-        const icon      = isCash ? '💵 Tiền mặt' : '📱 Chuyển khoản';
+        const accentClr = isCash ? '#16a34a' : '#1e3932';
+        const lightBg   = isCash ? '#f0fdf4'  : '#f8fafc';
+        const borderClr = isCash ? '#bbf7d0'  : '#e2e8f0';
+        const label     = isCash ? 'Tiền mặt' : 'Chuyển khoản';
 
         const itemsHTML = g.ids.map(id => {
             const it = splitExpandedCart.find(x => x.stableId === id);
-            return it ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #f3f4f6;">
-                <span style="font-size:0.82rem;font-weight:700;color:#374151;">${it.name}${it.size ? ` <span style="font-size:0.72rem;color:#9ca3af;">${it.size}</span>` : ''}</span>
-                <span style="font-size:0.82rem;font-weight:900;color:#006241;">${(it.price||0).toLocaleString()}đ</span>
+            return it ? `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px dashed #f3f4f6;">
+                <span style="font-size:0.92rem;font-weight:800;color:#1e3932;">${it.name}${it.size ? ` <span style="font-size:0.78rem;color:#9ca3af;font-weight:700;">${it.size}</span>` : ''}</span>
+                <span style="font-size:0.92rem;font-weight:900;color:#006241;">${(it.price||0).toLocaleString()}đ</span>
             </div>` : '';
         }).join('');
 
         const footerHTML = isCash ? `
-            <div style="display:flex;justify-content:space-between;padding:10px 14px;background:#f0fdf4;border-top:1px solid #bbf7d0;">
-                <span style="font-size:0.78rem;font-weight:700;color:#6b7280;">Nhận: <strong style="color:#111827;">${g.paid.toLocaleString()}đ</strong></span>
-                <span style="font-size:0.78rem;font-weight:700;color:#6b7280;">Thừa: <strong style="color:${g.change>0?'#2563eb':'#9ca3af'};">${g.change.toLocaleString()}đ</strong></span>
+            <div style="display:flex;justify-content:space-between;padding:10px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0;">
+                <span style="font-size:0.82rem;font-weight:700;color:#6b7280;">Nhận: <strong style="color:#1e3932;">${g.paid.toLocaleString()}đ</strong></span>
+                <span style="font-size:0.82rem;font-weight:700;color:#6b7280;">Thừa: <strong style="color:${g.change>0?'#2563eb':'#9ca3af'};">${g.change.toLocaleString()}đ</strong></span>
             </div>` : '';
 
         groupsHTML += `
-        <div style="border:2px solid ${borderClr};border-radius:16px;overflow:hidden;margin-bottom:12px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:${lightBg};border-bottom:1px solid ${borderClr};">
-                <span style="font-size:0.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em;color:${accentClr};">${icon} · Nhóm ${gi+1}</span>
-                <span style="font-size:1rem;font-weight:900;color:${accentClr};">${g.subtotal.toLocaleString()}đ</span>
+        <div style="border:2px solid ${borderClr};border-radius:20px;overflow:hidden;margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:${lightBg};border-bottom:1px solid ${borderClr};">
+                <span style="font-size:0.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:${accentClr};">${label} &mdash; Nhóm ${gi+1}</span>
+                <span style="font-size:1.1rem;font-weight:900;color:${accentClr};">${g.subtotal.toLocaleString()}đ</span>
             </div>
-            <div style="padding:4px 14px;">${itemsHTML}</div>
+            <div style="padding:4px 16px;">${itemsHTML}</div>
             ${footerHTML}
         </div>`;
     });
 
     container.innerHTML = `
-        <div style="flex:1;overflow-y:auto;padding:16px 20px 8px;">
-            <p style="font-size:0.68rem;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px;">Chi tiết thanh toán</p>
+        <div style="flex:1;overflow-y:auto;padding:20px 24px 8px;">
+            <p style="font-size:0.68rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:.12em;margin:0 0 16px;">Chi tiết thanh toán</p>
             ${groupsHTML}
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 4px 4px;border-top:2.5px solid #006241;margin-top:4px;">
-                <span style="font-size:0.82rem;font-weight:800;color:#6b7280;text-transform:uppercase;">Tổng cộng</span>
-                <span style="font-size:1.5rem;font-weight:900;color:#006241;">${grandTotal.toLocaleString()}đ</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 4px 4px;border-top:2.5px solid #006241;margin-top:4px;">
+                <span style="font-size:0.9rem;font-weight:900;color:#374151;text-transform:uppercase;letter-spacing:.04em;">Tổng cộng</span>
+                <span style="font-size:1.8rem;font-weight:900;color:#006241;">${grandTotal.toLocaleString()}đ</span>
             </div>
         </div>
-        <div style="padding:14px 20px 20px;border-top:1px solid #f3f4f6;display:flex;gap:10px;flex-shrink:0;background:white;">
+        <div style="padding:16px 24px 24px;border-top:1px solid #f3f4f6;display:flex;gap:12px;flex-shrink:0;background:white;">
             <button onclick="renderSplitView('list')"
-                style="padding:14px 18px;border:2px solid #e5e7eb;background:white;color:#6b7280;border-radius:14px;font-size:0.85rem;font-weight:900;cursor:pointer;transition:all 0.15s;"
-                onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">← Sửa</button>
+                style="padding:16px 20px;border:2px solid #e5e7eb;background:white;color:#6b7280;border-radius:20px;font-size:0.9rem;font-weight:900;cursor:pointer;transition:all .15s;"
+                onmouseover="this.style.background='#f9fafb';" onmouseout="this.style.background='white';">Sửa</button>
             <button onclick="_completeSplitPayment('${methodLabel}')"
-                style="flex:1;padding:14px;background:#f59e0b;color:white;border:none;border-radius:14px;font-size:0.9rem;font-weight:900;cursor:pointer;text-transform:uppercase;box-shadow:0 4px 14px rgba(245,158,11,.25);transition:opacity 0.15s;"
-                onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">✅ Hoàn tất & Lưu đơn</button>
+                style="flex:1;padding:16px;background:#f59e0b;color:white;border:none;border-radius:20px;font-size:0.95rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;box-shadow:0 4px 16px rgba(245,158,11,.25);transition:opacity .15s;"
+                onmouseover="this.style.opacity='.85';" onmouseout="this.style.opacity='1';">Hoàn tất &amp; Lưu đơn</button>
         </div>`;
 }
-
-
-
 function _completeSplitPayment(methodLabel) {
     let cashPaid = currentTotal, cashChange = 0;
     const cashGrps = splitGroups.filter(g => g.method === 'cash');
@@ -10947,38 +11019,24 @@ function discountFormDelete() {
         </svg>
     </button>
 </div>
-<div id="split-payment-modal" class="hidden fixed inset-0 z-[100000] flex items-center justify-center bg-black/40" style="backdrop-filter:blur(6px);">
+<div id="split-payment-modal" class="hidden fixed inset-0 z-[100000] flex items-end md:items-center justify-center bg-slate-900/60 backdrop-blur-md transition-all duration-300">
     <div id="split-modal-inner"
-         class="bg-white w-full flex flex-col overflow-hidden shadow-2xl"
-         style="border-radius:24px; max-width:560px; height:80vh; max-height:720px; margin:24px;">
-        <!-- Header -->
-        <div style="padding:20px 24px 16px; border-bottom:1px solid #f3f4f6; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:white;">
-            <div style="width:36px;"></div>
-            <div style="text-align:center;">
-                <p style="font-size:1rem; font-weight:900; text-transform:uppercase; color:#006241; letter-spacing:-0.3px; margin:0;">Thu tiền riêng</p>
-                <p style="font-size:0.7rem; font-weight:700; color:#9ca3af; margin:2px 0 0;">Chọn món → chọn phương thức thanh toán</p>
+         class="bg-white w-full md:max-w-[500px] h-[92vh] md:h-auto md:max-h-[85vh] rounded-t-[40px] md:rounded-[40px] shadow-2xl flex flex-col overflow-hidden animate-slide-up">
+        <!-- Header — clone từ modal đặt bed -->
+        <div class="px-8 pt-8 pb-5 flex justify-between items-start bg-white shrink-0 border-b border-gray-100">
+            <div>
+                <h2 class="text-3xl font-black text-[#1e3932] tracking-tighter uppercase leading-none">Thu tiền riêng</h2>
+                <p class="text-sm font-bold text-gray-400 mt-1">Chọn món rồi chọn phương thức</p>
             </div>
             <button onclick="closeSplitModal()"
-                    style="width:36px;height:36px;border-radius:50%;background:#f3f4f6;border:none;cursor:pointer;font-size:18px;color:#6b7280;display:flex;align-items:center;justify-content:center;font-weight:bold;transition:background 0.15s;"
-                    onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">✕</button>
+                    class="w-12 h-12 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors active:scale-90">
+                <span class="material-symbols-outlined text-2xl font-bold">close</span>
+            </button>
         </div>
         <!-- Dynamic body -->
-        <div id="split-modal-body" style="display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;background:white;"></div>
+        <div id="split-modal-body" class="flex flex-col flex-1 overflow-hidden min-h-0 bg-white"></div>
     </div>
 </div>
-<style>
-@media (max-width: 768px) {
-    #split-payment-modal { align-items: flex-end !important; }
-    #split-modal-inner {
-        max-width: 100% !important;
-        height: 92vh !important;
-        max-height: 92vh !important;
-        margin: 0 !important;
-        border-radius: 24px 24px 0 0 !important;
-        padding-bottom: env(safe-area-inset-bottom);
-    }
-}
-</style>
     <div id="modal-date-range" class="fixed inset-0 z-[100000] hidden flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
     <div class="bg-white w-[90%] max-w-[340px] rounded-[30px] p-6 shadow-2xl relative overflow-hidden">
         <div class="absolute top-0 left-0 w-full h-2 bg-[#006241]"></div>
