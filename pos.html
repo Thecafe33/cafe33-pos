@@ -2597,7 +2597,7 @@ function runAutoArchiveOrders() {
                 removed++;
             }
         });
-        if (removed > 0) console.log('[AutoArchiveOrders] Da xoa ' + removed + ' payment_events cu khoi RT.');
+        if (removed > 0) console.log('[AutoArchiveOrders] Đã xóa ' + removed + ' payment_events cũ khỏi RT.');
     });
 }
 
@@ -4048,7 +4048,30 @@ function selectBill(idx) {
             <div class="mt-4 pt-4 border-t-2 border-[#006241] flex flex-col items-end flex-shrink-0 text-right">
                 <div class="flex justify-between w-full items-center mb-1 text-left"><span class="text-[10px] font-bold text-gray-400 uppercase italic text-left">Số lượng: ${tQty} món</span><span class="brand-font text-[#006241] text-xl uppercase font-black opacity-30 text-right">Tổng bill</span></div>
                 <div class="font-black text-3xl leading-none text-right ${h.total < 0 ? 'text-red-500 text-right' : 'text-[#006241] text-right'}">${h.total.toLocaleString()}<span class="text-lg ml-1 text-right">đ</span></div>
-                ${(h.paid && h.paid > 0) ? `
+                ${(h.splitMeta && h.splitMeta.isSplit && h.splitMeta.groups) ? (() => {
+                    let splitHTML = '<div class="mt-3 pt-3 border-t border-dashed border-gray-200 w-full space-y-2">';
+                    splitHTML += '<p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Chi tiết tính riêng</p>';
+                    h.splitMeta.groups.forEach((g, gi) => {
+                        const isCash = g.method === 'cash';
+                        const icon   = isCash ? '💵' : '📱';
+                        const clr    = isCash ? 'border-green-200 bg-green-50/60' : 'border-indigo-200 bg-indigo-50/60';
+                        const txtClr = isCash ? 'text-green-700' : 'text-indigo-700';
+                        const itemsStr = (g.items||[]).map(it => `${it.name}${it.size?' '+it.size:''}`).join(', ');
+                        splitHTML += `<div class="border ${clr} rounded-xl p-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[9px] font-black uppercase ${txtClr}">${icon} Nhóm ${gi+1}</span>
+                                <span class="text-[10px] font-black ${txtClr}">${Number(g.subtotal||0).toLocaleString()}đ</span>
+                            </div>
+                            <p class="text-[9px] text-gray-500 font-bold leading-tight">${itemsStr}</p>
+                            ${isCash ? `<div class="flex justify-between mt-1 pt-1 border-t border-green-100">
+                                <span class="text-[9px] text-gray-400 font-bold">Nhận: <span class="text-gray-700">${Number(g.paid||0).toLocaleString()}đ</span></span>
+                                <span class="text-[9px] text-gray-400 font-bold">Thừa: <span class="${(g.change||0)>0?'text-blue-600':'text-gray-400'}">${Number(g.change||0).toLocaleString()}đ</span></span>
+                            </div>` : ''}
+                        </div>`;
+                    });
+                    splitHTML += '</div>';
+                    return splitHTML;
+                })() : (h.paid && h.paid > 0) ? `
                 <div class="mt-3 pt-3 border-t border-dashed border-gray-200 w-full flex flex-col gap-1.5">
                     <div class="flex justify-between items-center w-full">
                         <span class="text-[10px] font-bold text-gray-400 uppercase">Khách đưa</span>
@@ -7107,17 +7130,24 @@ function backMobileStep() {
 }
 
 let isSavingOrder = false;
-function saveOrderToFirebase(method) {
+function saveOrderToFirebase(method, _overridePaid, _overrideChange) {
     if (isSavingOrder) return;
     if (!cart || cart.length === 0) return alert("Giỏ hàng đang trống!");
     isSavingOrder = true;
 
-    const isMobile = window.innerWidth <= 768;
-    const _rawPaid = isMobile
-        ? document.getElementById('cash-paid-mobile').value
-        : document.getElementById('cash-paid').value;
-    const pVal = String(_rawPaid || '').replace(/,/g, '');
-    const paid = (method === 'Chuyển khoản') ? currentTotal : (Number(pVal) || currentTotal);
+    let paid, change;
+    if (_overridePaid !== undefined) {
+        paid   = _overridePaid;
+        change = _overrideChange !== undefined ? _overrideChange : Math.max(0, paid - currentTotal);
+    } else {
+        const isMobile = window.innerWidth <= 768;
+        const _rawPaid = isMobile
+            ? document.getElementById('cash-paid-mobile').value
+            : document.getElementById('cash-paid').value;
+        const pVal = String(_rawPaid || '').replace(/,/g, '');
+        paid   = (method === 'Chuyển khoản') ? currentTotal : (Number(pVal) || currentTotal);
+        change = Math.max(0, paid - currentTotal);
+    }
 
     const currentBooking = pendingBedOrder;
     const isCheckout = isCheckoutFlow;
@@ -7135,12 +7165,18 @@ function saveOrderToFirebase(method) {
         itemsArray: cart,
         total: currentTotal,
         paid: paid,
-        change: Math.max(0, paid - currentTotal),
+        change: change,
         method: method,
         points: Math.floor(currentTotal / 100),
         bedId: currentBedId,
         customerName: finalCustName
     };
+
+    // Gắn splitMeta nếu là đơn tính riêng
+    if (_splitOrderMeta) {
+        orderData.splitMeta = _splitOrderMeta;
+        _splitOrderMeta = null;
+    }
 
     getOrdersRef().push(orderData, (error) => {
         isSavingOrder = false;
@@ -7298,140 +7334,423 @@ function completeOrder() {
 
     saveOrderToFirebase(method);
 }
-let expandedCart = [];
-let selectedForPayment = new Set();
-let paidInstances = new Set();
+// ═══════════════════════════════════════════════════════════════
+// TÍNH RIÊNG — v2
+// ═══════════════════════════════════════════════════════════════
 
+// State
+let splitExpandedCart = []; // [{ stableId, name, size, price }]
+let splitSelected     = new Set();
+let splitGroups       = [];  // [{ ids[], method, subtotal, paid, change }]
+let splitQRListening  = false;
+let _splitQRUnsubscribe = null;
+let _splitOrderMeta   = null; // gắn vào order khi lưu
+
+// Mở modal — giữ state (thêm món giữa chừng không bị reset)
 function openSplitModal() {
     if (typeof cart === 'undefined' || !Array.isArray(cart) || cart.length === 0) {
         if (typeof showAppModal === 'function') showAppModal("Thông báo", "Giỏ hàng đang trống!", "⚠️");
         return;
     }
-
-    expandedCart = [];
-    let instanceId = 0;
-    cart.forEach(item => {
-        let unitPrice = 0;
-        if (item.size === 'L' && item.priceL !== undefined) unitPrice = item.priceL;
-        else if (item.size === 'M' && item.priceM !== undefined) unitPrice = item.priceM;
-        else if (item.price !== undefined) unitPrice = item.price;
-
-        for (let i = 0; i < (item.qty || 1); i++) {
-            expandedCart.push({
-                name: item.name || "Món không tên",
-                size: item.size || "",
-                price: unitPrice,
-                instanceId: instanceId++
-            });
-        }
-    });
-
-    selectedForPayment.clear();
-    renderSplitList();
-
+    _syncSplitCart();
+    splitSelected.clear();
+    renderSplitView('list');
     document.getElementById('split-payment-modal').classList.remove('hidden');
 }
 
+// Sync expandedCart từ cart: chỉ APPEND món mới, không rebuild
+function _syncSplitCart() {
+    const paidIds = new Set(splitGroups.flatMap(g => g.ids));
+    // Rebuild từ cart
+    const newExpanded = [];
+    let ci = 0;
+    cart.forEach(item => {
+        for (let i = 0; i < (item.qty || 1); i++) {
+            newExpanded.push({
+                stableId: `${item.name}__${item.size}__${ci}`,
+                name: item.name || 'Món không tên',
+                size: item.size || '',
+                price: item.price || 0,
+            });
+            ci++;
+        }
+    });
+    // Giữ lại các món đã paid (kể cả không còn trong cart)
+    const paidItems = splitExpandedCart.filter(it => paidIds.has(it.stableId));
+    const paidStableIds = new Set(paidItems.map(it => it.stableId));
+    // Merge: paid items + các item mới từ cart chưa paid
+    const merged = [...paidItems];
+    newExpanded.forEach(it => {
+        if (!paidStableIds.has(it.stableId)) merged.push(it);
+    });
+    splitExpandedCart = merged;
+}
+
 function closeSplitModal() {
+    if (splitQRListening) {
+        try { db.ref('payment_events').off(); } catch(e){}
+        splitQRListening = false;
+    }
     document.getElementById('split-payment-modal').classList.add('hidden');
-    selectedForPayment.clear();
-    hideToast();
+    splitSelected.clear();
 }
 
-function showToast() {
-    const toast = document.getElementById('split-toast');
-    if (toast) {
-        toast.classList.remove('hidden');
-        setTimeout(hideToast, 2500);
-    }
-}
-function hideToast() {
-    const toast = document.getElementById('split-toast');
-    if (toast) toast.classList.add('hidden');
+function resetSplitState() {
+    splitExpandedCart = [];
+    splitSelected.clear();
+    splitGroups = [];
+    splitQRListening = false;
+    _splitQRUnsubscribe = null;
+    _splitOrderMeta = null;
 }
 
-function renderSplitList() {
-    const container = document.getElementById('split-list');
+function _getPaidIds() {
+    return new Set(splitGroups.flatMap(g => g.ids));
+}
+
+// ─── RENDER ROUTER ────────────────────────────────────────────
+function renderSplitView(view) {
+    const container = document.getElementById('split-modal-body');
     if (!container) return;
-    container.innerHTML = '';
+    if (view === 'list')    _renderSplitList(container);
+    else if (view === 'cash')    _renderSplitCash(container);
+    else if (view === 'qr')      _renderSplitQR(container);
+    else if (view === 'summary') _renderSplitSummary(container);
+}
 
-    if (expandedCart.length === 0) {
-        container.innerHTML = '<p class="text-center text-gray-500 py-10 text-lg">Không có món nào</p>';
-        return;
-    }
+// ─── VIEW: CHỌN MÓN ──────────────────────────────────────────
+function _renderSplitList(container) {
+    const paidIds = _getPaidIds();
+    const allPaid = splitExpandedCart.length > 0 &&
+                    splitExpandedCart.every(it => paidIds.has(it.stableId));
 
-    expandedCart.forEach(exItem => {
-        const isPaid = paidInstances.has(exItem.instanceId);
-        const checked = selectedForPayment.has(exItem.instanceId) ? 'checked' : '';
-        const disabled = isPaid ? 'disabled' : '';
-        const rowClass = isPaid ? 'opacity-40' : '';
+    let listHTML = '';
+    splitExpandedCart.forEach(it => {
+        const isPaid = paidIds.has(it.stableId);
+        const isSel  = splitSelected.has(it.stableId);
+        const grp    = splitGroups.find(g => g.ids.includes(it.stableId));
+        const badge  = grp ? (grp.method === 'cash'
+            ? '<span class="text-xs text-green-600 font-black">💵 Đã thu · TM</span>'
+            : '<span class="text-xs text-indigo-600 font-black">📱 Đã thu · CK</span>') : '';
 
-        const displayPrice = (exItem.price || 0).toLocaleString();
-
-        const rowHTML = `
-        <div class="flex items-center justify-between py-4 px-5 bg-gray-50/80 backdrop-blur rounded-3xl ${rowClass} transition-all">
-            <div class="flex-1">
-                <p class="font-black text-xl text-gray-900">${exItem.name}</p>
-                <p class="text-lg text-[#006241] font-bold">${exItem.size ? exItem.size + ' • ' + displayPrice + 'đ' : ''}</p>
-                ${isPaid ? '<p class="text-sm text-green-600 font-black uppercase mt-2">✓ Đã thu</p>' : ''}
+        listHTML += `
+        <div onclick="${isPaid ? '' : `toggleSplitItem('${it.stableId}')`}"
+             class="flex items-center justify-between py-3 px-4 rounded-2xl transition-all mb-2 cursor-pointer
+                    ${isPaid ? 'bg-gray-50 opacity-40 cursor-default'
+                             : isSel ? 'bg-green-50 border-2 border-[#006241]'
+                                     : 'bg-gray-50 border-2 border-transparent active:scale-[0.98]'}">
+            <div class="flex-1 min-w-0">
+                <p class="font-black text-base text-gray-900 truncate">${it.name}</p>
+                <p class="text-sm font-bold text-[#006241]">${it.size ? it.size + ' · ' : ''}${(it.price||0).toLocaleString()}đ</p>
+                ${badge}
             </div>
-
-            <div class="flex items-center">
-                <input type="checkbox" ${checked} ${disabled}
-                       onchange="toggleSplitSelect(${exItem.instanceId}, this.checked)"
-                       class="w-8 h-8 rounded-xl border-4 border-gray-300 accent-[#006241] focus:ring-4 focus:ring-[#006241]/20">
-            </div>
+            ${!isPaid ? `<div class="w-6 h-6 rounded-full border-2 flex-shrink-0 ml-3 flex items-center justify-center
+                              ${isSel ? 'bg-[#006241] border-[#006241]' : 'border-gray-300'}">
+                ${isSel ? '<svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : ''}
+            </div>` : ''}
         </div>`;
-        container.innerHTML += rowHTML;
     });
 
-    updateSplitTotal();
-}
-function toggleSplitSelect(id, checked) {
-    if (checked) selectedForPayment.add(id);
-    else selectedForPayment.delete(id);
-    updateSplitTotal();
+    let selTotal = 0;
+    splitSelected.forEach(id => {
+        const it = splitExpandedCart.find(x => x.stableId === id);
+        if (it) selTotal += (it.price || 0);
+    });
+    const hasSel = splitSelected.size > 0;
+
+    container.innerHTML = `
+    <div class="flex-1 overflow-y-auto px-5 pt-3 pb-2 space-y-0">${listHTML}</div>
+    <div class="px-5 pb-5 pt-3 border-t border-gray-100 space-y-3 flex-shrink-0">
+        ${hasSel ? `
+        <div class="flex justify-between items-center px-1 mb-1">
+            <span class="text-sm font-bold text-gray-500">Chọn ${splitSelected.size} món:</span>
+            <span class="text-xl font-black text-[#006241]">${selTotal.toLocaleString()}đ</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+            <button onclick="renderSplitView('cash')"
+                class="py-4 bg-[#006241] text-white font-black text-sm rounded-2xl uppercase active:scale-95 transition-all flex items-center justify-center gap-1.5">
+                💵 Tiền mặt
+            </button>
+            <button onclick="_initSplitQR()"
+                class="py-4 bg-indigo-600 text-white font-black text-sm rounded-2xl uppercase active:scale-95 transition-all flex items-center justify-center gap-1.5">
+                📱 Chuyển khoản
+            </button>
+        </div>` : `<p class="text-center text-gray-400 text-sm font-bold py-1">Chạm vào món để chọn</p>`}
+        ${allPaid ? `
+        <button onclick="renderSplitView('summary')"
+            class="w-full py-4 bg-amber-500 text-white font-black text-base rounded-2xl uppercase active:scale-95 transition-all shadow-lg">
+            ✅ Xem tổng kết & Hoàn tất
+        </button>` : ''}
+    </div>`;
 }
 
-function updateSplitTotal() {
-    let total = 0;
-    selectedForPayment.forEach(id => {
-        const item = expandedCart.find(it => it.instanceId === id);
-        if (item && item.price !== undefined) total += item.price;
+function toggleSplitItem(stableId) {
+    if (splitSelected.has(stableId)) splitSelected.delete(stableId);
+    else splitSelected.add(stableId);
+    renderSplitView('list');
+}
+
+// ─── VIEW: TIỀN MẶT ───────────────────────────────────────────
+function _renderSplitCash(container) {
+    let subtotal = 0;
+    const selItems = [];
+    splitSelected.forEach(id => {
+        const it = splitExpandedCart.find(x => x.stableId === id);
+        if (it) { subtotal += it.price || 0; selItems.push(it); }
     });
 
-    const totalEl = document.getElementById('split-total');
-    if (totalEl) totalEl.innerText = total.toLocaleString() + 'đ';
+    container.innerHTML = `
+    <div class="flex-1 overflow-y-auto px-5 pt-4 pb-2">
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Các món thu lần này</p>
+        <div class="bg-gray-50 rounded-2xl px-4 py-2 mb-4 space-y-0">
+            ${selItems.map(it => `
+            <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                <span class="font-bold text-sm text-gray-800">${it.name}${it.size ? ' <span class="text-gray-400 text-xs">'+it.size+'</span>' : ''}</span>
+                <span class="font-black text-sm text-[#006241]">${(it.price||0).toLocaleString()}đ</span>
+            </div>`).join('')}
+            <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-bold text-gray-400 uppercase">Cần thu</span>
+                <span class="text-lg font-black text-[#006241]">${subtotal.toLocaleString()}đ</span>
+            </div>
+        </div>
 
-    const btn = document.getElementById('pay-selected-btn');
-    if (btn) btn.disabled = selectedForPayment.size === 0;
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Khách đưa</p>
+        <div class="bg-white border-2 border-gray-200 rounded-2xl px-4 py-3 mb-3 focus-within:border-[#006241] transition-colors">
+            <input id="split-cash-input" type="tel" inputmode="numeric"
+                   value="${subtotal.toLocaleString('en-US')}"
+                   oninput="formatSplitCashInput(this); _calcSplitChange(${subtotal})"
+                   class="w-full text-2xl font-black text-gray-900 bg-transparent outline-none text-right">
+        </div>
+        <div class="flex gap-2 flex-wrap mb-4">
+            ${[10000,20000,50000,100000,200000,500000].map(v =>
+                `<button onclick="quickSplitCash(${v},${subtotal})"
+                    class="flex-1 min-w-[30%] py-2.5 bg-gray-100 rounded-xl font-black text-xs active:scale-95 transition-all">
+                    ${(v/1000).toFixed(0)}k
+                </button>`
+            ).join('')}
+        </div>
+        <div class="flex justify-between items-center px-2 py-3 bg-blue-50 rounded-2xl">
+            <span class="text-sm font-bold text-gray-500">Tiền thừa:</span>
+            <span id="split-change-display" class="text-xl font-black text-blue-600">0đ</span>
+        </div>
+    </div>
+    <div class="px-5 pb-5 pt-3 border-t border-gray-100 flex gap-3 flex-shrink-0">
+        <button onclick="renderSplitView('list')"
+            class="py-4 px-5 border-2 border-gray-200 text-gray-600 font-black text-sm rounded-2xl active:scale-95 transition-all">← Quay lại</button>
+        <button onclick="_confirmSplitCash(${subtotal})"
+            class="flex-1 py-4 bg-[#006241] text-white font-black text-base rounded-2xl uppercase active:scale-95 transition-all">Xác nhận thu</button>
+    </div>`;
 
-    const allPaid = expandedCart.every(it => paidInstances.has(it.instanceId));
-    const completeBtn = document.getElementById('complete-all-btn');
-    if (completeBtn) completeBtn.classList.toggle('hidden', !allPaid);
+    _calcSplitChange(subtotal);
 }
 
-function markAsPaidSelected() {
-    if (selectedForPayment.size === 0) return;
-
-    selectedForPayment.forEach(id => paidInstances.add(id));
-    selectedForPayment.clear();
-    renderSplitList();
-    showToast();
+function formatSplitCashInput(el) {
+    const raw = el.value.replace(/[^0-9]/g,'');
+    el.value = raw ? Number(raw).toLocaleString('en-US') : '';
+}
+function _calcSplitChange(subtotal) {
+    const raw = (document.getElementById('split-cash-input')?.value||'').replace(/,/g,'');
+    const change = Math.max(0, (Number(raw)||0) - subtotal);
+    const el = document.getElementById('split-change-display');
+    if (el) el.innerText = change.toLocaleString() + 'đ';
+}
+function quickSplitCash(val, subtotal) {
+    const el = document.getElementById('split-cash-input');
+    if (el) { el.value = val.toLocaleString('en-US'); _calcSplitChange(subtotal); }
+}
+function _confirmSplitCash(subtotal) {
+    const raw = (document.getElementById('split-cash-input')?.value||'').replace(/,/g,'');
+    const paid = Number(raw) || subtotal;
+    if (paid < subtotal) { alert('Tiền khách đưa chưa đủ!'); return; }
+    splitGroups.push({ ids: Array.from(splitSelected), method: 'cash', subtotal, paid, change: Math.max(0,paid-subtotal) });
+    splitSelected.clear();
+    _checkSplitAllPaid();
 }
 
-function completeWholePayment() {
-    if (expandedCart.length !== paidInstances.size) {
-        if (typeof showAppModal === 'function') showAppModal("Chưa xong", "Còn món chưa thu tiền!", "⚠️");
-        return;
+// ─── VIEW: CHUYỂN KHOẢN ───────────────────────────────────────
+function _initSplitQR() {
+    let subtotal = 0;
+    splitSelected.forEach(id => {
+        const it = splitExpandedCart.find(x => x.stableId === id);
+        if (it) subtotal += it.price || 0;
+    });
+    const pendingIds = Array.from(splitSelected);
+    renderSplitView('qr');
+    _startSplitQR(subtotal, pendingIds);
+}
+
+function _renderSplitQR(container) {
+    let subtotal = 0;
+    splitSelected.forEach(id => {
+        const it = splitExpandedCart.find(x => x.stableId === id);
+        if (it) subtotal += it.price || 0;
+    });
+    container.innerHTML = `
+    <div class="flex-1 flex flex-col items-center justify-center px-5 py-6 gap-4">
+        <p class="text-xs font-bold text-gray-400 uppercase">Chuyển khoản · ${subtotal.toLocaleString()}đ</p>
+        <div id="split-qr-img-wrap" class="w-52 h-52 bg-gray-100 rounded-3xl flex items-center justify-center overflow-hidden">
+            <div class="w-8 h-8 border-4 border-gray-300 border-t-[#006241] rounded-full animate-spin"></div>
+        </div>
+        <p id="split-qr-code-text" class="text-xs font-mono text-gray-400 tracking-wider">Đang tạo mã...</p>
+        <div id="split-qr-status" class="text-sm font-bold text-amber-500 animate-pulse">Đang chờ thanh toán...</div>
+    </div>
+    <div class="px-5 pb-5 pt-3 border-t border-gray-100 flex-shrink-0">
+        <button onclick="_cancelSplitQR()"
+            class="w-full py-4 border-2 border-gray-200 text-gray-600 font-black text-base rounded-2xl active:scale-95 transition-all">← Huỷ, chọn lại</button>
+    </div>`;
+}
+
+function _startSplitQR(subtotal, pendingIds) {
+    const API_URL = "https://us-central1-the-cafe-33.cloudfunctions.net/createPayment";
+    fetch(API_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ amount: subtotal }) })
+    .then(r => r.json())
+    .then(result => {
+        if (result.status === 'success') {
+            const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=' + encodeURIComponent(result.qrCode);
+            const wrap = document.getElementById('split-qr-img-wrap');
+            if (wrap) wrap.innerHTML = `<img src="${qrUrl}" class="w-full h-full object-contain rounded-2xl">`;
+            const codeEl = document.getElementById('split-qr-code-text');
+            if (codeEl) codeEl.textContent = result.orderCodeFull || '';
+            _listenSplitQR(subtotal, pendingIds, result.orderCodeFull);
+        } else {
+            const s = document.getElementById('split-qr-status');
+            if (s) s.innerHTML = '<span class="text-red-500">Lỗi tạo QR!</span>';
+        }
+    })
+    .catch(() => {
+        const s = document.getElementById('split-qr-status');
+        if (s) s.innerHTML = '<span class="text-red-500">Lỗi kết nối!</span>';
+    });
+}
+
+function _listenSplitQR(subtotal, pendingIds, code) {
+    if (_splitQRUnsubscribe) { try { db.ref('payment_events').off(); } catch(e){} }
+    splitQRListening = true;
+    _splitQRUnsubscribe = db.ref('payment_events').limitToLast(5).on('value', snap => {
+        if (!snap.val()) return;
+        Object.values(snap.val()).forEach(data => {
+            const amt  = Number(data.amount || 0);
+            const dc   = String(data.orderCode || '').trim();
+            const isCodeMatch = code
+                ? (dc === code || (data.description||'').includes(code) || (data.content||'').includes(code))
+                : amt >= subtotal;
+            if (isCodeMatch && amt >= subtotal) _onSplitQRSuccess(subtotal, pendingIds);
+        });
+    });
+}
+
+function _onSplitQRSuccess(subtotal, pendingIds) {
+    if (!splitQRListening) return;
+    splitQRListening = false;
+    try { db.ref('payment_events').off(); } catch(e){}
+    _splitQRUnsubscribe = null;
+    splitGroups.push({ ids: pendingIds, method: 'bank', subtotal, paid: subtotal, change: 0 });
+    const s = document.getElementById('split-qr-status');
+    if (s) s.innerHTML = '<span class="text-green-600 font-black animate-bounce">✅ Đã nhận tiền!</span>';
+    splitSelected.clear();
+    setTimeout(_checkSplitAllPaid, 1200);
+}
+
+function _cancelSplitQR() {
+    splitQRListening = false;
+    try { db.ref('payment_events').off(); } catch(e){}
+    _splitQRUnsubscribe = null;
+    renderSplitView('list');
+}
+
+// ─── CHECK ALL PAID ────────────────────────────────────────────
+function _checkSplitAllPaid() {
+    const paidIds = _getPaidIds();
+    const allPaid = splitExpandedCart.length > 0 && splitExpandedCart.every(it => paidIds.has(it.stableId));
+    if (allPaid) renderSplitView('summary');
+    else renderSplitView('list');
+}
+
+// ─── VIEW: TỔNG KẾT ───────────────────────────────────────────
+function _renderSplitSummary(container) {
+    let grandTotal = 0;
+    const usedMethods = new Set();
+    splitGroups.forEach(g => { grandTotal += g.subtotal; usedMethods.add(g.method); });
+    const methodLabel = usedMethods.size === 2 ? 'Tiền mặt + Chuyển khoản'
+                      : usedMethods.has('bank') ? 'Chuyển khoản' : 'Tiền mặt';
+
+    let groupsHTML = '';
+    splitGroups.forEach((g, gi) => {
+        const isCash = g.method === 'cash';
+        const borderCls = isCash ? 'border-green-200' : 'border-indigo-200';
+        const headBg    = isCash ? 'bg-green-100/60 border-green-200' : 'bg-indigo-100/60 border-indigo-200';
+        const headTxt   = isCash ? 'text-green-800' : 'text-indigo-800';
+        const icon      = isCash ? '💵 Tiền mặt' : '📱 Chuyển khoản';
+
+        const itemsHTML = g.ids.map(id => {
+            const it = splitExpandedCart.find(x => x.stableId === id);
+            return it ? `<div class="flex justify-between py-1.5 border-b border-dashed border-gray-100 last:border-0">
+                <span class="text-sm font-bold text-gray-700">${it.name}${it.size ? ' <span class="text-xs text-gray-400">'+it.size+'</span>':''}</span>
+                <span class="text-sm font-black text-[#006241]">${(it.price||0).toLocaleString()}đ</span>
+            </div>` : '';
+        }).join('');
+
+        const footerHTML = isCash ? `
+        <div class="flex justify-between px-4 py-2 bg-green-50 border-t ${borderCls} text-xs font-bold">
+            <span class="text-gray-500">Nhận: <span class="text-gray-900 font-black">${g.paid.toLocaleString()}đ</span></span>
+            <span class="text-gray-500">Thừa: <span class="${g.change>0?'text-blue-600':'text-gray-400'} font-black">${g.change.toLocaleString()}đ</span></span>
+        </div>` : '';
+
+        groupsHTML += `
+        <div class="border-2 ${borderCls} rounded-2xl overflow-hidden mb-3">
+            <div class="flex justify-between items-center px-4 py-2.5 border-b ${headBg}">
+                <span class="text-xs font-black uppercase ${headTxt}">${icon} · Nhóm ${gi+1}</span>
+                <span class="text-base font-black ${headTxt}">${g.subtotal.toLocaleString()}đ</span>
+            </div>
+            <div class="px-4 py-2">${itemsHTML}</div>
+            ${footerHTML}
+        </div>`;
+    });
+
+    container.innerHTML = `
+    <div class="flex-1 overflow-y-auto px-5 pt-4 pb-2">
+        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Chi tiết thanh toán</p>
+        ${groupsHTML}
+        <div class="flex justify-between items-center px-1 pt-3 mt-1 border-t-2 border-[#006241]">
+            <span class="text-sm font-bold text-gray-500 uppercase">Tổng cộng</span>
+            <span class="text-2xl font-black text-[#006241]">${grandTotal.toLocaleString()}đ</span>
+        </div>
+    </div>
+    <div class="px-5 pb-5 pt-3 border-t border-gray-100 flex gap-3 flex-shrink-0">
+        <button onclick="renderSplitView('list')"
+            class="py-4 px-5 border-2 border-gray-200 text-gray-600 font-black text-sm rounded-2xl active:scale-95 transition-all">← Sửa</button>
+        <button onclick="_completeSplitPayment('${methodLabel}')"
+            class="flex-1 py-4 bg-amber-500 text-white font-black text-base rounded-2xl uppercase active:scale-95 transition-all shadow-lg">
+            ✅ Hoàn tất & Lưu đơn
+        </button>
+    </div>`;
+}
+
+function _completeSplitPayment(methodLabel) {
+    let cashPaid = currentTotal, cashChange = 0;
+    const cashGrps = splitGroups.filter(g => g.method === 'cash');
+    if (cashGrps.length) {
+        cashPaid  = cashGrps.reduce((s,g) => s+g.paid,   0);
+        cashChange = cashGrps.reduce((s,g) => s+g.change, 0);
     }
-
-    expandedCart = [];
-    paidInstances.clear();
-
+    _splitOrderMeta = {
+        isSplit: true,
+        groups: splitGroups.map(g => ({
+            method:   g.method,
+            subtotal: g.subtotal,
+            paid:     g.paid,
+            change:   g.change,
+            items:    g.ids.map(id => {
+                const it = splitExpandedCart.find(x => x.stableId === id);
+                return it ? { name: it.name, size: it.size, price: it.price } : null;
+            }).filter(Boolean)
+        }))
+    };
     closeSplitModal();
-    completeOrder();
+    resetSplitState();
+    saveOrderToFirebase(methodLabel, cashPaid, cashChange);
 }
+
 
 function openBedManagerMobile() {
     document.getElementById('loading-overlay').style.display = 'flex';
@@ -9082,6 +9401,7 @@ function resetOrderingMode(isSilent = false) {
 
     giftVoucherMarkUsedAndReset(true);
     resetDebtState();
+    resetSplitState();
     cart = [];
     renderCart();
 
@@ -10689,37 +11009,21 @@ function discountFormDelete() {
         </svg>
     </button>
 </div>
-   <div id="split-payment-modal" class="hidden fixed inset-0 z-[100000] flex items-end justify-center bg-black/40 backdrop-blur-md">
-    <div class="bg-white/95 backdrop-blur-2xl w-full max-h-[95vh] rounded-t-3xl shadow-2xl overflow-hidden flex flex-col border border-white/50">
-
-        <div class="p-5 border-b border-gray-100/50 flex justify-between items-center relative">
-            <h3 class="text-2xl font-black uppercase text-[#006241] absolute left-1/2 transform -translate-x-1/2">Thu tiền riêng</h3>
-            <button onclick="closeSplitModal()" class="w-10 h-10 rounded-full bg-gray-100/80 flex items-center justify-center text-gray-600 text-2xl">✕</button>
-        </div>
-
-        <div id="split-toast" class="hidden mx-5 mt-4 px-6 py-4 bg-green-50/90 backdrop-blur border border-green-200 rounded-3xl text-center">
-            <p class="text-green-700 font-black text-lg">Đã đánh dấu thu tiền phần này!</p>
-        </div>
-
-        <div class="flex-1 overflow-y-auto px-5 pt-4 pb-2 space-y-4" id="split-list">
-
-        </div>
-
-        <div class="p-5 border-t border-gray-100/50 bg-gray-50/90 backdrop-blur">
-            <div class="flex justify-between items-center mb-5">
-                <span class="text-lg text-gray-600 font-bold">Tổng đang chọn:</span>
-                <span id="split-total" class="text-3xl font-black text-[#006241]">0đ</span>
+<div id="split-payment-modal" class="hidden fixed inset-0 z-[100000] flex items-end justify-center bg-black/50 backdrop-blur-md">
+    <div class="bg-white/98 backdrop-blur-2xl w-full max-h-[95vh] rounded-t-[2rem] shadow-2xl flex flex-col border border-white/60 overflow-hidden"
+         style="padding-bottom: env(safe-area-inset-bottom)">
+        <!-- Header -->
+        <div class="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+            <div class="w-10"></div>
+            <div class="text-center">
+                <h3 class="text-lg font-black uppercase text-[#006241] leading-tight">Thu tiền riêng</h3>
+                <p class="text-[10px] text-gray-400 font-bold">Chọn món → chọn phương thức</p>
             </div>
-
-            <button id="pay-selected-btn" onclick="markAsPaidSelected()" disabled
-                    class="w-full py-5 bg-[#006241] text-white font-black text-xl rounded-3xl uppercase shadow-lg active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition-all">
-                Đã thu các món này
-            </button>
-
-            <button id="complete-all-btn" onclick="completeWholePayment()" class="hidden w-full py-5 mt-4 bg-amber-500 text-white font-black text-xl rounded-3xl uppercase shadow-lg active:scale-95 transition-all">
-                Hoàn tất thanh toán toàn bộ
-            </button>
+            <button onclick="closeSplitModal()"
+                    class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xl font-bold active:scale-90 transition-all">✕</button>
         </div>
+        <!-- Dynamic body — renderSplitView() ghi vào đây -->
+        <div id="split-modal-body" class="flex flex-col flex-1 overflow-hidden min-h-0"></div>
     </div>
 </div>
     <div id="modal-date-range" class="fixed inset-0 z-[100000] hidden flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in">
