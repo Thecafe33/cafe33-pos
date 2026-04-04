@@ -5070,8 +5070,14 @@ function selectBedItem(index) {
                         ${data.name || "Khách lẻ"}
                     </h1>
 
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         ${subTitleHTML}
+                        ${(!isDone && !isCancelled) ? `
+                        <button onclick="openEditBookingModal('${bookingId}')"
+                            class="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gray-100 hover:bg-[#006241] text-gray-500 hover:text-white text-[10px] font-black uppercase tracking-wide transition-all active:scale-95 border border-gray-200 hover:border-[#006241]">
+                            <span class="material-symbols-outlined text-[13px]">edit</span>
+                            Sửa
+                        </button>` : ''}
                         <div id="detail-timer-box" class="hidden ml-4 px-3 py-1 bg-red-50 text-red-600 rounded-lg flex items-center gap-2 animate-pulse">
                             <span class="material-symbols-outlined text-sm">timer</span>
                             <span id="detail-countdown" class="font-black font-mono text-lg tracking-tight">--:--</span>
@@ -7266,6 +7272,63 @@ function showBillModal(bookingId) {
 
         bodyEl.innerHTML = html;
         totalEl.innerText = grandTotal.toLocaleString() + 'đ';
+    });
+}
+
+var _editingBookingKey = null;
+
+function openEditBookingModal(bookingId) {
+    var booking = (globalAllBookings || []).find(function(b) { return (b.id || b.key) === bookingId; });
+    if (!booking) return;
+    _editingBookingKey = bookingId;
+    document.getElementById('edit-bk-name').value = booking.name || '';
+    document.getElementById('edit-bk-phone').value = booking.phone || '';
+    document.getElementById('edit-bk-compname').value = booking.compName || '';
+    document.getElementById('edit-bk-compphone').value = booking.compPhone || '';
+    document.getElementById('modal-edit-booking').classList.remove('hidden');
+}
+
+function closeEditBookingModal() {
+    document.getElementById('modal-edit-booking').classList.add('hidden');
+    _editingBookingKey = null;
+}
+
+function saveEditBooking() {
+    if (!_editingBookingKey) return;
+    var booking = (globalAllBookings || []).find(function(b) { return (b.id || b.key) === _editingBookingKey; });
+    if (!booking) return;
+
+    var newName     = document.getElementById('edit-bk-name').value.trim();
+    var newPhone    = document.getElementById('edit-bk-phone').value.trim();
+    var newCompName = document.getElementById('edit-bk-compname').value.trim();
+    var newCompPhone= document.getElementById('edit-bk-compphone').value.trim();
+
+    if (!newName) { alert('Vui lòng nhập tên khách hàng!'); return; }
+
+    var updates = {
+        name: newName,
+        phone: newPhone,
+        compName: newCompName,
+        compPhone: newCompPhone
+    };
+
+    var btn = document.querySelector('#modal-edit-booking button[onclick="saveEditBooking()"]');
+    if (btn) { btn.disabled = true; btn.innerText = 'Đang lưu...'; }
+
+    _updateBedBooking(booking, updates, function(err) {
+        if (btn) { btn.disabled = false; btn.innerHTML = '💾 Lưu thay đổi'; }
+        if (err) { alert('Lỗi: ' + err.message); return; }
+
+        // Cập nhật local cache
+        Object.assign(booking, updates);
+        var idx = (globalAllBookings || []).findIndex(function(b) { return (b.id||b.key) === _editingBookingKey; });
+        if (idx > -1) Object.assign(globalAllBookings[idx], updates);
+
+        closeEditBookingModal();
+
+        // Re-render panel PC
+        if (typeof showBookingDetail === 'function') showBookingDetail(_editingBookingKey);
+        if (typeof showAppModal === 'function') showAppModal('Đã lưu', 'Cập nhật thông tin thành công!', '✅');
     });
 }
 
@@ -12862,5 +12925,44 @@ function keypadConfirm() {
 </script>
 
 
+
+<!-- Modal Edit Booking Info -->
+<div id="modal-edit-booking" class="hidden fixed inset-0 z-[10001] flex items-center justify-center bg-black/50 backdrop-blur-sm p-6" onclick="if(event.target===this)closeEditBookingModal()">
+    <div class="bg-white w-full max-w-md rounded-[2rem] overflow-hidden shadow-2xl">
+        <div class="px-7 pt-7 pb-4 border-b border-gray-100 flex items-center justify-between">
+            <div>
+                <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Chỉnh sửa lịch</p>
+                <h3 class="text-xl font-black text-[#1e3932]">Thông tin khách</h3>
+            </div>
+            <button onclick="closeEditBookingModal()" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+        <div class="px-7 py-5 space-y-4">
+            <div>
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Tên khách hàng</label>
+                <input id="edit-bk-name" type="text" class="w-full border-2 border-gray-100 rounded-[1rem] px-4 py-3 text-[15px] font-bold text-gray-800 outline-none focus:border-[#006241] transition-colors" placeholder="Họ tên khách...">
+            </div>
+            <div>
+                <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Số điện thoại</label>
+                <input id="edit-bk-phone" type="tel" class="w-full border-2 border-gray-100 rounded-[1rem] px-4 py-3 text-[15px] font-bold text-gray-800 outline-none focus:border-[#006241] transition-colors" placeholder="0xxxxxxxxx">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Người đi cùng</label>
+                    <input id="edit-bk-compname" type="text" class="w-full border-2 border-gray-100 rounded-[1rem] px-4 py-3 text-[14px] font-bold text-gray-800 outline-none focus:border-[#006241] transition-colors" placeholder="Tên...">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">SĐT đi cùng</label>
+                    <input id="edit-bk-compphone" type="tel" class="w-full border-2 border-gray-100 rounded-[1rem] px-4 py-3 text-[14px] font-bold text-gray-800 outline-none focus:border-[#006241] transition-colors" placeholder="0xxxxxxxxx">
+                </div>
+            </div>
+        </div>
+        <div class="px-7 pb-7 flex gap-3">
+            <button onclick="closeEditBookingModal()" class="flex-1 py-4 rounded-[1.2rem] bg-gray-100 text-gray-500 font-black text-[14px] uppercase active:scale-95 transition-transform">Hủy</button>
+            <button onclick="saveEditBooking()" class="flex-[2] py-4 rounded-[1.2rem] bg-[#006241] text-white font-black text-[14px] uppercase shadow-lg shadow-[#006241]/20 active:scale-95 transition-transform">💾 Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
