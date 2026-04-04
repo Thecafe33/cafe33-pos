@@ -2658,6 +2658,12 @@ db.ref("customers").on("value", snap => {
     switchView('menu');
     listenToClientInput();
 
+    // Auto-cancel ngầm mỗi 5 phút — không cần mở tab Bed
+    setInterval(function() {
+        if (!globalAllBookings || !globalAllBookings.length) return;
+        _runAutoCancelCheck(globalAllBookings);
+    }, 5 * 60 * 1000);
+
     checkAndSyncDailyRevenue();
 };
 
@@ -4771,57 +4777,49 @@ function changeBedDate(dateInputValue) {
         renderBedBookings(currentBedList);
     });
 }
-function renderBedBookings(list) {
+function _runAutoCancelCheck(list) {
+    if (!list || !list.length) return;
     const now = new Date();
     const AUTO_CANCEL_MINUTES = 50;
     const todayStr = now.toLocaleDateString('en-GB');
 
-    if (list && list.length > 0) {
-        list.forEach(booking => {
-            if (booking.status === 'chờ khách' || !booking.status) {
-
-                if (!booking.displayDate || booking.displayDate === todayStr) {
-
-                    if (booking.start && booking.start.includes(':')) {
-                        let parts = booking.start.split(':');
-                        let bookingTime = new Date();
-                        bookingTime.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
-
-                        let diff = (now - bookingTime) / 60000;
-
-                        if (diff > AUTO_CANCEL_MINUTES) {
-
-                            let bookingId = booking.id || booking.key;
-
-                            if (bookingId) {
-                                _updateBedBooking(booking, {
-                                    status: 'đã hủy',
-                                    cancelType: 'auto_timeout',
-                                    note: 'Hủy tự động (Quá 50p)'
-                                });
-
-                                if (booking.phone) {
-                                    updateRepScore(booking.phone, booking.name || 'Khách hàng', -10, 'Lịch bị hủy do quá giờ', bookingId);
-                                }
-
-                                booking.status = 'đã hủy';
-                                booking.cancelType = 'auto_timeout';
+    list.forEach(function(booking) {
+        if (booking.status === 'chờ khách' || !booking.status) {
+            if (!booking.displayDate || booking.displayDate === todayStr) {
+                if (booking.start && booking.start.includes(':')) {
+                    var parts = booking.start.split(':');
+                    var bookingTime = new Date();
+                    bookingTime.setHours(parseInt(parts[0]), parseInt(parts[1]), 0);
+                    var diff = (now - bookingTime) / 60000;
+                    if (diff > AUTO_CANCEL_MINUTES) {
+                        var bookingId = booking.id || booking.key;
+                        if (bookingId) {
+                            _updateBedBooking(booking, {
+                                status: 'đã hủy',
+                                cancelType: 'auto_timeout',
+                                note: 'Hủy tự động (Quá 50p)'
+                            });
+                            if (booking.phone) {
+                                updateRepScore(booking.phone, booking.name || 'Khách hàng', -10, 'Lịch bị hủy do quá giờ', bookingId);
                             }
+                            booking.status = 'đã hủy';
+                            booking.cancelType = 'auto_timeout';
                         }
                     }
                 }
             }
-        });
-    }
+        }
+    });
+}
+
+function renderBedBookings(list) {
+    // Chạy auto-cancel mỗi lần render
+    _runAutoCancelCheck(list);
 
     selectedBedIndex = -1;
-
     document.getElementById('detail-empty-state')?.classList.remove('hidden');
-
     document.getElementById('detail-content-panel')?.classList.add('hidden');
-
     stopPanelCountdown();
-
     renderLeftColumnList();
     renderRightColumnMap();
 }
