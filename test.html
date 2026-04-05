@@ -14,10 +14,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
 
 <style>
@@ -66,7 +65,6 @@ html, body {
     background-color: var(--bg-left);
     border-right: 1px solid var(--border);
     padding: 12px;
-    gap: 12px;
 }
 
 /* Khu vực trên cùng: Logo + Banner */
@@ -75,6 +73,8 @@ html, body {
     height: 80px;
     width: 100%;
     flex-shrink: 0;
+    border-radius: 16px;
+    margin-bottom: 12px; /* Replace flex gap */
 }
 .img-placeholder {
     background-color: var(--ph-bg);
@@ -83,38 +83,27 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
+    text-align: center;
 }
 .img-placeholder .material-symbols-outlined {
     color: #cbd5e1;
     font-size: 2rem;
-}
-#ph-logo { 
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 12%;
-    height: 60px;
-    background: #ffffff; /* Nền trắng để tách biệt với banner */
-    z-index: 2;
 }
 
 /* Khu vực thân: Slide + Center Menu + Toppings */
 #body-layout {
     display: flex;
     flex: 1;
-    gap: 12px;
     overflow: hidden;
+    width: 100%;
 }
 
 /* Cột trái: Slide ảnh */
 #ph-slide {
     width: 22%;
-}
-
-/* Cột phải: Toppings */
-#ph-toppings {
-    width: 15%;
+    flex-shrink: 0;
+    overflow: hidden;
 }
 
 /* Cột giữa: Menu & Nổi bật */
@@ -122,19 +111,18 @@ html, body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 16px;
     overflow: hidden;
+    margin: 0 12px; /* Replace flex gap */
+    min-width: 0;
 }
 
 /* Món nổi bật (Top center) */
 #featured-section {
     display: flex;
-    gap: 12px;
-    height: 140px;
+    justify-content: space-between;
+    height: 100px;
     flex-shrink: 0;
-}
-.ph-featured {
-    flex: 1;
+    margin-bottom: 16px;
 }
 
 /* Lưới Menu chính (Bottom center) */
@@ -162,8 +150,6 @@ html, body {
     font-weight: 800;
     color: var(--text);
     margin-bottom: 12px;
-    padding-bottom: 4px;
-    border-bottom: 2px solid #e2e8f0;
 }
 .items-grid {
     display: grid;
@@ -177,6 +163,7 @@ html, body {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    height: 100%;
 }
 .item-card.sold-out {
     opacity: 0.4;
@@ -192,6 +179,8 @@ html, body {
     align-items: center;
     justify-content: center;
     border: 1px solid #e2e8f0;
+    flex-shrink: 0;
+    overflow: hidden;
 }
 .item-img-ph .material-symbols-outlined {
     font-size: 1.5rem;
@@ -203,14 +192,21 @@ html, body {
     color: #1e293b;
     line-height: 1.2;
     margin-bottom: 4px;
-    min-height: 16px;
+    width: 100%;
 }
 .item-card-price {
     font-size: 0.65rem;
     font-weight: 800;
     color: var(--text);
+    margin-top: auto; /* Đẩy giá xuống đáy */
 }
 
+/* Cột phải: Toppings */
+#ph-toppings {
+    width: 15%;
+    flex-shrink: 0;
+    overflow: hidden;
+}
 
 /* ── RIGHT PANEL (25%) : CART ── */
 #panel-right {
@@ -412,25 +408,7 @@ html, body {
 @keyframes pulse { 0%,100%{opacity:0.7} 50%{opacity:1} }
 @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
 
-#view-phone {
-    display: none;
-    position: fixed; inset: 0; z-index: 90;
-    background: rgba(0,0,0,0.45);
-    backdrop-filter: blur(6px);
-    align-items: center;
-    justify-content: center;
-    animation: fadeInUp 0.25s ease;
-}
-#view-phone.active { display: flex; }
-#phone-box { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 20px; padding: 24px; width: 340px; box-shadow: 0 24px 80px rgba(0,0,0,0.2); }
-#phone-box h3 { font-size: 0.9rem; font-weight: 900; color: var(--green); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; text-align: center;}
-#native-phone { width: 100%; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; color: #1e3932; font-size: 1.6rem; font-weight: 900; text-align: center; padding: 10px; outline: none; letter-spacing: 0.12em; margin-bottom: 12px; transition: border-color 0.2s; font-family: inherit; }
-#native-phone:focus { border-color: var(--green); background: #fff; }
-.phone-btns { display: flex; }
-.phone-btns button { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; transition: opacity 0.2s; }
-.phone-btns button:active { opacity: 0.7; }
-#btn-cancel-phone { background: #f1f5f9; color: #64748b; margin-right: 10px; }
-#btn-submit-phone { background: var(--green); color: #fff; flex: 2; }
+@keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
 
 </style>
 </head>
@@ -438,63 +416,49 @@ html, body {
 
 <div id="root">
 
-    <!-- ══════════════════════════════════ LEFT — NEW LAYOUT (75%) ═══════════════════════════════ -->
-<div id="panel-left">
+    <div id="panel-left">
 
-    <!-- Top Row -->
-    <div id="header-layout" class="img-placeholder">
-        <div id="ph-logo" class="img-placeholder">
-            <span class="material-symbols-outlined" style="font-size: 1.5rem;">image</span>
+        <div id="header-layout" class="img-placeholder">
+            <span class="material-symbols-outlined">image</span>
+            <span style="font-family:'Inter'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Banner</span>
         </div>
-        <!-- Icon đại diện cho Banner ngang -->
-        <span class="material-symbols-outlined">image</span>
-    </div>
 
-    <!-- Main Body -->
-    <div id="body-layout">
+        <div id="body-layout">
             
-            <!-- Cột trái slide -->
             <div id="ph-slide" class="img-placeholder">
                 <span class="material-symbols-outlined" style="font-size: 3rem;">image</span>
+                <span style="font-family:'Inter'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Slide</span>
             </div>
 
-            <!-- Cột giữa Menu -->
             <div id="center-layout">
-                <!-- 3 món nổi bật -->
                 <div id="featured-section">
-                    <div class="img-placeholder ph-featured">
+                    <div class="img-placeholder" style="width:32%; border-radius:16px;">
                         <span class="material-symbols-outlined">local_cafe</span>
                     </div>
-                    <div class="img-placeholder ph-featured">
+                    <div class="img-placeholder" style="width:32%; border-radius:16px;">
                         <span class="material-symbols-outlined">local_cafe</span>
                     </div>
-                    <div class="img-placeholder ph-featured">
+                    <div class="img-placeholder" style="width:32%; border-radius:16px;">
                         <span class="material-symbols-outlined">local_cafe</span>
                     </div>
                 </div>
 
-                <!-- Lưới danh mục 2 cột -->
                 <div id="menu-board-container">
                     <div id="menu-static-grid" class="categories-wrapper">
-                        <!-- Đổ JS vào đây -->
-                    </div>
+                        </div>
                 </div>
             </div>
 
-            <!-- Cột phải Toppings -->
             <div id="ph-toppings" class="img-placeholder">
                 <span class="material-symbols-outlined" style="font-size: 3rem;">image</span>
+                <span style="font-family:'Inter'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Toppings</span>
             </div>
 
         </div>
 
     </div>
-    <!-- ══════════════════════════════════ END LEFT ════════════════════════════════ -->
-
-    <!-- ══════════════════════════════════ RIGHT — CART (25%) ═════════════════════ -->
     <div id="panel-right">
 
-        <!-- Cart section -->
         <div id="cart-header">
             <h2>Chi tiết order</h2>
             <div style="display:flex;align-items:center;opacity:0.6;">
@@ -538,7 +502,6 @@ html, body {
             </div>
         </div>
 
-        <!-- QR overlay -->
         <div id="view-qr">
             <h2>Quét mã thanh toán</h2>
             <div id="qr-card">
@@ -550,7 +513,6 @@ html, body {
             </div>
         </div>
 
-        <!-- Success overlay -->
         <div id="view-success">
             <span class="material-symbols-outlined">task_alt</span>
             <h2>Hoàn tất!</h2>
@@ -558,12 +520,7 @@ html, body {
         </div>
 
     </div>
-    <!-- ══════════════════════════════════ END RIGHT ═══════════════════════════════ -->
-
-</div><!-- #root -->
-
-<!-- SCREENSAVER -->
-<div id="screensaver">
+    </div><div id="screensaver">
     <div id="ss-layer-1"></div>
     <div id="ss-layer-2"></div>
     <div id="ss-brand">
@@ -571,21 +528,6 @@ html, body {
     </div>
 </div>
 
-<!-- PHONE INPUT -->
-<div id="view-phone">
-    <div id="phone-box">
-        <h3>Tích điểm & Ưu đãi</h3>
-        <input type="tel" id="native-phone" placeholder="Nhập số điện thoại" autocomplete="off">
-        <div class="phone-btns">
-            <button id="btn-cancel-phone" onclick="closePhoneInput()">Bỏ qua</button>
-            <button id="btn-submit-phone" onclick="submitPhone()">Gửi số</button>
-        </div>
-    </div>
-</div>
-
-<!-- ================================================================
-     SCRIPTS
-================================================================ -->
 <script>
 'use strict';
 
@@ -643,25 +585,127 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var db     = firebase.database();
 var auth   = firebase.auth();
-var fstore = firebase.firestore();
 
 // ── STATE
 var menuData      = [];
 var soldOutItems  = {};
+var menuConfig    = {};
 var ssPlaylist    = [];
 var ssIndex       = -1;
 var ssActive      = 1;
 var ssTimer       = null;
 var ssRunning     = false;
+var slideTimer    = null;
+var currentSlideIdx = -1;
 
-var DEFAULT_SLIDES = [
-    { src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1768316658706.jpg?alt=media&token=c8854aaa-6af4-40d7-a5b6-ccdda66e58e8', duration:6000 }
-];
+// ── RENDER DYNAMIC CONFIG TỪ POS ──
+function applyMenuConfig() {
+    // 1. Banner & Logo
+    var headerLayout = document.getElementById('header-layout');
+    if (headerLayout) {
+        var logoHtml = '';
+        if (menuConfig.logo) {
+            logoHtml = '<div id="ph-logo" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 14%; height: 64px; z-index: 2; background: white; border-radius: 12px; padding: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"><img src="'+menuConfig.logo+'" style="width:100%;height:100%;object-fit:contain;border-radius:10px;"></div>';
+        }
 
+        if (menuConfig.banner) {
+            headerLayout.innerHTML = logoHtml + '<img src="'+menuConfig.banner+'" style="width:100%;height:100%;object-fit:cover;border-radius:16px;">';
+            headerLayout.className = '';
+            headerLayout.style.background = 'transparent';
+            headerLayout.style.border = 'none';
+        } else {
+            headerLayout.innerHTML = logoHtml + '<span class="material-symbols-outlined">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Banner</span>';
+            headerLayout.className = 'img-placeholder';
+            headerLayout.style.background = '';
+            headerLayout.style.border = '';
+        }
+    }
 
-// ── RENDER STATIC MENU THEO CHUẨN MỚI ──
+    // 2. Toppings
+    var topEl = document.getElementById('ph-toppings');
+    if (topEl) {
+        if (menuConfig.toppings) {
+            topEl.innerHTML = '<img src="'+menuConfig.toppings+'" style="width:100%;height:100%;object-fit:cover;border-radius:16px;">';
+            topEl.className = '';
+            topEl.style.background = 'transparent';
+            topEl.style.border = 'none';
+        } else {
+            topEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 3rem;">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1; text-align:center;">Toppings</span>';
+            topEl.className = 'img-placeholder';
+            topEl.style.background = '';
+            topEl.style.border = '';
+        }
+    }
+
+    // 3. Slides (Slideshow)
+    var slideEl = document.getElementById('ph-slide');
+    if (slideEl) {
+        if (menuConfig.slides && menuConfig.slides.length > 0) {
+            slideEl.className = '';
+            slideEl.style.background = 'transparent';
+            slideEl.style.border = 'none';
+
+            function showNextSlide() {
+                if (!menuConfig.slides || menuConfig.slides.length === 0) return;
+                currentSlideIdx = (currentSlideIdx + 1) % menuConfig.slides.length;
+                slideEl.innerHTML = '<img src="'+menuConfig.slides[currentSlideIdx]+'" style="width:100%;height:100%;object-fit:cover;border-radius:16px;animation: fadeIn 1s ease;">';
+                clearTimeout(slideTimer);
+                slideTimer = setTimeout(showNextSlide, 6000); // 6s per slide
+            }
+            if (!slideTimer) showNextSlide();
+            
+            // Sync to screensaver
+            ssPlaylist = menuConfig.slides.map(function(s) { return {src: s, duration: 6000}; });
+        } else {
+            clearTimeout(slideTimer);
+            slideTimer = null;
+            slideEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 3rem;">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1; text-align:center;">Slides</span>';
+            slideEl.className = 'img-placeholder';
+            slideEl.style.background = '';
+            slideEl.style.border = '';
+            ssPlaylist = [];
+        }
+    }
+
+    // 4. Featured Items
+    var featSection = document.getElementById('featured-section');
+    if (featSection && menuConfig.featured && menuConfig.featured.length > 0) {
+        var html = '';
+        var drinkImgs = menuConfig.drinkImages || {};
+
+        for(var i=0; i<3; i++) {
+            var fKey = menuConfig.featured[i];
+            var mItem = menuData.find(function(m){ return m._key === fKey; });
+
+            if (mItem) {
+                var imgUrl = drinkImgs[fKey];
+                var imgHtml = imgUrl ? '<img src="'+imgUrl+'" style="width:100%;height:100%;object-fit:contain;">' : '<span class="material-symbols-outlined" style="color:#cbd5e1; font-size: 1.5rem;">local_cafe</span>';
+
+                var pM = mItem.priceM > 0 ? (mItem.priceM/1000) : '';
+                var pL = mItem.priceL > 0 ? (mItem.priceL/1000) : '';
+                var priceStr = pM;
+                if(pL) priceStr += (priceStr ? ' | ' : '') + pL;
+                if(!priceStr) priceStr = '—';
+
+                html += '<div style="width:32%; background:#fff; border-radius:16px; display:flex; align-items:center; padding:10px 12px; box-shadow:0 4px 15px rgba(0,0,0,0.03); border:1px solid #f3f4f6; box-sizing: border-box;">' +
+                          '<div style="width:40px; height:60px; background:#f8fafc; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">'+imgHtml+'</div>' +
+                          '<div style="flex:1; display:flex; flex-direction:column; text-align:left; padding-left:10px; min-width:0;">' +
+                            '<span style="font-size:0.75rem; font-weight:800; color:#1e293b; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+mItem.name+'</span>' +
+                            '<span style="font-size:0.9rem; font-weight:900; color:#006241; margin-top:2px;">'+priceStr+'</span>' +
+                          '</div>' +
+                        '</div>';
+            } else {
+                html += '<div class="img-placeholder" style="width:32%; border-radius:16px; box-sizing: border-box; min-height:82px;"><span class="material-symbols-outlined" style="font-size:1.5rem;">local_cafe</span></div>';
+            }
+        }
+        featSection.innerHTML = html;
+    }
+}
+
+// ── RENDER MENU BẢNG CHÍNH ──
 function renderMenuBoard() {
     var grid = document.getElementById('menu-static-grid');
+    var drinkImgs = menuConfig.drinkImages || {};
     
     // Gom nhóm menu
     var groups = {};
@@ -673,7 +717,6 @@ function renderMenuBoard() {
 
     var html = '';
     
-    // Render từng nhóm
     for (var cat in groups) {
         if (groups[cat].length === 0) continue;
         
@@ -686,16 +729,18 @@ function renderMenuBoard() {
             var pM = m.priceM > 0 ? (m.priceM/1000) : '';
             var pL = m.priceL > 0 ? (m.priceL/1000) : '';
             
-            // Format giá: "15 | 20"
             var priceStr = pM;
             if (pL) priceStr += (priceStr ? ' | ' : '') + pL;
             if (!priceStr) priceStr = '—';
             
             var cardClass = isSoldOut ? 'item-card sold-out' : 'item-card';
 
+            var imgUrl = drinkImgs[m._key];
+            var imgHtml = imgUrl ? '<img src="'+imgUrl+'" style="width:100%;height:100%;object-fit:contain;">' : '<span class="material-symbols-outlined">local_cafe</span>';
+            var bgStyle = imgUrl ? 'background:transparent; border-color:transparent;' : '';
+
             html += '<div class="' + cardClass + '">';
-            // Placeholder cho ảnh ly nước
-            html +=   '<div class="item-img-ph"><span class="material-symbols-outlined">local_cafe</span></div>';
+            html +=   '<div class="item-img-ph" style="'+bgStyle+'">' + imgHtml + '</div>';
             html +=   '<div class="item-card-name">' + m.name + '</div>';
             html +=   '<div class="item-card-price">' + priceStr + '</div>';
             html += '</div>';
@@ -711,7 +756,40 @@ function renderMenuBoard() {
     }
 }
 
-// ── SCREENSAVER
+// ── LẮNG NGHE DATABASE ──
+function listenSoldOut() {
+    db.ref('screen_soldout').on('value', function(snap){
+        soldOutItems = snap.val() || {};
+        renderMenuBoard();
+    });
+}
+
+function listenMenu() {
+    db.ref('menu_xolifa').on('value', function(snap) {
+        var data = snap.val() || {};
+        menuData = [];
+        menuConfig = data.config || {};
+
+        if (Array.isArray(data)) {
+            data.forEach(function(v, i) {
+                if (v) { v._key = 'idx_' + i; menuData.push(v); }
+            });
+        } else {
+            Object.keys(data).forEach(function(k) {
+                if (k !== 'config' && data[k]) {
+                    var v = data[k];
+                    v._key = k;
+                    menuData.push(v);
+                }
+            });
+        }
+
+        applyMenuConfig();
+        renderMenuBoard();
+    });
+}
+
+// ── SCREENSAVER ──
 function startScreensaver() {
     if (ssRunning) return;
     ssRunning = true;
@@ -732,7 +810,7 @@ function stopScreensaver() {
 }
 function nextSsSlide() {
     if (!ssRunning) return;
-    var slides = ssPlaylist.length > 0 ? ssPlaylist : DEFAULT_SLIDES;
+    var slides = ssPlaylist.length > 0 ? ssPlaylist : [{src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1768316658706.jpg?alt=media&token=c8854aaa-6af4-40d7-a5b6-ccdda66e58e8', duration:6000}];
     ssIndex = (ssIndex + 1) % slides.length;
     var item   = slides[ssIndex];
     var backId  = ssActive === 1 ? 'ss-layer-2' : 'ss-layer-1';
@@ -758,7 +836,7 @@ function nextSsSlide() {
     backEl.appendChild(el);
 }
 
-// ── CART RENDER
+// ── CART RENDER ──
 function renderCart(data) {
     var listEl   = document.getElementById('cart-list');
     var emptyEl  = document.getElementById('cart-empty');
@@ -785,7 +863,6 @@ function renderCart(data) {
     }).join('');
 }
 
-// ── CUSTOMER
 function showCustomer(name, points) {
     var welcome  = document.getElementById('welcome-msg');
     var custInfo = document.getElementById('cust-info');
@@ -798,7 +875,6 @@ function hideCustomer() {
     document.getElementById('cust-info').style.display   = 'none';
 }
 
-// ── RESET
 function resetScreen() {
     document.getElementById('view-qr').classList.remove('active');
     document.getElementById('view-success').classList.remove('active');
@@ -807,11 +883,9 @@ function resetScreen() {
     document.getElementById('cash-info').style.display = 'none';
     document.getElementById('cart-list').innerHTML = '';
     document.getElementById('cart-empty').style.display = 'flex';
-    closePhoneInput();
     startScreensaver();
 }
 
-// ── SUCCESS
 function showSuccess(data) {
     var sv = document.getElementById('view-success');
     sv.classList.add('active');
@@ -819,64 +893,11 @@ function showSuccess(data) {
     setTimeout(function(){ sv.classList.remove('active'); resetScreen(); }, 5000);
 }
 
-// ── PHONE INPUT
-function openPhoneInput() {
-    stopScreensaver();
-    var v = document.getElementById('view-phone');
-    v.classList.add('active');
-    var inp = document.getElementById('native-phone');
-    inp.value = ''; setTimeout(function(){ inp.focus(); }, 100);
-    playSound('notify');
-}
-function closePhoneInput() {
-    document.getElementById('view-phone').classList.remove('active');
-    document.getElementById('native-phone').blur();
-}
-function submitPhone() {
-    var val = document.getElementById('native-phone').value.trim();
-    if (val.length < 3) return;
-    var btn = document.getElementById('btn-submit-phone');
-    btn.textContent = 'Đang gửi...'; btn.style.opacity = '0.5';
-    db.ref('client_input').set({ type:'phone_update', value: val, timestamp: Date.now() })
-        .then(function(){
-            btn.textContent = '✔ Đã lưu';
-            setTimeout(function(){ closePhoneInput(); btn.textContent = 'Gửi số'; btn.style.opacity = ''; }, 600);
-        })
-        .catch(function(e){ alert('Lỗi: ' + e.message); btn.textContent = 'Thử lại'; btn.style.opacity = ''; });
-}
-document.getElementById('native-phone').addEventListener('keypress', function(e){ if(e.key==='Enter') submitPhone(); });
-
-// ── FIREBASE LISTENERS ──
-function listenSoldOut() {
-    db.ref('screen_soldout').on('value', function(snap){
-        soldOutItems = snap.val() || {};
-        renderMenuBoard();
-    });
-}
-
-function listenMenu() {
-    db.ref('menu').on('value', function(snap){
-        var data = snap.val();
-        menuData = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
-        renderMenuBoard(); 
-    });
-}
-
-function listenSlides() {
-    fstore.collection('config').doc('screen_slides').onSnapshot(function(doc){
-        var arr = doc.exists ? doc.data().slides : null;
-        var slides = (arr && arr.length > 0)
-            ? arr.map(function(s){ return { src: s.url, duration: (s.duration||6)*1000 }; })
-            : DEFAULT_SLIDES.slice();
-        ssPlaylist  = slides;
-    });
-}
-
 function listenPOS() {
-    db.ref('session_display').on('value', function(snap){
+    db.ref('session_display_xolifa').on('value', function(snap){
         var data = snap.val();
         if (!data || data.state === 'idle') { resetScreen(); return; }
-        if (data.state === 'input_phone') { stopScreensaver(); openPhoneInput(); return; }
+        
         if (data.state === 'qr_payment') {
             stopScreensaver();
             document.getElementById('view-qr').classList.add('active');
@@ -909,12 +930,11 @@ function listenPOS() {
     });
 }
 
-// ── BOOT
+// ── BOOT ──
 auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty")
     .then(function(){
         console.log("Screen Board connected ✓");
         listenMenu();
-        listenSlides();
         listenPOS();
         listenSoldOut();
     }).catch(function(e){ console.error("Auth error:", e); });
