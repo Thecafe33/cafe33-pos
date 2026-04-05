@@ -609,12 +609,12 @@ function applyMenuConfig() {
         }
 
         if (menuConfig.banner) {
-            headerLayout.innerHTML = logoHtml + '<img src="'+menuConfig.banner+'" style="width:100%;height:100%;object-fit:cover;border-radius:16px;">';
+            headerLayout.innerHTML = logoHtml + '<img src="'+menuConfig.banner+'" style="position: absolute; inset: 0; width:100%; height:100%; object-fit:cover; border-radius:16px; z-index: 1;">';
             headerLayout.className = '';
             headerLayout.style.background = 'transparent';
             headerLayout.style.border = 'none';
         } else {
-            headerLayout.innerHTML = logoHtml + '<span class="material-symbols-outlined">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Banner</span>';
+            headerLayout.innerHTML = logoHtml + '<span class="material-symbols-outlined" style="position: relative; z-index: 1;">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1; position: relative; z-index: 1;">Banner</span>';
             headerLayout.className = 'img-placeholder';
             headerLayout.style.background = '';
             headerLayout.style.border = '';
@@ -706,10 +706,14 @@ function applyMenuConfig() {
 function renderMenuBoard() {
     var grid = document.getElementById('menu-static-grid');
     var drinkImgs = menuConfig.drinkImages || {};
+    var featuredKeys = menuConfig.featured || [];
     
     // Gom nhóm menu
     var groups = {};
     menuData.forEach(function(m) {
+        // NẾU LÀ MÓN NỔI BẬT -> ẨN KHỎI MENU BÊN DƯỚI
+        if (featuredKeys.includes(m._key)) return;
+
         var cat = m.type || 'Khác';
         if (!groups[cat]) groups[cat] = [];
         groups[cat].push(m);
