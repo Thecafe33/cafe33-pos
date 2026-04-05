@@ -23,6 +23,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1" rel="stylesheet" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&family=Google+Sans:wght@400;500;700&family=Bebas+Neue&display=swap" rel="stylesheet">
 <style>
@@ -597,6 +598,24 @@ input, button, select, textarea { font-size: 1rem; }
     }
 }
 
+
+/* ===== MENU CONFIG UPLOAD UI =====*/
+.mcs-upload-zone{border:2px dashed #d1d5db;border-radius:16px;padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:#fafafa;position:relative;}
+.mcs-upload-zone:hover,.mcs-upload-zone.drag-over{border-color:#006241;background:#f0fdf4;}
+.mcs-upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.mcs-upload-zone.uploading{pointer-events:none;border-color:#006241;background:#f0fdf4;}
+.mcs-progress-bar{height:4px;border-radius:2px;background:#e5e7eb;overflow:hidden;margin-top:10px;}
+.mcs-progress-fill{height:100%;background:linear-gradient(90deg,#006241,#00a86b);border-radius:2px;transition:width 0.3s;width:0%;}
+.mcs-img-preview{border-radius:14px;overflow:hidden;position:relative;background:#f3f4f6;display:flex;align-items:center;justify-content:center;}
+.mcs-img-preview .mcs-remove-btn{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:rgba(239,68,68,0.9);border:none;cursor:pointer;color:white;font-size:0.75rem;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.2);transition:all 0.15s;}
+.mcs-card{background:white;border-radius:20px;border:1.5px solid #f0f0f0;box-shadow:0 2px 12px rgba(0,0,0,0.04);padding:18px 20px;transition:box-shadow 0.2s;margin-bottom:16px;}
+.mcs-section-title{font-size:0.72rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:flex;align-items:center;gap:7px;margin-bottom:14px;}
+.mcs-spec-badge{display:inline-flex;align-items:center;gap:5px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:5px 10px;font-size:0.68rem;font-weight:700;color:#92400e;margin-bottom:10px;}
+.mcs-featured-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;border:2px solid #e5e7eb;cursor:pointer;font-size:0.8rem;font-weight:700;color:#374151;background:white;transition:all 0.15s;white-space:nowrap;margin:3px;}
+.mcs-featured-chip.selected{border-color:#006241;background:#f0fdf4;color:#006241;}
+.mcs-drink-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:13px;background:#f9fafb;border:1.5px solid transparent;transition:border-color 0.15s;margin-bottom:8px;}
+.mcs-drink-row:hover{border-color:#e5e7eb;}
+/* ===== END MENU CONFIG ====*/
 .glass {
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(20px);
@@ -1230,28 +1249,28 @@ input, button, select, textarea { font-size: 1rem; }
             </div>
             <div id="mgr-b-sticker" style="display:none;"></div>
             <div id="mgr-b-menuconfig" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;">
-                <div style="padding:18px 14px 10px;flex-shrink:0;">
-                    <span style="font-size:0.62rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;">Mục cấu hình</span>
+                <div style="padding:16px 12px 8px;flex-shrink:0;">
+                    <p style="font-size:0.58rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.14em;margin:0 0 12px 4px;">Mục cấu hình</p>
                 </div>
-                <div style="flex:1;overflow-y:auto;padding:0 8px 10px;" class="custom-scrollbar">
-                    <div onclick="menuConfigSwitchSection('logo')" id="mcs-btn-logo" style="padding:10px 14px;border-radius:12px;cursor:pointer;font-size:0.82rem;font-weight:700;color:#111827;background:#F0FDF4;border:1.5px solid #bbf7d0;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.15s;">
-                        <span style="font-size:1rem;">🏷️</span> Logo quán
-                    </div>
-                    <div onclick="menuConfigSwitchSection('banner')" id="mcs-btn-banner" style="padding:10px 14px;border-radius:12px;cursor:pointer;font-size:0.82rem;font-weight:700;color:#374151;background:#F8F8F8;border:1.5px solid transparent;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.15s;">
-                        <span style="font-size:1rem;">🖼️</span> Banner ngang
-                    </div>
-                    <div onclick="menuConfigSwitchSection('slides')" id="mcs-btn-slides" style="padding:10px 14px;border-radius:12px;cursor:pointer;font-size:0.82rem;font-weight:700;color:#374151;background:#F8F8F8;border:1.5px solid transparent;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.15s;">
-                        <span style="font-size:1rem;">🎞️</span> Slide Menu
-                    </div>
-                    <div onclick="menuConfigSwitchSection('toppings')" id="mcs-btn-toppings" style="padding:10px 14px;border-radius:12px;cursor:pointer;font-size:0.82rem;font-weight:700;color:#374151;background:#F8F8F8;border:1.5px solid transparent;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.15s;">
-                        <span style="font-size:1rem;">🧋</span> Ảnh Toppings
-                    </div>
-                    <div onclick="menuConfigSwitchSection('drinks')" id="mcs-btn-drinks" style="padding:10px 14px;border-radius:12px;cursor:pointer;font-size:0.82rem;font-weight:700;color:#374151;background:#F8F8F8;border:1.5px solid transparent;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.15s;">
-                        <span style="font-size:1rem;">🥤</span> Ảnh Món nước
-                    </div>
-                    <div onclick="menuConfigSwitchSection('featured')" id="mcs-btn-featured" style="padding:10px 14px;border-radius:12px;cursor:pointer;font-size:0.82rem;font-weight:700;color:#374151;background:#F8F8F8;border:1.5px solid transparent;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.15s;">
-                        <span style="font-size:1rem;">⭐</span> Món nổi bật
-                    </div>
+                <div style="flex:1;overflow-y:auto;padding:0 10px 12px;" class="custom-scrollbar">
+                    <button onclick="menuConfigSwitchSection('logo')" id="mcs-btn-logo" style="width:100%;padding:11px 14px;border-radius:14px;font-size:0.8rem;font-weight:700;text-align:left;border:none;cursor:pointer;background:#006241;color:white;margin-bottom:4px;display:flex;align-items:center;gap:9px;transition:all 0.18s;box-shadow:0 2px 10px rgba(0,98,65,0.2);">
+                        🏷️ Logo quán
+                    </button>
+                    <button onclick="menuConfigSwitchSection('banner')" id="mcs-btn-banner" style="width:100%;padding:11px 14px;border-radius:14px;font-size:0.8rem;font-weight:700;text-align:left;border:none;cursor:pointer;background:transparent;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;gap:9px;transition:all 0.18s;">
+                        🖼️ Banner ngang
+                    </button>
+                    <button onclick="menuConfigSwitchSection('slides')" id="mcs-btn-slides" style="width:100%;padding:11px 14px;border-radius:14px;font-size:0.8rem;font-weight:700;text-align:left;border:none;cursor:pointer;background:transparent;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;gap:9px;transition:all 0.18s;">
+                        🎞️ Slide Menu
+                    </button>
+                    <button onclick="menuConfigSwitchSection('toppings')" id="mcs-btn-toppings" style="width:100%;padding:11px 14px;border-radius:14px;font-size:0.8rem;font-weight:700;text-align:left;border:none;cursor:pointer;background:transparent;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;gap:9px;transition:all 0.18s;">
+                        🧋 Ảnh Toppings
+                    </button>
+                    <button onclick="menuConfigSwitchSection('drinks')" id="mcs-btn-drinks" style="width:100%;padding:11px 14px;border-radius:14px;font-size:0.8rem;font-weight:700;text-align:left;border:none;cursor:pointer;background:transparent;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;gap:9px;transition:all 0.18s;">
+                        🥤 Ảnh Món nước
+                    </button>
+                    <button onclick="menuConfigSwitchSection('featured')" id="mcs-btn-featured" style="width:100%;padding:11px 14px;border-radius:14px;font-size:0.8rem;font-weight:700;text-align:left;border:none;cursor:pointer;background:transparent;color:#6b7280;margin-bottom:4px;display:flex;align-items:center;gap:9px;transition:all 0.18s;">
+                        ⭐ Món nổi bật
+                    </button>
                 </div>
             </div>
             <div id="mgr-b-menueditor" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;">
@@ -1678,132 +1697,130 @@ luv u</textarea>
             <!-- ===== MENU CONFIG: Column C ===== -->
             <div id="mgr-c-menuconfig" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;">
                 <!-- Header -->
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px 14px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
-                    <div style="display:flex;align-items:center;gap:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px 14px;border-bottom:1px solid #f3f4f6;flex-shrink:0;">
+                    <div style="display:flex;align-items:center;gap:10px;">
                         <div style="width:5px;height:5px;border-radius:50%;background:#006241;flex-shrink:0;"></div>
-                        <span id="mcs-form-title" style="font-weight:900;font-size:0.95rem;color:#111827;">Logo quán</span>
+                        <span id="mcs-form-title" style="font-weight:900;font-size:1rem;color:#111827;">Logo quán</span>
                     </div>
-                    <button onclick="menuConfigSave()" style="font-size:0.75rem;font-weight:800;color:white;background:#006241;border:none;padding:8px 18px;border-radius:10px;cursor:pointer;display:flex;align-items:center;gap:5px;box-shadow:0 2px 10px rgba(0,98,65,0.25);" class="active:scale-95">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
-                        Lưu Firebase
-                    </button>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span id="mcs-save-status" style="font-size:0.72rem;font-weight:700;color:#9ca3af;display:none;"></span>
+                        <button onclick="menuConfigSave()" style="font-size:0.82rem;font-weight:800;color:white;background:#006241;border:none;padding:10px 22px;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:7px;box-shadow:0 3px 12px rgba(0,98,65,0.3);" class="active:scale-95">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Lưu
+                        </button>
+                    </div>
                 </div>
-                <div style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:22px;min-height:0;" class="custom-scrollbar">
 
-                    <!-- === LOGO === -->
-                    <div id="mcs-section-logo">
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-                            <span style="font-size:1.1rem;">🏷️</span>
-                            <span style="font-size:0.8rem;font-weight:900;color:#374151;text-transform:uppercase;letter-spacing:0.08em;">Ảnh Logo quán</span>
-                        </div>
-                        <label style="font-size:0.68rem;color:#9ca3af;font-weight:700;display:block;margin-bottom:6px;">URL ảnh logo (PNG nền trong hoặc JPG)</label>
-                        <input id="mcs-logo-url" type="url" placeholder="https://..." style="width:100%;padding:11px 15px;border-radius:13px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.88rem;font-weight:600;color:#111827;box-sizing:border-box;transition:border-color 0.2s;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent';menuConfigPreview('logo')">
-                        <div id="mcs-logo-preview" style="display:none;margin-top:12px;background:#f3f4f6;border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:center;min-height:80px;">
-                            <img id="mcs-logo-img" src="" style="max-height:70px;max-width:100%;object-fit:contain;border-radius:8px;">
-                        </div>
-                    </div>
+                <!-- Body -->
+                <div style="flex:1;overflow-y:auto;padding:28px;display:flex;flex-direction:column;gap:0;min-height:0;" class="custom-scrollbar">
 
-                    <div style="height:1px;background:#f3f4f6;"></div>
-
-                    <!-- === BANNER === -->
-                    <div id="mcs-section-banner">
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                            <span style="font-size:1.1rem;">🖼️</span>
-                            <span style="font-size:0.8rem;font-weight:900;color:#374151;text-transform:uppercase;letter-spacing:0.08em;">Banner ngang (Top)</span>
-                        </div>
-                        <div style="background:#FEF9C3;border:1px solid #FDE68A;border-radius:10px;padding:9px 12px;margin-bottom:12px;">
-                            <p style="font-size:0.7rem;font-weight:700;color:#92400e;margin:0;line-height:1.6;">
-                                📐 <b>Kích thước chuẩn:</b> <code style="background:#FDE68A;padding:1px 5px;border-radius:4px;">1440 × 80 px</code> (tỉ lệ 18:1)<br>
-                                💡 Tip: Để màn hình 24" nét căng, thiết kế ở <code style="background:#FDE68A;padding:1px 5px;border-radius:4px;">2880 × 160 px</code> rồi xuất về
-                            </p>
-                        </div>
-                        <label style="font-size:0.68rem;color:#9ca3af;font-weight:700;display:block;margin-bottom:6px;">URL ảnh banner</label>
-                        <input id="mcs-banner-url" type="url" placeholder="https://..." style="width:100%;padding:11px 15px;border-radius:13px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.88rem;font-weight:600;color:#111827;box-sizing:border-box;transition:border-color 0.2s;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent';menuConfigPreview('banner')">
-                        <div id="mcs-banner-preview" style="display:none;margin-top:12px;background:#f3f4f6;border-radius:14px;overflow:hidden;">
-                            <img id="mcs-banner-img" src="" style="width:100%;height:44px;object-fit:cover;display:block;">
-                        </div>
-                    </div>
-
-                    <div style="height:1px;background:#f3f4f6;"></div>
-
-                    <!-- === SLIDES === -->
-                    <div id="mcs-section-slides">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <span style="font-size:1.1rem;">🎞️</span>
-                                <span style="font-size:0.8rem;font-weight:900;color:#374151;text-transform:uppercase;letter-spacing:0.08em;">Slide Menu (Cột trái)</span>
+                    <!-- LOGO -->
+                    <div id="mcs-section-logo" class="mcs-card">
+                        <div class="mcs-section-title">🏷️ Logo quán</div>
+                        <div id="mcs-logo-zone" class="mcs-upload-zone" onclick="document.getElementById('mcs-logo-file').click()">
+                            <input type="file" id="mcs-logo-file" accept="image/*" style="display:none;" onchange="menuConfigUpload('logo',this)">
+                            <div id="mcs-logo-placeholder">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin:0 auto 8px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                <p style="font-size:0.82rem;font-weight:700;color:#6b7280;margin:0 0 4px;">Nhấn để chọn ảnh</p>
+                                <p style="font-size:0.7rem;color:#9ca3af;margin:0;">PNG, JPG, WEBP</p>
                             </div>
-                            <button onclick="menuConfigAddSlide()" style="font-size:0.7rem;font-weight:800;color:#006241;background:#F0FDF4;border:1px solid #bbf7d0;border-radius:8px;padding:5px 12px;cursor:pointer;" class="active:scale-95">+ Thêm ảnh</button>
-                        </div>
-                        <div style="background:#FEF9C3;border:1px solid #FDE68A;border-radius:10px;padding:9px 12px;margin-bottom:12px;">
-                            <p style="font-size:0.7rem;font-weight:700;color:#92400e;margin:0;line-height:1.6;">
-                                📐 <b>Kích thước chuẩn:</b> <code style="background:#FDE68A;padding:1px 5px;border-radius:4px;">320 × 960 px</code> (tỉ lệ 1:3)<br>
-                                💡 Tip: Thiết kế ở <code style="background:#FDE68A;padding:1px 5px;border-radius:4px;">640 × 1920 px</code> để nét căng trên 24"
-                            </p>
-                        </div>
-                        <div id="mcs-slides-list" style="display:flex;flex-direction:column;gap:10px;"></div>
-                        <div id="mcs-add-slide-form" style="display:none;background:#F8F8F8;border-radius:14px;padding:14px;margin-top:8px;">
-                            <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:6px;">URL ảnh slide mới</label>
-                            <input id="mcs-new-slide-url" type="url" placeholder="https://..." style="width:100%;padding:10px 14px;border-radius:11px;background:white;border:2px solid #e5e7eb;outline:none;font-size:0.88rem;font-weight:600;color:#111827;box-sizing:border-box;transition:border-color 0.2s;margin-bottom:8px;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='#e5e7eb'">
-                            <div style="display:flex;gap:8px;">
-                                <button onclick="menuConfigConfirmSlide()" style="flex:1;padding:9px;background:#006241;color:white;border:none;border-radius:10px;font-size:0.8rem;font-weight:800;cursor:pointer;" class="active:scale-95">Thêm</button>
-                                <button onclick="document.getElementById('mcs-add-slide-form').style.display='none'" style="padding:9px 14px;background:#f3f4f6;color:#6b7280;border:none;border-radius:10px;font-size:0.8rem;font-weight:800;cursor:pointer;" class="active:scale-95">Hủy</button>
+                            <div id="mcs-logo-progress" style="display:none;">
+                                <p style="font-size:0.78rem;font-weight:700;color:#006241;margin:0 0 8px;">⬆️ Đang tải lên...</p>
+                                <div class="mcs-progress-bar"><div id="mcs-logo-fill" class="mcs-progress-fill"></div></div>
                             </div>
                         </div>
-                    </div>
-
-                    <div style="height:1px;background:#f3f4f6;"></div>
-
-                    <!-- === TOPPINGS === -->
-                    <div id="mcs-section-toppings">
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                            <span style="font-size:1.1rem;">🧋</span>
-                            <span style="font-size:0.8rem;font-weight:900;color:#374151;text-transform:uppercase;letter-spacing:0.08em;">Ảnh Toppings (Cột phải)</span>
-                        </div>
-                        <div style="background:#FEF9C3;border:1px solid #FDE68A;border-radius:10px;padding:9px 12px;margin-bottom:12px;">
-                            <p style="font-size:0.7rem;font-weight:700;color:#92400e;margin:0;line-height:1.6;">
-                                📐 <b>Kích thước chuẩn:</b> <code style="background:#FDE68A;padding:1px 5px;border-radius:4px;">220 × 960 px</code> (tỉ lệ 1:4.3)<br>
-                                💡 Tip: Thiết kế ở <code style="background:#FDE68A;padding:1px 5px;border-radius:4px;">440 × 1920 px</code> để nét căng trên 24"
-                            </p>
-                        </div>
-                        <label style="font-size:0.68rem;color:#9ca3af;font-weight:700;display:block;margin-bottom:6px;">URL ảnh toppings (PNG đã tách nền)</label>
-                        <input id="mcs-toppings-url" type="url" placeholder="https://..." style="width:100%;padding:11px 15px;border-radius:13px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.88rem;font-weight:600;color:#111827;box-sizing:border-box;transition:border-color 0.2s;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent';menuConfigPreview('toppings')">
-                        <p style="font-size:0.68rem;color:#9ca3af;margin-top:6px;">⚠️ Yêu cầu file PNG đã tách nền để hiển thị đẹp trên menu</p>
-                        <div id="mcs-toppings-preview" style="display:none;margin-top:12px;background:repeating-conic-gradient(#e5e7eb 0% 25%, white 0% 50%) 0 0 / 20px 20px;border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:center;min-height:100px;">
-                            <img id="mcs-toppings-img" src="" style="max-height:120px;max-width:100%;object-fit:contain;">
+                        <div id="mcs-logo-preview" style="display:none;margin-top:12px;" class="mcs-img-preview">
+                            <img id="mcs-logo-img" src="" style="max-height:90px;max-width:100%;object-fit:contain;padding:12px;">
+                            <button class="mcs-remove-btn" onclick="menuConfigRemoveImage('logo')">✕</button>
                         </div>
                     </div>
 
-                    <div style="height:1px;background:#f3f4f6;"></div>
-
-                    <!-- === DRINK IMAGES === -->
-                    <div id="mcs-section-drinks">
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                            <span style="font-size:1.1rem;">🥤</span>
-                            <span style="font-size:0.8rem;font-weight:900;color:#374151;text-transform:uppercase;letter-spacing:0.08em;">Ảnh từng Món nước</span>
+                    <!-- BANNER -->
+                    <div id="mcs-section-banner" class="mcs-card">
+                        <div class="mcs-section-title">🖼️ Banner ngang (Top)</div>
+                        <div class="mcs-spec-badge">📐 1440 × 80 px &nbsp;·&nbsp; Tỉ lệ 18:1</div>
+                        <p style="font-size:0.68rem;color:#9ca3af;font-weight:600;margin:0 0 12px;">💡 Tip: Thiết kế ở <b>2880 × 160 px</b> rồi xuất nhỏ lại để nét trên màn 24"</p>
+                        <div id="mcs-banner-zone" class="mcs-upload-zone" onclick="document.getElementById('mcs-banner-file').click()">
+                            <input type="file" id="mcs-banner-file" accept="image/*" style="display:none;" onchange="menuConfigUpload('banner',this)">
+                            <div id="mcs-banner-placeholder">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin:0 auto 8px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                <p style="font-size:0.82rem;font-weight:700;color:#6b7280;margin:0 0 4px;">Nhấn để chọn ảnh banner</p>
+                                <p style="font-size:0.7rem;color:#9ca3af;margin:0;">Khuyến nghị PNG/JPG ngang</p>
+                            </div>
+                            <div id="mcs-banner-progress" style="display:none;">
+                                <p style="font-size:0.78rem;font-weight:700;color:#006241;margin:0 0 8px;">⬆️ Đang tải lên...</p>
+                                <div class="mcs-progress-bar"><div id="mcs-banner-fill" class="mcs-progress-fill"></div></div>
+                            </div>
                         </div>
-                        <p style="font-size:0.72rem;color:#9ca3af;font-weight:600;margin:0 0 12px;">Mỗi món nước có thể gắn 1 ảnh PNG đã tách nền để hiển thị trên màn hình kiosk.</p>
-                        <div id="mcs-drinks-list" style="display:flex;flex-direction:column;gap:8px;">
+                        <div id="mcs-banner-preview" style="display:none;margin-top:12px;" class="mcs-img-preview">
+                            <img id="mcs-banner-img" src="" style="width:100%;height:60px;object-fit:cover;">
+                            <button class="mcs-remove-btn" onclick="menuConfigRemoveImage('banner')">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- SLIDES -->
+                    <div id="mcs-section-slides" class="mcs-card">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                            <div class="mcs-section-title" style="margin-bottom:0;">🎞️ Slide Menu (Cột trái)</div>
+                            <span id="mcs-slide-count" style="font-size:0.62rem;font-weight:800;color:#006241;background:#F0FDF4;padding:2px 8px;border-radius:999px;border:1px solid #bbf7d0;">0 ảnh</span>
+                        </div>
+                        <div class="mcs-spec-badge">📐 320 × 960 px &nbsp;·&nbsp; Tỉ lệ 1:3</div>
+                        <p style="font-size:0.68rem;color:#9ca3af;font-weight:600;margin:0 0 12px;">💡 Tip: Thiết kế ở <b>640 × 1920 px</b> để nét căng</p>
+                        <div id="mcs-slides-zone" class="mcs-upload-zone" onclick="document.getElementById('mcs-slides-file').click()">
+                            <input type="file" id="mcs-slides-file" accept="image/*" multiple style="display:none;" onchange="menuConfigUploadSlides(this)">
+                            <div id="mcs-slides-placeholder">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin:0 auto 8px;display:block;"><rect x="2" y="7" width="20" height="15" rx="2"/><path d="M16 3l-4 4-4-4"/></svg>
+                                <p style="font-size:0.82rem;font-weight:700;color:#6b7280;margin:0 0 4px;">Nhấn để thêm ảnh slide</p>
+                                <p style="font-size:0.7rem;color:#9ca3af;margin:0;">Có thể chọn nhiều ảnh cùng lúc</p>
+                            </div>
+                            <div id="mcs-slides-progress" style="display:none;">
+                                <p style="font-size:0.78rem;font-weight:700;color:#006241;margin:0 0 8px;" id="mcs-slides-prog-text">⬆️ Đang tải lên...</p>
+                                <div class="mcs-progress-bar"><div id="mcs-slides-fill" class="mcs-progress-fill"></div></div>
+                            </div>
+                        </div>
+                        <div id="mcs-slides-list" style="display:flex;flex-direction:column;gap:8px;margin-top:12px;"></div>
+                    </div>
+
+                    <!-- TOPPINGS -->
+                    <div id="mcs-section-toppings" class="mcs-card">
+                        <div class="mcs-section-title">🧋 Ảnh Toppings (Cột phải)</div>
+                        <div class="mcs-spec-badge">📐 220 × 960 px &nbsp;·&nbsp; Tỉ lệ 1:4.3</div>
+                        <p style="font-size:0.68rem;color:#9ca3af;font-weight:600;margin:0 0 12px;">💡 Tip: Thiết kế ở <b>440 × 1920 px</b> · ⚠️ Dùng <b>PNG đã tách nền</b></p>
+                        <div id="mcs-toppings-zone" class="mcs-upload-zone" onclick="document.getElementById('mcs-toppings-file').click()">
+                            <input type="file" id="mcs-toppings-file" accept="image/png,image/webp" style="display:none;" onchange="menuConfigUpload('toppings',this)">
+                            <div id="mcs-toppings-placeholder">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="margin:0 auto 8px;display:block;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                <p style="font-size:0.82rem;font-weight:700;color:#6b7280;margin:0 0 4px;">Nhấn để chọn ảnh PNG tách nền</p>
+                                <p style="font-size:0.7rem;color:#9ca3af;margin:0;">Chỉ chấp nhận PNG / WEBP</p>
+                            </div>
+                            <div id="mcs-toppings-progress" style="display:none;">
+                                <p style="font-size:0.78rem;font-weight:700;color:#006241;margin:0 0 8px;">⬆️ Đang tải lên...</p>
+                                <div class="mcs-progress-bar"><div id="mcs-toppings-fill" class="mcs-progress-fill"></div></div>
+                            </div>
+                        </div>
+                        <div id="mcs-toppings-preview" style="display:none;margin-top:12px;" class="mcs-img-preview" style="background:repeating-conic-gradient(#e5e7eb 0% 25%,white 0% 50%) 0 0/16px 16px;">
+                            <img id="mcs-toppings-img" src="" style="max-height:120px;max-width:100%;object-fit:contain;padding:12px;">
+                            <button class="mcs-remove-btn" onclick="menuConfigRemoveImage('toppings')">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- DRINK IMAGES -->
+                    <div id="mcs-section-drinks" class="mcs-card">
+                        <div class="mcs-section-title">🥤 Ảnh từng Món nước</div>
+                        <p style="font-size:0.75rem;color:#6b7280;font-weight:600;margin:0 0 14px;line-height:1.5;">Upload ảnh <b>PNG đã tách nền</b> cho từng món. Ảnh sẽ hiển thị trên màn hình kiosk khi chọn món.</p>
+                        <div id="mcs-drinks-list">
                             <div style="text-align:center;padding:24px;opacity:0.4;">
                                 <p style="font-size:0.75rem;font-weight:700;color:#9ca3af;">Đang tải danh sách món...</p>
                             </div>
                         </div>
                     </div>
 
-                    <div style="height:1px;background:#f3f4f6;"></div>
-
-                    <!-- === FEATURED ITEMS === -->
-                    <div id="mcs-section-featured">
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                            <span style="font-size:1.1rem;">⭐</span>
-                            <span style="font-size:0.8rem;font-weight:900;color:#374151;text-transform:uppercase;letter-spacing:0.08em;">3 Món nổi bật nhất</span>
-                        </div>
-                        <p style="font-size:0.72rem;color:#9ca3af;font-weight:600;margin:0 0 12px;">Chọn 3 món sẽ được hiển thị nổi bật trên màn hình menu.</p>
-                        <div id="mcs-featured-list" style="display:flex;flex-direction:column;gap:8px;">
-                            <div style="text-align:center;padding:24px;opacity:0.4;">
-                                <p style="font-size:0.75rem;font-weight:700;color:#9ca3af;">Đang tải...</p>
-                            </div>
-                        </div>
+                    <!-- FEATURED -->
+                    <div id="mcs-section-featured" class="mcs-card">
+                        <div class="mcs-section-title">⭐ 3 Món nổi bật nhất</div>
+                        <p style="font-size:0.75rem;color:#6b7280;font-weight:600;margin:0 0 14px;line-height:1.5;">Chọn tối đa <b>3 món</b> để hiển thị nổi bật trên màn hình menu.</p>
+                        <div id="mcs-featured-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;"></div>
+                        <div id="mcs-featured-selected" style="display:flex;flex-direction:column;gap:8px;"></div>
                     </div>
 
                 </div>
@@ -2196,6 +2213,7 @@ if (!firebase.apps.length) {
 const db = firebase.database();
 const fstore = firebase.firestore();
 const auth = firebase.auth();
+const storage = firebase.storage();
 
 function autoLoginPOS() {
     const email = "elio@thecafe33.com";
@@ -9082,233 +9100,303 @@ function menuEditorDeleteItem() {
 }
 
 // =============================================
-// MENU CONFIG (logo, banner, slides, toppings, drink images, featured)
+// MENU CONFIG — Upload to Firebase Storage
 // =============================================
-var _menuConfigData = {
-    logo: '',
-    banner: '',
-    slides: [],
-    toppings: '',
-    drinkImages: {},
-    featured: []
-};
-var _menuConfigCurrentSection = 'logo';
+var _menuConfigData = { logo:'', banner:'', slides:[], toppings:'', drinkImages:{}, featured:[] };
 var _menuConfigAllItems = [];
+var _mcsCurrentSection = 'logo';
 
+// ---- Load ----
 function menuConfigLoad() {
-    // Load từ RT menu_xolifa/config
     db.ref('menu_xolifa/config').once('value', function(snap) {
         var cfg = snap.val() || {};
-        _menuConfigData.logo     = cfg.logo     || '';
-        _menuConfigData.banner   = cfg.banner   || '';
-        _menuConfigData.slides   = cfg.slides   || [];
-        _menuConfigData.toppings = cfg.toppings || '';
+        _menuConfigData.logo        = cfg.logo        || '';
+        _menuConfigData.banner      = cfg.banner      || '';
+        _menuConfigData.slides      = cfg.slides      || [];
+        _menuConfigData.toppings    = cfg.toppings    || '';
         _menuConfigData.drinkImages = cfg.drinkImages || {};
         _menuConfigData.featured    = cfg.featured    || [];
 
-        // Điền vào form
-        var el;
-        el = document.getElementById('mcs-logo-url');   if(el) el.value = _menuConfigData.logo;
-        el = document.getElementById('mcs-banner-url'); if(el) el.value = _menuConfigData.banner;
-        el = document.getElementById('mcs-toppings-url'); if(el) el.value = _menuConfigData.toppings;
-
-        menuConfigPreview('logo');
-        menuConfigPreview('banner');
-        menuConfigPreview('toppings');
+        // Render single images
+        ['logo','banner','toppings'].forEach(function(t){ menuConfigShowPreview(t, _menuConfigData[t]); });
         menuConfigRenderSlides();
 
-        // Load danh sách món để render drinks & featured
+        // Load menu items
         db.ref('menu_xolifa').once('value', function(msnap) {
-            var raw = msnap.val();
-            _menuConfigAllItems = [];
+            var raw = msnap.val(); _menuConfigAllItems = [];
             if (raw) {
                 if (Array.isArray(raw)) {
-                    raw.forEach(function(m, i) { if(m && m.name) _menuConfigAllItems.push({key:'idx_'+i, name:m.name, type:m.type||''}); });
+                    raw.forEach(function(m,i){ if(m&&m.name) _menuConfigAllItems.push({key:'idx_'+i, name:m.name, type:m.type||''}); });
                 } else {
-                    Object.keys(raw).forEach(function(k) {
-                        if (k === 'config') return;
-                        var m = raw[k];
-                        if(m && m.name) _menuConfigAllItems.push({key:k, name:m.name, type:m.type||''});
+                    Object.keys(raw).forEach(function(k){
+                        if(k==='config') return;
+                        var m=raw[k]; if(m&&m.name) _menuConfigAllItems.push({key:k,name:m.name,type:m.type||''});
                     });
                 }
             }
             menuConfigRenderDrinks();
-            menuConfigRenderFeatured();
+            menuConfigRenderFeaturedChips();
         });
     });
     menuConfigSwitchSection('logo');
 }
 
+// ---- Switch sidebar section ----
 function menuConfigSwitchSection(sec) {
-    _menuConfigCurrentSection = sec;
+    _mcsCurrentSection = sec;
     var sections = ['logo','banner','slides','toppings','drinks','featured'];
-    var titles = {logo:'Logo quán', banner:'Banner ngang (Top)', slides:'Slide Menu (Cột trái)', toppings:'Ảnh Toppings (Cột phải)', drinks:'Ảnh từng Món nước', featured:'3 Món nổi bật nhất'};
-
-    // Update sidebar buttons
-    sections.forEach(function(s) {
-        var btn = document.getElementById('mcs-btn-'+s);
-        if (!btn) return;
-        var active = (s === sec);
-        btn.style.background   = active ? '#F0FDF4' : '#F8F8F8';
-        btn.style.borderColor  = active ? '#bbf7d0' : 'transparent';
-        btn.style.color        = active ? '#111827' : '#374151';
+    var titles = {logo:'Logo quán', banner:'Banner ngang (Top)', slides:'Slide Menu (Cột trái)',
+                  toppings:'Ảnh Toppings (Cột phải)', drinks:'Ảnh từng Món nước', featured:'3 Món nổi bật nhất'};
+    sections.forEach(function(s){
+        var btn = document.getElementById('mcs-btn-'+s); if(!btn) return;
+        var on = (s===sec);
+        btn.style.background  = on ? '#006241' : 'transparent';
+        btn.style.color       = on ? 'white'   : '#6b7280';
+        btn.style.boxShadow   = on ? '0 2px 10px rgba(0,98,65,0.2)' : 'none';
     });
-
-    // Scroll column C to section
     var el = document.getElementById('mcs-section-'+sec);
-    if (el) el.scrollIntoView({behavior:'smooth', block:'start'});
-
-    // Update header title
-    var titleEl = document.getElementById('mcs-form-title');
-    if (titleEl) titleEl.textContent = titles[sec] || 'Cấu hình';
+    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+    var tt = document.getElementById('mcs-form-title');
+    if(tt) tt.textContent = titles[sec]||sec;
 }
 
-function menuConfigPreview(type) {
-    if (type === 'logo') {
-        var url = (document.getElementById('mcs-logo-url')||{}).value || _menuConfigData.logo;
-        var box = document.getElementById('mcs-logo-preview');
-        var img = document.getElementById('mcs-logo-img');
-        if (url && img) { img.src = url; if(box) box.style.display='flex'; }
-        else if(box) { box.style.display='none'; }
-        _menuConfigData.logo = url;
+// ---- Upload single image (logo / banner / toppings) ----
+function menuConfigUpload(type, input) {
+    var file = input.files[0]; if(!file) return;
+    var zone = document.getElementById('mcs-'+type+'-zone');
+    var ph   = document.getElementById('mcs-'+type+'-placeholder');
+    var prog = document.getElementById('mcs-'+type+'-progress');
+    var fill = document.getElementById('mcs-'+type+'-fill');
+    if(ph)   ph.style.display   = 'none';
+    if(prog) prog.style.display = 'block';
+    if(zone) zone.classList.add('uploading');
+
+    var path = 'menu_display/'+type+'/'+Date.now()+'_'+file.name;
+    var ref  = storage.ref(path);
+    var task = ref.put(file);
+
+    task.on('state_changed',
+        function(snap){ var pct = (snap.bytesTransferred/snap.totalBytes*100)|0; if(fill) fill.style.width=pct+'%'; },
+        function(err){ alert('Lỗi upload: '+err.message); if(prog) prog.style.display='none'; if(ph) ph.style.display='block'; if(zone) zone.classList.remove('uploading'); },
+        function(){
+            task.snapshot.ref.getDownloadURL().then(function(url){
+                _menuConfigData[type] = url;
+                if(prog) prog.style.display='none';
+                if(zone) zone.classList.remove('uploading');
+                menuConfigShowPreview(type, url);
+                menuConfigAutoSave();
+            });
+        }
+    );
+    input.value='';
+}
+
+function menuConfigShowPreview(type, url) {
+    var zone = document.getElementById('mcs-'+type+'-zone');
+    var ph   = document.getElementById('mcs-'+type+'-placeholder');
+    var prev = document.getElementById('mcs-'+type+'-preview');
+    var img  = document.getElementById('mcs-'+type+'-img');
+    if(!url){ 
+        if(zone) zone.style.display='flex'; if(ph) ph.style.display='block';
+        if(prev) prev.style.display='none'; return; 
     }
-    if (type === 'banner') {
-        var url = (document.getElementById('mcs-banner-url')||{}).value || _menuConfigData.banner;
-        var box = document.getElementById('mcs-banner-preview');
-        var img = document.getElementById('mcs-banner-img');
-        if (url && img) { img.src = url; if(box) box.style.display='block'; }
-        else if(box) { box.style.display='none'; }
-        _menuConfigData.banner = url;
-    }
-    if (type === 'toppings') {
-        var url = (document.getElementById('mcs-toppings-url')||{}).value || _menuConfigData.toppings;
-        var box = document.getElementById('mcs-toppings-preview');
-        var img = document.getElementById('mcs-toppings-img');
-        if (url && img) { img.src = url; if(box) box.style.display='flex'; }
-        else if(box) { box.style.display='none'; }
-        _menuConfigData.toppings = url;
-    }
+    if(img)  img.src = url;
+    if(prev) prev.style.display='flex';
+    if(zone) zone.style.display='none';
+}
+
+function menuConfigRemoveImage(type) {
+    _menuConfigData[type] = '';
+    var zone = document.getElementById('mcs-'+type+'-zone');
+    var ph   = document.getElementById('mcs-'+type+'-placeholder');
+    var prev = document.getElementById('mcs-'+type+'-preview');
+    if(zone){ zone.style.display='flex'; } if(ph) ph.style.display='block';
+    if(prev) prev.style.display='none';
+    menuConfigAutoSave();
+}
+
+// ---- Upload multiple slides ----
+function menuConfigUploadSlides(input) {
+    var files = Array.from(input.files); if(!files.length) return;
+    var zone  = document.getElementById('mcs-slides-zone');
+    var ph    = document.getElementById('mcs-slides-placeholder');
+    var prog  = document.getElementById('mcs-slides-progress');
+    var fill  = document.getElementById('mcs-slides-fill');
+    var ptxt  = document.getElementById('mcs-slides-prog-text');
+    if(ph)   ph.style.display='none';
+    if(prog) prog.style.display='block';
+    if(zone) zone.classList.add('uploading');
+
+    var done=0, total=files.length;
+    files.forEach(function(file){
+        var path = 'menu_display/slides/'+Date.now()+'_'+Math.random().toString(36).slice(2)+'_'+file.name;
+        var task = storage.ref(path).put(file);
+        task.on('state_changed',
+            function(snap){ var pct=((done*100+(snap.bytesTransferred/snap.totalBytes*100))/total)|0; if(fill) fill.style.width=pct+'%'; },
+            function(err){ alert('Lỗi: '+err.message); },
+            function(){
+                task.snapshot.ref.getDownloadURL().then(function(url){
+                    _menuConfigData.slides.push(url);
+                    done++;
+                    if(ptxt) ptxt.textContent='⬆️ Đã tải '+done+'/'+total+' ảnh...';
+                    if(fill) fill.style.width=(done/total*100)+'%';
+                    if(done===total){
+                        if(prog) prog.style.display='none';
+                        if(ph)   ph.style.display='block';
+                        if(zone) zone.classList.remove('uploading');
+                        menuConfigRenderSlides();
+                        menuConfigAutoSave();
+                    }
+                });
+            }
+        );
+    });
+    input.value='';
 }
 
 function menuConfigRenderSlides() {
-    var listEl = document.getElementById('mcs-slides-list');
-    if (!listEl) return;
-    listEl.innerHTML = '';
-    if (!_menuConfigData.slides.length) {
-        listEl.innerHTML = '<div style="text-align:center;padding:20px;opacity:0.4;"><p style="font-size:0.75rem;font-weight:700;color:#9ca3af;">Chưa có ảnh nào. Nhấn "+ Thêm ảnh" để bắt đầu.</p></div>';
-        return;
-    }
-    _menuConfigData.slides.forEach(function(url, i) {
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;gap:10px;background:#F8F8F8;border-radius:12px;padding:10px 12px;';
-        row.innerHTML = '<img src="'+url+'" style="width:40px;height:40px;object-fit:cover;border-radius:8px;flex-shrink:0;background:#e5e7eb;">'
-            +'<span style="flex:1;font-size:0.78rem;font-weight:600;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Slide '+(i+1)+'</span>'
-            +'<button onclick="menuConfigRemoveSlide('+i+')" style="width:28px;height:28px;border-radius:8px;background:#fee2e2;border:none;cursor:pointer;color:#ef4444;font-size:0.8rem;font-weight:900;flex-shrink:0;" class="active:scale-90">✕</button>';
+    var listEl  = document.getElementById('mcs-slides-list');
+    var countEl = document.getElementById('mcs-slide-count');
+    if(countEl) countEl.textContent = _menuConfigData.slides.length+' ảnh';
+    if(!listEl) return;
+    listEl.innerHTML='';
+    if(!_menuConfigData.slides.length){ listEl.innerHTML='<p style="font-size:0.75rem;color:#9ca3af;font-weight:600;text-align:center;padding:12px 0;">Chưa có slide nào.</p>'; return; }
+    _menuConfigData.slides.forEach(function(url,i){
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:12px;background:#f9fafb;border-radius:13px;padding:10px 12px;border:1.5px solid #f0f0f0;';
+        row.innerHTML='<img src="'+url+'" style="width:52px;height:52px;object-fit:cover;border-radius:10px;flex-shrink:0;background:#e5e7eb;" onerror="this.style.background='#f3f4f6'">'
+            +'<div style="flex:1;min-width:0;">'
+            +'<p style="font-size:0.82rem;font-weight:800;color:#111827;margin:0 0 2px;">Slide '+(i+1)+'</p>'
+            +'<p style="font-size:0.68rem;color:#9ca3af;font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+url.split('/').pop().split('?')[0]+'</p>'
+            +'</div>'
+            +'<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">'
+            +(i>0?'<button onclick="menuConfigMoveSlide('+i+',-1)" style="width:26px;height:26px;border-radius:7px;background:#f3f4f6;border:none;cursor:pointer;font-size:0.75rem;color:#374151;" class="active:scale-90" title="Lên">▲</button>':'<div style="width:26px;height:26px;"></div>')
+            +(i<_menuConfigData.slides.length-1?'<button onclick="menuConfigMoveSlide('+i+',1)" style="width:26px;height:26px;border-radius:7px;background:#f3f4f6;border:none;cursor:pointer;font-size:0.75rem;color:#374151;" class="active:scale-90" title="Xuống">▼</button>':'<div style="width:26px;height:26px;"></div>')
+            +'</div>'
+            +'<button onclick="menuConfigRemoveSlide('+i+')" style="width:30px;height:30px;border-radius:8px;background:#fee2e2;border:none;cursor:pointer;color:#ef4444;font-size:0.8rem;font-weight:900;flex-shrink:0;" class="active:scale-90" title="Xóa">✕</button>';
         listEl.appendChild(row);
     });
 }
 
-function menuConfigAddSlide() {
-    var form = document.getElementById('mcs-add-slide-form');
-    if (form) { form.style.display = 'block'; }
-    var inp = document.getElementById('mcs-new-slide-url');
-    if (inp) { inp.value = ''; inp.focus(); }
-}
-
-function menuConfigConfirmSlide() {
-    var inp = document.getElementById('mcs-new-slide-url');
-    var url = inp ? inp.value.trim() : '';
-    if (!url) { alert('Vui lòng nhập URL ảnh!'); return; }
-    _menuConfigData.slides.push(url);
-    var form = document.getElementById('mcs-add-slide-form');
-    if (form) form.style.display = 'none';
+function menuConfigMoveSlide(i, dir) {
+    var arr=_menuConfigData.slides, j=i+dir;
+    if(j<0||j>=arr.length) return;
+    var tmp=arr[i]; arr[i]=arr[j]; arr[j]=tmp;
     menuConfigRenderSlides();
 }
 
 function menuConfigRemoveSlide(i) {
-    _menuConfigData.slides.splice(i, 1);
+    _menuConfigData.slides.splice(i,1);
     menuConfigRenderSlides();
+    menuConfigAutoSave();
 }
 
+// ---- Drink images ----
 function menuConfigRenderDrinks() {
-    var listEl = document.getElementById('mcs-drinks-list');
-    if (!listEl) return;
-    listEl.innerHTML = '';
-    if (!_menuConfigAllItems.length) {
-        listEl.innerHTML = '<div style="text-align:center;padding:20px;opacity:0.4;"><p style="font-size:0.75rem;font-weight:700;color:#9ca3af;">Chưa có món nào trong menu.</p></div>';
-        return;
+    var listEl=document.getElementById('mcs-drinks-list'); if(!listEl) return;
+    listEl.innerHTML='';
+    if(!_menuConfigAllItems.length){
+        listEl.innerHTML='<p style="font-size:0.75rem;color:#9ca3af;text-align:center;padding:16px;">Chưa có món nào.</p>'; return;
     }
-    _menuConfigAllItems.forEach(function(item) {
-        var currentUrl = _menuConfigData.drinkImages[item.key] || '';
-        var row = document.createElement('div');
-        row.style.cssText = 'background:#F8F8F8;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;';
-        row.innerHTML = '<div style="display:flex;align-items:center;gap:8px;">'
-            +'<div style="width:8px;height:8px;border-radius:50%;background:#006241;flex-shrink:0;"></div>'
-            +'<span style="font-size:0.85rem;font-weight:800;color:#111827;">'+item.name+'</span>'
-            +'<span style="font-size:0.65rem;font-weight:700;color:#9ca3af;background:#f3f4f6;padding:2px 8px;border-radius:999px;">'+item.type+'</span>'
+    _menuConfigAllItems.forEach(function(item){
+        var url=_menuConfigData.drinkImages[item.key]||'';
+        var row=document.createElement('div');
+        row.className='mcs-drink-row'; row.id='mcs-drow-'+item.key;
+        var thumbHtml = url
+            ? '<img src="'+url+'" id="mcs-dthumb-'+item.key+'" style="width:44px;height:44px;object-fit:contain;border-radius:9px;background:repeating-conic-gradient(#e5e7eb 0% 25%,white 0% 50%) 0 0/12px 12px;flex-shrink:0;">'
+            : '<div id="mcs-dthumb-'+item.key+'" style="width:44px;height:44px;border-radius:9px;background:#f3f4f6;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>';
+        row.innerHTML=thumbHtml
+            +'<div style="flex:1;min-width:0;">'
+            +'<p style="font-size:0.83rem;font-weight:800;color:#111827;margin:0 0 1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+item.name+'</p>'
+            +'<p style="font-size:0.65rem;color:#9ca3af;font-weight:700;margin:0;">'+item.type+'</p>'
             +'</div>'
-            +'<div style="display:flex;align-items:center;gap:8px;">'
-            +'<input data-key="'+item.key+'" type="url" placeholder="URL PNG đã tách nền..." value="'+currentUrl+'"'
-            +' style="flex:1;padding:9px 12px;border-radius:10px;background:white;border:1.5px solid #e5e7eb;outline:none;font-size:0.82rem;font-weight:600;color:#111827;box-sizing:border-box;transition:border-color 0.2s;"'
-            +' onfocus="this.style.borderColor=\'#006241\'" onblur="this.style.borderColor=\'#e5e7eb\';menuConfigUpdateDrinkImage(\''+item.key+'\',this.value)" class="mcs-drink-input">'
-            +(currentUrl ? '<img src="'+currentUrl+'" style="width:36px;height:36px;object-fit:contain;border-radius:8px;background:repeating-conic-gradient(#e5e7eb 0% 25%,white 0% 50%) 0 0/12px 12px;" id="mcs-drink-preview-'+item.key+'">' : '<div id="mcs-drink-preview-'+item.key+'" style="width:36px;height:36px;border-radius:8px;background:#f3f4f6;flex-shrink:0;"></div>')
-            +'</div>';
+            +(url
+                ? '<button onclick="menuConfigRemoveDrinkImg(''+item.key+'')" style="width:30px;height:30px;border-radius:8px;background:#fee2e2;border:none;cursor:pointer;color:#ef4444;font-size:0.78rem;font-weight:900;flex-shrink:0;" title="Xóa ảnh">✕</button>'
+                : '')
+            +'<label style="padding:8px 14px;border-radius:10px;background:#006241;color:white;font-size:0.75rem;font-weight:800;cursor:pointer;flex-shrink:0;white-space:nowrap;display:flex;align-items:center;gap:5px;">'
+            +'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+            +(url?'Đổi':'Upload')
+            +'<input type="file" accept="image/png,image/webp" style="display:none;" onchange="menuConfigUploadDrink(''+item.key+'',this)">'
+            +'</label>';
         listEl.appendChild(row);
     });
 }
 
-function menuConfigUpdateDrinkImage(key, url) {
-    _menuConfigData.drinkImages[key] = url;
-    var prev = document.getElementById('mcs-drink-preview-'+key);
-    if (prev) {
-        if (url) { prev.outerHTML = '<img src="'+url+'" style="width:36px;height:36px;object-fit:contain;border-radius:8px;background:repeating-conic-gradient(#e5e7eb 0% 25%,white 0% 50%) 0 0/12px 12px;" id="mcs-drink-preview-'+key+'">'; }
-        else { prev.outerHTML = '<div id="mcs-drink-preview-'+key+'" style="width:36px;height:36px;border-radius:8px;background:#f3f4f6;flex-shrink:0;"></div>'; }
-    }
+function menuConfigUploadDrink(key, input) {
+    var file=input.files[0]; if(!file) return;
+    var row=document.getElementById('mcs-drow-'+key);
+    if(row) row.style.opacity='0.5';
+    var path='menu_display/drinks/'+key+'_'+Date.now();
+    var task=storage.ref(path).put(file);
+    task.on('state_changed', null,
+        function(err){ alert('Lỗi: '+err.message); if(row) row.style.opacity='1'; },
+        function(){
+            task.snapshot.ref.getDownloadURL().then(function(url){
+                _menuConfigData.drinkImages[key]=url;
+                if(row) row.style.opacity='1';
+                menuConfigRenderDrinks();
+                menuConfigAutoSave();
+            });
+        }
+    );
+    input.value='';
 }
 
-function menuConfigRenderFeatured() {
-    var listEl = document.getElementById('mcs-featured-list');
-    if (!listEl) return;
-    listEl.innerHTML = '';
-    if (!_menuConfigAllItems.length) {
-        listEl.innerHTML = '<div style="text-align:center;padding:20px;opacity:0.4;"><p style="font-size:0.75rem;font-weight:700;color:#9ca3af;">Chưa có món nào.</p></div>';
-        return;
-    }
-    // Slots 1 2 3
-    for (var slot = 0; slot < 3; slot++) {
-        var slotRow = document.createElement('div');
-        slotRow.style.cssText = 'display:flex;align-items:center;gap:10px;background:#F8F8F8;border-radius:12px;padding:10px 12px;';
-        var currentKey = _menuConfigData.featured[slot] || '';
-        var opts = '<option value="">-- Chọn món --</option>';
-        _menuConfigAllItems.forEach(function(item) {
-            opts += '<option value="'+item.key+'"'+(item.key===currentKey?' selected':'')+'>'+item.name+'</option>';
-        });
-        slotRow.innerHTML = '<span style="width:22px;height:22px;border-radius:50%;background:#006241;color:white;font-size:0.72rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+(slot+1)+'</span>'
-            +'<select data-slot="'+slot+'" onchange="menuConfigUpdateFeatured('+slot+',this.value)" style="flex:1;padding:9px 12px;border-radius:10px;background:white;border:1.5px solid #e5e7eb;outline:none;font-size:0.82rem;font-weight:700;color:#111827;cursor:pointer;appearance:auto;">'+opts+'</select>';
-        listEl.appendChild(slotRow);
-    }
+function menuConfigRemoveDrinkImg(key) {
+    delete _menuConfigData.drinkImages[key];
+    menuConfigRenderDrinks();
+    menuConfigAutoSave();
 }
 
-function menuConfigUpdateFeatured(slot, key) {
-    _menuConfigData.featured[slot] = key;
-}
-
-function menuConfigSave() {
-    // Collect current form values before saving
-    var logoUrl = (document.getElementById('mcs-logo-url')||{}).value || '';
-    var bannerUrl = (document.getElementById('mcs-banner-url')||{}).value || '';
-    var toppingsUrl = (document.getElementById('mcs-toppings-url')||{}).value || '';
-    _menuConfigData.logo = logoUrl;
-    _menuConfigData.banner = bannerUrl;
-    _menuConfigData.toppings = toppingsUrl;
-
-    // Collect drink images from inputs
-    document.querySelectorAll('.mcs-drink-input').forEach(function(inp) {
-        var key = inp.getAttribute('data-key');
-        if (key) _menuConfigData.drinkImages[key] = inp.value || '';
+// ---- Featured chips ----
+function menuConfigRenderFeaturedChips() {
+    var el=document.getElementById('mcs-featured-chips'); if(!el) return;
+    el.innerHTML='';
+    _menuConfigAllItems.forEach(function(item){
+        var sel=_menuConfigData.featured.indexOf(item.key)>=0;
+        var chip=document.createElement('div');
+        chip.className='mcs-featured-chip'+(sel?' selected':'');
+        chip.setAttribute('data-key',item.key);
+        chip.innerHTML=(sel?'<span style="color:#006241;">✓</span> ':'')+item.name;
+        chip.onclick=function(){ menuConfigToggleFeatured(item.key); };
+        el.appendChild(chip);
     });
+    menuConfigRenderFeaturedSelected();
+}
 
-    var saveData = {
+function menuConfigToggleFeatured(key) {
+    var idx=_menuConfigData.featured.indexOf(key);
+    if(idx>=0){ _menuConfigData.featured.splice(idx,1); }
+    else {
+        if(_menuConfigData.featured.length>=3){ alert('Chỉ được chọn tối đa 3 món nổi bật!'); return; }
+        _menuConfigData.featured.push(key);
+    }
+    menuConfigRenderFeaturedChips();
+}
+
+function menuConfigRenderFeaturedSelected() {
+    var el=document.getElementById('mcs-featured-selected'); if(!el) return;
+    el.innerHTML='';
+    if(!_menuConfigData.featured.length){
+        el.innerHTML='<p style="font-size:0.75rem;color:#d1d5db;font-weight:600;text-align:center;padding:8px;">Chưa chọn món nào</p>'; return;
+    }
+    _menuConfigData.featured.forEach(function(key,i){
+        var item=_menuConfigAllItems.find(function(m){return m.key===key;});
+        if(!item) return;
+        var row=document.createElement('div');
+        row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:#F0FDF4;border:1.5px solid #bbf7d0;';
+        row.innerHTML='<span style="width:22px;height:22px;border-radius:50%;background:#006241;color:white;font-size:0.7rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+(i+1)+'</span>'
+            +'<span style="flex:1;font-size:0.85rem;font-weight:800;color:#111827;">'+item.name+'</span>'
+            +'<span style="font-size:0.65rem;color:#9ca3af;font-weight:700;">'+item.type+'</span>';
+        el.appendChild(row);
+    });
+}
+
+// ---- Auto-save ----
+function menuConfigAutoSave() {
+    var statusEl=document.getElementById('mcs-save-status');
+    if(statusEl){ statusEl.textContent='💾 Đang lưu...'; statusEl.style.display='inline'; }
+    var saveData={
         logo:        _menuConfigData.logo,
         banner:      _menuConfigData.banner,
         slides:      _menuConfigData.slides,
@@ -9316,17 +9404,19 @@ function menuConfigSave() {
         drinkImages: _menuConfigData.drinkImages,
         featured:    _menuConfigData.featured.filter(Boolean)
     };
-
-    db.ref('menu_xolifa/config').set(saveData, function(err) {
-        if (err) { alert('Lỗi lưu: '+err.message); return; }
-        // Show success toast
-        var toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#006241;color:white;padding:12px 28px;border-radius:999px;font-size:0.88rem;font-weight:800;z-index:99999;box-shadow:0 8px 24px rgba(0,98,65,0.35);pointer-events:none;opacity:1;transition:opacity 0.5s;';
-        toast.textContent = '✅ Đã lưu cấu hình Menu Display!';
-        document.body.appendChild(toast);
-        setTimeout(function(){ toast.style.opacity='0'; setTimeout(function(){ toast.remove(); }, 500); }, 2200);
+    db.ref('menu_xolifa/config').set(saveData, function(err){
+        if(statusEl){
+            statusEl.textContent = err ? '❌ Lỗi lưu!' : '✅ Đã lưu';
+            setTimeout(function(){ statusEl.style.display='none'; }, 2000);
+        }
     });
 }
+
+// ---- Manual save button ----
+function menuConfigSave() {
+    menuConfigAutoSave();
+}
+
 
 
 var _keypadItemName = '';
