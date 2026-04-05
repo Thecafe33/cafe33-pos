@@ -17,40 +17,37 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@700;800;900&family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
 
 <style>
-/* SF Pro-like via system font stack + League Spartan for logo */
-
 :root {
-    /* Brand palette — deep forest meets warm cream */
-    --ink:        #1a1410;
-    --ink-soft:   #4a3f35;
-    --ink-muted:  #8a7a6e;
-    --cream:      #faf7f2;
-    --cream-dark: #f0ebe1;
-    --gold:       #c8963e;
-    --gold-pale:  #f5e6c8;
-    --green:      #2d5016;
-    --green-mid:  #3d6b1f;
-    --green-pale: #edf3e8;
-    --rule:       rgba(26,20,16,0.1);
-    --panel:      #ffffff;
+    --green: #4b6b3e;
+    --green-light: #5b8a47;
+    --green-pale: #e8f5e9;
+    --amber: #f59e0b;
+    --bg-left: #ffffff; 
+    --panel: #ffffff;
+    --panel2: #F8F9FB;
+    --border: rgba(0,0,0,0.06);
+    --text: #1a1a1a;
+    --muted: #666666;
+    
+    /* Màu cho placeholder ảnh */
+    --ph-bg: #f8fafc;
+    --ph-border: #e2e8f0;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 html, body {
     width: 100%; height: 100%; overflow: hidden;
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    background: var(--cream);
-    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-left);
+    color: var(--text);
     user-select: none; -webkit-user-select: none;
-    -webkit-font-smoothing: antialiased;
 }
 
-/* ══ LAYOUT ══════════════════════════════════════════════════════ */
+/* ── LAYOUT TỔNG ── */
 #root {
     display: flex;
     height: 100vh;
@@ -58,330 +55,192 @@ html, body {
     overflow: hidden;
 }
 
-/* LEFT PANEL (75%) */
+/* ── LEFT PANEL (75%) : LAYOUT THEO ẢNH MỚI ── */
 #panel-left {
-    width: 85%;
-    flex: 0 0 85%;
-    max-width: 85%;
+    width: 75%;
+    flex: 0 0 75%;
+    max-width: 75%;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    background: var(--cream);
-    background-image:
-        radial-gradient(ellipse at 0% 100%, rgba(200,150,62,0.12) 0%, transparent 50%),
-        radial-gradient(ellipse at 100% 0%,  rgba(45,80,22,0.08)  0%, transparent 50%);
-    overflow: hidden;
-    position: relative;
-    border-right: 1px solid var(--rule);
+    background-color: var(--bg-left);
+    border-right: 1px solid var(--border);
+    padding: 12px;
+    gap: 12px;
 }
 
-/* RIGHT PANEL (25%) */
-#panel-right {
+/* Khu vực trên cùng: Logo + Banner */
+#header-layout {
+    position: relative;
+    height: 80px;
+    width: 100%;
+    flex-shrink: 0;
+}
+.img-placeholder {
+    background-color: var(--ph-bg);
+    border: 2px dashed var(--ph-border);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.img-placeholder .material-symbols-outlined {
+    color: #cbd5e1;
+    font-size: 2rem;
+}
+#ph-logo { 
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12%;
+    height: 60px;
+    background: #ffffff; /* Nền trắng để tách biệt với banner */
+    z-index: 2;
+}
+
+/* Khu vực thân: Slide + Center Menu + Toppings */
+#body-layout {
+    display: flex;
+    flex: 1;
+    gap: 12px;
+    overflow: hidden;
+}
+
+/* Cột trái: Slide ảnh */
+#ph-slide {
+    width: 22%;
+}
+
+/* Cột phải: Toppings */
+#ph-toppings {
     width: 15%;
-    flex: 0 0 15%;
-    max-width: 15%;
-    min-width: 0;
+}
+
+/* Cột giữa: Menu & Nổi bật */
+#center-layout {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow: hidden;
+}
+
+/* Món nổi bật (Top center) */
+#featured-section {
+    display: flex;
+    gap: 12px;
+    height: 140px;
+    flex-shrink: 0;
+}
+.ph-featured {
+    flex: 1;
+}
+
+/* Lưới Menu chính (Bottom center) */
+#menu-board-container {
+    flex: 1;
+    overflow: hidden;
+}
+.categories-wrapper {
+    column-count: 2;
+    column-gap: 20px;
+    width: 100%;
+    height: 100%;
+}
+.category-block {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: 20px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+}
+.category-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 12px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid #e2e8f0;
+}
+.items-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px 8px;
+}
+
+/* Card từng món ăn */
+.item-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.item-card.sold-out {
+    opacity: 0.4;
+    filter: grayscale(100%);
+}
+.item-img-ph {
+    width: 50px;
+    height: 70px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+}
+.item-img-ph .material-symbols-outlined {
+    font-size: 1.5rem;
+    color: #cbd5e1;
+}
+.item-card-name {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.2;
+    margin-bottom: 4px;
+    min-height: 16px;
+}
+.item-card-price {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--text);
+}
+
+
+/* ── RIGHT PANEL (25%) : CART ── */
+#panel-right {
+    width: 25%;
+    flex: 0 0 25%;
+    max-width: 25%;
+    min-width: 0; 
     display: flex;
     flex-direction: column;
     background: var(--panel);
     overflow: hidden;
     position: relative;
-    box-shadow: -2px 0 32px rgba(26,20,16,0.06);
+    box-shadow: -4px 0 20px rgba(0,0,0,0.04);
     z-index: 10;
 }
-
-/* ══ HEADER ══════════════════════════════════════════════════════ */
-#header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px 8px;
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--rule);
-    background: transparent;
-}
-
-/* Logo */
-.logo-wrap { display: flex; flex-direction: column; gap: 1px; }
-.logo-text {
-    font-family: 'League Spartan', sans-serif;
-    font-size: 2rem;
-    font-weight: 900;
-    color: var(--green);
-    letter-spacing: -0.02em;
-    line-height: 1;
-}
-.logo-sub {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.62rem;
-    font-weight: 500;
-    color: var(--ink-muted);
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-}
-
-/* Header right: size labels + wifi */
-.header-right { display: flex; align-items: center; gap: 24px; }
-
-.size-labels {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-}
-.size-label-col {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-}
-.size-circle {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    border: 1.5px solid var(--ink-muted);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.55rem;
-    font-weight: 700;
-    color: var(--ink-soft);
-    letter-spacing: 0;
-}
-.size-circle.large { width: 22px; height: 22px; font-size: 0.55rem; }
-.size-tag {
-    font-size: 0.48rem;
-    font-weight: 600;
-    color: var(--ink-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-}
-
-#wifi-box {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.62rem;
-    font-weight: 600;
-    color: var(--ink-soft);
-    background: var(--cream-dark);
-    padding: 6px 14px;
-    border-radius: 100px;
-    border: 1px solid var(--rule);
-    letter-spacing: 0.04em;
-}
-#wifi-box .material-symbols-outlined { font-size: 0.9rem !important; color: var(--green); }
-
-/* ══ MENU BOARD ══════════════════════════════════════════════════ */
-#menu-board-container {
-    flex: 1;
-    padding: 8px 12px 10px;
-    overflow: hidden;
-}
-
-.menu-grid {
-    display: -webkit-box;
-    display: -webkit-flex;
-    display: -ms-flexbox;
-    display: flex;
-    -webkit-flex-direction: row;
-    flex-direction: row;
-    -webkit-align-items: flex-start;
-    align-items: flex-start;
-    width: 100%;
-    height: 100%;
-    gap: 0;
-}
-
-.menu-col {
-    -webkit-flex: 1 1 0;
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 0 10px 0 0;
-    display: -webkit-box;
-    display: -webkit-flex;
-    display: flex;
-    -webkit-flex-direction: column;
-    flex-direction: column;
-    height: 100%;
-}
-
-/* Each category column block */
-.category-section {
-    display: block;
-    width: 100%;
-    margin-bottom: 26px;
-    padding: 0;
-    -webkit-flex-shrink: 0;
-    flex-shrink: 0;
-}
-
-/* Category heading */
-.category-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-    padding-bottom: 5px;
-    border-bottom: 1.5px solid var(--ink);
-}
-.category-header-text {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: var(--ink);
-    letter-spacing: -0.02em;
-    line-height: 1;
-}
-.category-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: var(--gold);
-    flex-shrink: 0;
-}
-
-/* ── Menu item row ── */
-.menu-item-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    width: 100%;
-    margin-bottom: 5px;
-    gap: 4px;
-}
-
-.menu-item-row.sold-out {
-    opacity: 0.35;
-    filter: grayscale(60%);
-}
-
-.item-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.item-name {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.78rem;
-    font-weight: 500;
-    color: var(--ink);
-    line-height: 1.25;
-    white-space: nowrap;
-    overflow: visible;
-    display: block;
-}
-
-.item-name.sold-out-text { text-decoration: line-through; }
-
-.item-desc { display: none; }
-
-/* Dotted leader between name and price */
-.item-leader {
-    flex: 1;
-    min-width: 4px;
-    height: 0;
-    border-bottom: 1.5px dotted rgba(26,20,16,0.2);
-    margin-bottom: 3px;
-    align-self: flex-end;
-}
-
-/* Price columns */
-.item-prices {
-    display: -webkit-box;
-    display: -webkit-flex;
-    display: flex;
-    gap: 14px;
-    flex-shrink: 0;
-    align-items: baseline;
-}
-
-.price-col {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--ink);
-    text-align: right;
-    min-width: 26px;
-    letter-spacing: -0.02em;
-}
-
-.price-col.empty-price { color: transparent; }
-
-/* Size header above prices */
-.price-header {
-    display: flex;
-    gap: 14px;
-    flex-shrink: 0;
-    margin-bottom: 6px;
-}
-.price-header-col {
-    font-size: 0.48rem;
-    font-weight: 700;
-    color: var(--ink-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    text-align: center;
-    min-width: 26px;
-}
-
-/* Sold-out badge */
-.sold-out-badge {
-    display: inline-block;
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.42rem;
-    font-weight: 700;
-    background: #fee2e2;
-    color: #b91c1c;
-    padding: 1px 5px;
-    border-radius: 4px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    vertical-align: middle;
-}
-
-/* ── Special box (Bánh mì chảo) ── */
-.special-box {
-    position: relative;
-    border: 1.5px solid var(--ink);
-    border-radius: 16px;
-    padding: 12px 14px 8px;
-    margin-top: 10px;
-    background: rgba(26,20,16,0.02);
-    break-inside: avoid;
-}
-.special-box-label {
-    position: absolute;
-    top: -9px;
-    left: 14px;
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.6rem;
-    font-weight: 700;
-    font-style: italic;
-    color: var(--ink);
-    background: var(--cream);
-    padding: 0 6px;
-    letter-spacing: 0.03em;
-}
-.sparkle-icon {
-    position: absolute;
-    top: -9px; right: 10px;
-    width: 16px; height: 16px;
-    fill: var(--gold);
-}
-
-/* ══ RIGHT PANEL — CART ══════════════════════════════════════════ */
 #cart-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 10px 8px;
-    border-bottom: 1px solid var(--rule);
-    background: #fff;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel2);
     flex-shrink: 0;
 }
 #cart-header h2 {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--ink);
-    letter-spacing: -0.01em;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--green);
 }
 #cart-list-wrap {
     flex: 1;
@@ -391,46 +250,43 @@ html, body {
 .cart-row {
     display: flex;
     align-items: center;
-    padding: 5px 8px;
-    border-radius: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
     background: #fff;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     animation: rowIn 0.25s ease both;
-    border: 1px solid var(--rule);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
-@keyframes rowIn { from { opacity:0; transform:translateX(10px); } to { opacity:1; transform:none; } }
+@keyframes rowIn { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
 .cart-qty {
     width: 18px; height: 18px;
-    border-radius: 5px;
+    border-radius: 4px;
     background: var(--green-pale);
     color: var(--green);
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-weight: 800;
-    font-size: 0.58rem;
+    font-weight: 900;
+    font-size: 0.55rem;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
-    margin-right: 6px;
-    border: 1px solid rgba(45,80,22,0.15);
+    margin-right: 6px; 
 }
 .cart-name {
     flex: 1;
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
     font-size: 0.6rem;
-    font-weight: 500;
-    color: var(--ink);
+    font-weight: 700;
+    color: #1f2937;
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
     min-width: 0;
 }
 .cart-item-price {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.62rem;
-    font-weight: 600;
+    font-size: 0.65rem;
+    font-weight: 800;
     color: var(--green);
     flex-shrink: 0;
-    margin-left: 6px;
+    margin-left: 6px; 
 }
 #cart-empty {
     display: flex;
@@ -438,157 +294,198 @@ html, body {
     align-items: center;
     justify-content: center;
     height: 100%;
-    opacity: 0.25;
+    opacity: 0.3;
 }
-#cart-empty .material-symbols-outlined { font-size: 2.5rem; margin-bottom: 8px; color: var(--ink); }
-#cart-empty p {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: var(--ink);
-}
+#cart-empty .material-symbols-outlined { font-size: 2rem; margin-bottom: 8px; }
+#cart-empty p { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
 
-/* ── Total bar ── */
+/* ── TOTAL BAR ── */
 #total-bar {
-    padding: 8px 10px;
-    border-top: 1px solid var(--rule);
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
     background: #fff;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    box-shadow: 0 -6px 20px rgba(26,20,16,0.04);
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.02);
 }
-#customer-chip { display: flex; align-items: center; min-width: 0; margin-bottom: 10px; }
+#customer-chip {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    margin-bottom: 8px; 
+}
 #customer-chip .avatar {
-    width: 24px; height: 24px;
+    width: 20px; height: 20px;
     background: var(--green);
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; margin-right: 8px;
+    flex-shrink: 0;
+    margin-right: 6px; 
 }
-#customer-chip .avatar .material-symbols-outlined { font-size: 0.8rem; color: white; }
-#customer-chip .cust-name { font-size: 0.65rem; font-weight: 700; color: var(--green); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-#customer-chip .cust-pts { font-size: 0.48rem; font-weight: 600; color: var(--gold); text-transform: uppercase; letter-spacing: 0.08em; }
+#customer-chip .avatar .material-symbols-outlined { font-size: 0.7rem; color: white; }
+#customer-chip .cust-name { font-size: 0.65rem; font-weight: 800; color: var(--green); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;}
+#customer-chip .cust-pts { font-size: 0.5rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 0.08em; }
 #welcome-msg {
-    display: flex; align-items: center; opacity: 0.4;
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.62rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    opacity: 0.4;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
 }
-#welcome-msg .material-symbols-outlined { font-size: 1rem !important; margin-right: 5px; }
-#total-right {
-    display: flex; flex-direction: column; align-items: flex-start;
-    padding-top: 10px;
-    border-top: 1px dashed var(--rule);
+#welcome-msg .material-symbols-outlined {
+    font-size: 0.8rem !important;
+    margin-right: 4px; 
 }
-#total-label {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 0.52rem; font-weight: 700;
-    color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 3px;
+#total-right { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: flex-start;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
 }
-#total-amount {
-    font-family: -apple-system, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 1.5rem; font-weight: 800;
-    color: var(--green); line-height: 1;
-    font-variant-numeric: tabular-nums; letter-spacing: -1px;
+#total-label { font-size: 0.55rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 2px;}
+#total-amount { font-size: 1.2rem; font-weight: 900; color: var(--green); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px;}
+#cash-info {
+    display: none;
+    margin-top: 6px;
+    border-top: 1px dashed #e5e7eb;
+    padding-top: 6px;
+    width: 100%;
+    flex-direction: column;
 }
-#cash-info { display:none; margin-top:8px; border-top:1px dashed var(--rule); padding-top:8px; width:100%; flex-direction:column; }
-.cash-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
-.cash-row:last-child { margin-bottom:0; }
-.cash-label { font-size:0.55rem; font-weight:700; color:var(--ink-muted); text-transform:uppercase; letter-spacing:0.1em; }
-#screen-paid  { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:0.85rem; font-weight:700; color:var(--ink); }
-#screen-change { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:1rem; font-weight:800; color:var(--gold); }
+.cash-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.cash-row:last-child { margin-bottom: 0; }
+.cash-label { font-size: 0.55rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+#screen-paid  { font-size: 0.75rem; font-weight: 900; color: #1f2937; }
+#screen-change { font-size: 0.85rem; font-weight: 900; color: var(--amber); }
 
-/* ══ OVERLAYS ══════════════════════════════════════════════════ */
+/* ══ OVERLAYS ══ */
 #view-qr {
-    display:none; position:absolute; top:0; right:0; bottom:0; left:0; z-index:60;
-    background:rgba(250,247,242,0.96); backdrop-filter:blur(24px);
-    flex-direction:column; align-items:center; justify-content:center;
-    animation:fadeInUp 0.35s ease both;
+    display: none;
+    position: absolute; inset: 0; z-index: 60;
+    background: rgba(255,255,255,0.97);
+    backdrop-filter: blur(24px);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: fadeInUp 0.35s ease both;
 }
-#view-qr.active { display:flex; }
-#view-qr h2 { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:1.1rem; font-weight:700; color:var(--green); text-align:center; padding:0 20px; letter-spacing:0.05em; }
-#qr-card { background:#fff; padding:14px; border-radius:20px; box-shadow:0 10px 40px rgba(45,80,22,0.15); border:1px solid var(--rule); margin:14px 0; }
-#qr-image { width:170px; height:170px; object-fit:contain; border-radius:10px; }
-#qr-amount-wrap { text-align:center; background:var(--green-pale); border:1px solid rgba(45,80,22,0.2); border-radius:14px; padding:10px 20px; }
-#qr-amount-label { font-size:0.55rem; font-weight:700; color:var(--green-mid); text-transform:uppercase; letter-spacing:0.15em; }
-#qr-amount { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:1.6rem; font-weight:900; color:var(--green); font-variant-numeric:tabular-nums; }
+#view-qr.active { display: flex; }
+#view-qr h2 { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.18em; color: var(--green); text-align: center; padding: 0 10px;}
+#qr-card { background: #fff; padding: 12px; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,98,65,0.15); border: 1px solid #e5e7eb; margin: 12px 0; }
+#qr-image { width: 160px; height: 160px; object-fit: contain; border-radius: 8px; }
+#qr-amount-wrap { text-align: center; background: var(--green-pale); border: 1px solid #bbf7d0; border-radius: 12px; padding: 8px 16px; }
+#qr-amount-label { font-size: 0.55rem; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 0.15em; }
+#qr-amount { font-size: 1.5rem; font-weight: 900; color: var(--green); font-variant-numeric: tabular-nums; }
 
 #view-success {
-    display:none; position:absolute; top:0; right:0; bottom:0; left:0; z-index:70;
-    background:var(--green); color:white;
-    flex-direction:column; align-items:center; justify-content:center;
-    animation:fadeInUp 0.3s ease both;
+    display: none;
+    position: absolute; inset: 0; z-index: 70;
+    background: var(--green);
+    color: white;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: fadeInUp 0.3s ease both;
 }
-#view-success.active { display:flex; }
-#view-success .material-symbols-outlined { font-size:4.5rem; margin-bottom:10px; }
-#view-success h2 { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:2rem; font-weight:900; letter-spacing:0.05em; margin-bottom:6px; }
-#view-success p  { font-size:0.85rem; font-weight:500; opacity:0.8; text-align:center; padding:0 24px; }
+#view-success.active { display: flex; }
+#view-success .material-symbols-outlined { font-size: 4rem; margin-bottom: 8px; }
+#view-success h2 { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+#view-success p  { font-size: 0.8rem; font-weight: 600; opacity: 0.8; text-align: center; padding: 0 20px;}
 
-#screensaver { display:none; position:fixed; top:0; right:0; bottom:0; left:0; z-index:100; background:#000; overflow:hidden; }
-#screensaver.active { display:block; }
-#ss-layer-1, #ss-layer-2 { position:absolute; top:0; right:0; bottom:0; left:0; transition:opacity 1.2s ease-in-out; opacity:0; }
-#ss-layer-1.active, #ss-layer-2.active { opacity:1; }
-#ss-layer-1 img, #ss-layer-2 img, #ss-layer-1 video, #ss-layer-2 video { width:100%; height:100%; object-fit:cover; }
-#ss-brand { position:absolute; bottom:0; left:0; right:0; z-index:10; padding:40px 32px 28px; background:linear-gradient(to top,rgba(0,0,0,0.8) 0%,transparent 100%); text-align:center; }
-#ss-brand p { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:1.4rem; font-weight:700; font-style:italic; text-transform:uppercase; letter-spacing:0.25em; color:rgba(255,255,255,0.9); animation:pulse 3s ease-in-out infinite; }
+#screensaver {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: #000;
+    overflow: hidden;
+}
+#screensaver.active { display: block; }
+#ss-layer-1, #ss-layer-2 { position: absolute; inset: 0; transition: opacity 1.2s ease-in-out; opacity: 0; }
+#ss-layer-1.active, #ss-layer-2.active { opacity: 1; }
+#ss-layer-1 img, #ss-layer-2 img, #ss-layer-1 video, #ss-layer-2 video { width: 100%; height: 100%; object-fit: cover; }
+#ss-brand { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 40px 32px 28px; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%); text-align: center; }
+#ss-brand p { font-size: 1.2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.25em; color: rgba(255,255,255,0.9); animation: pulse 3s ease-in-out infinite; }
 
 @keyframes pulse { 0%,100%{opacity:0.7} 50%{opacity:1} }
 @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
 
-/* Phone input */
-#view-phone { display:none; position:fixed; top:0; right:0; bottom:0; left:0; z-index:90; background:rgba(26,20,16,0.5); backdrop-filter:blur(8px); align-items:center; justify-content:center; animation:fadeInUp 0.25s ease; }
-#view-phone.active { display:flex; }
-#phone-box { background:#fff; border:1px solid var(--rule); border-radius:24px; padding:28px; width:360px; box-shadow:0 30px 80px rgba(26,20,16,0.2); }
-#phone-box h3 { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:1rem; font-weight:700; color:var(--green); letter-spacing:0.02em; margin-bottom:18px; text-align:center; }
-#native-phone { width:100%; background:#faf7f2; border:2px solid var(--rule); border-radius:14px; color:var(--ink); font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:1.6rem; font-weight:700; text-align:center; padding:12px; outline:none; letter-spacing:0.1em; margin-bottom:14px; transition:border-color 0.2s; }
-#native-phone:focus { border-color:var(--green); background:#fff; }
-.phone-btns { display:flex; gap:8px; }
-.phone-btns button { flex:1; padding:11px; border:none; border-radius:10px; font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:0.75rem; font-weight:700; cursor:pointer; text-transform:uppercase; letter-spacing:0.08em; transition:opacity 0.2s; }
-.phone-btns button:active { opacity:0.7; }
-#btn-cancel-phone { background:#f1f5f9; color:#64748b; }
-#btn-submit-phone { background:var(--green); color:#fff; flex:2; }
+#view-phone {
+    display: none;
+    position: fixed; inset: 0; z-index: 90;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(6px);
+    align-items: center;
+    justify-content: center;
+    animation: fadeInUp 0.25s ease;
+}
+#view-phone.active { display: flex; }
+#phone-box { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 20px; padding: 24px; width: 340px; box-shadow: 0 24px 80px rgba(0,0,0,0.2); }
+#phone-box h3 { font-size: 0.9rem; font-weight: 900; color: var(--green); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; text-align: center;}
+#native-phone { width: 100%; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; color: #1e3932; font-size: 1.6rem; font-weight: 900; text-align: center; padding: 10px; outline: none; letter-spacing: 0.12em; margin-bottom: 12px; transition: border-color 0.2s; font-family: inherit; }
+#native-phone:focus { border-color: var(--green); background: #fff; }
+.phone-btns { display: flex; }
+.phone-btns button { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; transition: opacity 0.2s; }
+.phone-btns button:active { opacity: 0.7; }
+#btn-cancel-phone { background: #f1f5f9; color: #64748b; margin-right: 10px; }
+#btn-submit-phone { background: var(--green); color: #fff; flex: 2; }
+
 </style>
 </head>
 <body>
 
 <div id="root">
 
-    <!-- ══════════════════════════════════ LEFT — STATIC MENU BOARD (75%) ═══════════════════════════════ -->
-    <div id="panel-left">
+    <!-- ══════════════════════════════════ LEFT — NEW LAYOUT (75%) ═══════════════════════════════ -->
+<div id="panel-left">
 
-        <!-- Header -->
-        <div id="header">
-            <div class="logo-wrap">
-                <div class="logo-text">The Cafe 33</div>
-                <div class="logo-sub">Specialty Coffee &amp; Kitchen</div>
-            </div>
-            <div class="header-right">
-                <div class="size-labels">
-                    <div style="font-size:0.5rem;font-weight:600;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.15em;margin-right:4px;">Size</div>
-                    <div class="size-label-col">
-                        <div class="size-circle">M</div>
-                        <div class="size-tag">Vừa</div>
-                    </div>
-                    <div class="size-label-col">
-                        <div class="size-circle large">L</div>
-                        <div class="size-tag">Lớn</div>
-                    </div>
-                </div>
-                <div id="wifi-box">
-                    <span class="material-symbols-outlined">wifi</span>
-                    <span>Wifi: 123456789</span>
-                </div>
-            </div>
+    <!-- Top Row -->
+    <div id="header-layout" class="img-placeholder">
+        <div id="ph-logo" class="img-placeholder">
+            <span class="material-symbols-outlined" style="font-size: 1.5rem;">image</span>
         </div>
+        <!-- Icon đại diện cho Banner ngang -->
+        <span class="material-symbols-outlined">image</span>
+    </div>
 
-        <!-- Static Menu Groupings -->
-        <div id="menu-board-container">
-            <div id="menu-static-grid" class="menu-grid">
-                <!-- Data đổ bằng JS tĩnh -->
+    <!-- Main Body -->
+    <div id="body-layout">
+            
+            <!-- Cột trái slide -->
+            <div id="ph-slide" class="img-placeholder">
+                <span class="material-symbols-outlined" style="font-size: 3rem;">image</span>
             </div>
+
+            <!-- Cột giữa Menu -->
+            <div id="center-layout">
+                <!-- 3 món nổi bật -->
+                <div id="featured-section">
+                    <div class="img-placeholder ph-featured">
+                        <span class="material-symbols-outlined">local_cafe</span>
+                    </div>
+                    <div class="img-placeholder ph-featured">
+                        <span class="material-symbols-outlined">local_cafe</span>
+                    </div>
+                    <div class="img-placeholder ph-featured">
+                        <span class="material-symbols-outlined">local_cafe</span>
+                    </div>
+                </div>
+
+                <!-- Lưới danh mục 2 cột -->
+                <div id="menu-board-container">
+                    <div id="menu-static-grid" class="categories-wrapper">
+                        <!-- Đổ JS vào đây -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột phải Toppings -->
+            <div id="ph-toppings" class="img-placeholder">
+                <span class="material-symbols-outlined" style="font-size: 3rem;">image</span>
+            </div>
+
         </div>
 
     </div>
@@ -758,145 +655,60 @@ var ssTimer       = null;
 var ssRunning     = false;
 
 var DEFAULT_SLIDES = [
-    { src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1768316658706.jpg?alt=media&token=c8854aaa-6af4-40d7-a5b6-ccdda66e58e8', duration:6000 },
-    { src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1770299826548.jpg?alt=media&token=c3e3fad2-b9b3-48e8-aad8-bd5658a3f386', duration:6000 }
+    { src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1768316658706.jpg?alt=media&token=c8854aaa-6af4-40d7-a5b6-ccdda66e58e8', duration:6000 }
 ];
 
-// Mô phỏng Description hệt như ảnh trong trường hợp Firebase chưa cập nhật `desc`
-var mockDesc = {
-    "TRÀ SỮA LONG NHÃN": "Trà sữa, mứt long nhãn, trân châu 3Q",
-    "TRÀ SỮA OREO": "Trà sữa, bánh oreo vụn, trân châu 3Q",
-    "SỮA TƯƠI ĐƯỜNG ĐEN": "Sữa béo, trân châu 3Q, đường đen",
-    "SỮA TƯƠI MATCHA": "Sữa tươi hốn, trân châu 3Q, đường đen, matcha",
-    "SỮA TƯƠI OREO": "Sữa tươi béo, trân châu 3Q, đường đen, oreo",
-    "CAFE SỮA ĐÁ": "Cà phê, sữa đặc",
-    "BẠC XỈU": "Cà phê, sữa đặc, sữa tươi",
-    "MATCHA LATTE": "Matcha Đài Loan, sữa béo",
-    "CHOCO LATTE": "Sữa béo, socola",
-    "CAFE LATTE": "Sữa béo, cafe",
-    "THÁI ĐỎ LATTE": "Trà thái đỏ, sữa béo",
-    "MATCHA LATTE SỐ 3": "Matcha Nhật Bản, sữa béo",
-    "MATCHA ĐÁ XAY": "Trà xanh, sữa, kem",
-    "SWEET LOVE": "Dâu tây, sữa, kem",
-    "OREO & CHOCO": "Oreo, socola, sữa, kem",
-    "HOLA PASSION": "Chanh dây, sữa, kem",
-    "KEM TUYẾT DÂU TÂY": "Dâu tây, trân châu 3Q",
-    "KEM TUYẾT MÙA HẠ": "Chanh dây, thơm, xoài, trân châu 3Q",
-    "KEM TUYẾT CHANH DÂY": "Chanh dây, trân châu 3Q",
-    "THẬP CẨM CHIÊN": "Cá viên, cá miếng, xúc xích, chả giò (50)",
-    "BÁNH TRÁNG NƯỚNG": "Bánh tráng, trứng, hành phi, hành, chà bông, mayo, tương ớt, phomai lát",
-    "BÁNH TRÁNG CUỘN": "Bánh tráng, trứng, hành phi, xoài, đậu phộng, rau răm, mayo, tương ớt, sốt me",
-    "BÁNH TRÁNG TRỘN": "Bánh tráng, trứng, hành phi, xoài, đậu phộng, rau răm, sốt me",
-    "CÁ VIÊN CHIÊN": "Cá viên, tương đen, tương ớt",
-    "TRÀ ĐÀO": "Trà đào, trân châu 3Q, 1/2 trái đào",
-    "TRÀ CHanh dây": "Chanh dây, thơm, trân châu 3Q",
-    "TRÀ DƯA LƯỚI": "Trà dưa lưới, trân châu 3Q",
-    "TRÀ KIWI": "Trà kiwi, trân châu 3Q",
-    "TRÀ QUÝT JEJU": "Trà lài, quýt, trân châu 3Q",
-    "TRÀ BƯỞI YUZU": "Trà lài, bưởi, yuzu, trân châu 3Q",
-    "TRÀ LONG NHÃN": "Long nhãn, táo đỏ, hạt sen, trân châu 3Q",
-    "BÁNH MÌ CHẢO": "Mì sợi phở, cải thìa, chả cá, xúc xích, trứng chiên, hành phi, sốt mì trộn",
-    "MÌ TRỘN": "Mì sợi phở, cải thìa, chả cá, xúc xích, trứng chiên, hành phi, sốt mì trộn"
-};
 
-// Check các món có Ngôi sao Vàng như trong ảnh
-function getStar(name) {
-    var starItems = ['BẠC XỈU', 'MATCHA ĐÁ XAY', 'THÁI ĐỎ LATTE', 'TRÀ LONG NHÃN'];
-    var hasStar = starItems.some(function(sn) { return name.toUpperCase().includes(sn); });
-    if (hasStar) {
-        return '<svg style="width:12px;height:12px;display:inline-block;margin-left:4px;transform:translateY(1px)" viewBox="0 0 24 24" fill="#FFD700"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>';
-    }
-    return '';
-}
-
-// ── RENDER STATIC MENU BOARD — ANDROID TV SAFE (flex columns) ──
+// ── RENDER STATIC MENU THEO CHUẨN MỚI ──
 function renderMenuBoard() {
     var grid = document.getElementById('menu-static-grid');
-
+    
     // Gom nhóm menu
     var groups = {};
-    var catOrder = [];
     menuData.forEach(function(m) {
         var cat = m.type || 'Khác';
-        if (!groups[cat]) { groups[cat] = []; catOrder.push(cat); }
+        if (!groups[cat]) groups[cat] = [];
         groups[cat].push(m);
     });
 
-    function renderRow(m) {
-        var isSoldOut = !!soldOutItems[m.name];
-        var priceM = m.priceM || 0;
-        var priceL = m.priceL || 0;
-        var pM = priceM > 0 ? (priceM/1000) : '';
-        var pL = priceL > 0 ? (priceL/1000) : '';
-        var rowClass = isSoldOut ? 'menu-item-row sold-out' : 'menu-item-row';
-        var nameClass = isSoldOut ? 'item-name sold-out-text' : 'item-name';
-        var descText = m.desc || mockDesc[m.name.toUpperCase()] || '';
-
-        var str = '<div class="' + rowClass + '">';
-        str +=   '<div class="item-info">';
-        str +=     '<div class="' + nameClass + '">' + m.name + getStar(m.name) + (isSoldOut ? '<span class="sold-out-badge">Hết</span>' : '') + '</div>';
-        if (descText) str += '<div class="item-desc">' + descText + '</div>';
-        str +=   '</div>';
-        str +=   '<div class="item-leader"></div>';
-        str +=   '<div class="item-prices">';
-        str +=     '<div class="price-col' + (pM === '' ? ' empty-price' : '') + '">' + (pM !== '' ? pM + 'k' : '—') + '</div>';
-        str +=     '<div class="price-col">' + (pL !== '' ? pL + 'k' : '') + '</div>';
-        str +=   '</div>';
-        str += '</div>';
-        return str;
-    }
-
-    function renderCatSection(cat) {
-        var items = groups[cat];
-        if (!items || items.length === 0) return '';
-        var html = '<div class="category-section">';
-        html += '<div class="category-header"><span class="category-dot"></span><span class="category-header-text">' + cat + '</span></div>';
-        var normalItems = [], specialBoxItems = [];
-        items.forEach(function(m) {
-            if (m.name.toUpperCase().indexOf('BÁNH MÌ') !== -1 || m.name.toUpperCase().indexOf('MÌ TRỘN') !== -1) {
-                specialBoxItems.push(m);
-            } else {
-                normalItems.push(m);
-            }
-        });
-        normalItems.forEach(function(m) { html += renderRow(m); });
-        if (specialBoxItems.length > 0) {
-            html += '<div class="special-box"><span class="special-box-label">Đồ ăn</span>';
-            specialBoxItems.forEach(function(m) { html += renderRow(m); });
-            html += '<svg class="sparkle-icon" viewBox="0 0 24 24"><path d="M12 0L13.5 8.5L22 10L13.5 11.5L12 20L10.5 11.5L2 10L10.5 8.5L12 0Z"/></svg>';
-            html += '</div>';
-        }
-        html += '</div>';
-        return html;
-    }
-
-    if (catOrder.length === 0) {
-        grid.innerHTML = '<div class="menu-col" style="text-align:center;padding:50px;opacity:0.4;">Không có dữ liệu menu</div>';
-        return;
-    }
-
-    // Phân bổ categories vào 3 cột theo số item để cân bằng chiều cao
-    var NUM_COLS = 3;
-    var cols = [[], [], []];
-    var colWeights = [0, 0, 0];
-    catOrder.forEach(function(cat) {
-        var weight = groups[cat].length + 1.5; // +1.5 tính phần header
-        // Tìm cột nhẹ nhất
-        var minIdx = 0;
-        for (var i = 1; i < NUM_COLS; i++) {
-            if (colWeights[i] < colWeights[minIdx]) minIdx = i;
-        }
-        cols[minIdx].push(cat);
-        colWeights[minIdx] += weight;
-    });
-
     var html = '';
-    for (var c = 0; c < NUM_COLS; c++) {
-        html += '<div class="menu-col">';
-        cols[c].forEach(function(cat) { html += renderCatSection(cat); });
-        html += '</div>';
+    
+    // Render từng nhóm
+    for (var cat in groups) {
+        if (groups[cat].length === 0) continue;
+        
+        html += '<div class="category-block">';
+        html += '<div class="category-title">' + cat + '</div>';
+        html += '<div class="items-grid">';
+        
+        groups[cat].forEach(function(m) {
+            var isSoldOut = !!soldOutItems[m.name];
+            var pM = m.priceM > 0 ? (m.priceM/1000) : '';
+            var pL = m.priceL > 0 ? (m.priceL/1000) : '';
+            
+            // Format giá: "15 | 20"
+            var priceStr = pM;
+            if (pL) priceStr += (priceStr ? ' | ' : '') + pL;
+            if (!priceStr) priceStr = '—';
+            
+            var cardClass = isSoldOut ? 'item-card sold-out' : 'item-card';
+
+            html += '<div class="' + cardClass + '">';
+            // Placeholder cho ảnh ly nước
+            html +=   '<div class="item-img-ph"><span class="material-symbols-outlined">local_cafe</span></div>';
+            html +=   '<div class="item-card-name">' + m.name + '</div>';
+            html +=   '<div class="item-card-price">' + priceStr + '</div>';
+            html += '</div>';
+        });
+        
+        html += '</div></div>'; 
     }
-    grid.innerHTML = html;
+
+    if (Object.keys(groups).length === 0) {
+         grid.innerHTML = '<div style="text-align:center; padding: 50px; opacity:0.4;">Không có dữ liệu menu</div>';
+    } else {
+         grid.innerHTML = html;
+    }
 }
 
 // ── SCREENSAVER
