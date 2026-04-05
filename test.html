@@ -177,9 +177,29 @@ html, body {
 }
 
 .menu-grid {
-    column-count: 3;
-    column-gap: 0;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-flex-direction: row;
+    flex-direction: row;
+    -webkit-align-items: flex-start;
+    align-items: flex-start;
     width: 100%;
+    height: 100%;
+    gap: 0;
+}
+
+.menu-col {
+    -webkit-flex: 1 1 0;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 18px 0 0;
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: flex;
+    -webkit-flex-direction: column;
+    flex-direction: column;
     height: 100%;
 }
 
@@ -187,11 +207,10 @@ html, body {
 .category-section {
     display: block;
     width: 100%;
-    margin-bottom: 0;
-    padding: 0 20px 20px 0;
-    break-inside: avoid;
-    page-break-inside: avoid;
-    -webkit-column-break-inside: avoid;
+    margin-bottom: 16px;
+    padding: 0;
+    -webkit-flex-shrink: 0;
+    flex-shrink: 0;
 }
 
 /* Category heading */
@@ -274,6 +293,8 @@ html, body {
 
 /* Price columns */
 .item-prices {
+    display: -webkit-box;
+    display: -webkit-flex;
     display: flex;
     gap: 14px;
     flex-shrink: 0;
@@ -491,7 +512,7 @@ html, body {
 
 /* ══ OVERLAYS ══════════════════════════════════════════════════ */
 #view-qr {
-    display:none; position:absolute; inset:0; z-index:60;
+    display:none; position:absolute; top:0; right:0; bottom:0; left:0; z-index:60;
     background:rgba(250,247,242,0.96); backdrop-filter:blur(24px);
     flex-direction:column; align-items:center; justify-content:center;
     animation:fadeInUp 0.35s ease both;
@@ -505,7 +526,7 @@ html, body {
 #qr-amount { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:1.6rem; font-weight:900; color:var(--green); font-variant-numeric:tabular-nums; }
 
 #view-success {
-    display:none; position:absolute; inset:0; z-index:70;
+    display:none; position:absolute; top:0; right:0; bottom:0; left:0; z-index:70;
     background:var(--green); color:white;
     flex-direction:column; align-items:center; justify-content:center;
     animation:fadeInUp 0.3s ease both;
@@ -515,9 +536,9 @@ html, body {
 #view-success h2 { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:2rem; font-weight:900; letter-spacing:0.05em; margin-bottom:6px; }
 #view-success p  { font-size:0.85rem; font-weight:500; opacity:0.8; text-align:center; padding:0 24px; }
 
-#screensaver { display:none; position:fixed; inset:0; z-index:100; background:#000; overflow:hidden; }
+#screensaver { display:none; position:fixed; top:0; right:0; bottom:0; left:0; z-index:100; background:#000; overflow:hidden; }
 #screensaver.active { display:block; }
-#ss-layer-1, #ss-layer-2 { position:absolute; inset:0; transition:opacity 1.2s ease-in-out; opacity:0; }
+#ss-layer-1, #ss-layer-2 { position:absolute; top:0; right:0; bottom:0; left:0; transition:opacity 1.2s ease-in-out; opacity:0; }
 #ss-layer-1.active, #ss-layer-2.active { opacity:1; }
 #ss-layer-1 img, #ss-layer-2 img, #ss-layer-1 video, #ss-layer-2 video { width:100%; height:100%; object-fit:cover; }
 #ss-brand { position:absolute; bottom:0; left:0; right:0; z-index:10; padding:40px 32px 28px; background:linear-gradient(to top,rgba(0,0,0,0.8) 0%,transparent 100%); text-align:center; }
@@ -527,7 +548,7 @@ html, body {
 @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
 
 /* Phone input */
-#view-phone { display:none; position:fixed; inset:0; z-index:90; background:rgba(26,20,16,0.5); backdrop-filter:blur(8px); align-items:center; justify-content:center; animation:fadeInUp 0.25s ease; }
+#view-phone { display:none; position:fixed; top:0; right:0; bottom:0; left:0; z-index:90; background:rgba(26,20,16,0.5); backdrop-filter:blur(8px); align-items:center; justify-content:center; animation:fadeInUp 0.25s ease; }
 #view-phone.active { display:flex; }
 #phone-box { background:#fff; border:1px solid var(--rule); border-radius:24px; padding:28px; width:360px; box-shadow:0 30px 80px rgba(26,20,16,0.2); }
 #phone-box h3 { font-family:-apple-system,'Helvetica Neue',Arial,sans-serif; font-size:1rem; font-weight:700; color:var(--green); letter-spacing:0.02em; margin-bottom:18px; text-align:center; }
@@ -797,30 +818,25 @@ function getStar(name) {
     return '';
 }
 
-// ── RENDER STATIC MENU BOARD THEO ẢNH MẪU ──
+// ── RENDER STATIC MENU BOARD — ANDROID TV SAFE (flex columns) ──
 function renderMenuBoard() {
     var grid = document.getElementById('menu-static-grid');
-    
+
     // Gom nhóm menu
     var groups = {};
+    var catOrder = [];
     menuData.forEach(function(m) {
         var cat = m.type || 'Khác';
-        if (!groups[cat]) groups[cat] = [];
+        if (!groups[cat]) { groups[cat] = []; catOrder.push(cat); }
         groups[cat].push(m);
     });
 
-    var html = '';
-    
-    // Sinh HTML render Row chuẩn
     function renderRow(m) {
         var isSoldOut = !!soldOutItems[m.name];
         var priceM = m.priceM || 0;
         var priceL = m.priceL || 0;
-        
-        // Render dạng số trần ko chữ 'k', đúng như ảnh
         var pM = priceM > 0 ? (priceM/1000) : '';
         var pL = priceL > 0 ? (priceL/1000) : '';
-        
         var rowClass = isSoldOut ? 'menu-item-row sold-out' : 'menu-item-row';
         var nameClass = isSoldOut ? 'item-name sold-out-text' : 'item-name';
         var descText = m.desc || mockDesc[m.name.toUpperCase()] || '';
@@ -839,43 +855,57 @@ function renderMenuBoard() {
         return str;
     }
 
-    for (var cat in groups) {
-        if (groups[cat].length === 0) continue;
-        
-        html += '<div class="category-section">';
+    function renderCatSection(cat) {
+        var items = groups[cat];
+        if (!items || items.length === 0) return '';
+        var html = '<div class="category-section">';
         html += '<div class="category-header"><span class="category-dot"></span><span class="category-header-text">' + cat + '</span></div>';
-        
-        var normalItems = [];
-        var specialBoxItems = [];
-        
-        // Lọc riêng Bánh Mì Chảo & Mì Trộn để làm Khung bo góc
-        groups[cat].forEach(function(m) {
-            if (m.name.toUpperCase().includes("BÁNH MÌ") || m.name.toUpperCase().includes("MÌ TRỘN")) {
+        var normalItems = [], specialBoxItems = [];
+        items.forEach(function(m) {
+            if (m.name.toUpperCase().indexOf('BÁNH MÌ') !== -1 || m.name.toUpperCase().indexOf('MÌ TRỘN') !== -1) {
                 specialBoxItems.push(m);
             } else {
                 normalItems.push(m);
             }
         });
-
         normalItems.forEach(function(m) { html += renderRow(m); });
-        
-        // Render Box Bánh mì
         if (specialBoxItems.length > 0) {
             html += '<div class="special-box"><span class="special-box-label">Đồ ăn</span>';
             specialBoxItems.forEach(function(m) { html += renderRow(m); });
-            // Sparkle icon lấp lánh (✨) gắn viền box
             html += '<svg class="sparkle-icon" viewBox="0 0 24 24"><path d="M12 0L13.5 8.5L22 10L13.5 11.5L12 20L10.5 11.5L2 10L10.5 8.5L12 0Z"/></svg>';
             html += '</div>';
         }
-        
-        html += '</div>'; 
+        html += '</div>';
+        return html;
     }
 
-    if (Object.keys(groups).length === 0) {
-         grid.innerHTML = '<div style="column-span: all; text-align:center; padding: 50px; opacity:0.4;">Không có dữ liệu menu</div>';
-    } else {
-         grid.innerHTML = html;
+    if (catOrder.length === 0) {
+        grid.innerHTML = '<div class="menu-col" style="text-align:center;padding:50px;opacity:0.4;">Không có dữ liệu menu</div>';
+        return;
     }
+
+    // Phân bổ categories vào 3 cột theo số item để cân bằng chiều cao
+    var NUM_COLS = 3;
+    var cols = [[], [], []];
+    var colWeights = [0, 0, 0];
+    catOrder.forEach(function(cat) {
+        var weight = groups[cat].length + 1.5; // +1.5 tính phần header
+        // Tìm cột nhẹ nhất
+        var minIdx = 0;
+        for (var i = 1; i < NUM_COLS; i++) {
+            if (colWeights[i] < colWeights[minIdx]) minIdx = i;
+        }
+        cols[minIdx].push(cat);
+        colWeights[minIdx] += weight;
+    });
+
+    var html = '';
+    for (var c = 0; c < NUM_COLS; c++) {
+        html += '<div class="menu-col">';
+        cols[c].forEach(function(cat) { html += renderCatSection(cat); });
+        html += '</div>';
+    }
+    grid.innerHTML = html;
 }
 
 // ── SCREENSAVER
