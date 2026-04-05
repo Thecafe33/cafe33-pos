@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Cafe 33 — Menu Board</title>
     <link rel="manifest" href="/screen-manifest.json">
-    <meta name="theme-color" content="#006241">
+    <meta name="theme-color" content="#4b6b3e">
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/screen-sw.js', { scope: '/screen.html' });
@@ -16,22 +16,23 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Import Font Lora (chuẩn ảnh) và Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800;900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
 
 <style>
 :root {
-    --green: #006241;
-    --green-light: #00a86b;
+    --green: #4b6b3e; /* Xanh lá thẫm chuẩn ảnh */
+    --green-light: #5b8a47;
     --green-pale: #e8f5e9;
     --amber: #f59e0b;
-    --bg-left: #F1F5F9; 
+    --bg-left: #fdfbf7; 
     --panel: #ffffff;
     --panel2: #F8F9FB;
     --border: rgba(0,0,0,0.06);
-    --text: #1e293b;
-    --muted: #64748b;
-    --card-radius: 10px;
+    --text: #1a1a1a;
+    --muted: #666666;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -43,7 +44,7 @@ html, body {
     user-select: none; -webkit-user-select: none;
 }
 
-/* ── LAYOUT ── */
+/* ── LAYOUT CỨNG ÉP CHUẨN 75 - 25 ── */
 #root {
     display: flex;
     height: 100vh;
@@ -51,23 +52,34 @@ html, body {
     overflow: hidden;
 }
 
-/* LEFT PANEL (75%) */
+/* LEFT PANEL (75%) - Background tỏa sáng như ảnh */
 #panel-left {
+    width: 75%;
     flex: 0 0 75%;
     max-width: 75%;
-    min-width: 0;
+    min-width: 0; /* Chống phình to */
     display: flex;
     flex-direction: column;
-    background: var(--bg-left);
+    background-color: var(--bg-left);
+    background-image: 
+        radial-gradient(circle at 10% 90%, rgba(255, 219, 139, 0.45) 0%, transparent 40%),
+        radial-gradient(circle at 0% 100%, rgba(160, 240, 210, 0.35) 0%, transparent 35%),
+        radial-gradient(circle at 90% 0%, rgba(180, 240, 230, 0.45) 0%, transparent 40%),
+        radial-gradient(circle at 100% 10%, rgba(255, 230, 160, 0.35) 0%, transparent 35%);
+    background-size: cover;
+    background-repeat: no-repeat;
     border-right: 1px solid var(--border);
     overflow: hidden;
+    position: relative;
+    z-index: 1;
 }
 
 /* RIGHT PANEL (25%) */
 #panel-right {
+    width: 25%;
     flex: 0 0 25%;
     max-width: 25%;
-    min-width: 0;
+    min-width: 0; /* Chống phình to */
     display: flex;
     flex-direction: column;
     background: var(--panel);
@@ -82,86 +94,71 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px 8px;
+    padding: 10px 24px 0px;
     background: transparent;
     flex-shrink: 0;
 }
 .logo-text { 
     font-family: 'League Spartan', sans-serif; 
-    font-size: 1.6rem; 
+    font-size: 1.4rem; 
     font-weight: 900; 
     color: var(--green); 
     letter-spacing: -1px; 
     line-height: 1;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 #wifi-box { 
     display: flex; 
     align-items: center; 
-    font-size: 0.75rem; 
+    font-size: 0.65rem; 
     font-weight: 800; 
     color: var(--green); 
-    background: #fff; 
-    padding: 6px 14px; 
+    background: rgba(255,255,255,0.7); 
+    padding: 4px 12px; 
     border-radius: 20px; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.04); 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03); 
     letter-spacing: 0.05em; 
-    border: 1px solid rgba(0, 98, 65, 0.1);
 }
-#wifi-box .material-symbols-outlined { font-size: 1rem; margin-right: 6px; } /* Fixed gap */
+#wifi-box .material-symbols-outlined { font-size: 0.8rem; margin-right: 4px; }
 
-/* ── STATIC MENU BOARD (ANDROID TV SAFE COLUMNS) ── */
+/* ── MENU BẢN GỐC TÁI TẠO 100% (ANDROID TV SAFE) ── */
 #menu-board-container {
     flex: 1;
-    padding: 6px 20px 20px 20px;
+    padding: 4px 24px 16px 24px;
     overflow: hidden;
 }
 
 .menu-grid {
-    column-count: 4;
-    column-gap: 16px;
+    column-count: 3; /* Chuẩn 3 cột như ảnh */
+    column-gap: 36px;
     width: 100%;
     height: 100%;
 }
 
 .category-section {
-    background: #ffffff;
-    border-radius: var(--card-radius);
-    padding: 8px 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.02), 0 1px 3px rgba(0,0,0,0.02);
-    border: 1px solid rgba(0, 0, 0, 0.03);
-    
-    /* FIX ĐÈ LÊN NHAU VÀ CẮT CỘT TRÊN TV */
-    display: inline-block;
+    display: block;
     width: 100%;
-    margin-bottom: 12px; /* Replaced flex gap */
+    margin-bottom: 18px; 
     break-inside: avoid;
     page-break-inside: avoid;
     -webkit-column-break-inside: avoid;
 }
 
 .category-header {
-    font-family: 'League Spartan', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 800;
+    font-family: 'Lora', serif;
+    font-size: 1rem;
+    font-weight: 700;
     color: var(--green);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding-bottom: 4px;
-    margin-bottom: 6px;
-    border-bottom: 2px solid var(--green-pale);
-    display: flex;
-    align-items: center;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
 }
 
 .menu-item-row {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
+    justify-content: space-between;
     width: 100%;
-    margin-bottom: 4px; /* Replaced flex gap */
-}
-.menu-item-row:last-child {
-    margin-bottom: 0;
+    margin-bottom: 10px; 
 }
 
 .menu-item-row.sold-out {
@@ -170,77 +167,80 @@ html, body {
 }
 
 .item-info {
-    flex: 0 1 auto;
-    max-width: 65%;
+    flex: 1;
+    padding-right: 8px;
+    min-width: 0;
 }
 
 .item-name {
-    font-size: 0.6rem; /* Thu nhỏ gấp đôi */
+    font-family: 'Lora', serif;
+    font-size: 0.58rem; /* Rất nhỏ, vừa màn hình */
     font-weight: 700;
-    color: #1e293b;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.item-name.sold-out-text {
-    text-decoration: line-through;
-}
-
-.item-dots {
-    flex-grow: 1;
-    border-bottom: 2px dotted #cbd5e1;
-    margin: 0 6px 2px 6px;
-    min-width: 10px; 
-    opacity: 0.7;
-}
-
-.item-price-wrap {
-    flex-shrink: 0;
-    text-align: right;
-    margin-bottom: 1px;
-}
-
-.item-price {
-    font-size: 0.65rem;
-    font-weight: 800;
-    color: var(--green);
-}
-
-.sub-price {
-    font-size: 0.5rem;
-    font-weight: 600;
-    color: #94a3b8;
-    margin-left: 2px;
-}
-
-.sold-out-badge {
-    font-size: 0.4rem;
-    background: #ef4444;
-    color: white;
-    padding: 2px 4px;
-    border-radius: 4px;
-    font-weight: 700;
-    margin-left: 4px;
+    color: var(--text);
+    line-height: 1.3;
     text-transform: uppercase;
-    vertical-align: middle;
-    letter-spacing: 0.05em;
-    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    display: flex;
+    align-items: center;
 }
 
-/* ── RIGHT: CART SECTION ── */
+.item-name.sold-out-text { text-decoration: line-through; }
+
+.item-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.48rem;
+    font-weight: 400;
+    color: var(--muted);
+    line-height: 1.3;
+    margin-top: 2px;
+}
+
+.item-prices {
+    display: flex;
+    flex-shrink: 0;
+}
+
+.price-col {
+    width: 16px;
+    text-align: right;
+    font-family: 'Lora', serif;
+    font-size: 0.58rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.price-col.m-size { margin-right: 12px; }
+
+/* BOX BÁNH MÌ CHẢO */
+.special-box {
+    border: 1px solid #333;
+    border-radius: 40px;
+    padding: 16px 20px 8px 20px;
+    position: relative;
+    margin-top: 14px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.sparkle-icon {
+    position: absolute;
+    top: -8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    fill: #1a1a1a;
+}
+
+/* ── RIGHT: CART SECTION (TỐI ƯU SIÊU NHỎ) ── */
 #cart-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-bottom: 1px solid var(--border);
     background: var(--panel2);
     flex-shrink: 0;
 }
 #cart-header h2 {
-    font-size: 0.75rem;
+    font-size: 0.6rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -249,44 +249,48 @@ html, body {
 #cart-list-wrap {
     flex: 1;
     overflow-y: auto;
-    padding: 10px;
+    padding: 6px 10px;
 }
 .cart-row {
     display: flex;
     align-items: center;
-    padding: 8px 10px;
-    border-radius: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
     background: #fff;
-    margin-bottom: 8px; /* Replaced flex gap */
+    margin-bottom: 6px;
     animation: rowIn 0.25s ease both;
     border: 1px solid var(--border);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 @keyframes rowIn { from { opacity:0; transform:translateX(12px); } to { opacity:1; transform:none; } }
 .cart-qty {
-    width: 24px; height: 24px;
-    border-radius: 6px;
+    width: 18px; height: 18px;
+    border-radius: 4px;
     background: var(--green-pale);
     color: var(--green);
     font-weight: 900;
-    font-size: 0.75rem;
+    font-size: 0.55rem;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
-    margin-right: 8px; /* Fixed gap */
+    margin-right: 6px; 
 }
 .cart-name {
     flex: 1;
-    font-size: 0.8rem;
+    font-size: 0.6rem;
     font-weight: 700;
     color: #1f2937;
-    line-height: 1.3;
+    line-height: 1.2;
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    min-width: 0;
 }
 .cart-item-price {
-    font-size: 0.85rem;
+    font-size: 0.65rem;
     font-weight: 800;
     color: var(--green);
     flex-shrink: 0;
-    margin-left: 8px; /* Fixed gap */
+    margin-left: 6px; 
 }
 #cart-empty {
     display: flex;
@@ -296,71 +300,71 @@ html, body {
     height: 100%;
     opacity: 0.3;
 }
-#cart-empty .material-symbols-outlined { font-size: 2.5rem; margin-bottom: 10px; } /* Fixed gap */
-#cart-empty p { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+#cart-empty .material-symbols-outlined { font-size: 2rem; margin-bottom: 8px; }
+#cart-empty p { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
 
 /* ── TOTAL BAR ── */
 #total-bar {
-    padding: 16px;
+    padding: 10px 14px;
     border-top: 1px solid var(--border);
     background: #fff;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.02);
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.02);
 }
 #customer-chip {
     display: flex;
     align-items: center;
     min-width: 0;
-    margin-bottom: 12px; /* Replaced flex gap */
+    margin-bottom: 8px; 
 }
 #customer-chip .avatar {
-    width: 30px; height: 30px;
+    width: 20px; height: 20px;
     background: var(--green);
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
-    margin-right: 8px; /* Fixed gap */
+    margin-right: 6px; 
 }
-#customer-chip .avatar .material-symbols-outlined { font-size: 1rem; color: white; }
-#customer-chip .cust-name { font-size: 0.8rem; font-weight: 800; color: var(--green); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#customer-chip .cust-pts { font-size: 0.6rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 0.08em; }
+#customer-chip .avatar .material-symbols-outlined { font-size: 0.7rem; color: white; }
+#customer-chip .cust-name { font-size: 0.65rem; font-weight: 800; color: var(--green); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;}
+#customer-chip .cust-pts { font-size: 0.5rem; font-weight: 700; color: #16a34a; text-transform: uppercase; letter-spacing: 0.08em; }
 #welcome-msg {
     display: flex;
     align-items: center;
     opacity: 0.4;
-    font-size: 0.75rem;
+    font-size: 0.6rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.1em;
 }
 #welcome-msg .material-symbols-outlined {
-    font-size: 1.1rem !important;
-    margin-right: 6px; /* Fixed gap */
+    font-size: 0.8rem !important;
+    margin-right: 4px; 
 }
 #total-right { 
     display: flex; 
     flex-direction: column; 
     align-items: flex-start;
-    padding-top: 10px;
+    padding-top: 8px;
     border-top: 1px dashed var(--border);
 }
-#total-label { font-size: 0.7rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 2px;}
-#total-amount { font-size: 1.6rem; font-weight: 900; color: var(--green); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px;}
+#total-label { font-size: 0.55rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 2px;}
+#total-amount { font-size: 1.2rem; font-weight: 900; color: var(--green); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -1px;}
 #cash-info {
     display: none;
-    margin-top: 10px;
+    margin-top: 6px;
     border-top: 1px dashed #e5e7eb;
-    padding-top: 10px;
+    padding-top: 6px;
     width: 100%;
     flex-direction: column;
 }
-.cash-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; } /* Fixed gap */
+.cash-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .cash-row:last-child { margin-bottom: 0; }
-.cash-label { font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
-#screen-paid  { font-size: 0.95rem; font-weight: 900; color: #1f2937; }
-#screen-change { font-size: 1.1rem; font-weight: 900; color: var(--amber); }
+.cash-label { font-size: 0.55rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+#screen-paid  { font-size: 0.75rem; font-weight: 900; color: #1f2937; }
+#screen-change { font-size: 0.85rem; font-weight: 900; color: var(--amber); }
 
 /* ══ OVERLAYS ══ */
 #view-qr {
@@ -374,12 +378,12 @@ html, body {
     animation: fadeInUp 0.35s ease both;
 }
 #view-qr.active { display: flex; }
-#view-qr h2 { font-size: 1.1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.18em; color: var(--green); text-align: center; padding: 0 10px;}
-#qr-card { background: #fff; padding: 16px; border-radius: 20px; box-shadow: 0 8px 40px rgba(0,98,65,0.18); border: 2px solid #e5e7eb; margin: 16px 0; } /* Fixed gap */
-#qr-image { width: 200px; height: 200px; object-fit: contain; border-radius: 10px; }
-#qr-amount-wrap { text-align: center; background: var(--green-pale); border: 1px solid #bbf7d0; border-radius: 16px; padding: 10px 20px; }
-#qr-amount-label { font-size: 0.65rem; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 0.15em; }
-#qr-amount { font-size: 2rem; font-weight: 900; color: var(--green); font-variant-numeric: tabular-nums; }
+#view-qr h2 { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.18em; color: var(--green); text-align: center; padding: 0 10px;}
+#qr-card { background: #fff; padding: 12px; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,98,65,0.15); border: 1px solid #e5e7eb; margin: 12px 0; }
+#qr-image { width: 160px; height: 160px; object-fit: contain; border-radius: 8px; }
+#qr-amount-wrap { text-align: center; background: var(--green-pale); border: 1px solid #bbf7d0; border-radius: 12px; padding: 8px 16px; }
+#qr-amount-label { font-size: 0.55rem; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 0.15em; }
+#qr-amount { font-size: 1.5rem; font-weight: 900; color: var(--green); font-variant-numeric: tabular-nums; }
 
 #view-success {
     display: none;
@@ -392,9 +396,9 @@ html, body {
     animation: fadeInUp 0.3s ease both;
 }
 #view-success.active { display: flex; }
-#view-success .material-symbols-outlined { font-size: 5rem; margin-bottom: 12px; } /* Fixed gap */
-#view-success h2 { font-size: 2.2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
-#view-success p  { font-size: 1rem; font-weight: 600; opacity: 0.8; text-align: center; padding: 0 20px;}
+#view-success .material-symbols-outlined { font-size: 4rem; margin-bottom: 8px; }
+#view-success h2 { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+#view-success p  { font-size: 0.8rem; font-weight: 600; opacity: 0.8; text-align: center; padding: 0 20px;}
 
 #screensaver {
     display: none;
@@ -422,14 +426,14 @@ html, body {
     animation: fadeInUp 0.25s ease;
 }
 #view-phone.active { display: flex; }
-#phone-box { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 28px; padding: 28px; width: 400px; box-shadow: 0 24px 80px rgba(0,0,0,0.2); }
-#phone-box h3 { font-size: 1.05rem; font-weight: 900; color: var(--green); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px; text-align: center;}
-#native-phone { width: 100%; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 16px; color: #1e3932; font-size: 2rem; font-weight: 900; text-align: center; padding: 14px; outline: none; letter-spacing: 0.12em; margin-bottom: 16px; transition: border-color 0.2s; font-family: inherit; }
+#phone-box { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 20px; padding: 24px; width: 340px; box-shadow: 0 24px 80px rgba(0,0,0,0.2); }
+#phone-box h3 { font-size: 0.9rem; font-weight: 900; color: var(--green); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px; text-align: center;}
+#native-phone { width: 100%; background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; color: #1e3932; font-size: 1.6rem; font-weight: 900; text-align: center; padding: 10px; outline: none; letter-spacing: 0.12em; margin-bottom: 12px; transition: border-color 0.2s; font-family: inherit; }
 #native-phone:focus { border-color: var(--green); background: #fff; }
 .phone-btns { display: flex; }
-.phone-btns button { flex: 1; padding: 12px; border: none; border-radius: 12px; font-size: 0.85rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; transition: opacity 0.2s; }
+.phone-btns button { flex: 1; padding: 10px; border: none; border-radius: 8px; font-size: 0.75rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.06em; transition: opacity 0.2s; }
 .phone-btns button:active { opacity: 0.7; }
-#btn-cancel-phone { background: #f1f5f9; color: #64748b; margin-right: 12px; } /* Fixed gap */
+#btn-cancel-phone { background: #f1f5f9; color: #64748b; margin-right: 10px; }
 #btn-submit-phone { background: var(--green); color: #fff; flex: 2; }
 
 </style>
@@ -525,7 +529,7 @@ html, body {
         <div id="view-success">
             <span class="material-symbols-outlined">task_alt</span>
             <h2>Hoàn tất!</h2>
-            <p>Món của bạn đang được chuẩn bị</p>
+            <p>Món đang được chuẩn bị</p>
         </div>
 
     </div>
@@ -630,11 +634,58 @@ var DEFAULT_SLIDES = [
     { src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1770299826548.jpg?alt=media&token=c3e3fad2-b9b3-48e8-aad8-bd5658a3f386', duration:6000 }
 ];
 
-// ── RENDER STATIC MENU BOARD
+// Mô phỏng Description hệt như ảnh trong trường hợp Firebase chưa cập nhật `desc`
+var mockDesc = {
+    "TRÀ SỮA LONG NHÃN": "Trà sữa, mứt long nhãn, trân châu 3Q",
+    "TRÀ SỮA OREO": "Trà sữa, bánh oreo vụn, trân châu 3Q",
+    "SỮA TƯƠI ĐƯỜNG ĐEN": "Sữa béo, trân châu 3Q, đường đen",
+    "SỮA TƯƠI MATCHA": "Sữa tươi hốn, trân châu 3Q, đường đen, matcha",
+    "SỮA TƯƠI OREO": "Sữa tươi béo, trân châu 3Q, đường đen, oreo",
+    "CAFE SỮA ĐÁ": "Cà phê, sữa đặc",
+    "BẠC XỈU": "Cà phê, sữa đặc, sữa tươi",
+    "MATCHA LATTE": "Matcha Đài Loan, sữa béo",
+    "CHOCO LATTE": "Sữa béo, socola",
+    "CAFE LATTE": "Sữa béo, cafe",
+    "THÁI ĐỎ LATTE": "Trà thái đỏ, sữa béo",
+    "MATCHA LATTE SỐ 3": "Matcha Nhật Bản, sữa béo",
+    "MATCHA ĐÁ XAY": "Trà xanh, sữa, kem",
+    "SWEET LOVE": "Dâu tây, sữa, kem",
+    "OREO & CHOCO": "Oreo, socola, sữa, kem",
+    "HOLA PASSION": "Chanh dây, sữa, kem",
+    "KEM TUYẾT DÂU TÂY": "Dâu tây, trân châu 3Q",
+    "KEM TUYẾT MÙA HẠ": "Chanh dây, thơm, xoài, trân châu 3Q",
+    "KEM TUYẾT CHANH DÂY": "Chanh dây, trân châu 3Q",
+    "THẬP CẨM CHIÊN": "Cá viên, cá miếng, xúc xích, chả giò (50)",
+    "BÁNH TRÁNG NƯỚNG": "Bánh tráng, trứng, hành phi, hành, chà bông, mayo, tương ớt, phomai lát",
+    "BÁNH TRÁNG CUỘN": "Bánh tráng, trứng, hành phi, xoài, đậu phộng, rau răm, mayo, tương ớt, sốt me",
+    "BÁNH TRÁNG TRỘN": "Bánh tráng, trứng, hành phi, xoài, đậu phộng, rau răm, sốt me",
+    "CÁ VIÊN CHIÊN": "Cá viên, tương đen, tương ớt",
+    "TRÀ ĐÀO": "Trà đào, trân châu 3Q, 1/2 trái đào",
+    "TRÀ CHanh dây": "Chanh dây, thơm, trân châu 3Q",
+    "TRÀ DƯA LƯỚI": "Trà dưa lưới, trân châu 3Q",
+    "TRÀ KIWI": "Trà kiwi, trân châu 3Q",
+    "TRÀ QUÝT JEJU": "Trà lài, quýt, trân châu 3Q",
+    "TRÀ BƯỞI YUZU": "Trà lài, bưởi, yuzu, trân châu 3Q",
+    "TRÀ LONG NHÃN": "Long nhãn, táo đỏ, hạt sen, trân châu 3Q",
+    "BÁNH MÌ CHẢO": "Mì sợi phở, cải thìa, chả cá, xúc xích, trứng chiên, hành phi, sốt mì trộn",
+    "MÌ TRỘN": "Mì sợi phở, cải thìa, chả cá, xúc xích, trứng chiên, hành phi, sốt mì trộn"
+};
+
+// Check các món có Ngôi sao Vàng như trong ảnh
+function getStar(name) {
+    var starItems = ['BẠC XỈU', 'MATCHA ĐÁ XAY', 'THÁI ĐỎ LATTE', 'TRÀ LONG NHÃN'];
+    var hasStar = starItems.some(function(sn) { return name.toUpperCase().includes(sn); });
+    if (hasStar) {
+        return '<svg style="width:12px;height:12px;display:inline-block;margin-left:4px;transform:translateY(1px)" viewBox="0 0 24 24" fill="#FFD700"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>';
+    }
+    return '';
+}
+
+// ── RENDER STATIC MENU BOARD THEO ẢNH MẪU ──
 function renderMenuBoard() {
     var grid = document.getElementById('menu-static-grid');
     
-    // Gom nhóm menu theo Category (type)
+    // Gom nhóm menu
     var groups = {};
     menuData.forEach(function(m) {
         var cat = m.type || 'Khác';
@@ -644,32 +695,63 @@ function renderMenuBoard() {
 
     var html = '';
     
+    // Sinh HTML render Row chuẩn
+    function renderRow(m) {
+        var isSoldOut = !!soldOutItems[m.name];
+        var priceM = m.priceM || 0;
+        var priceL = m.priceL || 0;
+        
+        // Render dạng số trần ko chữ 'k', đúng như ảnh
+        var pM = priceM > 0 ? (priceM/1000) : '';
+        var pL = priceL > 0 ? (priceL/1000) : '';
+        
+        var rowClass = isSoldOut ? 'menu-item-row sold-out' : 'menu-item-row';
+        var nameClass = isSoldOut ? 'item-name sold-out-text' : 'item-name';
+        var descText = m.desc || mockDesc[m.name.toUpperCase()] || '';
+
+        var str = '<div class="' + rowClass + '">';
+        str +=   '<div class="item-info">';
+        str +=     '<div class="' + nameClass + '">' + m.name + getStar(m.name) + (isSoldOut ? '<span class="sold-out-badge">Hết</span>' : '') + '</div>';
+        if (descText) str += '<div class="item-desc">' + descText + '</div>';
+        str +=   '</div>';
+        
+        // Bỏ chấm bi, ép giá tiền thẳng tắp sát lề phải
+        str +=   '<div class="item-prices">';
+        str +=     '<div class="price-col m-size">' + pM + '</div>';
+        str +=     '<div class="price-col">' + pL + '</div>';
+        str +=   '</div>';
+        str += '</div>';
+        return str;
+    }
+
     for (var cat in groups) {
         if (groups[cat].length === 0) continue;
         
         html += '<div class="category-section">';
         html += '<div class="category-header">' + cat + '</div>';
         
+        var normalItems = [];
+        var specialBoxItems = [];
+        
+        // Lọc riêng Bánh Mì Chảo & Mì Trộn để làm Khung bo góc
         groups[cat].forEach(function(m) {
-            var isSoldOut = !!soldOutItems[m.name];
-            var priceM = m.priceM || 0;
-            var priceL = m.priceL || 0;
-            var priceLabel = priceM > 0 ? (priceM/1000) + 'k' : (priceL > 0 ? (priceL/1000) + 'k' : '—');
-            var priceSub   = (priceM > 0 && priceL > 0) ? '<span class="sub-price">/' + (priceL/1000) + 'k</span>' : '';
-            
-            var rowClass = isSoldOut ? 'menu-item-row sold-out' : 'menu-item-row';
-            var nameClass = isSoldOut ? 'item-name sold-out-text' : 'item-name';
-
-            html += '<div class="' + rowClass + '">';
-            html +=   '<div class="item-info">';
-            html +=     '<div class="' + nameClass + '">' + m.name + (isSoldOut ? '<span class="sold-out-badge">Hết</span>' : '') + '</div>';
-            html +=   '</div>';
-            html +=   '<div class="item-dots"></div>';
-            html +=   '<div class="item-price-wrap">';
-            html +=     '<span class="item-price">' + priceLabel + priceSub + '</span>';
-            html +=   '</div>';
-            html += '</div>';
+            if (m.name.toUpperCase().includes("BÁNH MÌ") || m.name.toUpperCase().includes("MÌ TRỘN")) {
+                specialBoxItems.push(m);
+            } else {
+                normalItems.push(m);
+            }
         });
+
+        normalItems.forEach(function(m) { html += renderRow(m); });
+        
+        // Render Box Bánh mì
+        if (specialBoxItems.length > 0) {
+            html += '<div class="special-box">';
+            specialBoxItems.forEach(function(m) { html += renderRow(m); });
+            // Sparkle icon lấp lánh (✨) gắn viền box
+            html += '<svg class="sparkle-icon" viewBox="0 0 24 24"><path d="M12 0L13.5 8.5L22 10L13.5 11.5L12 20L10.5 11.5L2 10L10.5 8.5L12 0Z"/></svg>';
+            html += '</div>';
+        }
         
         html += '</div>'; 
     }
@@ -746,7 +828,7 @@ function renderCart(data) {
     }
     emptyEl.style.display = 'none';
     listEl.innerHTML = data.cart.map(function(item){
-        var sizeBadge = item.size ? '<span style="font-size:0.55rem;font-weight:800;background:#e2e8f0;color:#475569;padding:2px 4px;border-radius:4px;margin-left:4px;vertical-align:middle;">' + item.size + '</span>' : '';
+        var sizeBadge = item.size ? '<span style="font-size:0.45rem;font-weight:800;background:#e2e8f0;color:#475569;padding:2px 4px;border-radius:4px;margin-left:4px;vertical-align:middle;">' + item.size + '</span>' : '';
         return '<div class="cart-row">'
             + '<div class="cart-qty">' + item.qty + '</div>'
             + '<div class="cart-name">' + item.name + sizeBadge + '</div>'
