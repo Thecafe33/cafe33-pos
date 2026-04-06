@@ -14,6 +14,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800;900&display=swap" rel="stylesheet">
@@ -67,10 +68,10 @@ html, body {
     padding: 12px;
 }
 
-/* Khu vực trên cùng: Logo + Banner */
+/* Khu vực trên cùng: Banner */
 #header-layout {
     position: relative;
-    height: 80px;
+    height: 120px;
     width: 100%;
     flex-shrink: 0;
     border-radius: 16px;
@@ -97,14 +98,14 @@ html, body {
     flex: 1;
     overflow: hidden;
     width: 100%;
-    gap: 16px;
 }
 
-/* Cột trái: Slide ảnh */
+/* Cột trái: Slide ảnh (Fix cứng 320px) */
 #ph-slide {
-    width: 25%;
+    width: 320px;
     flex-shrink: 0;
     overflow: hidden;
+    margin-right: 16px;
 }
 
 /* Cột giữa: Menu & Nổi bật */
@@ -114,6 +115,7 @@ html, body {
     flex-direction: column;
     overflow: hidden;
     min-width: 0;
+    margin-right: 16px;
 }
 
 /* Món nổi bật (Top center) */
@@ -155,7 +157,8 @@ html, body {
 .items-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px 8px;
+    row-gap: 12px;
+    column-gap: 8px;
 }
 
 /* Card từng món ăn */
@@ -200,6 +203,13 @@ html, body {
     font-weight: 800;
     color: var(--text);
     margin-top: auto; /* Đẩy giá xuống đáy */
+}
+
+/* Cột phải: Toppings (Fix cứng 220px) */
+#ph-toppings {
+    width: 220px;
+    flex-shrink: 0;
+    overflow: hidden;
 }
 
 /* ── RIGHT PANEL (25%) : CART ── */
@@ -401,7 +411,6 @@ html, body {
 
 @keyframes pulse { 0%,100%{opacity:0.7} 50%{opacity:1} }
 @keyframes fadeInUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
-
 @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
 
 </style>
@@ -410,21 +419,27 @@ html, body {
 
 <div id="root">
 
+    <!-- ══════════════════════════════════ LEFT — NEW LAYOUT (75%) ═══════════════════════════════ -->
     <div id="panel-left">
 
+        <!-- Top Row: Banner -->
         <div id="header-layout" class="img-placeholder">
             <span class="material-symbols-outlined">image</span>
-            <span style="font-family:'Inter'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Banner</span>
+            <span style="font-family:'Inter'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Banner (1416x120px)</span>
         </div>
 
+        <!-- Main Body -->
         <div id="body-layout">
             
+            <!-- Cột trái slide -->
             <div id="ph-slide" class="img-placeholder">
                 <span class="material-symbols-outlined" style="font-size: 3rem;">image</span>
-                <span style="font-family:'Inter'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Slide</span>
+                <span style="font-family:'Inter'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Slide (320x924px)</span>
             </div>
 
+            <!-- Cột giữa Menu -->
             <div id="center-layout">
+                <!-- 3 món nổi bật -->
                 <div id="featured-section">
                     <div class="img-placeholder" style="flex:1; border-radius:16px;">
                         <span class="material-symbols-outlined">local_cafe</span>
@@ -437,17 +452,29 @@ html, body {
                     </div>
                 </div>
 
+                <!-- Lưới danh mục -->
                 <div id="menu-board-container">
                     <div id="menu-static-grid" class="categories-wrapper">
-                        </div>
+                        <!-- Đổ JS vào đây -->
+                    </div>
                 </div>
+            </div>
+
+            <!-- Cột phải Toppings -->
+            <div id="ph-toppings" class="img-placeholder">
+                <span class="material-symbols-outlined" style="font-size: 3rem;">image</span>
+                <span style="font-family:'Inter'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1;">Toppings (220x924px)</span>
             </div>
 
         </div>
 
     </div>
+    <!-- ══════════════════════════════════ END LEFT ════════════════════════════════ -->
+
+    <!-- ══════════════════════════════════ RIGHT — CART (25%) ═════════════════════ -->
     <div id="panel-right">
 
+        <!-- Cart section -->
         <div id="cart-header">
             <h2>Chi tiết order</h2>
             <div style="display:flex;align-items:center;opacity:0.6;">
@@ -491,6 +518,7 @@ html, body {
             </div>
         </div>
 
+        <!-- QR overlay -->
         <div id="view-qr">
             <h2>Quét mã thanh toán</h2>
             <div id="qr-card">
@@ -502,6 +530,7 @@ html, body {
             </div>
         </div>
 
+        <!-- Success overlay -->
         <div id="view-success">
             <span class="material-symbols-outlined">task_alt</span>
             <h2>Hoàn tất!</h2>
@@ -509,7 +538,12 @@ html, body {
         </div>
 
     </div>
-    </div><div id="screensaver">
+    <!-- ══════════════════════════════════ END RIGHT ═══════════════════════════════ -->
+
+</div><!-- #root -->
+
+<!-- SCREENSAVER -->
+<div id="screensaver">
     <div id="ss-layer-1"></div>
     <div id="ss-layer-2"></div>
     <div id="ss-brand">
@@ -517,10 +551,13 @@ html, body {
     </div>
 </div>
 
+<!-- ================================================================
+     SCRIPTS
+================================================================ -->
 <script>
 'use strict';
 
-// ── AUDIO
+// ── AUDIO ──
 var _audioCtx = null;
 function getAudioCtx() {
     if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -561,7 +598,7 @@ function playSound(type){ playJingle(type); }
 document.addEventListener('click',      function(){ getAudioCtx(); }, { once: true });
 document.addEventListener('touchstart', function(){ getAudioCtx(); }, { once: true });
 
-// ── FIREBASE INIT
+// ── FIREBASE INIT ──
 var firebaseConfig = {
     apiKey:            "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
     authDomain:        "the-cafe-33.firebaseapp.com",
@@ -573,12 +610,14 @@ var firebaseConfig = {
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var db     = firebase.database();
+var fstore = firebase.firestore();
 var auth   = firebase.auth();
 
-// ── STATE
+// ── STATE ──
 var menuData      = [];
 var soldOutItems  = {};
-var menuConfig    = {};
+var screen2026Config = {};
+
 var ssPlaylist    = [];
 var ssIndex       = -1;
 var ssActive      = 1;
@@ -587,153 +626,255 @@ var ssRunning     = false;
 var slideTimer    = null;
 var currentSlideIdx = -1;
 
-// ── RENDER DYNAMIC CONFIG TỪ POS ──
-function applyMenuConfig() {
-    // 1. Banner & Logo
-    var headerLayout = document.getElementById('header-layout');
-    if (headerLayout) {
-        var logoHtml = '';
-        if (menuConfig.logo) {
-            logoHtml = '<div id="ph-logo" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 14%; height: 64px; z-index: 2; background: white; border-radius: 12px; padding: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"><img src="'+menuConfig.logo+'" style="width:100%;height:100%;object-fit:contain;border-radius:10px;"></div>';
-        }
+window._screenConfigLoaded = false;
 
-        if (menuConfig.banner) {
-            headerLayout.innerHTML = logoHtml + '<img src="'+menuConfig.banner+'" style="position: absolute; inset: 0; width:100%; height:100%; object-fit:cover; border-radius:16px; z-index: 1;">';
-            headerLayout.className = '';
-            headerLayout.style.background = 'transparent';
-            headerLayout.style.border = 'none';
-        } else {
-            headerLayout.innerHTML = logoHtml + '<span class="material-symbols-outlined" style="position: relative; z-index: 1;">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1; position: relative; z-index: 1;">Banner</span>';
-            headerLayout.className = 'img-placeholder';
-            headerLayout.style.background = '';
-            headerLayout.style.border = '';
-        }
-    }
+// ── LẮNG NGHE CONFIG MỚI TỪ FIRESTORE (SCREEN 2026) ──
+function listenScreenConfig2026() {
+    fstore.collection('config_xolifa').doc('screen_2026').onSnapshot(function(doc) {
+        try {
+            var data = doc.exists ? doc.data() : {};
+            // Luôn đảm bảo cấu trúc mặc định an toàn tuyệt đối
+            screen2026Config = {
+                banner: data.banner || null,
+                slides: data.slides || [],
+                menuImages: data.menuImages || {},
+                toppings: data.toppings || [],
+                featured: data.featured || []
+            };
+            window._screenConfigLoaded = true;
 
-    // 2. Slides (Slideshow)
-    var slideEl = document.getElementById('ph-slide');
-    if (slideEl) {
-        if (menuConfig.slides && menuConfig.slides.length > 0) {
-            slideEl.className = '';
-            slideEl.style.background = 'transparent';
-            slideEl.style.border = 'none';
-
-            function showNextSlide() {
-                if (!menuConfig.slides || menuConfig.slides.length === 0) return;
-                currentSlideIdx = (currentSlideIdx + 1) % menuConfig.slides.length;
-                slideEl.innerHTML = '<img src="'+menuConfig.slides[currentSlideIdx]+'" style="width:100%;height:100%;object-fit:cover;border-radius:16px;animation: fadeIn 1s ease;">';
-                clearTimeout(slideTimer);
-                slideTimer = setTimeout(showNextSlide, 6000); // 6s per slide
+            // Nếu menuData đã được load thì tiến hành vẽ giao diện
+            if (menuData.length > 0) {
+                applyScreenConfig2026();
+                renderMenuBoard();
             }
-            if (!slideTimer) showNextSlide();
-            
-            // Sync to screensaver
-            ssPlaylist = menuConfig.slides.map(function(s) { return {src: s, duration: 6000}; });
-        } else {
-            clearTimeout(slideTimer);
-            slideTimer = null;
-            slideEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 3rem;">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1; text-align:center;">Slides</span>';
-            slideEl.className = 'img-placeholder';
-            slideEl.style.background = '';
-            slideEl.style.border = '';
-            ssPlaylist = [];
+        } catch (e) {
+            console.error("Lỗi áp dụng cấu hình screen 2026:", e);
         }
-    }
+    }, function(err) {
+        console.error("Lỗi tải cấu hình screen 2026:", err);
+    });
+}
 
-    // 3. Featured Items
-    var featSection = document.getElementById('featured-section');
-    if (featSection && menuConfig.featured && menuConfig.featured.length > 0) {
-        var html = '';
-        var drinkImgs = menuConfig.drinkImages || {};
+function applyScreenConfig2026() {
+    try {
+        var config = screen2026Config || {};
+        var banner = config.banner;
+        var slides = config.slides || [];
+        var toppings = config.toppings || [];
+        var featured = config.featured || [];
+        var menuImages = config.menuImages || {};
 
-        for(var i=0; i<3; i++) {
-            var fKey = menuConfig.featured[i];
-            var mItem = menuData.find(function(m){ return m._key === fKey; });
+        // 1. Banner
+        var headerLayout = document.getElementById('header-layout');
+        if (headerLayout) {
+            var bannerUrl = banner ? (banner.url || banner) : null;
+            if (typeof bannerUrl === 'object') bannerUrl = bannerUrl.url;
 
-            if (mItem) {
-                var imgUrl = drinkImgs[fKey];
-                var imgHtml = imgUrl ? '<img src="'+imgUrl+'" style="width:100%;height:100%;object-fit:contain;">' : '<span class="material-symbols-outlined" style="color:#cbd5e1; font-size: 1.5rem;">local_cafe</span>';
-
-                var pM = mItem.priceM > 0 ? (mItem.priceM/1000) : '';
-                var pL = mItem.priceL > 0 ? (mItem.priceL/1000) : '';
-                var priceStr = pM;
-                if(pL) priceStr += (priceStr ? ' | ' : '') + pL;
-                if(!priceStr) priceStr = '—';
-
-                html += '<div style="flex:1; background:#fff; border-radius:16px; display:flex; align-items:center; padding:10px 12px; box-shadow:0 4px 15px rgba(0,0,0,0.03); border:1px solid #f3f4f6; box-sizing: border-box;">' +
-                          '<div style="width:40px; height:60px; background:#f8fafc; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">'+imgHtml+'</div>' +
-                          '<div style="flex:1; display:flex; flex-direction:column; text-align:left; padding-left:10px; min-width:0;">' +
-                            '<span style="font-size:0.75rem; font-weight:800; color:#1e293b; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+mItem.name+'</span>' +
-                            '<span style="font-size:0.9rem; font-weight:900; color:#006241; margin-top:2px;">'+priceStr+'</span>' +
-                          '</div>' +
-                        '</div>';
+            if (bannerUrl) {
+                headerLayout.innerHTML = '<img src="'+bannerUrl+'" style="position: absolute; inset: 0; width:100%; height:100%; object-fit:fill; border-radius:16px; z-index: 1;">';
+                headerLayout.className = '';
+                headerLayout.style.background = 'transparent';
+                headerLayout.style.border = 'none';
             } else {
-                html += '<div class="img-placeholder" style="flex:1; border-radius:16px; box-sizing: border-box; min-height:82px;"><span class="material-symbols-outlined" style="font-size:1.5rem;">local_cafe</span></div>';
+                headerLayout.innerHTML = '<span class="material-symbols-outlined" style="position: relative; z-index: 1;">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1; position: relative; z-index: 1;">Banner (1416x120px)</span>';
+                headerLayout.className = 'img-placeholder';
+                headerLayout.style.background = '';
+                headerLayout.style.border = '';
             }
         }
-        featSection.innerHTML = html;
+
+        // 2. Slides (Slideshow cột trái)
+        var slideEl = document.getElementById('ph-slide');
+        if (slideEl) {
+            if (slides.length > 0) {
+                slideEl.className = '';
+                slideEl.style.background = 'transparent';
+                slideEl.style.border = 'none';
+
+                function showNextSlide() {
+                    if (!slides || slides.length === 0) return;
+                    currentSlideIdx = (currentSlideIdx + 1) % slides.length;
+                    var sData = slides[currentSlideIdx];
+                    var sUrl = sData ? (sData.url || sData) : '';
+                    if (typeof sUrl === 'object') sUrl = sUrl.url;
+                    
+                    if (sUrl) {
+                        slideEl.innerHTML = '<img src="'+sUrl+'" style="width:100%;height:100%;object-fit:fill;border-radius:16px;animation: fadeIn 1s ease;">';
+                    }
+                    clearTimeout(slideTimer);
+                    slideTimer = setTimeout(showNextSlide, (sData.duration || 8) * 1000); 
+                }
+                if (!slideTimer) showNextSlide();
+                
+                // Sync to screensaver
+                ssPlaylist = slides.map(function(s) { 
+                    var su = s.url || s; if (typeof su === 'object') su = su.url;
+                    return {src: su, duration: (s.duration||8)*1000}; 
+                });
+            } else {
+                clearTimeout(slideTimer);
+                slideTimer = null;
+                slideEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 3rem;">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1; text-align:center;">Slide (320x924px)</span>';
+                slideEl.className = 'img-placeholder';
+                slideEl.style.background = '';
+                slideEl.style.border = '';
+                ssPlaylist = [];
+            }
+        }
+
+        // 3. Toppings (Cột phải)
+        var topEl = document.getElementById('ph-toppings');
+        if (topEl) {
+            if (toppings.length > 0) {
+                var tUrl = toppings[0] ? (toppings[0].url || toppings[0]) : '';
+                if (typeof tUrl === 'object') tUrl = tUrl.url;
+                if (tUrl) {
+                    topEl.innerHTML = '<img src="'+tUrl+'" style="width:100%;height:100%;object-fit:fill;border-radius:16px;">';
+                    topEl.className = '';
+                    topEl.style.background = 'transparent';
+                    topEl.style.border = 'none';
+                }
+            } else {
+                topEl.innerHTML = '<span class="material-symbols-outlined" style="font-size: 3rem;">image</span><span style="font-family:\'Inter\'; font-weight:800; font-size:1.2rem; margin-top:8px; color:#cbd5e1; text-align:center;">Toppings (220x924px)</span>';
+                topEl.className = 'img-placeholder';
+                topEl.style.background = '';
+                topEl.style.border = '';
+            }
+        }
+
+        // 4. Featured Items (Món nổi bật)
+        var featSection = document.getElementById('featured-section');
+        if (featSection) {
+            var html = '';
+            for(var i=0; i<3; i++) {
+                var fData = featured[i];
+                var mItem = fData ? menuData.find(function(m){ return m._origIdx == fData.idx; }) : null;
+
+                if (mItem) {
+                    var imgData = menuImages[fData.idx];
+                    var imgUrl = imgData ? (imgData.url || imgData) : null;
+                    if (typeof imgUrl === 'object') imgUrl = imgUrl.url;
+                    
+                    var imgHtml = imgUrl ? '<img src="'+imgUrl+'" style="width:100%;height:100%;object-fit:contain;">' : '<span class="material-symbols-outlined" style="color:#cbd5e1; font-size: 1.5rem;">local_cafe</span>';
+
+                    var pM = mItem.priceM > 0 ? (mItem.priceM/1000) : '';
+                    var pL = mItem.priceL > 0 ? (mItem.priceL/1000) : '';
+                    var priceStr = pM;
+                    if(pL) priceStr += (priceStr ? ' | ' : '') + pL;
+                    if(!priceStr) priceStr = '—';
+
+                    html += '<div style="flex:1; background:#fff; border-radius:16px; display:flex; align-items:center; padding:10px 12px; box-shadow:0 4px 15px rgba(0,0,0,0.03); border:1px solid #f3f4f6; box-sizing: border-box; gap: 10px;">' +
+                              '<div style="width:40px; height:60px; background:#f8fafc; border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;">'+imgHtml+'</div>' +
+                              '<div style="flex:1; display:flex; flex-direction:column; text-align:left; min-width:0;">' +
+                                '<span style="font-size:0.75rem; font-weight:800; color:#1e293b; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+mItem.name+'</span>' +
+                                '<span style="font-size:0.9rem; font-weight:900; color:#006241; margin-top:2px;">'+priceStr+'</span>' +
+                              '</div>' +
+                            '</div>';
+                } else {
+                    html += '<div class="img-placeholder" style="flex:1; border-radius:16px; box-sizing: border-box; min-height:82px;"><span class="material-symbols-outlined" style="font-size:1.5rem;">local_cafe</span></div>';
+                }
+            }
+            featSection.innerHTML = html;
+        }
+    } catch(e) {
+        console.error("Lỗi Render applyScreenConfig2026:", e);
     }
 }
 
 // ── RENDER MENU BẢNG CHÍNH ──
 function renderMenuBoard() {
     var grid = document.getElementById('menu-static-grid');
-    var drinkImgs = menuConfig.drinkImages || {};
-    var featuredKeys = menuConfig.featured || [];
+    if (!grid) return;
     
-    // Gom nhóm menu
-    var groups = {};
-    menuData.forEach(function(m) {
-        // NẾU LÀ MÓN NỔI BẬT -> ẨN KHỎI MENU BÊN DƯỚI
-        if (featuredKeys.includes(m._key)) return;
-
-        var cat = m.type || 'Khác';
-        if (!groups[cat]) groups[cat] = [];
-        groups[cat].push(m);
-    });
-
-    var html = '';
-    
-    for (var cat in groups) {
-        if (groups[cat].length === 0) continue;
+    try {
+        var config = screen2026Config || {};
+        var featured = config.featured || [];
+        var menuImages = config.menuImages || {};
+        var featIndices = featured.map(function(f){ return String(f.idx); });
         
-        html += '<div class="category-block">';
-        html += '<div class="category-title">' + cat + '</div>';
-        html += '<div class="items-grid">';
-        
-        groups[cat].forEach(function(m) {
-            var isSoldOut = !!soldOutItems[m.name];
-            var pM = m.priceM > 0 ? (m.priceM/1000) : '';
-            var pL = m.priceL > 0 ? (m.priceL/1000) : '';
-            
-            var priceStr = pM;
-            if (pL) priceStr += (priceStr ? ' | ' : '') + pL;
-            if (!priceStr) priceStr = '—';
-            
-            var cardClass = isSoldOut ? 'item-card sold-out' : 'item-card';
+        // Gom nhóm menu
+        var groups = {};
+        menuData.forEach(function(m) {
+            // NẾU LÀ MÓN NỔI BẬT -> ẨN KHỎI MENU BÊN DƯỚI
+            if (featIndices.includes(String(m._origIdx))) return;
 
-            var imgUrl = drinkImgs[m._key];
-            var imgHtml = imgUrl ? '<img src="'+imgUrl+'" style="width:100%;height:100%;object-fit:contain;">' : '<span class="material-symbols-outlined">local_cafe</span>';
-            var bgStyle = imgUrl ? 'background:transparent; border-color:transparent;' : '';
-
-            html += '<div class="' + cardClass + '">';
-            html +=   '<div class="item-img-ph" style="'+bgStyle+'">' + imgHtml + '</div>';
-            html +=   '<div class="item-card-name">' + m.name + '</div>';
-            html +=   '<div class="item-card-price">' + priceStr + '</div>';
-            html += '</div>';
+            var cat = m.type || 'Khác';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(m);
         });
-        
-        html += '</div></div>'; 
-    }
 
-    if (Object.keys(groups).length === 0) {
-         grid.innerHTML = '<div style="text-align:center; padding: 50px; opacity:0.4;">Không có dữ liệu menu</div>';
-    } else {
-         grid.innerHTML = html;
+        var html = '';
+        
+        for (var cat in groups) {
+            if (groups[cat].length === 0) continue;
+            
+            html += '<div class="category-block">';
+            html += '<div class="category-title">' + cat + '</div>';
+            html += '<div class="items-grid">';
+            
+            groups[cat].forEach(function(m) {
+                var isSoldOut = soldOutItems && !!soldOutItems[m.name];
+                var pM = m.priceM > 0 ? (m.priceM/1000) : '';
+                var pL = m.priceL > 0 ? (m.priceL/1000) : '';
+                
+                var priceStr = pM;
+                if (pL) priceStr += (priceStr ? ' | ' : '') + pL;
+                if (!priceStr) priceStr = '—';
+                
+                var cardClass = isSoldOut ? 'item-card sold-out' : 'item-card';
+
+                var imgData = menuImages[m._origIdx];
+                var imgUrl = imgData ? (imgData.url || imgData) : null;
+                if (typeof imgUrl === 'object') imgUrl = imgUrl.url;
+                
+                var imgHtml = imgUrl ? '<img src="'+imgUrl+'" style="width:100%;height:100%;object-fit:contain;">' : '<span class="material-symbols-outlined">local_cafe</span>';
+                var bgStyle = imgUrl ? 'background:transparent; border-color:transparent;' : '';
+
+                html += '<div class="' + cardClass + '">';
+                html +=   '<div class="item-img-ph" style="'+bgStyle+'">' + imgHtml + '</div>';
+                html +=   '<div class="item-card-name">' + m.name + '</div>';
+                html +=   '<div class="item-card-price">' + priceStr + '</div>';
+                html += '</div>';
+            });
+            
+            html += '</div></div>'; 
+        }
+
+        if (Object.keys(groups).length === 0) {
+             grid.innerHTML = '<div style="text-align:center; padding: 50px; opacity:0.4;">Không có dữ liệu menu</div>';
+        } else {
+             grid.innerHTML = html;
+        }
+    } catch(e) {
+        console.error("Lỗi Render renderMenuBoard:", e);
+        grid.innerHTML = '<div style="text-align:center; padding: 50px; opacity:0.4; color:red;">Lỗi tải menu</div>';
     }
 }
 
-// ── LẮNG NGHE DATABASE ──
+// ── LẮNG NGHE MENU TỪ RTDB ──
+function listenMenu() {
+    db.ref('menu_xolifa').on('value', function(snap) {
+        var data = snap.val() || {};
+        var items = Array.isArray(data) ? data : Object.values(data);
+        menuData = [];
+        
+        // Gán index chính xác y như POS đang dùng
+        items.forEach(function(item, idx) {
+            if (item && item.name) {
+                item._origIdx = idx;
+                menuData.push(item);
+            }
+        });
+        
+        // Vẽ lại giao diện nếu cấu hình đã sẵn sàng
+        if (window._screenConfigLoaded) {
+            applyScreenConfig2026();
+            renderMenuBoard();
+        }
+    });
+}
+
 function listenSoldOut() {
     db.ref('screen_soldout').on('value', function(snap){
         soldOutItems = snap.val() || {};
@@ -741,30 +882,6 @@ function listenSoldOut() {
     });
 }
 
-function listenMenu() {
-    db.ref('menu_xolifa').on('value', function(snap) {
-        var data = snap.val() || {};
-        menuData = [];
-        menuConfig = data.config || {};
-
-        if (Array.isArray(data)) {
-            data.forEach(function(v, i) {
-                if (v) { v._key = 'idx_' + i; menuData.push(v); }
-            });
-        } else {
-            Object.keys(data).forEach(function(k) {
-                if (k !== 'config' && data[k]) {
-                    var v = data[k];
-                    v._key = k;
-                    menuData.push(v);
-                }
-            });
-        }
-
-        applyMenuConfig();
-        renderMenuBoard();
-    });
-}
 
 // ── SCREENSAVER ──
 function startScreensaver() {
@@ -911,6 +1028,8 @@ function listenPOS() {
 auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty")
     .then(function(){
         console.log("Screen Board connected ✓");
+        // Gọi các hàm kết nối tuần tự và an toàn
+        listenScreenConfig2026();
         listenMenu();
         listenPOS();
         listenSoldOut();
