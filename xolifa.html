@@ -599,6 +599,15 @@ input, button, select, textarea { font-size: 1rem; }
 }
 
 
+/* Cart ẩn hoàn toàn ở tab quản lý (desktop) */
+@media only screen and (min-width: 769px) {
+    #sidebar-cart.hidden {
+        display: none !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        visibility: hidden !important;
+    }
+}
 /* ===== MENU CONFIG UPLOAD UI =====*/
 .mcs-upload-zone{border:2px dashed #d1d5db;border-radius:16px;padding:20px 16px;text-align:center;cursor:pointer;transition:all 0.2s;background:#fafafa;position:relative;}
 .mcs-upload-zone:hover,.mcs-upload-zone.drag-over{border-color:#006241;background:#f0fdf4;}
@@ -9116,14 +9125,16 @@ function menuEditorDeleteItem() {
 }
 
 // =============================================
-// MENU CONFIG — Upload to Firebase Storage (v3 fixed)
+// MENU CONFIG — Upload to Firebase Storage (v4)
 // =============================================
 var _mcsData = { logo:'', banner:'', slides:[], toppings:'', drinkImages:{}, featured:[] };
-var _mcsItems = [];   // all menu items loaded from RT
 
-// ─── LOAD ───
+// ─── LOAD ──────────────────────────────────────────────
 function menuConfigLoad() {
-    // Load config node
+    // Dùng window._menuData đã load sẵn từ main app
+    // (tránh gọi Firebase thêm lần nữa và tránh vấn đề auth timing)
+    menuConfigSwitchSection('logo');
+
     db.ref('menu_xolifa/config').once('value', function(snap) {
         var cfg = snap.val() || {};
         _mcsData.logo        = cfg.logo        || '';
@@ -9133,155 +9144,184 @@ function menuConfigLoad() {
         _mcsData.drinkImages = cfg.drinkImages || {};
         _mcsData.featured    = Array.isArray(cfg.featured) ? cfg.featured : [];
 
-        // Show existing images
-        mcsShowResult('logo',    _mcsData.logo);
-        mcsShowResult('banner',  _mcsData.banner);
-        mcsShowResult('toppings',_mcsData.toppings);
+        mcsShowResult('logo',     _mcsData.logo);
+        mcsShowResult('banner',   _mcsData.banner);
+        mcsShowResult('toppings', _mcsData.toppings);
         mcsRenderSlides();
+        mcsLoadItems();
+    });
+}
 
-        // Load menu items for drinks & featured
-        db.ref('menu_xolifa').once('value', function(msnap) {
-            _mcsItems = [];
-            var raw = msnap.val();
-            if (raw && typeof raw === 'object') {
-                if (Array.isArray(raw)) {
-                    raw.forEach(function(m,i){
-                        if(m && m.name) _mcsItems.push({key:'idx_'+i, name:m.name, type:m.type||''});
+// Dùng window._menuData (đã có sẵn từ main listener)
+function mcsLoadItems() {
+    var raw = window._menuData; // array đã được load từ main app
+    var items = [];
+
+    if (raw && Array.isArray(raw)) {
+        raw.forEach(function(m, i) {
+            if (m && m.name && m.name !== 'config') {
+                items.push({ key: m._key || ('idx_' + i), name: m.name, type: m.type || '' });
+            }
+        });
+    }
+
+    // Nếu _menuData chưa sẵn, fallback đọc thẳng FB (sau 500ms delay cho auth)
+    if (!items.length) {
+        setTimeout(function() {
+            db.ref('menu_xolifa').once('value', function(snap) {
+                var data = snap.val();
+                if (!data) { mcsRenderDrinks([]); mcsRenderFeaturedChips([]); return; }
+                var arr = [];
+                if (Array.isArray(data)) {
+                    data.forEach(function(m, i) {
+                        if (m && m.name) arr.push({ key: 'idx_' + i, name: m.name, type: m.type || '' });
                     });
                 } else {
-                    Object.keys(raw).forEach(function(k){
-                        if(k === 'config') return;
-                        var m = raw[k];
-                        if(m && m.name) _mcsItems.push({key:k, name:m.name, type:m.type||''});
+                    Object.keys(data).forEach(function(k) {
+                        var m = data[k];
+                        if (k === 'config' || !m || !m.name) return;
+                        arr.push({ key: k, name: m.name, type: m.type || '' });
                     });
                 }
-            }
-            mcsRenderDrinks();
-            mcsRenderFeaturedChips();
-        });
-    });
-    menuConfigSwitchSection('logo');
+                mcsRenderDrinks(arr);
+                mcsRenderFeaturedChips(arr);
+            });
+        }, 400);
+        return;
+    }
+    mcsRenderDrinks(items);
+    mcsRenderFeaturedChips(items);
 }
 
-// ─── SIDEBAR SWITCH ───
+// ─── SIDEBAR NAV ────────────────────────────────────────
 function menuConfigSwitchSection(sec) {
     var SECTIONS = ['logo','banner','slides','toppings','drinks','featured'];
-    var TITLES   = {logo:'Logo quán',banner:'Banner ngang (Top)',slides:'Slide Menu (Cột trái)',
-                    toppings:'Ảnh Toppings (Cột phải)',drinks:'Ảnh từng Món nước',featured:'3 Món nổi bật nhất'};
-    SECTIONS.forEach(function(s){
-        var btn=document.getElementById('mcs-btn-'+s); if(!btn) return;
-        var on=(s===sec);
-        btn.style.background = on?'#006241':'transparent';
-        btn.style.color      = on?'white':'#6b7280';
-        btn.style.boxShadow  = on?'0 2px 10px rgba(0,98,65,0.2)':'none';
+    var TITLES   = {
+        logo:     'Logo quán',
+        banner:   'Banner ngang (Top)',
+        slides:   'Slide Menu (Cột trái)',
+        toppings: 'Ảnh Toppings (Cột phải)',
+        drinks:   'Ảnh từng Món nước',
+        featured: '3 Món nổi bật nhất'
+    };
+    SECTIONS.forEach(function(s) {
+        var btn = document.getElementById('mcs-btn-' + s); if (!btn) return;
+        var on  = (s === sec);
+        btn.style.background = on ? '#006241' : 'transparent';
+        btn.style.color      = on ? 'white'   : '#6b7280';
+        btn.style.boxShadow  = on ? '0 2px 10px rgba(0,98,65,0.2)' : 'none';
     });
-    var el=document.getElementById('mcs-section-'+sec);
-    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
-    var tt=document.getElementById('mcs-form-title');
-    if(tt) tt.textContent=TITLES[sec]||sec;
+    var el = document.getElementById('mcs-section-' + sec);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    var tt = document.getElementById('mcs-form-title');
+    if (tt) tt.textContent = TITLES[sec] || sec;
 }
 
-// ─── SHOW/HIDE RESULT ───
+// ─── SHOW / HIDE RESULT ─────────────────────────────────
 function mcsShowResult(type, url) {
-    var dz  = document.getElementById('mcs-'+type+'-dropzone');
-    var res = document.getElementById('mcs-'+type+'-result');
-    var img = document.getElementById('mcs-'+type+'-img');
-    var pg  = document.getElementById('mcs-'+type+'-prog');
-    if(pg)  pg.style.display='none';
-    if(url) {
-        if(img) img.src=url;
-        if(dz)  dz.style.display='none';
-        if(res) res.style.display='block';
+    var dz  = document.getElementById('mcs-' + type + '-dropzone');
+    var res = document.getElementById('mcs-' + type + '-result');
+    var img = document.getElementById('mcs-' + type + '-img');
+    var pg  = document.getElementById('mcs-' + type + '-prog');
+    if (pg)  pg.style.display = 'none';
+    if (url) {
+        if (img) img.src = url;
+        if (dz)  dz.style.display = 'none';
+        if (res) res.style.display = 'block';
     } else {
-        if(dz)  dz.style.display='block';
-        if(res) res.style.display='none';
+        if (dz)  dz.style.display = 'block';
+        if (res) res.style.display = 'none';
     }
 }
 
 function mcsRemove(type) {
-    _mcsData[type]='';
-    mcsShowResult(type,'');
+    _mcsData[type] = '';
+    mcsShowResult(type, '');
     mcsAutoSave();
 }
 
-// ─── SINGLE UPLOAD (logo/banner/toppings) ───
+// ─── UPLOAD ĐƠN (logo / banner / toppings) ──────────────
 function mcsUpload(type, input) {
-    var file=input.files[0]; if(!file) return;
-    input.value='';
+    var file = input.files[0]; if (!file) return;
+    input.value = '';
 
-    var dz   = document.getElementById('mcs-'+type+'-dropzone');
-    var pg   = document.getElementById('mcs-'+type+'-prog');
-    var fill = document.getElementById('mcs-'+type+'-fill');
-    var pct  = document.getElementById('mcs-'+type+'-pct');
+    var dz   = document.getElementById('mcs-' + type + '-dropzone');
+    var pg   = document.getElementById('mcs-' + type + '-prog');
+    var fill = document.getElementById('mcs-' + type + '-fill');
+    var pct  = document.getElementById('mcs-' + type + '-pct');
 
-    if(dz) dz.style.display='none';
-    if(pg) pg.style.display='block';
-    if(fill) fill.style.width='0%';
-    if(pct)  pct.textContent='0%';
+    if (dz)   dz.style.display   = 'none';
+    if (pg)   pg.style.display   = 'block';
+    if (fill) fill.style.width   = '0%';
+    if (pct)  pct.textContent    = '0%';
 
-    var path = 'menu_display/'+type+'/'+Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    var uploadTask = storage.ref(path).put(file);
+    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    var path = 'menu_display/' + type + '/' + Date.now() + '_' + safeName;
+    var task = storage.ref(path).put(file);
 
-    uploadTask.on('state_changed',
-        function(snap){
-            var p = Math.round(snap.bytesTransferred/snap.totalBytes*100);
-            if(fill) fill.style.width=p+'%';
-            if(pct)  pct.textContent=p+'%';
+    task.on('state_changed',
+        function(snap) {
+            var p = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
+            if (fill) fill.style.width = p + '%';
+            if (pct)  pct.textContent  = p + '%';
         },
-        function(err){
-            alert('Lỗi upload: '+err.message);
-            if(pg) pg.style.display='none';
-            if(dz) dz.style.display='block';
+        function(err) {
+            alert('Lỗi upload: ' + err.message);
+            if (pg) pg.style.display = 'none';
+            if (dz) dz.style.display = 'block';
         },
-        function(){
-            uploadTask.snapshot.ref.getDownloadURL().then(function(url){
-                _mcsData[type]=url;
-                mcsShowResult(type,url);
+        function() {
+            task.snapshot.ref.getDownloadURL().then(function(url) {
+                _mcsData[type] = url;
+                mcsShowResult(type, url);
                 mcsAutoSave();
             });
         }
     );
 }
 
-// ─── SLIDES UPLOAD (multiple) ───
+// ─── UPLOAD NHIỀU SLIDE ──────────────────────────────────
 function mcsUploadSlides(input) {
-    var files=Array.from(input.files); if(!files.length) return;
-    input.value='';
+    var files = Array.from(input.files); if (!files.length) return;
+    input.value = '';
 
+    var dz   = document.getElementById('mcs-slides-dropzone');
     var pg   = document.getElementById('mcs-slides-prog');
     var fill = document.getElementById('mcs-slides-fill');
     var pct  = document.getElementById('mcs-slides-pct');
     var txt  = document.getElementById('mcs-slides-prog-txt');
-    var dz   = document.getElementById('mcs-slides-dropzone');
 
-    if(dz) dz.style.display='none';
-    if(pg) pg.style.display='block';
-    if(fill) fill.style.width='0%';
-    if(pct)  pct.textContent='0%';
+    if (dz)   dz.style.display   = 'none';
+    if (pg)   pg.style.display   = 'block';
+    if (fill) fill.style.width   = '0%';
+    if (pct)  pct.textContent    = '0%';
+    if (txt)  txt.textContent    = '⬆️ Đang tải lên...';
 
-    var done=0, total=files.length, urls=[];
+    var done = 0, total = files.length, newUrls = new Array(total);
 
-    files.forEach(function(file, idx){
-        var path='menu_display/slides/'+Date.now()+'_'+idx+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-        var task=storage.ref(path).put(file);
+    files.forEach(function(file, idx) {
+        var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        var path = 'menu_display/slides/' + Date.now() + '_' + idx + '_' + safeName;
+        var task = storage.ref(path).put(file);
         task.on('state_changed',
-            function(snap){
-                var overall=Math.round((done*100+snap.bytesTransferred/snap.totalBytes*100)/total);
-                if(fill) fill.style.width=overall+'%';
-                if(pct)  pct.textContent=overall+'%';
+            function(snap) {
+                var overall = Math.round((done * 100 + snap.bytesTransferred / snap.totalBytes * 100) / total);
+                if (fill) fill.style.width = overall + '%';
+                if (pct)  pct.textContent  = overall + '%';
             },
-            function(err){ alert('Lỗi: '+err.message); done++; },
-            function(){
-                task.snapshot.ref.getDownloadURL().then(function(url){
-                    urls[idx]=url;
+            function(err) {
+                alert('Lỗi: ' + err.message);
+                done++;
+            },
+            function() {
+                task.snapshot.ref.getDownloadURL().then(function(url) {
+                    newUrls[idx] = url;
                     done++;
-                    if(txt) txt.textContent='⬆️ Đã xong '+done+'/'+total+' ảnh...';
-                    if(fill) fill.style.width=Math.round(done/total*100)+'%';
-                    if(pct)  pct.textContent=Math.round(done/total*100)+'%';
-                    if(done===total){
-                        urls.forEach(function(u){ if(u) _mcsData.slides.push(u); });
-                        if(pg) pg.style.display='none';
-                        if(dz) dz.style.display='block';
+                    if (txt) txt.textContent = '⬆️ Đã xong ' + done + '/' + total + ' ảnh...';
+                    if (done === total) {
+                        newUrls.forEach(function(u) { if (u) _mcsData.slides.push(u); });
+                        if (pg) pg.style.display = 'none';
+                        if (dz) dz.style.display = 'block';
                         mcsRenderSlides();
                         mcsAutoSave();
                     }
@@ -9291,156 +9331,169 @@ function mcsUploadSlides(input) {
     });
 }
 
-// ─── RENDER SLIDES ───
+// ─── RENDER SLIDES ──────────────────────────────────────
 function mcsRenderSlides() {
-    var list=document.getElementById('mcs-slides-list');
-    var cnt =document.getElementById('mcs-slide-count');
-    if(cnt) cnt.textContent=_mcsData.slides.length+' ảnh';
-    if(!list) return;
-    list.innerHTML='';
-    if(!_mcsData.slides.length){
-        list.innerHTML='<p style="font-size:0.9rem;color:#d1d5db;font-weight:600;text-align:center;padding:16px 0;">Chưa có ảnh nào.</p>';
+    var list = document.getElementById('mcs-slides-list');
+    var cnt  = document.getElementById('mcs-slide-count');
+    if (cnt) cnt.textContent = _mcsData.slides.length + ' ảnh';
+    if (!list) return;
+    list.innerHTML = '';
+    if (!_mcsData.slides.length) {
+        list.innerHTML = '<p style="font-size:0.9rem;color:#d1d5db;font-weight:600;text-align:center;padding:16px 0;">Chưa có ảnh nào.</p>';
         return;
     }
-    _mcsData.slides.forEach(function(url,i){
-        var row=document.createElement('div');
-        row.style.cssText='display:flex;align-items:center;gap:14px;background:#f9fafb;border-radius:14px;padding:12px 14px;border:1.5px solid #f0f0f0;';
-        row.innerHTML='<img src="'+url+'" style="width:56px;height:56px;object-fit:cover;border-radius:10px;flex-shrink:0;background:#e5e7eb;" onerror="this.style.background='#f3f4f6'">'
-            +'<div style="flex:1;min-width:0;">'
-            +'<p style="font-size:0.95rem;font-weight:800;color:#111827;margin:0 0 3px;">Slide '+(i+1)+'</p>'
-            +'<p style="font-size:0.75rem;color:#9ca3af;font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+url.substring(url.lastIndexOf('%2F')+3,url.indexOf('?'))+'</p>'
-            +'</div>'
-            +'<div style="display:flex;gap:6px;flex-shrink:0;">'
-            +(i>0?'<button onclick="mcsMoveSlide('+i+',-1)" style="width:32px;height:32px;border-radius:9px;background:#f3f4f6;border:1px solid #e5e7eb;cursor:pointer;font-size:0.85rem;color:#374151;" title="Lên">▲</button>':'')
-            +(i<_mcsData.slides.length-1?'<button onclick="mcsMoveSlide('+i+',1)" style="width:32px;height:32px;border-radius:9px;background:#f3f4f6;border:1px solid #e5e7eb;cursor:pointer;font-size:0.85rem;color:#374151;" title="Xuống">▼</button>':'')
-            +'<button onclick="mcsRemoveSlide('+i+')" style="width:32px;height:32px;border-radius:9px;background:#fee2e2;border:1px solid #fca5a5;cursor:pointer;color:#ef4444;font-size:0.85rem;font-weight:900;" title="Xóa">✕</button>'
-            +'</div>';
+    _mcsData.slides.forEach(function(url, i) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:14px;background:#f9fafb;border-radius:14px;padding:12px 14px;border:1.5px solid #f0f0f0;';
+        var fname = '';
+        try { fname = decodeURIComponent(url).split('/').pop().split('?')[0].substring(0,40); } catch(e) { fname = 'slide-'+(i+1); }
+        row.innerHTML =
+            '<img src="'+url+'" style="width:56px;height:56px;object-fit:cover;border-radius:10px;flex-shrink:0;background:#e5e7eb;">'
+            + '<div style="flex:1;min-width:0;">'
+            +   '<p style="font-size:0.95rem;font-weight:800;color:#111827;margin:0 0 3px;">Slide '+(i+1)+'</p>'
+            +   '<p style="font-size:0.72rem;color:#9ca3af;font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+fname+'</p>'
+            + '</div>'
+            + '<div style="display:flex;gap:6px;flex-shrink:0;">'
+            +   (i > 0 ? '<button onclick="mcsMoveSlide('+i+',-1)" style="width:32px;height:32px;border-radius:9px;background:#f3f4f6;border:1px solid #e5e7eb;cursor:pointer;font-size:0.85rem;color:#374151;">▲</button>' : '')
+            +   (i < _mcsData.slides.length - 1 ? '<button onclick="mcsMoveSlide('+i+',1)" style="width:32px;height:32px;border-radius:9px;background:#f3f4f6;border:1px solid #e5e7eb;cursor:pointer;font-size:0.85rem;color:#374151;">▼</button>' : '')
+            +   '<button onclick="mcsRemoveSlide('+i+')" style="width:32px;height:32px;border-radius:9px;background:#fee2e2;border:1px solid #fca5a5;cursor:pointer;color:#ef4444;font-size:0.85rem;font-weight:900;" title="Xóa">✕</button>'
+            + '</div>';
         list.appendChild(row);
     });
 }
 
-function mcsMoveSlide(i,dir){
-    var a=_mcsData.slides,j=i+dir;
-    if(j<0||j>=a.length) return;
-    var t=a[i];a[i]=a[j];a[j]=t;
+function mcsMoveSlide(i, dir) {
+    var a = _mcsData.slides, j = i + dir;
+    if (j < 0 || j >= a.length) return;
+    var t = a[i]; a[i] = a[j]; a[j] = t;
     mcsRenderSlides();
 }
-
-function mcsRemoveSlide(i){
-    _mcsData.slides.splice(i,1);
+function mcsRemoveSlide(i) {
+    _mcsData.slides.splice(i, 1);
     mcsRenderSlides();
     mcsAutoSave();
 }
 
-// ─── DRINK IMAGES ───
-function mcsRenderDrinks() {
-    var list=document.getElementById('mcs-drinks-list');
-    if(!list) return;
-    list.innerHTML='';
-    if(!_mcsItems.length){
-        list.innerHTML='<p style="font-size:0.9rem;color:#9ca3af;text-align:center;padding:20px;">Chưa có món nào trong menu.</p>';
+// ─── DRINK IMAGES ───────────────────────────────────────
+function mcsRenderDrinks(items) {
+    var list = document.getElementById('mcs-drinks-list');
+    if (!list) return;
+    if (!items || !items.length) {
+        list.innerHTML = '<div style="text-align:center;padding:32px;"><p style="font-size:0.95rem;color:#9ca3af;font-weight:700;">⚠️ Không tìm thấy món nào.<br><span style="font-size:0.82rem;font-weight:500;">Hãy thêm món vào tab Menu trước.</span></p></div>';
         return;
     }
-    _mcsItems.forEach(function(item){
-        var url=_mcsData.drinkImages[item.key]||'';
-        var row=document.createElement('div');
-        row.id='mcs-drow-'+item.key;
-        row.style.cssText='display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;background:#f9fafb;border:1.5px solid #f0f0f0;margin-bottom:10px;transition:border-color 0.15s;';
+    list.innerHTML = '';
+    items.forEach(function(item) {
+        var url = (_mcsData.drinkImages && _mcsData.drinkImages[item.key]) || '';
+        var row = document.createElement('div');
+        row.id  = 'mcs-drow-' + item.key;
+        row.style.cssText = 'display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:14px;background:#f9fafb;border:1.5px solid #f0f0f0;margin-bottom:10px;';
 
-        var thumbHtml=url
-            ?'<img id="mcs-dth-'+item.key+'" src="'+url+'" style="width:52px;height:52px;object-fit:contain;border-radius:10px;background:repeating-conic-gradient(#e5e7eb 0% 25%,white 0% 50%) 0 0/14px 14px;flex-shrink:0;">'
-            :'<div id="mcs-dth-'+item.key+'" style="width:52px;height:52px;border-radius:10px;background:#f3f4f6;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:1.5px dashed #d1d5db;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>';
+        var thumb = url
+            ? '<img id="mcs-dth-'+item.key+'" src="'+url+'" style="width:52px;height:52px;object-fit:contain;border-radius:10px;background:repeating-conic-gradient(#e5e7eb 0% 25%,white 0% 50%) 0 0/14px 14px;flex-shrink:0;">'
+            : '<div id="mcs-dth-'+item.key+'" style="width:52px;height:52px;border-radius:10px;background:#f3f4f6;flex-shrink:0;display:flex;align-items:center;justify-content:center;border:2px dashed #d1d5db;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>';
 
-        row.innerHTML=thumbHtml
-            +'<div style="flex:1;min-width:0;">'
-            +'<p style="font-size:0.95rem;font-weight:800;color:#111827;margin:0 0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+item.name+'</p>'
-            +'<p style="font-size:0.75rem;color:#9ca3af;font-weight:700;margin:0;background:#f3f4f6;display:inline-block;padding:2px 8px;border-radius:6px;">'+item.type+'</p>'
-            +'</div>'
-            +(url?'<button onclick="mcsRemoveDrink(''+item.key+'')" style="padding:8px 14px;border-radius:10px;background:#fee2e2;border:1px solid #fca5a5;cursor:pointer;color:#ef4444;font-size:0.82rem;font-weight:800;flex-shrink:0;white-space:nowrap;">✕ Xóa</button>':'')
-            +'<label id="mcs-dlbl-'+item.key+'" style="padding:10px 18px;border-radius:12px;background:#006241;color:white;font-size:0.88rem;font-weight:800;cursor:pointer;flex-shrink:0;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:opacity 0.15s;">'
-            +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
-            +(url?'Đổi ảnh':'Upload')
-            +'<input type="file" accept="image/png,image/webp" style="display:none;" onchange="mcsUploadDrink(''+item.key+'',this)">'
-            +'</label>';
+        row.innerHTML = thumb
+            + '<div style="flex:1;min-width:0;">'
+            +   '<p style="font-size:1rem;font-weight:800;color:#111827;margin:0 0 3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+item.name+'</p>'
+            +   '<span style="font-size:0.75rem;color:#9ca3af;font-weight:700;background:#f3f4f6;padding:2px 9px;border-radius:6px;">'+item.type+'</span>'
+            + '</div>'
+            + (url ? '<button onclick="mcsRemoveDrink(''+item.key+'')" style="padding:9px 14px;border-radius:10px;background:#fee2e2;border:1px solid #fca5a5;cursor:pointer;color:#ef4444;font-size:0.85rem;font-weight:800;flex-shrink:0;white-space:nowrap;">✕ Xóa</button>' : '')
+            + '<label style="padding:11px 20px;border-radius:12px;background:#006241;color:white;font-size:0.9rem;font-weight:800;cursor:pointer;flex-shrink:0;white-space:nowrap;display:flex;align-items:center;gap:7px;">'
+            +   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>'
+            +   (url ? 'Đổi ảnh' : 'Upload PNG')
+            +   '<input type="file" accept="image/png,image/webp" style="display:none;" onchange="mcsUploadDrink(''+item.key+'',this)">'
+            + '</label>';
         list.appendChild(row);
     });
 }
 
-function mcsUploadDrink(key, input){
-    var file=input.files[0]; if(!file) return;
-    input.value='';
-    var lbl=document.getElementById('mcs-dlbl-'+key);
-    var row=document.getElementById('mcs-drow-'+key);
-    if(lbl){ lbl.style.opacity='0.5'; lbl.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg> Đang tải...'; }
-    var path='menu_display/drinks/'+key+'_'+Date.now();
-    storage.ref(path).put(file).then(function(snap){
-        return snap.ref.getDownloadURL();
-    }).then(function(url){
-        _mcsData.drinkImages[key]=url;
-        mcsRenderDrinks();
-        mcsAutoSave();
-    }).catch(function(err){
-        alert('Lỗi upload: '+err.message);
-        if(lbl){ lbl.style.opacity='1'; }
-    });
+function mcsUploadDrink(key, input) {
+    var file = input.files[0]; if (!file) return;
+    input.value = '';
+    var lbl = document.getElementById('mcs-dlbl-' + key);
+    var row = document.getElementById('mcs-drow-' + key);
+    if (row) row.style.opacity = '0.5';
+
+    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    var path = 'menu_display/drinks/' + key + '_' + Date.now() + '_' + safeName;
+    storage.ref(path).put(file)
+        .then(function(snap) { return snap.ref.getDownloadURL(); })
+        .then(function(url) {
+            _mcsData.drinkImages[key] = url;
+            if (row) row.style.opacity = '1';
+            // Reload danh sách drinks
+            mcsLoadItems();
+            mcsAutoSave();
+        })
+        .catch(function(err) {
+            alert('Lỗi upload: ' + err.message);
+            if (row) row.style.opacity = '1';
+        });
 }
 
-function mcsRemoveDrink(key){
-    delete _mcsData.drinkImages[key];
-    mcsRenderDrinks();
+function mcsRemoveDrink(key) {
+    if (_mcsData.drinkImages) delete _mcsData.drinkImages[key];
+    mcsLoadItems();
     mcsAutoSave();
 }
 
-// ─── FEATURED CHIPS ───
-function mcsRenderFeaturedChips(){
-    var chips=document.getElementById('mcs-featured-chips');
-    var sel  =document.getElementById('mcs-featured-selected');
-    var cnt  =document.getElementById('mcs-featured-count');
-    if(!chips) return;
-    chips.innerHTML='';
-    if(cnt) cnt.textContent=_mcsData.featured.length+'/3';
+// ─── FEATURED ───────────────────────────────────────────
+function mcsRenderFeaturedChips(items) {
+    var chips = document.getElementById('mcs-featured-chips');
+    var sel   = document.getElementById('mcs-featured-selected');
+    var cnt   = document.getElementById('mcs-featured-count');
+    if (!chips || !items) return;
+    chips.innerHTML = '';
+    if (cnt) cnt.textContent = _mcsData.featured.length + '/3';
 
-    _mcsItems.forEach(function(item){
-        var isOn=_mcsData.featured.indexOf(item.key)>=0;
-        var chip=document.createElement('div');
-        chip.style.cssText='display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:999px;border:2px solid '+(isOn?'#006241':'#e5e7eb')+';cursor:pointer;font-size:0.9rem;font-weight:700;color:'+(isOn?'#006241':'#374151')+';background:'+(isOn?'#f0fdf4':'white')+';transition:all 0.15s;margin:4px;';
-        chip.innerHTML=(isOn?'<span style="color:#006241;font-weight:900;">✓</span> ':'')+item.name;
-        chip.onclick=function(){ mcsToggleFeatured(item.key); };
+    items.forEach(function(item) {
+        var isOn = _mcsData.featured.indexOf(item.key) >= 0;
+        var chip = document.createElement('div');
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:7px;padding:9px 18px;border-radius:999px;'
+            + 'border:2px solid ' + (isOn ? '#006241' : '#e5e7eb') + ';'
+            + 'cursor:pointer;font-size:0.9rem;font-weight:700;'
+            + 'color:' + (isOn ? '#006241' : '#374151') + ';'
+            + 'background:' + (isOn ? '#f0fdf4' : 'white') + ';'
+            + 'transition:all 0.15s;margin:4px;';
+        chip.innerHTML = (isOn ? '<span style="color:#006241;font-weight:900;">✓</span> ' : '') + item.name;
+        chip.onclick = (function(k) { return function() { mcsToggleFeatured(k, items); }; })(item.key);
         chips.appendChild(chip);
     });
 
-    if(!sel) return;
-    sel.innerHTML='';
-    if(!_mcsData.featured.length){
-        sel.innerHTML='<p style="font-size:0.88rem;color:#d1d5db;font-weight:600;text-align:center;padding:10px;">Chưa chọn món nào</p>';
+    if (!sel) return;
+    sel.innerHTML = '';
+    if (!_mcsData.featured.length) {
+        sel.innerHTML = '<p style="font-size:0.88rem;color:#d1d5db;font-weight:600;text-align:center;padding:10px;">Chưa chọn món nào</p>';
         return;
     }
-    _mcsData.featured.forEach(function(key,i){
-        var item=_mcsItems.find(function(m){return m.key===key;});
-        if(!item) return;
-        var row=document.createElement('div');
-        row.style.cssText='display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;background:#F0FDF4;border:1.5px solid #bbf7d0;';
-        row.innerHTML='<span style="width:26px;height:26px;border-radius:50%;background:#006241;color:white;font-size:0.82rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'+(i+1)+'</span>'
-            +'<span style="flex:1;font-size:0.95rem;font-weight:800;color:#111827;">'+item.name+'</span>'
-            +'<span style="font-size:0.75rem;color:#9ca3af;font-weight:700;background:#e5e7eb;padding:2px 8px;border-radius:6px;">'+item.type+'</span>';
+    _mcsData.featured.forEach(function(key, i) {
+        var item = items.find(function(m) { return m.key === key; });
+        if (!item) return;
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;background:#F0FDF4;border:1.5px solid #bbf7d0;margin-top:8px;';
+        row.innerHTML = '<span style="width:26px;height:26px;border-radius:50%;background:#006241;color:white;font-size:0.82rem;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (i + 1) + '</span>'
+            + '<span style="flex:1;font-size:0.95rem;font-weight:800;color:#111827;">' + item.name + '</span>'
+            + '<span style="font-size:0.75rem;color:#9ca3af;font-weight:700;background:#e5e7eb;padding:2px 8px;border-radius:6px;">' + item.type + '</span>';
         sel.appendChild(row);
     });
 }
 
-function mcsToggleFeatured(key){
-    var idx=_mcsData.featured.indexOf(key);
-    if(idx>=0){ _mcsData.featured.splice(idx,1); }
-    else {
-        if(_mcsData.featured.length>=3){ alert('Chỉ được chọn tối đa 3 món nổi bật!'); return; }
+function mcsToggleFeatured(key, items) {
+    var idx = _mcsData.featured.indexOf(key);
+    if (idx >= 0) {
+        _mcsData.featured.splice(idx, 1);
+    } else {
+        if (_mcsData.featured.length >= 3) { alert('Chỉ được chọn tối đa 3 món nổi bật!'); return; }
         _mcsData.featured.push(key);
     }
-    mcsRenderFeaturedChips();
+    mcsRenderFeaturedChips(items);
 }
 
-// ─── SAVE ───
-function mcsAutoSave(){
-    var st=document.getElementById('mcs-save-status');
-    if(st){ st.textContent='💾 Đang lưu...'; st.style.display='inline'; st.style.color='#9ca3af'; }
+// ─── AUTO-SAVE ──────────────────────────────────────────
+function mcsAutoSave() {
+    var st = document.getElementById('mcs-save-status');
+    if (st) { st.textContent = '💾 Đang lưu...'; st.style.display = 'inline'; st.style.color = '#9ca3af'; }
     db.ref('menu_xolifa/config').set({
         logo:        _mcsData.logo,
         banner:      _mcsData.banner,
@@ -9448,24 +9501,25 @@ function mcsAutoSave(){
         toppings:    _mcsData.toppings,
         drinkImages: _mcsData.drinkImages,
         featured:    _mcsData.featured.filter(Boolean)
-    }, function(err){
-        if(st){
-            st.textContent=err?'❌ Lỗi lưu!':'✅ Đã lưu';
-            st.style.color=err?'#ef4444':'#006241';
-            setTimeout(function(){ st.style.display='none'; },2500);
+    }, function(err) {
+        if (st) {
+            st.textContent  = err ? '❌ Lỗi lưu!' : '✅ Đã lưu';
+            st.style.color  = err ? '#ef4444'    : '#006241';
+            setTimeout(function() { st.style.display = 'none'; }, 2500);
         }
     });
 }
 
-function menuConfigSave(){ mcsAutoSave(); }
+function menuConfigSave() { mcsAutoSave(); }
 
-// Add spin animation if not present
-if(!document.getElementById('mcs-spin-style')){
-    var s=document.createElement('style');
-    s.id='mcs-spin-style';
-    s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+// Spin animation
+(function(){
+    if (document.getElementById('mcs-spin-style')) return;
+    var s = document.createElement('style');
+    s.id = 'mcs-spin-style';
+    s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
     document.head.appendChild(s);
-}
+})();
 
 
 
