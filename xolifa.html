@@ -1444,14 +1444,37 @@ input, button, select, textarea { font-size: 1rem; }
                     <div id="screen-tab-2026-menu" class="screen-tab-2026-content" style="display:none;flex-direction:column;gap:16px;">
                         <div style="background:white;border-radius:18px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
                             <h3 style="margin:0 0 20px;font-size:1.1rem;font-weight:700;color:#111827;">🥤 Ảnh Các Món</h3>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-                                <select id="menu-select-2026" style="padding:12px 16px;border:2px solid #e5e7eb;border-radius:12px;background:white;font-size:0.95rem;font-weight:500;cursor:pointer;transition:all 0.2s;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='#e5e7eb'">
-                                    <option value="">Chọn một món</option>
-                                </select>
-                                <input type="file" id="menu-image-2026" accept="image/*" style="padding:12px 16px;border:2px solid #e5e7eb;border-radius:12px;background:#f9fafb;cursor:pointer;font-size:0.9rem;box-sizing:border-box;transition:all 0.2s;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='#e5e7eb'">
+                            
+                            <!-- UPLOAD AREA -->
+                            <div style="margin-bottom:24px;padding:20px;background:#f9fafb;border-radius:14px;border:2px solid #e5e7eb;">
+                                <div style="display:flex;gap:16px;margin-bottom:16px;">
+                                    <div style="flex:1;">
+                                        <label style="font-size:0.85rem;font-weight:600;color:#9ca3af;display:block;margin-bottom:8px;text-transform:uppercase;">Chọn Ảnh</label>
+                                        <input type="file" id="menu-image-2026" accept="image/*" style="width:100%;padding:12px 16px;border:2px solid #e5e7eb;border-radius:12px;background:white;cursor:pointer;font-size:0.9rem;box-sizing:border-box;transition:all 0.2s;" onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='#e5e7eb'">
+                                    </div>
+                                    <div style="width:100px;">
+                                        <label style="font-size:0.85rem;font-weight:600;color:#9ca3af;display:block;margin-bottom:8px;text-transform:uppercase;">Xem trước</label>
+                                        <div id="menu-preview-2026" style="width:100%;aspect-ratio:1/1;border-radius:10px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- DANH SÁCH CÁC MÓN -->
+                                <div style="margin-bottom:12px;">
+                                    <label style="font-size:0.85rem;font-weight:600;color:#9ca3af;display:block;margin-bottom:8px;text-transform:uppercase;">Chọn Món</label>
+                                    <div id="menu-list-2026" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:200px;overflow-y:auto;padding:8px;background:white;border-radius:10px;border:1px solid #e5e7eb;"></div>
+                                </div>
+                                
+                                <button onclick="uploadMenuImage2026()" style="width:100%;padding:12px;background:linear-gradient(135deg,#006241,#00a86b);color:white;border:none;border-radius:12px;font-weight:700;cursor:pointer;transition:all 0.3s;box-shadow:0 2px 8px rgba(0,98,65,0.15);" class="active:scale-95" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,98,65,0.25)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,98,65,0.15)'">💾 Lưu Ảnh Món Này</button>
                             </div>
-                            <button onclick="uploadMenuImage2026()" style="width:100%;padding:12px;background:linear-gradient(135deg,#006241,#00a86b);color:white;border:none;border-radius:12px;font-weight:700;cursor:pointer;margin-bottom:20px;transition:all 0.3s;box-shadow:0 2px 8px rgba(0,98,65,0.15);" class="active:scale-95" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,98,65,0.25)'" onmouseout="this.style.boxShadow='0 2px 8px rgba(0,98,65,0.15)'">Lưu Ảnh</button>
-                            <div id="menu-gallery-2026" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:12px;"></div>
+                            
+                            <!-- GALLERY ĐÃ UPLOAD -->
+                            <div style="margin-bottom:12px;">
+                                <p style="margin:0 0 12px;font-size:0.9rem;font-weight:700;color:#111827;">Ảnh đã lưu</p>
+                                <div id="menu-gallery-2026" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:12px;"></div>
+                                <p id="menu-gallery-empty-2026" style="text-align:center;color:#9ca3af;padding:30px 20px;margin:0;">Chưa có ảnh nào</p>
+                            </div>
                         </div>
                     </div>
 
@@ -9113,28 +9136,64 @@ function loadScreenMenuSelect() {
     db.ref('menu_xolifa').once('value', snap => {
         var data = snap.val();
         var items = Array.isArray(data) ? data : Object.values(data || {});
-        var select = document.getElementById('menu-select-2026');
-        select.innerHTML = '<option value="">Chọn một món</option>';
+        var list = document.getElementById('menu-list-2026');
+        list.innerHTML = '';
+        
         items.forEach((item, idx) => {
             if (item && item.name) {
-                var opt = document.createElement('option');
-                opt.value = idx;
-                opt.textContent = item.name;
-                select.appendChild(opt);
+                var btn = document.createElement('button');
+                btn.style.cssText = 'padding:10px;border:2px solid #e5e7eb;border-radius:10px;background:white;cursor:pointer;font-size:0.8rem;font-weight:600;color:#374151;transition:all 0.2s;word-break:break-word;';
+                btn.textContent = item.name;
+                btn.className = 'menu-item-btn-2026';
+                btn.setAttribute('data-idx', idx);
+                btn.onclick = function() { selectMenuItem2026(idx, item); };
+                list.appendChild(btn);
             }
         });
+        
         renderMenuGallery2026();
     });
 }
 
+var _selectedMenuItemIdx = null;
+
+function selectMenuItem2026(idx, item) {
+    // Highlight selected button
+    document.querySelectorAll('.menu-item-btn-2026').forEach(btn => {
+        var isActive = btn.getAttribute('data-idx') == idx;
+        btn.style.borderColor = isActive ? '#006241' : '#e5e7eb';
+        btn.style.background = isActive ? '#f0fdf4' : 'white';
+        btn.style.color = isActive ? '#006241' : '#374151';
+        btn.style.fontWeight = isActive ? '700' : '600';
+    });
+    
+    _selectedMenuItemIdx = idx;
+    document.getElementById('menu-image-2026').value = '';
+    document.getElementById('menu-preview-2026').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
+}
+
+// PREVIEW KHI CHỌN FILE
+document.addEventListener('change', function(e) {
+    if (e.target.id === 'menu-image-2026') {
+        var file = e.target.files[0];
+        if (file) {
+            var reader = new FileReader();
+            reader.onload = function(evt) {
+                var preview = document.getElementById('menu-preview-2026');
+                preview.innerHTML = '<img src="' + evt.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+});
+
 function uploadMenuImage2026() {
-    var select = document.getElementById('menu-select-2026');
+    if (_selectedMenuItemIdx === null) { alert('⚠️ Chọn một món trước!'); return; }
     var input = document.getElementById('menu-image-2026');
-    if (!select.value) { alert('Chọn một món!'); return; }
-    if (!input.files.length) { alert('Chọn ảnh!'); return; }
+    if (!input.files.length) { alert('⚠️ Chọn ảnh!'); return; }
     
     var file = input.files[0];
-    var idx = select.value;
+    var idx = _selectedMenuItemIdx;
     var reader = new FileReader();
     reader.onload = function(e) {
         var timestamp = Date.now();
@@ -9142,16 +9201,25 @@ function uploadMenuImage2026() {
         ref.put(file).then(snap => snap.ref.getDownloadURL()).then(url => {
             _screen2026Data.menuImages[idx] = {url, timestamp};
             input.value = '';
-            select.value = '';
+            document.getElementById('menu-preview-2026').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
             renderMenuGallery2026();
-        }).catch(err => alert('Lỗi: ' + err.message));
+            alert('✅ Lưu ảnh thành công!');
+        }).catch(err => alert('❌ Lỗi: ' + err.message));
     };
     reader.readAsArrayBuffer(file);
 }
 
 function renderMenuGallery2026() {
     var gallery = document.getElementById('menu-gallery-2026');
+    var empty = document.getElementById('menu-gallery-empty-2026');
     gallery.innerHTML = '';
+    
+    if (Object.keys(_screen2026Data.menuImages).length === 0) {
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+    
     Object.keys(_screen2026Data.menuImages).forEach(idx => {
         var item = _screen2026Data.menuImages[idx];
         var div = document.createElement('div');
