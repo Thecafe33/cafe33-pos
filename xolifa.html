@@ -4055,9 +4055,10 @@ function switchView(v) {
 
     var sidebarCart = document.getElementById('sidebar-cart');
     if (sidebarCart) {
-        if (isMobile) sidebarCart.classList.toggle('hidden', v !== 'menu');
-        else sidebarCart.classList.toggle('hidden', v !== 'menu' && v !== 'payment' || v === 'discount');
-        if (v === 'discount') sidebarCart.classList.add('hidden');
+        var showCart = (v === 'menu') || (!isMobile && v === 'payment');
+        sidebarCart.style.display = showCart ? '' : 'none';
+        // sync hidden class for other code that checks it
+        sidebarCart.classList.toggle('hidden', !showCart);
     }
 
     var catBar = document.getElementById('category-bar');
@@ -9152,45 +9153,27 @@ function menuConfigLoad() {
     });
 }
 
-// Dùng window._menuData (đã có sẵn từ main listener)
+// Load danh sách món – đọc thẳng Firebase, không phụ thuộc timing
 function mcsLoadItems() {
-    var raw = window._menuData; // array đã được load từ main app
-    var items = [];
-
-    if (raw && Array.isArray(raw)) {
-        raw.forEach(function(m, i) {
-            if (m && m.name && m.name !== 'config') {
-                items.push({ key: m._key || ('idx_' + i), name: m.name, type: m.type || '' });
+    db.ref('menu_xolifa').once('value', function(snap) {
+        var data = snap.val();
+        var items = [];
+        if (data && typeof data === 'object') {
+            if (Array.isArray(data)) {
+                data.forEach(function(m, i) {
+                    if (m && m.name) items.push({ key: 'idx_' + i, name: m.name, type: m.type || '' });
+                });
+            } else {
+                Object.keys(data).forEach(function(k) {
+                    var m = data[k];
+                    if (k === 'config' || !m || typeof m !== 'object' || !m.name) return;
+                    items.push({ key: k, name: m.name, type: m.type || '' });
+                });
             }
-        });
-    }
-
-    // Nếu _menuData chưa sẵn, fallback đọc thẳng FB (sau 500ms delay cho auth)
-    if (!items.length) {
-        setTimeout(function() {
-            db.ref('menu_xolifa').once('value', function(snap) {
-                var data = snap.val();
-                if (!data) { mcsRenderDrinks([]); mcsRenderFeaturedChips([]); return; }
-                var arr = [];
-                if (Array.isArray(data)) {
-                    data.forEach(function(m, i) {
-                        if (m && m.name) arr.push({ key: 'idx_' + i, name: m.name, type: m.type || '' });
-                    });
-                } else {
-                    Object.keys(data).forEach(function(k) {
-                        var m = data[k];
-                        if (k === 'config' || !m || !m.name) return;
-                        arr.push({ key: k, name: m.name, type: m.type || '' });
-                    });
-                }
-                mcsRenderDrinks(arr);
-                mcsRenderFeaturedChips(arr);
-            });
-        }, 400);
-        return;
-    }
-    mcsRenderDrinks(items);
-    mcsRenderFeaturedChips(items);
+        }
+        mcsRenderDrinks(items);
+        mcsRenderFeaturedChips(items);
+    });
 }
 
 // ─── SIDEBAR NAV ────────────────────────────────────────
@@ -9569,5 +9552,6 @@ function keypadConfirm() {
 </script>
 
 
+<div id="ver-badge" style="position:fixed;bottom:14px;right:18px;z-index:99999;background:rgba(0,0,0,0.55);color:white;font-size:0.68rem;font-weight:800;padding:4px 10px;border-radius:999px;letter-spacing:0.05em;pointer-events:none;backdrop-filter:blur(6px);">v3.1</div>
 </body>
 </html>
