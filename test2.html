@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>XOLIFA — Màn hình khách (Cập nhật POS & Layout)</title>
+<title>XOLIFA — Màn hình khách (Fix khoảng trắng)</title>
 <meta name="theme-color" content="#006241">
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
@@ -83,10 +83,10 @@ html, body {
 .feat-price { font-size: 22px; font-weight: 900; color: var(--green); }
 .feat-img { width: 150px; height: 150px; object-fit: contain; position: absolute; right: -10px; bottom: -10px; filter: drop-shadow(0 15px 20px rgba(0,0,0,0.15)); }
 
-/* KHUNG DANH MỤC THÔNG MINH - Đã fix khoảng trắng 2 bên */
+/* KHUNG DANH MỤC THÔNG MINH */
 #categories-grid-container {
   height: 580px; position: relative; background: var(--surface); border-radius: var(--radius);
-  padding: 30px 20px; /* Giảm padding 2 bên để content tràn ra sát mép */
+  padding: 30px 40px; /* Căn chỉnh viền chung */
   box-shadow: var(--shadow);
   display: flex; flex-direction: column; align-items: stretch;
 }
@@ -97,23 +97,27 @@ html, body {
 }
 
 #categories-masonry {
-  column-count: 2; column-gap: 50px; /* Tối ưu gap giữa 2 cột */
+  column-count: 2; column-gap: 80px; /* Tăng khoảng cách giữa 2 cột để né cái line ở giữa */
   width: 100%; transform-origin: top center; 
 }
 
-.cat-section { break-inside: avoid; margin-bottom: 30px; position: relative; z-index: 1; padding: 0 10px; }
+.cat-section { break-inside: avoid; margin-bottom: 35px; position: relative; z-index: 1; }
 .cat-title { font-size: 24px; font-weight: 900; color: var(--text-main); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px dashed rgba(0,98,65,0.2); padding-bottom: 8px;}
+
+/* KHẮC PHỤC LỖI KHOẢNG TRẮNG 2 BÊN */
 .cat-items-grid { 
-  display: grid; 
-  grid-template-columns: repeat(3, 1fr); 
-  gap: 16px 10px; 
-  justify-items: center; /* Căn giữa các món trong ô của nó */
+  display: flex; /* Dùng flex để dàn trải đều 100% width */
+  justify-content: space-between; /* Đẩy các item dạt ra tận cùng mép trái và phải */
+  gap: 10px;
   width: 100%;
 }
-.item-card { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; }
-.item-img { width: 90px; height: 110px; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.08)); }
-.item-img-placeholder { width: 90px; height: 110px; background: var(--box-bg); border-radius: 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--green); opacity: 0.5; }
-.item-name { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; width: 100%; padding: 0 5px;}
+.item-card { 
+  display: flex; flex-direction: column; align-items: center; text-align: center; 
+  width: 32%; /* Ép mỗi món chiếm đều 1/3 cột */
+}
+.item-img { width: 100px; height: 120px; object-fit: contain; margin-bottom: 10px; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.08)); }
+.item-img-placeholder { width: 100px; height: 120px; background: var(--box-bg); border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 34px; color: var(--green); opacity: 0.5; }
+.item-name { font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; width: 100%; }
 .item-price { font-size: 15px; font-weight: 800; color: var(--green); }
 
 /* 3. PHẢI: ĐƠN HÀNG (400px) */
@@ -415,7 +419,6 @@ auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty").then(functi
 });
 
 function listenToPOS() {
-    // Đã đổi sang listen node session_display_xolifa theo yêu cầu
     db.ref('session_display_xolifa').on('value', function(snap) {
         var data = snap.val();
         if (!data || data.state === 'idle') { resetScreen(); return; }
