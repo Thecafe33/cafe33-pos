@@ -11,1200 +11,507 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet">
-
 <style>
-/* ─── RESET & ROOT ─────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --W:1920px;--H:1080px;
+  --LEFT:1632px;--RIGHT:288px;
+  --green:#006241;--green-mid:#00875A;--green-dark:#004f32;--green-bg:#E8F5EE;
+  --amber:#F59E0B;--surface:#FFFFFF;--bg:#F0F3F1;
+  --text1:#0D1F16;--text2:#4B5563;--muted:#9CA3AF;--border:rgba(0,0,0,0.07);
+  --r-sm:10px;--r-md:16px;--r-lg:24px;--r-xl:32px;
+}
+html,body{width:var(--W);height:var(--H);overflow:hidden;user-select:none;font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);-webkit-font-smoothing:antialiased}
+#app{display:flex;width:var(--W);height:var(--H)}
 
-:root {
-  /* FHD 23.8" hardcoded */
-  --screen-w: 1920px;
-  --screen-h: 1080px;
-  --left-w: 1632px;   /* 85% */
-  --right-w: 288px;   /* 15% */
-  --slide-h: 405px;   /* ~37.5% of 1080 */
-  --cart-h: 675px;    /* ~62.5% of 1080 */
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LEFT PANEL — 1632px
+━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#panel-left{width:var(--LEFT);height:var(--H);display:flex;flex-direction:column;border-right:1px solid var(--border);overflow:hidden;position:relative;background:var(--bg)}
 
-  /* Brand */
-  --green: #006241;
-  --green-light: #00875A;
-  --green-dark: #004f32;
-  --green-muted: #E6F4EE;
-  --amber: #F59E0B;
-  --bg: #F0F2F0;
-  --surface: #FFFFFF;
-  --text-primary: #0F1F17;
-  --text-secondary: #4B5563;
-  --text-muted: #9CA3AF;
-  --border: rgba(0,0,0,0.07);
-  --shadow-sm: 0 2px 8px rgba(0,98,65,0.08);
-  --shadow-md: 0 8px 30px rgba(0,98,65,0.12);
-  --shadow-lg: 0 20px 60px rgba(0,98,65,0.16);
-  --radius-sm: 12px;
-  --radius-md: 20px;
-  --radius-lg: 32px;
-}
+/* ── BANNER BAR 86px ── */
+#banner-bar{height:86px;flex-shrink:0;display:flex;align-items:stretch;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,0.05);overflow:hidden}
+#logo-zone{width:174px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--green);padding:0 18px;border-right:none}
+#logo-text{font-family:'Bebas Neue',sans-serif;font-size:44px;color:#fff;letter-spacing:0.07em;line-height:1}
+#logo-sub{font-size:10px;font-weight:700;color:rgba(255,255,255,0.65);letter-spacing:0.15em;text-transform:uppercase;margin-top:2px}
+#banner-zone{flex:1;overflow:hidden;position:relative}
+#banner-img{width:100%;height:100%;object-fit:cover;display:none}
+#banner-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0fdf4,#dcfce7)}
+#banner-ph span{font-size:17px;font-weight:800;color:var(--green);letter-spacing:0.08em;text-transform:uppercase;opacity:0.45}
+#clock-zone{width:154px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 16px;border-left:1px solid var(--border)}
+#clock-big{font-size:36px;font-weight:900;color:var(--green-dark);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;line-height:1}
+#clock-date{font-size:11px;font-weight:600;color:var(--muted);margin-top:3px;text-align:center}
 
-html, body {
-  width: var(--screen-w);
-  height: var(--screen-h);
-  overflow: hidden;
-  user-select: none;
-  -webkit-user-select: none;
-  background: var(--bg);
-  font-family: 'Be Vietnam Pro', sans-serif;
-  -webkit-font-smoothing: antialiased;
-}
+/* ── FEATURED ROW 186px ── */
+#featured-row{height:186px;flex-shrink:0;display:flex;align-items:stretch;gap:14px;padding:12px 22px;background:var(--bg);border-bottom:1px solid var(--border)}
+.feat-card{flex:1;background:var(--surface);border-radius:var(--r-lg);display:flex;align-items:center;gap:12px;padding:12px 18px;box-shadow:0 6px 28px rgba(0,98,65,0.13);border:1.5px solid rgba(0,98,65,0.09);overflow:hidden;position:relative}
+.feat-card::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,98,65,0.03),transparent 60%);pointer-events:none}
+.feat-star{position:absolute;top:9px;right:11px;font-size:10px;font-weight:800;color:#fff;background:var(--amber);padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:0.05em}
+.feat-img-wrap{width:100px;height:148px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.feat-img-wrap img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 6px 14px rgba(0,0,0,0.18))}
+.feat-img-ph{width:92px;height:110px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;font-size:42px;opacity:0.6}
+.feat-info{flex:1;min-width:0}
+.feat-lbl{font-size:10px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--green);margin-bottom:5px;display:block}
+.feat-name{font-size:19px;font-weight:900;color:var(--text1);line-height:1.2;text-transform:uppercase;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:9px}
+.feat-prices{display:flex;gap:7px;flex-wrap:wrap}
+.feat-chip{padding:5px 13px;border-radius:999px;font-size:14px;font-weight:900;color:#fff;box-shadow:0 3px 8px rgba(0,0,0,0.15)}
+.feat-chip-alt{padding:4px 12px;border-radius:999px;font-size:13px;font-weight:800;background:rgba(0,98,65,0.08);border:1.5px solid rgba(0,98,65,0.2)}
+.feat-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;background:var(--surface);border-radius:var(--r-lg);border:2px dashed #D1D5DB;opacity:0.45}
+.feat-empty span{font-size:32px}
+.feat-empty p{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em}
 
-/* ─── LAYOUT ROOT ──────────────────────────────────────────── */
-#app {
-  display: flex;
-  width: var(--screen-w);
-  height: var(--screen-h);
-}
+/* ── MENU + TOPPING ROW (flex-1) ── */
+#body-row{flex:1;display:flex;overflow:hidden;min-height:0}
 
-/* ─── LEFT — MENU DISPLAY ──────────────────────────────────── */
-#panel-left {
-  width: var(--left-w);
-  height: var(--screen-h);
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-right: 1px solid var(--border);
-  position: relative;
-}
+/* menu columns */
+#menu-area{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+#cat-bar{display:flex;align-items:center;gap:7px;padding:9px 20px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0}
+#cat-bar::-webkit-scrollbar{display:none}
+.cat-btn{padding:5px 16px;border-radius:999px;font-size:13px;font-weight:700;background:var(--bg);color:var(--text2);border:none;cursor:default;white-space:nowrap;transition:all 0.25s}
+.cat-btn.on{background:var(--green);color:#fff;box-shadow:0 3px 10px rgba(0,98,65,0.3)}
+#menu-scroll{flex:1;overflow-y:auto;padding:13px 20px 46px}
+#menu-scroll::-webkit-scrollbar{width:5px}
+#menu-scroll::-webkit-scrollbar-thumb{background:#C8D5CC;border-radius:10px}
 
-/* Header bar */
-#left-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 40px 16px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-  flex-shrink: 0;
-}
-#logo-word {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 52px;
-  color: var(--green);
-  letter-spacing: 0.06em;
-  line-height: 1;
-}
-#left-tagline {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-#clock-display {
-  font-size: 40px;
-  font-weight: 800;
-  color: var(--green-dark);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-#date-display {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-align: right;
-  text-transform: capitalize;
-  margin-top: 2px;
-}
+/* section */
+.sect{margin-bottom:16px}
+.sect-title{font-size:15px;font-weight:900;color:var(--text1);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:9px;padding-left:3px;display:flex;align-items:center;gap:8px}
+.sect-title::after{content:'';flex:1;height:1.5px;background:linear-gradient(to right,rgba(0,98,65,0.18),transparent);border-radius:2px}
+.sect-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}
 
-/* Category tabs */
-#cat-tabs-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 40px;
-  background: var(--surface);
-  overflow-x: auto;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
-}
-#cat-tabs-bar::-webkit-scrollbar { display: none; }
-.cat-tab {
-  padding: 8px 22px;
-  border-radius: 999px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text-secondary);
-  background: var(--bg);
-  border: none;
-  cursor: default;
-  white-space: nowrap;
-  transition: all 0.25s;
-  letter-spacing: 0.01em;
-}
-.cat-tab.active {
-  background: var(--green);
-  color: #fff;
-  box-shadow: 0 4px 16px rgba(0,98,65,0.3);
-}
+/* menu card */
+.mcard{border-radius:var(--r-md);overflow:hidden;display:flex;flex-direction:column;height:148px;border:1.5px solid rgba(255,255,255,0.2);box-shadow:0 4px 14px rgba(0,0,0,0.12);position:relative}
+.mcard-img{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.mcard-img img{width:100%;height:100%;object-fit:cover}
+.mcard-img-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:30px;opacity:0.55}
+.mcard-body{padding:6px 8px 8px;background:rgba(0,0,0,0.24);backdrop-filter:blur(2px)}
+.mcard-name{font-size:11.5px;font-weight:900;color:#fff;text-transform:uppercase;line-height:1.2;letter-spacing:0.01em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;margin-bottom:4px}
+.mcard-prices{display:flex;gap:4px;flex-wrap:wrap}
+.mcard-price{font-size:10.5px;font-weight:800;color:#fff;background:rgba(255,255,255,0.22);padding:2px 6px;border-radius:999px;white-space:nowrap}
+.mcard-size{font-size:9.5px;background:rgba(0,0,0,0.22);color:rgba(255,255,255,0.8)}
 
-/* Menu grid */
-#menu-area {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
-}
-#menu-grid-wrap {
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  padding: 28px 40px 28px;
-}
-#menu-grid-wrap::-webkit-scrollbar { width: 6px; }
-#menu-grid-wrap::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }
-#menu-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
-}
+/* ── TOPPING COLUMN ── */
+#topping-col{width:174px;flex-shrink:0;border-left:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden}
+#topping-hdr{padding:11px 13px;border-bottom:1px solid var(--border);background:var(--green);flex-shrink:0}
+#topping-hdr p{font-size:11px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.1em}
+#topping-list{flex:1;overflow-y:auto;padding:9px;display:grid;grid-template-columns:repeat(2,1fr);gap:7px;align-content:start}
+#topping-list::-webkit-scrollbar{width:3px}
+#topping-list::-webkit-scrollbar-thumb{background:#D1D5DB;border-radius:10px}
+.top-card{aspect-ratio:1/1;border-radius:var(--r-sm);overflow:hidden;background:var(--bg);border:1px solid var(--border)}
+.top-card img{width:100%;height:100%;object-fit:cover}
+.top-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:20px 6px;opacity:0.35}
+.top-empty span{font-size:28px}
+.top-empty p{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;text-align:center;letter-spacing:0.05em}
 
-.menu-card {
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  border: 1.5px solid var(--border);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  height: 210px;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: var(--shadow-sm);
-  position: relative;
-}
-.menu-card-img {
-  flex: 1;
-  background: var(--green-muted);
-  overflow: hidden;
-  position: relative;
-}
-.menu-card-img img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.menu-card-img-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #E6F4EE 0%, #D1EAE0 100%);
-}
-.menu-card-img-placeholder span {
-  font-size: 42px;
-  opacity: 0.5;
-}
-.menu-card-body {
-  padding: 10px 14px 12px;
-  background: var(--surface);
-}
-.menu-card-name {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.01em;
-  line-height: 1.25;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  margin-bottom: 6px;
-}
-.menu-card-price {
-  font-size: 16px;
-  font-weight: 900;
-  color: var(--green);
-}
-.menu-card-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: var(--green);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 999px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
+/* ── WELCOME STRIP 40px ── */
+#welcome-strip{position:absolute;bottom:0;left:0;width:var(--LEFT);height:40px;z-index:5;background:var(--green);display:flex;align-items:center;overflow:hidden}
+#welcome-tick{display:inline-block;white-space:nowrap;font-size:14px;font-weight:700;color:rgba(255,255,255,0.88);letter-spacing:0.04em;text-transform:uppercase;animation:tick 32s linear infinite}
+@keyframes tick{from{transform:translateX(1640px)}to{transform:translateX(-100%)}}
 
-/* Screensaver over left panel */
-#screensaver-left {
-  display: none;
-  position: absolute;
-  inset: 0;
-  z-index: 50;
-  background: #000;
-  overflow: hidden;
-}
-#saver-l1, #saver-l2 {
-  position: absolute; inset: 0;
-  transition: opacity 1s ease-in-out;
-  opacity: 0;
-}
-#saver-overlay {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
-  padding: 40px 60px;
-  z-index: 10;
-}
-#saver-text {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 64px;
-  color: #fff;
-  letter-spacing: 0.08em;
-  opacity: 0.9;
-}
+/* ── SCREENSAVER ── */
+#screensaver{display:none;position:absolute;inset:0;z-index:60;background:#000;overflow:hidden}
+#sv1,#sv2{position:absolute;inset:0;transition:opacity 1.2s ease-in-out;opacity:0}
+#sv1 img,#sv2 img{width:100%;height:100%;object-fit:cover}
+#sv-over{position:absolute;bottom:0;left:0;right:0;z-index:10;background:linear-gradient(to top,rgba(0,0,0,0.72),transparent);padding:38px 60px}
+#sv-logo{font-family:'Bebas Neue',sans-serif;font-size:68px;color:#fff;letter-spacing:0.07em;line-height:1}
+#sv-tag{font-size:16px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.12em;margin-top:5px}
 
-/* ─── RIGHT PANEL ──────────────────────────────────────────── */
-#panel-right {
-  width: var(--right-w);
-  height: var(--screen-h);
-  display: flex;
-  flex-direction: column;
-  background: var(--surface);
-  box-shadow: -4px 0 30px rgba(0,0,0,0.08);
-}
+/* ── QR ── */
+#view-qr{display:none;position:absolute;inset:0;z-index:80;background:rgba(255,255,255,0.96);backdrop-filter:blur(20px);flex-direction:column;align-items:center;justify-content:center;animation:fi .3s}
+#view-qr h2{font-size:26px;font-weight:900;color:var(--green);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:14px}
+.qr-box{background:#fff;padding:14px;border-radius:var(--r-xl);box-shadow:0 20px 60px rgba(0,98,65,0.18);border:2px solid rgba(0,98,65,0.1);margin-bottom:18px}
+#qr-img{width:230px;height:230px;border-radius:14px}
+#qr-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em;text-align:center;margin-bottom:6px}
+#qr-amt{font-size:50px;font-weight:900;color:var(--green);letter-spacing:-0.02em;text-align:center}
 
-/* Right top — Slides */
-#slide-panel {
-  width: var(--right-w);
-  height: var(--slide-h);
-  background: #000;
-  overflow: hidden;
-  position: relative;
-  flex-shrink: 0;
-  border-bottom: 2px solid var(--green);
-}
-#slide-l1, #slide-l2 {
-  position: absolute; inset: 0;
-  transition: opacity 1s ease-in-out;
-  opacity: 0;
-}
-#slide-l1 img, #slide-l2 img,
-#slide-l1 video, #slide-l2 video {
-  width: 100%; height: 100%; object-fit: cover;
-}
-#slide-dots {
-  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 5px; z-index: 10;
-}
-.s-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.4);
-  transition: all 0.3s;
-}
-.s-dot.active {
-  background: #fff;
-  width: 16px;
-  border-radius: 3px;
-}
-#slide-logo-badge {
-  position: absolute; top: 12px; left: 12px;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(8px);
-  border-radius: 8px;
-  padding: 5px 10px;
-  z-index: 10;
-}
-#slide-logo-badge span {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 20px;
-  color: #fff;
-  letter-spacing: 0.08em;
-}
+/* ── SUCCESS ── */
+#view-success{display:none;position:absolute;inset:0;z-index:80;background:var(--green);flex-direction:column;align-items:center;justify-content:center;animation:fi .4s}
+#view-success .material-symbols-outlined{font-size:108px;color:#fff;margin-bottom:18px}
+#view-success h2{font-size:58px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:0.04em}
+#view-success p{font-size:21px;font-weight:600;color:rgba(255,255,255,0.73);margin-top:10px}
+@keyframes fi{from{opacity:0}to{opacity:1}}
 
-/* Right bottom — Cart */
-#cart-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: var(--surface);
-}
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   RIGHT PANEL — 288px
+━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+#panel-right{width:var(--RIGHT);height:var(--H);display:flex;flex-direction:column;background:var(--surface);box-shadow:-4px 0 22px rgba(0,0,0,0.08)}
 
-#cart-header {
-  padding: 14px 18px 10px;
-  border-bottom: 1px solid var(--border);
-  background: var(--green-muted);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-#cart-title {
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--green-dark);
-}
-#cart-count-badge {
-  background: var(--green);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  border-radius: 999px;
-  padding: 2px 8px;
-  min-width: 24px;
-  text-align: center;
-  display: none;
-}
+/* slide panel 405px */
+#slide-panel{height:405px;flex-shrink:0;background:#000;position:relative;overflow:hidden;border-bottom:2.5px solid var(--green)}
+#sl1,#sl2{position:absolute;inset:0;transition:opacity 1s ease-in-out;opacity:0}
+#sl1 img,#sl2 img,#sl1 video,#sl2 video{width:100%;height:100%;object-fit:cover}
+#sl-badge{position:absolute;top:11px;left:11px;z-index:10;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);border-radius:8px;padding:4px 10px}
+#sl-badge span{font-family:'Bebas Neue',sans-serif;font-size:19px;color:#fff;letter-spacing:0.08em}
+#sl-dots{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:10}
+.sdot{width:5px;height:5px;border-radius:3px;background:rgba(255,255,255,0.38);transition:all .35s}
+.sdot.on{width:15px;background:#fff}
 
-#cart-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-#cart-list::-webkit-scrollbar { width: 4px; }
-#cart-list::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }
-
-.cart-item {
-  background: var(--bg);
-  border-radius: var(--radius-sm);
-  padding: 9px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  animation: fadeSlideIn 0.3s ease-out;
-  border: 1px solid var(--border);
-}
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.cart-qty {
-  width: 30px; height: 30px;
-  background: var(--green);
-  color: #fff;
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-  font-weight: 900;
-  flex-shrink: 0;
-}
-.cart-name {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.3;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-.cart-size-tag {
-  display: inline-block;
-  background: #F3F4F6;
-  color: #6B7280;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  margin-top: 2px;
-}
-.cart-price {
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--green);
-  text-align: right;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* Cart empty state */
-#cart-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  gap: 8px;
-  color: var(--text-muted);
-}
-#cart-empty .material-symbols-outlined {
-  font-size: 44px;
-  opacity: 0.25;
-}
-#cart-empty p {
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.4;
-}
-
-/* Cart footer */
-#cart-footer {
-  border-top: 1.5px solid var(--border);
-  padding: 12px 18px 14px;
-  background: var(--surface);
-  flex-shrink: 0;
-}
-#cart-customer {
-  display: none;
-  align-items: center;
-  gap: 8px;
-  background: var(--green-muted);
-  padding: 7px 10px;
-  border-radius: var(--radius-sm);
-  margin-bottom: 10px;
-  border: 1px solid rgba(0,98,65,0.15);
-}
-#cart-customer .material-symbols-outlined {
-  font-size: 20px;
-  color: var(--green);
-  flex-shrink: 0;
-}
-#cust-name {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--green-dark);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-#cust-pts {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--green);
-  white-space: nowrap;
-}
-
-#total-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-#total-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-}
-#total-price {
-  font-size: 30px;
-  font-weight: 900;
-  color: var(--green);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-
-#cash-row {
-  display: none;
-  flex-direction: column;
-  gap: 5px;
-  padding-top: 8px;
-  border-top: 1.5px dashed #E5E7EB;
-}
-.cash-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.cash-line-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-}
-#screen-paid {
-  font-size: 16px;
-  font-weight: 900;
-  color: var(--text-primary);
-}
-#screen-change {
-  font-size: 22px;
-  font-weight: 900;
-  color: var(--amber);
-  font-variant-numeric: tabular-nums;
-}
-
-/* ─── QR OVERLAY ───────────────────────────────────────────── */
-#view-qr {
-  display: none;
-  position: absolute;
-  inset: 0;
-  z-index: 80;
-  background: rgba(255,255,255,0.97);
-  backdrop-filter: blur(20px);
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.3s;
-}
-#view-qr .qr-box {
-  background: #fff;
-  padding: 16px;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  border: 2px solid rgba(0,98,65,0.1);
-  margin-bottom: 24px;
-}
-#view-qr img { width: 220px; height: 220px; border-radius: 16px; }
-#view-qr h2 {
-  font-size: 22px;
-  font-weight: 900;
-  color: var(--green);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 6px;
-  text-align: center;
-}
-#qr-amount {
-  font-size: 44px;
-  font-weight: 900;
-  color: var(--green);
-  letter-spacing: -0.02em;
-  text-align: center;
-}
-
-/* ─── SUCCESS OVERLAY ──────────────────────────────────────── */
-#view-success {
-  display: none;
-  position: absolute;
-  inset: 0;
-  z-index: 80;
-  background: var(--green);
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  animation: fadeIn 0.4s;
-}
-#view-success .material-symbols-outlined {
-  font-size: 100px;
-  color: #fff;
-  margin-bottom: 20px;
-}
-#view-success h2 {
-  font-size: 52px;
-  font-weight: 900;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-#view-success p {
-  font-size: 20px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.8);
-  margin-top: 10px;
-}
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-/* ─── MARQUEE WELCOME ──────────────────────────────────────── */
-#welcome-strip {
-  position: absolute;
-  bottom: 0; left: 0; right: 0;
-  height: 44px;
-  background: var(--green);
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  z-index: 5;
-}
-#welcome-marquee {
-  display: inline-block;
-  white-space: nowrap;
-  animation: marquee 28s linear infinite;
-  font-size: 15px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.9);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-@keyframes marquee {
-  from { transform: translateX(1920px); }
-  to   { transform: translateX(-100%); }
-}
+/* cart panel */
+#cart-panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#cart-hdr{padding:12px 15px 9px;flex-shrink:0;background:var(--green-bg);border-bottom:1px solid rgba(0,98,65,0.12);display:flex;align-items:center;justify-content:space-between}
+#cart-hdr-t{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;color:var(--green-dark)}
+#cart-bdg{background:var(--green);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:2px 7px;display:none}
+#cart-list{flex:1;overflow-y:auto;padding:8px 11px;display:flex;flex-direction:column;gap:5px}
+#cart-list::-webkit-scrollbar{width:3px}
+#cart-list::-webkit-scrollbar-thumb{background:#D1D5DB;border-radius:10px}
+.citem{background:var(--bg);border-radius:9px;padding:7px 9px;display:flex;align-items:center;gap:7px;border:1px solid var(--border);animation:pop .25s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.cqty{width:27px;height:27px;border-radius:7px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;flex-shrink:0}
+.cname{flex:1;font-size:12px;font-weight:700;color:var(--text1);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.csz{display:inline-block;font-size:9.5px;font-weight:700;background:#F3F4F6;color:#6B7280;padding:1px 5px;border-radius:4px;text-transform:uppercase;margin-top:2px}
+.cprice{font-size:12px;font-weight:900;color:var(--green);text-align:right;white-space:nowrap;flex-shrink:0}
+#cart-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px}
+#cart-empty .material-symbols-outlined{font-size:38px;color:var(--muted);opacity:0.28}
+#cart-empty p{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;opacity:0.42}
+#cart-footer{border-top:1.5px solid var(--border);padding:10px 15px 12px;flex-shrink:0;background:var(--surface)}
+#cust-row{display:none;align-items:center;gap:7px;background:var(--green-bg);padding:6px 9px;border-radius:9px;margin-bottom:8px;border:1px solid rgba(0,98,65,0.14)}
+#cust-row .material-symbols-outlined{font-size:17px;color:var(--green);flex-shrink:0}
+#cust-nm{font-size:12px;font-weight:800;color:var(--green-dark);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1}
+#cust-pt{font-size:10px;font-weight:600;color:var(--green);white-space:nowrap}
+#tot-row{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px}
+#tot-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em}
+#tot-price{font-size:27px;font-weight:900;color:var(--green);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;line-height:1}
+#cash-row{display:none;flex-direction:column;gap:4px;padding-top:6px;border-top:1.5px dashed #E5E7EB}
+.csh-ln{display:flex;justify-content:space-between;align-items:center}
+.csh-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted)}
+#paid-v{font-size:14px;font-weight:900;color:var(--text1)}
+#chg-v{font-size:20px;font-weight:900;color:var(--amber);font-variant-numeric:tabular-nums}
 </style>
 </head>
-
 <body>
 <div id="app">
 
-  <!-- ════════════════ LEFT PANEL — MENU ════════════════ -->
-  <div id="panel-left">
+<!-- ═══════════ LEFT ═══════════ -->
+<div id="panel-left">
 
-    <!-- Header -->
-    <div id="left-header">
-      <div>
-        <div id="logo-word">XOLIFA</div>
-        <div id="left-tagline">Chào mừng quý khách</div>
-      </div>
-      <div style="text-align:right;">
-        <div id="clock-display">--:--</div>
-        <div id="date-display">--</div>
-      </div>
+  <!-- BANNER -->
+  <div id="banner-bar">
+    <div id="logo-zone">
+      <div id="logo-text">XOLIFA</div>
+      <div id="logo-sub">Coffee &amp; More</div>
     </div>
-
-    <!-- Category Tabs -->
-    <div id="cat-tabs-bar">
-      <button class="cat-tab active" data-cat="">Tất cả</button>
+    <div id="banner-zone">
+      <img id="banner-img" src="" alt="">
+      <div id="banner-ph"><span>✦ Xin chào quý khách ✦</span></div>
     </div>
+    <div id="clock-zone">
+      <div id="clock-big">--:--</div>
+      <div id="clock-date">--</div>
+    </div>
+  </div>
 
-    <!-- Menu Grid -->
+  <!-- FEATURED -->
+  <div id="featured-row">
+    <div class="feat-empty" id="fe0"><span>⭐</span><p>Nổi bật 1</p></div>
+    <div class="feat-empty" id="fe1"><span>⭐</span><p>Nổi bật 2</p></div>
+    <div class="feat-empty" id="fe2"><span>⭐</span><p>Nổi bật 3</p></div>
+  </div>
+
+  <!-- MENU + TOPPING -->
+  <div id="body-row">
     <div id="menu-area">
-      <div id="menu-grid-wrap">
-        <div id="menu-grid"></div>
-      </div>
+      <div id="cat-bar"><button class="cat-btn on" data-cat="">Tất cả</button></div>
+      <div id="menu-scroll"><div id="menu-content"></div></div>
+    </div>
+    <div id="topping-col">
+      <div id="topping-hdr"><p>🍨 Topping</p></div>
+      <div id="topping-list"><div class="top-empty"><span>🍮</span><p>Chưa có topping</p></div></div>
+    </div>
+  </div>
 
-      <!-- Screensaver left -->
-      <div id="screensaver-left">
-        <div id="saver-l1"></div>
-        <div id="saver-l2"></div>
-        <div id="saver-overlay">
-          <div id="saver-text">XOLIFA</div>
-          <div style="font-size:18px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px;">Xin chào quý khách</div>
-        </div>
+  <!-- Welcome strip -->
+  <div id="welcome-strip">
+    <span id="welcome-tick">✦ Xin chào quý khách đến với XOLIFA ✦ &nbsp;&nbsp; Cảm ơn quý khách đã tin tưởng lựa chọn ✦ &nbsp;&nbsp; Chúc quý khách có trải nghiệm tuyệt vời ✦ &nbsp;&nbsp;</span>
+  </div>
+
+  <!-- Screensaver -->
+  <div id="screensaver">
+    <div id="sv1"></div><div id="sv2"></div>
+    <div id="sv-over"><div id="sv-logo">XOLIFA</div><div id="sv-tag">Xin chào quý khách</div></div>
+  </div>
+
+  <!-- QR -->
+  <div id="view-qr">
+    <h2>Thanh Toán QR</h2>
+    <div class="qr-box"><img id="qr-img" src=""></div>
+    <div id="qr-lbl">Số tiền cần thanh toán</div>
+    <div id="qr-amt">0đ</div>
+  </div>
+
+  <!-- Success -->
+  <div id="view-success">
+    <span class="material-symbols-outlined">check_circle</span>
+    <h2>Thành Công!</h2>
+    <p>Cảm ơn quý khách — Hẹn gặp lại!</p>
+  </div>
+
+</div><!-- /left -->
+
+<!-- ═══════════ RIGHT ═══════════ -->
+<div id="panel-right">
+
+  <!-- Slides -->
+  <div id="slide-panel">
+    <div id="sl1"></div><div id="sl2"></div>
+    <div id="sl-badge"><span>XOLIFA</span></div>
+    <div id="sl-dots"></div>
+  </div>
+
+  <!-- Cart -->
+  <div id="cart-panel">
+    <div id="cart-hdr">
+      <span id="cart-hdr-t">Đơn hàng</span>
+      <span id="cart-bdg">0</span>
+    </div>
+    <div id="cart-list">
+      <div id="cart-empty">
+        <span class="material-symbols-outlined">shopping_bag</span>
+        <p>Chưa có món</p>
       </div>
     </div>
-
-    <!-- Welcome strip -->
-    <div id="welcome-strip">
-      <span id="welcome-marquee">✦ Xin chào quý khách đến với XOLIFA ✦ &nbsp;&nbsp;&nbsp; Cảm ơn quý khách đã tin tưởng lựa chọn ✦ &nbsp;&nbsp;&nbsp; Chúc quý khách có trải nghiệm tuyệt vời ✦ &nbsp;&nbsp;&nbsp; Mọi thắc mắc vui lòng liên hệ nhân viên ✦ &nbsp;&nbsp;&nbsp;</span>
-    </div>
-
-    <!-- QR Overlay -->
-    <div id="view-qr">
-      <h2>Thanh Toán QR</h2>
-      <div class="qr-box">
-        <img id="qr-image" src="">
+    <div id="cart-footer">
+      <div id="cust-row">
+        <span class="material-symbols-outlined">person</span>
+        <div id="cust-nm">Khách</div>
+        <div id="cust-pt">0 điểm</div>
       </div>
-      <div style="text-align:center;">
-        <p style="font-size:12px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;">Số tiền cần thanh toán</p>
-        <div id="qr-amount">0đ</div>
+      <div id="tot-row">
+        <span id="tot-lbl">Tạm tính</span>
+        <span id="tot-price">0đ</span>
+      </div>
+      <div id="cash-row">
+        <div class="csh-ln"><span class="csh-lbl">Khách đưa</span><span id="paid-v">0đ</span></div>
+        <div class="csh-ln"><span class="csh-lbl" style="color:#F59E0B">Tiền thừa</span><span id="chg-v">0đ</span></div>
       </div>
     </div>
+  </div>
 
-    <!-- Success Overlay -->
-    <div id="view-success">
-      <span class="material-symbols-outlined">check_circle</span>
-      <h2>Thành Công!</h2>
-      <p>Cảm ơn quý khách — Hẹn gặp lại!</p>
-    </div>
-
-  </div><!-- /panel-left -->
-
-  <!-- ════════════════ RIGHT PANEL ════════════════ -->
-  <div id="panel-right">
-
-    <!-- Top: Slide panel -->
-    <div id="slide-panel">
-      <div id="slide-l1"></div>
-      <div id="slide-l2"></div>
-      <div id="slide-logo-badge"><span>XOLIFA</span></div>
-      <div id="slide-dots"></div>
-    </div>
-
-    <!-- Bottom: Cart panel -->
-    <div id="cart-panel">
-      <div id="cart-header">
-        <span id="cart-title">Đơn hàng</span>
-        <span id="cart-count-badge">0</span>
-      </div>
-
-      <div id="cart-list">
-        <div id="cart-empty">
-          <span class="material-symbols-outlined">shopping_bag</span>
-          <p>Chưa có món</p>
-        </div>
-      </div>
-
-      <div id="cart-footer">
-        <div id="cart-customer">
-          <span class="material-symbols-outlined">person</span>
-          <div style="flex:1;min-width:0;">
-            <div id="cust-name">Khách lẻ</div>
-            <div id="cust-pts">0 điểm</div>
-          </div>
-        </div>
-
-        <div id="total-row">
-          <span id="total-label">Tạm tính</span>
-          <span id="total-price">0đ</span>
-        </div>
-
-        <div id="cash-row">
-          <div class="cash-line">
-            <span class="cash-line-label">Khách đưa</span>
-            <span id="screen-paid">0đ</span>
-          </div>
-          <div class="cash-line">
-            <span class="cash-line-label" style="color:#F59E0B;">Tiền thừa</span>
-            <span id="screen-change">0đ</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div><!-- /panel-right -->
-
+</div><!-- /right -->
 </div><!-- /app -->
 
 <script>
-// ══════════════════════════════════════════════════════
-// FIREBASE INIT
-// ══════════════════════════════════════════════════════
-var firebaseConfig = {
-    apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
-    authDomain: "the-cafe-33.firebaseapp.com",
-    databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "the-cafe-33",
-    storageBucket: "the-cafe-33.appspot.com",
-    messagingSenderId: "...",
-    appId: "..."
-};
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-var db     = firebase.database();
-var fstore = firebase.firestore();
-var auth   = firebase.auth();
+/* ══ FIREBASE ══ */
+var fbCfg={apiKey:"AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",authDomain:"the-cafe-33.firebaseapp.com",databaseURL:"https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"the-cafe-33",storageBucket:"the-cafe-33.appspot.com",messagingSenderId:"...",appId:"..."};
+if(!firebase.apps.length) firebase.initializeApp(fbCfg);
+var db=firebase.database(), fstore=firebase.firestore(), auth=firebase.auth();
 
-// ══════════════════════════════════════════════════════
-// CLOCK
-// ══════════════════════════════════════════════════════
-function updateClock() {
-    var now  = new Date();
-    var hh   = String(now.getHours()).padStart(2,'0');
-    var mm   = String(now.getMinutes()).padStart(2,'0');
-    document.getElementById('clock-display').textContent = hh + ':' + mm;
+/* ══ CLOCK ══ */
+(function tick(){var n=new Date(),hh=String(n.getHours()).padStart(2,'0'),mm=String(n.getMinutes()).padStart(2,'0');document.getElementById('clock-big').textContent=hh+':'+mm;var days=['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];document.getElementById('clock-date').textContent=days[n.getDay()]+' · '+n.getDate()+'/'+(n.getMonth()+1)+'/'+n.getFullYear();setTimeout(tick,1000);})();
 
-    var days = ['Chủ Nhật','Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy'];
-    var d = now.getDate(), mo = now.getMonth()+1, y = now.getFullYear();
-    document.getElementById('date-display').textContent =
-        days[now.getDay()] + ', ' + d + '/' + mo + '/' + y;
-}
-updateClock();
-setInterval(updateClock, 1000);
+/* ══ STATE ══ */
+var menuData=[],menuImages={},toppingData=[],featuredCfg=[],bannerUrl=null,currentCat='';
 
-// ══════════════════════════════════════════════════════
-// MENU LOAD + RENDER
-// ══════════════════════════════════════════════════════
-var menuData   = [];
-var menuImages = {};
-var currentCat = '';
-
-function loadMenu() {
-    db.ref('menu_xolifa').once('value', function(snap) {
-        var raw = snap.val();
-        menuData = raw ? (Array.isArray(raw) ? raw : Object.values(raw)) : [];
-        loadMenuImages();
-        buildCategoryTabs();
-        renderMenu();
-    });
+/* ══ CONFIG SNAPSHOT ══ */
+function loadCfg(){
+  fstore.collection('config_xolifa').doc('screen_2026').onSnapshot(function(doc){
+    if(!doc.exists) return;
+    var d=doc.data();
+    /* banner */
+    if(d.banner&&d.banner.url){document.getElementById('banner-img').src=d.banner.url;document.getElementById('banner-img').style.display='block';document.getElementById('banner-ph').style.display='none';}
+    /* menu images */
+    if(d.menuImages){menuImages=d.menuImages;renderBoard();}
+    /* toppings */
+    if(d.toppings&&Array.isArray(d.toppings)){toppingData=d.toppings;renderToppings();}
+    /* featured */
+    if(d.featured&&Array.isArray(d.featured)){featuredCfg=d.featured;renderFeatured();}
+    /* slides */
+    if(d.slides&&Array.isArray(d.slides)&&d.slides.length){
+      slideList=d.slides.map(function(s){return{type:'image',src:s.url,duration:(s.duration||8)*1000};});
+    }else{slideList=DEF_SLIDES.slice();}
+    totalSl=slideList.length; buildDots(totalSl);
+    clearTimeout(slTimer); slIdx=-1; slAct=1; nextSlide();
+  },function(e){console.warn('cfg:',e);});
 }
 
-function loadMenuImages() {
-    fstore.collection('config_xolifa').doc('screen_2026').get().then(function(doc) {
-        if (doc.exists && doc.data().menuImages) {
-            menuImages = doc.data().menuImages;
-            renderMenu();
-        }
-    }).catch(function(){});
+/* ══ MENU ══ */
+function loadMenu(){
+  db.ref('menu_xolifa').on('value',function(snap){
+    var raw=snap.val();
+    menuData=raw?(Array.isArray(raw)?raw:Object.values(raw)):[];
+    menuData=menuData.filter(function(m){return m&&m.name;});
+    buildTabs(); renderBoard(); renderFeatured();
+  });
 }
 
-function buildCategoryTabs() {
-    var cats = [];
-    menuData.forEach(function(item) {
-        if (item && item.type && !cats.includes(item.type)) cats.push(item.type);
-    });
-    var bar = document.getElementById('cat-tabs-bar');
-    bar.innerHTML = '';
-    var allBtn = document.createElement('button');
-    allBtn.className = 'cat-tab' + (currentCat === '' ? ' active' : '');
-    allBtn.textContent = 'Tất cả';
-    allBtn.setAttribute('data-cat','');
-    allBtn.onclick = function(){ currentCat=''; updateCatTabs(); renderMenu(); };
-    bar.appendChild(allBtn);
-    cats.forEach(function(cat) {
-        var btn = document.createElement('button');
-        btn.className = 'cat-tab' + (currentCat === cat ? ' active' : '');
-        btn.textContent = cat;
-        btn.setAttribute('data-cat', cat);
-        btn.onclick = function(){ currentCat=cat; updateCatTabs(); renderMenu(); };
-        bar.appendChild(btn);
-    });
+function buildTabs(){
+  var cats=[]; menuData.forEach(function(m){if(m.type&&!cats.includes(m.type))cats.push(m.type);});
+  var bar=document.getElementById('cat-bar'); bar.innerHTML='';
+  bar.appendChild(mkTab('Tất cả',''));
+  cats.forEach(function(c){bar.appendChild(mkTab(c,c));});
+}
+function mkTab(lbl,val){
+  var b=document.createElement('button');
+  b.className='cat-btn'+(currentCat===val?' on':'');
+  b.textContent=lbl; b.setAttribute('data-cat',val);
+  b.onclick=function(){currentCat=val;document.querySelectorAll('.cat-btn').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-cat')===val)});renderBoard();};
+  return b;
 }
 
-function updateCatTabs() {
-    document.querySelectorAll('.cat-tab').forEach(function(btn) {
-        btn.classList.toggle('active', btn.getAttribute('data-cat') === currentCat);
-    });
+var COLORS=['#006241','#00875A','#2563EB','#7C3AED','#DC2626','#D97706','#0891B2','#059669','#9333EA','#E11D48','#0284C7','#16A34A','#B45309','#6D28D9','#BE123C'];
+function getClr(item,idx){return item.color||COLORS[idx%COLORS.length];}
+function getEmoji(n,t){n=(n||'').toLowerCase();t=(t||'').toLowerCase();if(n.includes('cà phê')||n.includes('coffee')||n.includes('latte')||n.includes('espresso')||n.includes('cappuccino')||n.includes('phin'))return'☕';if(n.includes('trà')||t.includes('trà'))return'🍵';if(n.includes('matcha'))return'🍵';if(n.includes('chocolate')||n.includes('cacao'))return'🍫';if(n.includes('sinh tố')||n.includes('soda')||n.includes('nước'))return'🥤';if(n.includes('bánh'))return'🍰';if(n.includes('bạc xỉu'))return'🥛';return'🧋';}
+
+function renderBoard(){
+  var wrap=document.getElementById('menu-content'); wrap.innerHTML='';
+  if(currentCat===''){
+    var map={},ord=[];
+    menuData.forEach(function(m){var t=m.type||'Khác';if(!map[t]){map[t]=[];ord.push(t);}map[t].push(m);});
+    ord.forEach(function(c){wrap.appendChild(makeSection(c,map[c]));});
+  }else{
+    var fil=menuData.filter(function(m){return m.type===currentCat;});
+    if(fil.length){var s=makeSection(currentCat,fil);s.querySelector('.sect-title').style.display='none';wrap.appendChild(s);}
+  }
+}
+function makeSection(cat,items){
+  var sec=document.createElement('div'); sec.className='sect';
+  var title=document.createElement('div'); title.className='sect-title'; title.textContent=cat; sec.appendChild(title);
+  var grid=document.createElement('div'); grid.className='sect-grid';
+  items.forEach(function(item){grid.appendChild(makeCard(item));});
+  sec.appendChild(grid); return sec;
+}
+function makeCard(item){
+  var gi=menuData.indexOf(item); var img=menuImages[gi]; var clr=getClr(item,gi);
+  var pM=Number(item.priceM||0),pL=Number(item.priceL||0);
+  var card=document.createElement('div'); card.className='mcard';
+  card.style.background=clr; card.style.boxShadow='0 5px 16px '+clr+'55';
+  var ia=document.createElement('div'); ia.className='mcard-img';
+  if(img&&img.url){var im=new Image();im.src=img.url;im.loading='lazy';im.style.cssText='width:100%;height:100%;object-fit:cover;';im.onerror=function(){ia.innerHTML='<div class="mcard-img-ph">'+getEmoji(item.name,item.type)+'</div>';};ia.appendChild(im);}
+  else{ia.innerHTML='<div class="mcard-img-ph">'+getEmoji(item.name,item.type)+'</div>';}
+  card.appendChild(ia);
+  var body=document.createElement('div'); body.className='mcard-body';
+  var nm=document.createElement('div'); nm.className='mcard-name'; nm.textContent=item.name; body.appendChild(nm);
+  var pr=document.createElement('div'); pr.className='mcard-prices';
+  if(pM>0&&pL>0)pr.innerHTML='<span class="mcard-price mcard-size">M</span><span class="mcard-price">'+(pM/1000)+'k</span><span class="mcard-price mcard-size">L</span><span class="mcard-price">'+(pL/1000)+'k</span>';
+  else if(pM>0)pr.innerHTML='<span class="mcard-price">'+(pM/1000)+'k</span>';
+  else if(pL>0)pr.innerHTML='<span class="mcard-price">'+(pL/1000)+'k</span>';
+  else pr.innerHTML='<span class="mcard-price">—</span>';
+  body.appendChild(pr); card.appendChild(body); return card;
 }
 
-function renderMenu() {
-    var grid = document.getElementById('menu-grid');
-    grid.innerHTML = '';
-    var filtered = currentCat
-        ? menuData.filter(function(it){ return it && it.type === currentCat; })
-        : menuData.filter(function(it){ return it && it.name; });
-
-    var colors = [
-        'linear-gradient(135deg,#E6F4EE,#C8E8D8)',
-        'linear-gradient(135deg,#FEF3C7,#FDE68A)',
-        'linear-gradient(135deg,#EDE9FE,#DDD6FE)',
-        'linear-gradient(135deg,#FCE7F3,#FBCFE8)',
-        'linear-gradient(135deg,#DBEAFE,#BFDBFE)'
-    ];
-
-    filtered.forEach(function(item, idx) {
-        if (!item || !item.name) return;
-        var globalIdx = menuData.indexOf(item);
-        var imgData = menuImages[globalIdx];
-        var price = Number(item.price || item.sell_price || 0);
-        var card = document.createElement('div');
-        card.className = 'menu-card';
-
-        var imgHtml;
-        if (imgData && imgData.url) {
-            imgHtml = '<div class="menu-card-img"><img src="'+imgData.url+'" loading="lazy" onerror="this.parentElement.innerHTML=\'<div class=menu-card-img-placeholder><span>☕</span></div>\'"></div>';
-        } else {
-            var bg = colors[idx % colors.length];
-            var emoji = getMenuEmoji(item.name, item.type);
-            imgHtml = '<div class="menu-card-img"><div class="menu-card-img-placeholder" style="background:'+bg+'"><span>'+emoji+'</span></div></div>';
-        }
-
-        var badgeHtml = (item.type && item.type.toLowerCase().includes('mới')) ? '<span class="menu-card-badge">Mới</span>' : '';
-
-        card.innerHTML = imgHtml + badgeHtml +
-            '<div class="menu-card-body">' +
-            '<div class="menu-card-name">' + item.name + '</div>' +
-            '<div class="menu-card-price">' + (price > 0 ? price.toLocaleString('vi-VN') + 'đ' : '—') + '</div>' +
-            '</div>';
-        grid.appendChild(card);
-    });
+/* ══ FEATURED ══ */
+function renderFeatured(){
+  var row=document.getElementById('featured-row'); row.innerHTML='';
+  [0,1,2].forEach(function(s){
+    var cfg=featuredCfg[s];
+    if(cfg!=null&&menuData[cfg.idx]){row.appendChild(makeFeat(menuData[cfg.idx],cfg.idx));}
+    else{var e=document.createElement('div');e.className='feat-empty';e.innerHTML='<span>⭐</span><p>Nổi bật '+(s+1)+'</p>';row.appendChild(e);}
+  });
+}
+function makeFeat(item,gi){
+  var img=menuImages[gi]; var clr=getClr(item,gi);
+  var pM=Number(item.priceM||0),pL=Number(item.priceL||0);
+  var card=document.createElement('div'); card.className='feat-card'; card.style.borderColor=clr+'22';
+  var star=document.createElement('span'); star.className='feat-star'; star.textContent='⭐ Nổi bật'; card.appendChild(star);
+  var iw=document.createElement('div'); iw.className='feat-img-wrap';
+  if(img&&img.url){var im=new Image();im.src=img.url;im.alt=item.name;im.onerror=function(){iw.innerHTML='<div class="feat-img-ph" style="background:'+clr+'18;">'+getEmoji(item.name,item.type)+'</div>';};iw.appendChild(im);}
+  else{iw.innerHTML='<div class="feat-img-ph" style="background:'+clr+'18;">'+getEmoji(item.name,item.type)+'</div>';}
+  card.appendChild(iw);
+  var info=document.createElement('div'); info.className='feat-info';
+  info.innerHTML='<span class="feat-lbl">'+(item.type||'')+'</span><div class="feat-name">'+item.name+'</div>';
+  var pr=document.createElement('div'); pr.className='feat-prices';
+  if(pM>0){pr.innerHTML+='<span class="feat-chip" style="background:'+clr+';">'+(pM/1000).toFixed(0)+'k</span>';if(pL>0)pr.innerHTML+='<span class="feat-chip-alt" style="color:'+clr+';border-color:'+clr+'44;">L: '+(pL/1000).toFixed(0)+'k</span>';}
+  else if(pL>0){pr.innerHTML+='<span class="feat-chip" style="background:'+clr+';">'+(pL/1000).toFixed(0)+'k</span>';}
+  info.appendChild(pr); card.appendChild(info); return card;
 }
 
-function getMenuEmoji(name, type) {
-    var n = (name||'').toLowerCase();
-    var t = (type||'').toLowerCase();
-    if (n.includes('cà phê') || n.includes('coffee') || n.includes('espresso') || n.includes('latte') || n.includes('cappuccino')) return '☕';
-    if (n.includes('trà') || n.includes('tea')) return '🍵';
-    if (n.includes('nước') || n.includes('soda') || n.includes('juice') || n.includes('sinh tố')) return '🥤';
-    if (n.includes('bánh') || n.includes('cake') || n.includes('snack')) return '🍰';
-    if (n.includes('trứng') || n.includes('ăn')) return '🥚';
-    if (t.includes('food') || t.includes('đồ ăn')) return '🍽️';
-    return '🧋';
+/* ══ TOPPINGS ══ */
+function renderToppings(){
+  var l=document.getElementById('topping-list'); l.innerHTML='';
+  if(!toppingData||!toppingData.length){l.innerHTML='<div class="top-empty"><span>🍮</span><p>Chưa có topping</p></div>';return;}
+  toppingData.forEach(function(t){if(!t||!t.url)return;var c=document.createElement('div');c.className='top-card';var im=document.createElement('img');im.src=t.url;im.loading='lazy';c.appendChild(im);l.appendChild(c);});
 }
 
-// ══════════════════════════════════════════════════════
-// SLIDE PANEL (Right top — 15% width)
-// ══════════════════════════════════════════════════════
-var DEFAULT_SLIDES = [
-    { type:'image', src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1768316658706.jpg?alt=media&token=c8854aaa-6af4-40d7-a5b6-ccdda66e58e8', duration:6000 },
-    { type:'image', src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1770299826548.jpg?alt=media&token=c3e3fad2-b9b3-48e8-aad8-bd5658a3f386', duration:6000 },
-    { type:'image', src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/IMG_20260113_214718.png?alt=media&token=7cda9538-ce16-43ae-92a1-7eeaf1166d23', duration:6000 }
+/* ══ SLIDES (right panel) ══ */
+var DEF_SLIDES=[
+  {type:'image',src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1768316658706.jpg?alt=media&token=c8854aaa-6af4-40d7-a5b6-ccdda66e58e8',duration:7000},
+  {type:'image',src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1770299826548.jpg?alt=media&token=c3e3fad2-b9b3-48e8-aad8-bd5658a3f386',duration:7000},
+  {type:'image',src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/IMG_20260113_214718.png?alt=media&token=7cda9538-ce16-43ae-92a1-7eeaf1166d23',duration:7000}
 ];
-
-var slidePlaylist   = DEFAULT_SLIDES.slice();
-var slideIndex      = -1;
-var slideActiveLayer = 1;
-var slideTimer      = null;
-var totalSlides     = 0;
-
-function buildSlideDots(n) {
-    var dotsEl = document.getElementById('slide-dots');
-    dotsEl.innerHTML = '';
-    for (var i = 0; i < n; i++) {
-        var d = document.createElement('div');
-        d.className = 's-dot' + (i === 0 ? ' active' : '');
-        dotsEl.appendChild(d);
-    }
+var slideList=DEF_SLIDES.slice(),slIdx=-1,slAct=1,slTimer=null,totalSl=0;
+function buildDots(n){var e=document.getElementById('sl-dots');e.innerHTML='';for(var i=0;i<n;i++){var d=document.createElement('div');d.className='sdot'+(i===0?' on':'');e.appendChild(d);}}
+function updDot(i){document.querySelectorAll('.sdot').forEach(function(d,j){d.classList.toggle('on',j===i);});}
+function nextSlide(){
+  if(!slideList.length)return;
+  slIdx=(slIdx+1)%slideList.length; updDot(slIdx);
+  var item=slideList[slIdx],bId=slAct===1?'sl2':'sl1',fId=slAct===1?'sl1':'sl2',bEl=document.getElementById(bId);
+  bEl.innerHTML='';
+  if(item.type==='image'){var im=new Image();im.style.cssText='width:100%;height:100%;object-fit:cover;';im.src=item.src;im.onload=function(){doSl(fId,bId,item.duration);};im.onerror=function(){setTimeout(nextSlide,1000);};bEl.appendChild(im);}
+  else{var v=document.createElement('video');v.style.cssText='width:100%;height:100%;object-fit:cover;';v.src=item.src;v.muted=true;v.autoplay=true;v.playsInline=true;v.loop=false;v.onloadeddata=function(){doSl(fId,bId,0);};v.onended=nextSlide;v.onerror=function(){setTimeout(nextSlide,1000);};bEl.appendChild(v);}
 }
-function updateSlideDot(idx) {
-    var dots = document.querySelectorAll('.s-dot');
-    dots.forEach(function(d,i){ d.classList.toggle('active', i===idx); });
-}
+function doSl(fId,bId,dur){document.getElementById(bId).style.opacity='1';setTimeout(function(){document.getElementById(fId).style.opacity='0';setTimeout(function(){document.getElementById(fId).innerHTML='';},1050);},80);slAct=slAct===1?2:1;if(dur>0)slTimer=setTimeout(nextSlide,dur);}
 
-function nextSlide() {
-    if (!slidePlaylist.length) return;
-    slideIndex = (slideIndex + 1) % slidePlaylist.length;
-    updateSlideDot(slideIndex);
-    var item    = slidePlaylist[slideIndex];
-    var backId  = slideActiveLayer === 1 ? 'slide-l2' : 'slide-l1';
-    var frontId = slideActiveLayer === 1 ? 'slide-l1' : 'slide-l2';
-    var backEl  = document.getElementById(backId);
-    var frontEl = document.getElementById(frontId);
-    backEl.innerHTML = '';
-    var el;
-    if (item.type === 'image') {
-        el = new Image();
-        el.src = item.src;
-        el.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-        el.onload = function(){ doTransition(frontEl, backEl, item.duration); };
-        el.onerror = function(){ setTimeout(nextSlide, 1000); };
-    } else {
-        el = document.createElement('video');
-        el.src = item.src;
-        el.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-        el.muted = true; el.autoplay = true; el.playsInline = true; el.loop = false;
-        el.onloadeddata = function(){ doTransition(frontEl, backEl, 0); };
-        el.onended = nextSlide;
-        el.onerror = function(){ setTimeout(nextSlide, 1000); };
-    }
-    backEl.appendChild(el);
+/* ══ SCREENSAVER ══ */
+var savOn=false,savIdx=-1,savAct=1,savTm=null,savSl=DEF_SLIDES.slice();
+function startSav(){if(savOn)return;savOn=true;document.getElementById('screensaver').style.display='block';savIdx=-1;nxtSav();}
+function stopSav(){savOn=false;clearTimeout(savTm);document.getElementById('screensaver').style.display='none';}
+function nxtSav(){
+  if(!savOn||!savSl.length)return;
+  savIdx=(savIdx+1)%savSl.length;
+  var item=savSl[savIdx],bId=savAct===1?'sv2':'sv1',fId=savAct===1?'sv1':'sv2',bEl=document.getElementById(bId);
+  bEl.innerHTML='';var im=new Image();im.style.cssText='width:100%;height:100%;object-fit:cover;';im.src=item.src;
+  im.onload=function(){bEl.style.opacity='1';setTimeout(function(){document.getElementById(fId).style.opacity='0';},80);savAct=savAct===1?2:1;savTm=setTimeout(nxtSav,item.duration||9000);};
+  im.onerror=function(){savTm=setTimeout(nxtSav,2000);};
+  bEl.appendChild(im);
 }
 
-function doTransition(frontEl, backEl, dur) {
-    backEl.style.opacity = '1';
-    setTimeout(function(){
-        frontEl.style.opacity = '0';
-        setTimeout(function(){ frontEl.innerHTML = ''; }, 1000);
-    }, 80);
-    slideActiveLayer = slideActiveLayer === 1 ? 2 : 1;
-    if (dur > 0) slideTimer = setTimeout(nextSlide, dur);
+/* ══ POS LISTENER ══ */
+function listenPOS(){
+  db.ref('session_display').on('value',function(snap){
+    var data=snap.val();
+    if(!data||data.state==='idle'){resetScreen();return;}
+    if(data.state==='qr_payment'){stopSav();showQr(data);return;}
+    if(data.state==='success'){stopSav();playJingle('success');showSuccess();setTimeout(resetScreen,5000);return;}
+    stopSav();
+    document.getElementById('view-qr').style.display='none';
+    document.getElementById('view-success').style.display='none';
+    renderCart(data);
+  });
+}
+function showQr(data){document.getElementById('view-qr').style.display='flex';document.getElementById('view-success').style.display='none';document.getElementById('qr-img').src=data.qrUrl||'';document.getElementById('qr-amt').textContent=Number(data.amount||0).toLocaleString('vi-VN')+'đ';}
+function showSuccess(){document.getElementById('view-qr').style.display='none';document.getElementById('view-success').style.display='flex';}
+function renderCart(data){
+  var cr=document.getElementById('cust-row'),nm=data.customerName;
+  if(nm&&nm!=='Khách mới'&&nm!=='Khách lẻ'){cr.style.display='flex';document.getElementById('cust-nm').textContent=nm;document.getElementById('cust-pt').textContent=(data.customerPoints||0)+' điểm';}else{cr.style.display='none';}
+  document.getElementById('tot-price').textContent=Number(data.total||0).toLocaleString('vi-VN')+'đ';
+  var csh=document.getElementById('cash-row');
+  if(data.state==='cash_payment'){csh.style.display='flex';var p=Number(data.paid||0),c=Number(data.change||0);document.getElementById('paid-v').textContent=p.toLocaleString('vi-VN')+'đ';document.getElementById('chg-v').textContent=(c>0?c:0).toLocaleString('vi-VN')+'đ';document.getElementById('chg-v').style.color=c>0?'#F59E0B':'#9CA3AF';}else{csh.style.display='none';}
+  var list=document.getElementById('cart-list'),em=document.getElementById('cart-empty'),bdg=document.getElementById('cart-bdg'),cart=data.cart||[];
+  if(!cart.length){list.innerHTML='';list.appendChild(em);em.style.display='flex';bdg.style.display='none';return;}
+  em.style.display='none';
+  var tot=cart.reduce(function(s,i){return s+(i.qty||1);},0);bdg.style.display='block';bdg.textContent=tot;
+  list.innerHTML='';
+  cart.forEach(function(item){
+    var sz=item.size?'<span class="csz">'+item.size+'</span>':'';
+    var div=document.createElement('div');div.className='citem';
+    div.innerHTML='<div class="cqty">'+(item.qty||1)+'</div><div style="flex:1;min-width:0;"><div class="cname">'+item.name+'</div>'+sz+'</div><div class="cprice">'+((item.price||0)*(item.qty||1)).toLocaleString('vi-VN')+'đ</div>';
+    list.appendChild(div);
+  });
+}
+function resetScreen(){
+  document.getElementById('view-qr').style.display='none';
+  document.getElementById('view-success').style.display='none';
+  document.getElementById('cust-row').style.display='none';
+  document.getElementById('tot-price').textContent='0đ';
+  document.getElementById('cash-row').style.display='none';
+  var list=document.getElementById('cart-list'),em=document.getElementById('cart-empty');
+  list.innerHTML='';em.style.display='flex';list.appendChild(em);
+  document.getElementById('cart-bdg').style.display='none';
+  startSav();
 }
 
-function listenToSlides() {
-    fstore.collection('config_xolifa').doc('screen_2026').onSnapshot(function(doc) {
-        if (!doc.exists) { useDefaultSlides(); return; }
-        var data = doc.data();
-        var arr = data.slides;
-        if (arr && Array.isArray(arr) && arr.length > 0) {
-            slidePlaylist = arr.map(function(sl){
-                return { type:'image', src: sl.url, duration: (sl.duration||6)*1000 };
-            });
-        } else {
-            useDefaultSlides();
-        }
-        totalSlides = slidePlaylist.length;
-        buildSlideDots(totalSlides);
-        clearTimeout(slideTimer);
-        slideIndex = -1;
-        nextSlide();
-    }, function(err) {
-        console.warn('Slides error:', err);
-        useDefaultSlides();
-    });
-}
+/* ══ SOUND ══ */
+var _ac=null;
+function gAC(){if(!_ac)_ac=new(window.AudioContext||window.webkitAudioContext)();if(_ac.state==='suspended')_ac.resume();return _ac;}
+function playJingle(type){try{var ctx=gAC(),ns=type==='success'?[523,659,784,1047,1319]:[784,1047,784];ns.forEach(function(f,i){var o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sine';o.frequency.value=f;var t=ctx.currentTime+i*0.13;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(0.18,t+0.03);g.gain.exponentialRampToValueAtTime(0.001,t+0.35);o.start(t);o.stop(t+0.38);});}catch(e){}}
+document.addEventListener('click',function(){gAC();},{once:true});
+document.addEventListener('touchstart',function(){gAC();},{once:true});
 
-function useDefaultSlides() {
-    slidePlaylist = DEFAULT_SLIDES.slice();
-    totalSlides = slidePlaylist.length;
-    buildSlideDots(totalSlides);
-    if (slideIndex === -1) nextSlide();
-}
-
-// ══════════════════════════════════════════════════════
-// SCREENSAVER (left panel full cover)
-// ══════════════════════════════════════════════════════
-var saverRunning  = false;
-var saverSlides   = DEFAULT_SLIDES.slice();
-var saverIdx      = -1;
-var saverActive   = 1;
-var saverTimer    = null;
-
-function startScreensaver() {
-    if (saverRunning) return;
-    saverRunning = true;
-    document.getElementById('screensaver-left').style.display = 'block';
-    saverIdx = -1;
-    nextSaverSlide();
-}
-function stopScreensaver() {
-    saverRunning = false;
-    clearTimeout(saverTimer);
-    document.getElementById('screensaver-left').style.display = 'none';
-}
-function nextSaverSlide() {
-    if (!saverRunning) return;
-    saverIdx = (saverIdx + 1) % saverSlides.length;
-    var item   = saverSlides[saverIdx];
-    var backId = saverActive === 1 ? 'saver-l2' : 'saver-l1';
-    var frontId= saverActive === 1 ? 'saver-l1' : 'saver-l2';
-    var backEl = document.getElementById(backId);
-    backEl.innerHTML = '';
-    var el = new Image();
-    el.src = item.src;
-    el.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-    el.onload = function(){
-        backEl.style.opacity = '1';
-        setTimeout(function(){ document.getElementById(frontId).style.opacity='0'; }, 80);
-        saverActive = saverActive === 1 ? 2 : 1;
-        saverTimer = setTimeout(nextSaverSlide, item.duration || 8000);
-    };
-    el.onerror = function(){ saverTimer = setTimeout(nextSaverSlide, 2000); };
-    backEl.appendChild(el);
-}
-
-// ══════════════════════════════════════════════════════
-// POS LISTENER
-// ══════════════════════════════════════════════════════
-auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty")
-    .then(function() {
-        listenToSlides();
-        listenToPOS();
-        loadMenu();
-        startScreensaver();
-    })
-    .catch(function(e) { console.error('Auth error:', e); });
-
-function listenToPOS() {
-    db.ref('session_display').on('value', function(snap) {
-        var data = snap.val();
-        if (!data) { resetScreen(); return; }
-
-        if (data.state === 'qr_payment') {
-            stopScreensaver();
-            showPanel('qr');
-            document.getElementById('qr-image').src = data.qrUrl || '';
-            document.getElementById('qr-amount').textContent = Number(data.amount||0).toLocaleString('vi-VN') + 'đ';
-            return;
-        }
-        if (data.state === 'success') {
-            stopScreensaver();
-            showPanel('success');
-            setTimeout(function(){ showPanel('none'); resetScreen(); }, 5000);
-            return;
-        }
-        if (data.state === 'idle') { resetScreen(); return; }
-
-        // default: render cart
-        stopScreensaver();
-        showPanel('none');
-        renderCart(data);
-    });
-}
-
-function showPanel(which) {
-    document.getElementById('view-qr').style.display      = which === 'qr'      ? 'flex' : 'none';
-    document.getElementById('view-success').style.display = which === 'success' ? 'flex' : 'none';
-}
-
-function renderCart(data) {
-    // Customer
-    var custEl   = document.getElementById('cart-customer');
-    var nameEl   = document.getElementById('cust-name');
-    var ptsEl    = document.getElementById('cust-pts');
-    var name = data.customerName;
-    if (name && name !== 'Khách mới' && name !== 'Khách lẻ') {
-        custEl.style.display = 'flex';
-        nameEl.textContent  = name;
-        ptsEl.textContent   = (data.customerPoints || 0) + ' điểm';
-    } else {
-        custEl.style.display = 'none';
-    }
-
-    // Total
-    var total = Number(data.total || 0);
-    document.getElementById('total-price').textContent = total.toLocaleString('vi-VN') + 'đ';
-
-    // Cash info
-    var cashRow = document.getElementById('cash-row');
-    if (data.state === 'cash_payment') {
-        cashRow.style.display = 'flex';
-        var paid   = Number(data.paid   || 0);
-        var change = Number(data.change || 0);
-        document.getElementById('screen-paid').textContent   = paid.toLocaleString('vi-VN') + 'đ';
-        document.getElementById('screen-change').textContent = (change > 0 ? change : 0).toLocaleString('vi-VN') + 'đ';
-        document.getElementById('screen-change').style.color = change > 0 ? '#F59E0B' : '#9CA3AF';
-    } else {
-        cashRow.style.display = 'none';
-    }
-
-    // Cart items
-    var listEl = document.getElementById('cart-list');
-    var emptyEl = document.getElementById('cart-empty');
-    var badge  = document.getElementById('cart-count-badge');
-    var cart   = data.cart || [];
-
-    if (cart.length === 0) {
-        listEl.innerHTML = '';
-        listEl.appendChild(emptyEl);
-        emptyEl.style.display = 'flex';
-        badge.style.display = 'none';
-        return;
-    }
-
-    emptyEl.style.display = 'none';
-    badge.style.display = 'block';
-    badge.textContent = cart.length;
-
-    listEl.innerHTML = '';
-    var totalQty = 0;
-    cart.forEach(function(item) {
-        totalQty += (item.qty || 1);
-        var sizeBadge = item.size
-            ? '<span class="cart-size-tag">' + item.size + '</span>'
-            : '';
-        var div = document.createElement('div');
-        div.className = 'cart-item';
-        div.innerHTML =
-            '<div class="cart-qty">' + (item.qty||1) + '</div>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div class="cart-name">' + (item.name||'') + '</div>' +
-              sizeBadge +
-            '</div>' +
-            '<div class="cart-price">' + ((item.price||0)*(item.qty||1)).toLocaleString('vi-VN') + 'đ</div>';
-        listEl.appendChild(div);
-    });
-    badge.textContent = totalQty;
-}
-
-function resetScreen() {
-    showPanel('none');
-    document.getElementById('cart-customer').style.display = 'none';
-    document.getElementById('total-price').textContent = '0đ';
-    document.getElementById('cash-row').style.display = 'none';
-    document.getElementById('cart-list').innerHTML = '';
-    document.getElementById('cart-list').appendChild(document.getElementById('cart-empty'));
-    document.getElementById('cart-empty').style.display = 'flex';
-    document.getElementById('cart-count-badge').style.display = 'none';
-    startScreensaver();
-}
-
-// ══════════════════════════════════════════════════════
-// SOUND ENGINE
-// ══════════════════════════════════════════════════════
-var _audioCtx = null;
-function getAudioCtx() {
-    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (_audioCtx.state === 'suspended') _audioCtx.resume();
-    return _audioCtx;
-}
-function playJingle(type) {
-    try {
-        var ctx = getAudioCtx();
-        var notes = type === 'success'
-            ? [523, 659, 784, 1047, 1319]
-            : [784, 1047, 784];
-        notes.forEach(function(freq, i) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, ctx.currentTime);
-            var t = ctx.currentTime + i * 0.13;
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(0.18, t + 0.03);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-            osc.start(t); osc.stop(t + 0.38);
-        });
-    } catch(e) {}
-}
-document.addEventListener('click',      function(){ getAudioCtx(); }, { once: true });
-document.addEventListener('touchstart', function(){ getAudioCtx(); }, { once: true });
+/* ══ BOOT ══ */
+auth.signInWithEmailAndPassword("elio@thecafe33.com","Thecafe33ty")
+  .then(function(){
+    buildDots(DEF_SLIDES.length); nextSlide();
+    loadMenu(); loadCfg(); listenPOS(); startSav();
+  }).catch(function(e){console.error('Auth:',e);});
 </script>
 </body>
 </html>
