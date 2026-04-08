@@ -3,13 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>XOLIFA — Màn hình khách (Pro Digital Menu Board)</title>
-<meta name="theme-color" content="#006241">
+<title>XOLIFA — Màn hình khách (Static Background V1)</title>
 
-<!-- Font Montserrat hỗ trợ Tiếng Việt cực tốt, nét dày, số đẹp -->
+<!-- Font chữ cho khu vực Giỏ hàng -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,700,1,0" rel="stylesheet">
 
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -20,188 +19,112 @@
 <style>
 /* ─── RESET CƠ BẢN ─────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 html, body {
-  width: 100vw; height: 100vh;
-  margin: 0; padding: 0; overflow: hidden;
-  background: #000;
-  font-family: 'Montserrat', sans-serif;
-  pointer-events: none;
-  user-select: none;
-}
-
-:root {
-  --green: #004D30;      /* Xanh đậm sang trọng hơn */
-  --green-light: #00764A;
-  --bg-highlight: #EAE3D2; /* Màu kem/vàng nhạt giống ảnh mẫu TQ */
-  --surface: #FFFFFF;
-  --bg-gray: #F5F5F5;
-  --text-main: #111;
-  --text-muted: #666;
-  --border: #DDD;
+  width: 100vw; height: 100vh; margin: 0; padding: 0; overflow: hidden;
+  background: #000; font-family: 'Montserrat', sans-serif;
+  pointer-events: none; user-select: none;
 }
 
 /* ─── KHUNG CANVAS (1920x1080) ───────────────────────── */
 #app {
   position: absolute; top: 0; left: 0;
   width: 1920px; height: 1080px;
-  background: var(--surface);
-  display: flex;
   transform-origin: top left;
+  background-color: #FAFAFA;
 }
 
-/* ═════════ 1. CỘT TRÁI: MÓN NỔI BẬT (480px) ═════════ */
-#col-highlight {
-  width: 480px; height: 1080px;
-  background: var(--bg-highlight);
-  padding: 40px;
-  display: flex; flex-direction: column;
-  border-right: 2px solid rgba(0,0,0,0.05);
+/* 1. ẢNH NỀN (Tấm ảnh Photoshop của bạn) */
+#bg-image {
+  position: absolute; top: 0; left: 0;
+  width: 1920px; height: 1080px;
+  object-fit: cover; z-index: 1;
 }
 
-#logo-box {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 90px; color: var(--text-main);
-  line-height: 1; letter-spacing: 0.05em;
-  margin-bottom: 10px;
-}
-.highlight-title {
-  display: inline-block;
-  background: var(--text-main); color: #fff;
-  font-size: 24px; font-weight: 900;
-  padding: 8px 16px; border-radius: 4px;
-  margin-bottom: 40px; letter-spacing: 0.1em;
-}
+/* ═════════ CÁC VÙNG ĐỘNG (ĐÈ LÊN TRÊN ẢNH NỀN) ═════════ */
 
-#featured-list {
-  flex: 1; display: flex; flex-direction: column; gap: 40px;
-}
-.feat-item {
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-}
-.feat-img {
-  width: 220px; height: 220px; object-fit: contain;
-  margin-bottom: 15px; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15));
-}
-.feat-name {
-  font-size: 26px; font-weight: 800; color: var(--text-main);
-  line-height: 1.2; margin-bottom: 8px;
-}
-.feat-price {
-  font-size: 32px; font-weight: 900; color: var(--green);
-}
-
-/* ═════════ 2. CỘT GIỮA: THỰC ĐƠN DẠNG LIST (940px) ═════════ */
-#col-menu {
-  width: 940px; height: 1080px;
-  padding: 40px 50px;
-  display: flex; flex-direction: column; gap: 30px;
-}
-
-/* Banner Slide nằm ngay trên cùng của Menu */
-#slide-container {
-  width: 100%; height: 280px;
-  border-radius: 16px; overflow: hidden;
-  position: relative; flex-shrink: 0;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+/* 2. VÙNG SLIDE (Bên Trái) */
+/* Căn tọa độ đè đúng vào ô màu nâu bên trái trong ảnh */
+#zone-slide {
+  position: absolute; z-index: 5;
+  top: 105px; left: 40px; 
+  width: 440px; height: 935px; /* Kích thước ước lượng theo ảnh */
+  border-radius: 24px; overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  background: #000;
 }
 #slide-l1, #slide-l2 { position: absolute; inset: 0; transition: opacity 1s ease-in-out; opacity: 0; }
 #slide-l1 img, #slide-l2 img { width: 100%; height: 100%; object-fit: cover; }
+#slide-dots { position: absolute; bottom: 20px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; z-index: 10; }
+.s-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.4); }
+.s-dot.active { background: #fff; width: 24px; border-radius: 5px; }
 
-/* Khu vực danh sách món */
-#menu-list-container {
-  flex: 1;
-  display: flex; gap: 60px;
-}
-.menu-col {
-  flex: 1; display: flex; flex-direction: column; gap: 40px;
-}
-.cat-block { display: flex; flex-direction: column; }
 
-/* Tên danh mục kiểu bảng hiệu */
-.cat-title {
-  font-size: 24px; font-weight: 900; color: var(--surface);
-  background: var(--text-main); display: inline-block;
-  padding: 6px 16px; border-radius: 4px;
-  margin-bottom: 20px; align-self: flex-start;
-  letter-spacing: 0.05em; text-transform: uppercase;
+/* 3. VÙNG VIDEO (Góc Trên Phải) */
+/* Căn tọa độ đè đúng vào ô màu nâu góc trên bên phải */
+#zone-video {
+  position: absolute; z-index: 5;
+  top: 35px; right: 40px;
+  width: 440px; height: 350px;
+  border-radius: 24px; overflow: hidden;
+  background: #000;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
+#zone-video video { width: 100%; height: 100%; object-fit: cover; }
 
-/* ── THIẾT KẾ DÒNG KẺ (DOTTED LEADER) LẤP ĐẦY KHOẢNG TRỐNG ── */
-.menu-line {
-  display: flex; align-items: baseline;
-  margin-bottom: 16px; width: 100%;
-}
-.m-name {
-  font-size: 20px; font-weight: 800; color: var(--text-main);
-  white-space: nowrap; /* Không xuống dòng */
-}
-/* Dấu chấm nối giữa tên và giá */
-.m-dots {
-  flex: 1;
-  border-bottom: 2px dotted #CCC;
-  margin: 0 12px;
-  position: relative; top: -6px;
-}
-.m-price {
-  font-size: 20px; font-weight: 900; color: var(--green);
-  white-space: nowrap;
+
+/* 4. VÙNG GIỎ HÀNG (Góc Dưới Phải) */
+/* Căn tọa độ đè đúng vào ô màu nâu góc dưới bên phải */
+#zone-cart {
+  position: absolute; z-index: 5;
+  bottom: 40px; right: 40px;
+  width: 440px; height: 610px;
+  background: #FFFFFF; /* Che ô màu nâu bằng nền trắng cho đơn hàng dễ đọc */
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+  display: flex; flex-direction: column; overflow: hidden;
 }
 
-/* ═════════ 3. CỘT PHẢI: GIỎ HÀNG (500px) ═════════ */
-#col-cart {
-  width: 500px; height: 1080px;
-  background: var(--bg-gray);
-  border-left: 2px solid var(--border);
-  display: flex; flex-direction: column;
+.cart-header { background: #006241; color: #fff; padding: 20px; text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 0.05em; }
+#cart-customer-info { display: none; align-items: center; gap: 10px; background: #E6F4EE; padding: 12px 20px; color: #004f32; font-weight: 800; font-size: 18px; border-bottom: 2px solid #fff; }
+#cart-customer-info .material-symbols-outlined { color: #006241; font-size: 26px; }
+
+#cart-list { flex: 1; padding: 20px; overflow: hidden; display: flex; flex-direction: column; gap: 16px; }
+.cart-item { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px dashed #E5E7EB; padding-bottom: 16px; }
+.c-qty { width: 32px; height: 32px; background: #006241; color: #fff; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 16px; font-weight: 900; margin-right: 12px; flex-shrink: 0; }
+.c-name { flex: 1; font-size: 18px; font-weight: 800; line-height: 1.3; color: #111; }
+.c-size { display: block; font-size: 14px; font-weight: 700; color: #666; margin-top: 4px; }
+.c-price { font-size: 18px; font-weight: 900; color: #006241; margin-left: 10px; white-space: nowrap; }
+
+#cart-footer { padding: 24px 20px; background: #FAFAFA; border-top: 2px solid #E5E7EB; }
+.total-label { font-size: 16px; font-weight: 800; color: #666; text-transform: uppercase; }
+.total-price { font-size: 40px; font-weight: 900; color: #006241; text-align: right; margin-top: 4px; line-height: 1; letter-spacing: -0.02em; }
+
+
+/* 5. KHUNG LỚP PHỦ TEM "HẾT HÀNG" */
+#sold-out-container {
+  position: absolute; top: 0; left: 0;
+  width: 1920px; height: 1080px;
+  z-index: 10; /* Nằm trên ảnh nền nhưng dưới QR */
+  pointer-events: none;
+}
+/* Thiết kế cái tem dán chữ TẠM HẾT */
+.sold-out-stamp {
+  position: absolute;
+  background: rgba(220, 38, 38, 0.9); /* Màu đỏ */
+  color: #FFF; font-weight: 900; font-size: 20px;
+  padding: 4px 16px; border-radius: 6px;
+  transform: rotate(-10deg);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
+  letter-spacing: 0.05em;
+  border: 2px solid #FFF;
 }
 
-.cart-header {
-  background: var(--text-main); color: var(--surface);
-  padding: 30px; text-align: center;
-  font-size: 28px; font-weight: 900; letter-spacing: 0.05em;
-}
-
-#cart-customer-info {
-  display: none; align-items: center; gap: 12px;
-  background: #E0E0E0; padding: 16px 30px;
-  color: var(--text-main); font-weight: 900; font-size: 22px;
-}
-#cart-customer-info .material-symbols-outlined { color: var(--text-main); font-size: 32px; }
-
-#cart-list {
-  flex: 1; padding: 30px; overflow: hidden;
-  display: flex; flex-direction: column; gap: 24px;
-}
-.cart-item {
-  display: flex; justify-content: space-between; align-items: flex-start;
-  border-bottom: 2px dashed #CCC; padding-bottom: 20px;
-}
-.c-qty {
-  width: 40px; height: 40px; background: var(--text-main); color: var(--surface);
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 8px; font-size: 22px; font-weight: 900; margin-right: 16px; flex-shrink: 0;
-}
-.c-name { flex: 1; font-size: 22px; font-weight: 900; line-height: 1.3; color: var(--text-main); }
-.c-size { display: block; font-size: 16px; font-weight: 700; color: var(--text-muted); margin-top: 6px; }
-.c-price { font-size: 24px; font-weight: 900; color: var(--green); margin-left: 10px; white-space: nowrap; }
-
-#cart-footer {
-  padding: 40px 30px; background: var(--surface);
-  border-top: 2px solid var(--border);
-}
-.total-label { font-size: 20px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
-.total-price { font-size: 60px; font-weight: 900; color: var(--green); text-align: right; margin-top: 5px; line-height: 1; letter-spacing: -0.02em; }
-
-/* ─── OVERLAYS ─────────────────────────────────────────────── */
-#view-qr, #view-success {
-  display: none; position: absolute; inset: 0; z-index: 100;
-  backdrop-filter: blur(24px); flex-direction: column; align-items: center; justify-content: center;
-}
+/* 6. OVERLAYS QR & SUCCESS */
+#view-qr, #view-success { display: none; position: absolute; inset: 0; z-index: 100; backdrop-filter: blur(24px); flex-direction: column; align-items: center; justify-content: center; }
 #view-qr { background: rgba(245, 245, 245, 0.95); }
-#view-qr img { width: 450px; height: 450px; border-radius: 20px; margin: 40px 0; border: 6px solid var(--green); box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
-#qr-amount { font-size: 90px; font-weight: 900; color: var(--green); letter-spacing: -0.02em; }
-#view-success { background: var(--green); color: #fff; }
+#view-qr img { width: 450px; height: 450px; border-radius: 20px; margin: 40px 0; border: 6px solid #006241; box-shadow: 0 20px 50px rgba(0,0,0,0.1); }
+#qr-amount { font-size: 90px; font-weight: 900; color: #006241; letter-spacing: -0.02em; }
+#view-success { background: #006241; color: #fff; }
 #view-success .material-symbols-outlined { font-size: 250px; margin-bottom: 30px; }
 #view-success h2 { font-size: 90px; font-weight: 900; letter-spacing: 0.02em; }
 </style>
@@ -210,40 +133,33 @@ html, body {
 <body>
 <div id="app">
   
-  <!-- 1. CỘT TRÁI: HIGHLIGHT -->
-  <div id="col-highlight">
-    <div id="logo-box">XOLIFA</div>
-    <div class="highlight-title">MÓN MỚI / NỔI BẬT</div>
-    <div id="featured-list">
-      <!-- Sinh ra bằng JS -->
-    </div>
+  <!-- 1. ẢNH NỀN MENU GỐC -->
+  <!-- BẠN THAY ĐƯỜNG LINK ẢNH THIẾT KẾ CỦA BẠN VÀO ĐÂY -->
+  <img id="bg-image" src="https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/bg-menu-sample.jpg?alt=media" onerror="this.src='https://via.placeholder.com/1920x1080/D5BCA2/444?text=HAY+THEM+ANH+NEN+CUA+BAN+VAO+CODE'">
+
+  <!-- 2. VÙNG CHẠY SLIDE TRÁI -->
+  <div id="zone-slide">
+    <div id="slide-l1"></div>
+    <div id="slide-l2"></div>
+    <div id="slide-dots"></div>
   </div>
 
-  <!-- 2. CỘT GIỮA: THỰC ĐƠN -->
-  <div id="col-menu">
-    <!-- Slide nằm ngang phía trên -->
-    <div id="slide-container">
-      <div id="slide-l1"></div>
-      <div id="slide-l2"></div>
-    </div>
-    
-    <!-- Danh sách món dạng Text + Dotted Leader -->
-    <div id="menu-list-container">
-      <div class="menu-col" id="menu-col-left"></div>
-      <div class="menu-col" id="menu-col-right"></div>
-    </div>
+  <!-- 3. VÙNG CHẠY VIDEO PHẢI -->
+  <div id="zone-video">
+    <!-- Bạn có thể thay link video hoặc link Youtube/Drive tại đây -->
+    <video src="https://www.w3schools.com/html/mov_bbb.mp4" autoplay loop muted playsinline></video>
   </div>
 
-  <!-- 3. CỘT PHẢI: GIỎ HÀNG -->
-  <div id="col-cart">
+  <!-- 4. VÙNG GIỎ HÀNG (CART) -->
+  <div id="zone-cart">
     <div class="cart-header">ĐƠN HÀNG HIỆN TẠI</div>
     <div id="cart-customer-info">
       <span class="material-symbols-outlined">person</span>
       <span id="cart-customer-name"></span>
     </div>
     <div id="cart-list">
-      <div style="text-align:center; color:var(--text-muted); margin-top: 100px; font-weight: 800; font-size: 24px;">
-        <span class="material-symbols-outlined" style="font-size: 80px; opacity: 0.2; display:block; margin-bottom: 15px;">receipt_long</span>
+      <div style="text-align:center; color:#9ca3af; margin-top: 80px; font-weight: 800; font-size: 20px;">
+        <span class="material-symbols-outlined" style="font-size: 70px; opacity: 0.2; display:block; margin-bottom: 15px;">receipt_long</span>
         Chưa có món nào
       </div>
     </div>
@@ -253,11 +169,14 @@ html, body {
     </div>
   </div>
 
-  <!-- LỚP PHỦ -->
+  <!-- 5. CONTAINER CHỨA CÁC TEM "TẠM HẾT" -->
+  <div id="sold-out-container"></div>
+
+  <!-- OVERLAYS THANH TOÁN -->
   <div id="view-qr">
-    <h2 style="font-size: 56px; font-weight: 900; color: var(--text-main);">VUI LÒNG QUÉT MÃ QR</h2>
+    <h2 style="font-size: 56px; font-weight: 900; color: #111;">VUI LÒNG QUÉT MÃ QR</h2>
     <img id="qr-image" src="">
-    <p style="font-size:32px;font-weight:800;color:var(--text-muted);text-transform:uppercase;">Số tiền thanh toán</p>
+    <p style="font-size:32px;font-weight:800;color:#666;text-transform:uppercase;">Số tiền thanh toán</p>
     <div id="qr-amount">0đ</div>
   </div>
   <div id="view-success">
@@ -269,7 +188,7 @@ html, body {
 
 <script>
 // ══════════════════════════════════════════════════════
-// 1. ÉP KHUNG VỪA MÀN HÌNH TV
+// 1. ÉP KHUNG VỪA MÀN HÌNH TV (ANTI-ZOOM)
 // ══════════════════════════════════════════════════════
 function scaleToFit() {
     var app = document.getElementById('app');
@@ -297,129 +216,53 @@ var fstore = firebase.firestore();
 var auth   = firebase.auth();
 
 // ══════════════════════════════════════════════════════
-// 3. XỬ LÝ LẤY GIÁ TIỀN (Hiển thị Size M | Size L)
+// 3. THUẬT TOÁN ĐÓNG DẤU "TẠM HẾT" THEO TỌA ĐỘ
 // ══════════════════════════════════════════════════════
-function getDisplayPrice(item) {
-    if (!item) return '';
+/* 
+  BẢN ĐỒ TỌA ĐỘ:
+  Bạn tự điều chỉnh x (trái sang), y (trên xuống) bằng đơn vị Pixel.
+  Lấy tọa độ bằng cách mở ảnh bằng MS Paint hoặc Photoshop, trỏ chuột vào tên món là thấy thông số x,y.
+*/
+const SOLD_OUT_MAP = {
+  "Sữa gạo Phù Nam": { x: 500, y: 380 },
+  "Sữa gạo Matcha": { x: 500, y: 430 },
+  "Trà sữa nguyên lá": { x: 500, y: 480 },
+  "Cà phê latte": { x: 500, y: 650 },
+  "Choco latte": { x: 500, y: 730 },
+  "Đen đá": { x: 500, y: 810 },
+  // ... Thêm các món khác vào đây
+  "Trà lài thơm chanh dây": { x: 1050, y: 580 },
+  "Trà sen vàng": { x: 1050, y: 680 }
+};
 
-    let pm = Number(item.priceM || 0);
-    let pl = Number(item.priceL || 0);
-
-    if (pm > 0 && pl > 0) return (pm/1000) + 'K | ' + (pl/1000) + 'K';
-    if (pm > 0) return pm.toLocaleString('vi-VN') + 'đ';
-    if (pl > 0) return pl.toLocaleString('vi-VN') + 'đ';
-
-    let normal = Number(item.price || item.sell_price || item.Price || item.gia || 0);
-    if (normal === 0 && item.sizes) {
-      // Quét sâu vào mảng size nếu normal = 0
-      if(Array.isArray(item.sizes) && item.sizes.length > 0) normal = Number(item.sizes[0].price || 0);
-      else if (typeof item.sizes === 'object') normal = Number(Object.values(item.sizes)[0].price || Object.values(item.sizes)[0] || 0);
-    }
-    
-    if (normal > 0) return normal.toLocaleString('vi-VN') + 'đ';
-    return '';
-}
-
-// ══════════════════════════════════════════════════════
-// 4. RENDER MENU VÀ AUTO-SHRINK
-// ══════════════════════════════════════════════════════
-var menuData = [];
-var menuImages = {};
-
-function loadMenu() {
+function renderSoldOutStickers() {
     db.ref('menu_xolifa').once('value', function(snap) {
         var raw = snap.val();
-        menuData = raw ? (Array.isArray(raw) ? raw : Object.values(raw)) : [];
-        loadMenuImages();
+        var menuData = raw ? (Array.isArray(raw) ? raw : Object.values(raw)) : [];
+        var container = document.getElementById('sold-out-container');
+        container.innerHTML = '';
+
+        menuData.forEach(function(item) {
+            // Kiểm tra trạng thái hết hàng của POS (Tùy cấu trúc DB của bạn, ví dụ: status == 0, is_active == false...)
+            // Ở đây tôi ví dụ biến `out_of_stock` hoặc `status == 0`
+            let isSoldOut = item.out_of_stock === true || item.status === 0 || item.status === 'out_of_stock';
+            
+            if (isSoldOut && item.name && SOLD_OUT_MAP[item.name]) {
+                var coords = SOLD_OUT_MAP[item.name];
+                var sticker = document.createElement('div');
+                sticker.className = 'sold-out-stamp';
+                sticker.textContent = 'TẠM HẾT';
+                sticker.style.left = coords.x + 'px';
+                sticker.style.top = coords.y + 'px';
+                container.appendChild(sticker);
+            }
+        });
     });
 }
 
-function loadMenuImages() {
-    fstore.collection('config_xolifa').doc('screen_2026').get().then(function(doc) {
-        if (doc.exists && doc.data().menuImages) menuImages = doc.data().menuImages;
-        renderSmartMenu();
-    }).catch(function(){ renderSmartMenu(); });
-}
-
-function renderSmartMenu() {
-    var validItems = menuData.filter(it => it && it.name && it.type);
-    
-    // ── CỘT TRÁI: TỐI ĐA 3 MÓN NỔI BẬT (CÓ ẢNH TO) ──
-    var featuredItems = validItems.filter(it => (it.type||'').toLowerCase().includes('mới') || (it.name||'').toLowerCase().includes('đặc biệt')).slice(0, 3);
-    if(featuredItems.length < 3) featuredItems = validItems.slice(0, 3);
-
-    var featContainer = document.getElementById('featured-list');
-    featContainer.innerHTML = '';
-    featuredItems.forEach((item) => {
-        var globalIdx = menuData.indexOf(item);
-        var imgUrl = (menuImages[globalIdx] && menuImages[globalIdx].url) ? menuImages[globalIdx].url : '';
-        var imgHtml = imgUrl ? `<img src="${imgUrl}" class="feat-img" onerror="this.style.display='none'">` : `<div class="feat-img" style="background:#ddd;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:50px;">☕</div>`;
-        var priceStr = getDisplayPrice(item);
-        
-        featContainer.innerHTML += `
-            <div class="feat-item">
-                ${imgHtml}
-                <div class="feat-name">${item.name}</div>
-                <div class="feat-price">${priceStr}</div>
-            </div>
-        `;
-    });
-
-    // ── CỘT GIỮA: DẠNG DANH SÁCH (DOTTED LEADER) ──
-    var grouped = {};
-    validItems.forEach(item => {
-        if(!featuredItems.includes(item)) {
-            if(!grouped[item.type]) grouped[item.type] = [];
-            grouped[item.type].push(item);
-        }
-    });
-
-    var colLeft = document.getElementById('menu-col-left');
-    var colRight = document.getElementById('menu-col-right');
-    colLeft.innerHTML = ''; colRight.innerHTML = '';
-
-    var categories = Object.keys(grouped);
-    
-    categories.forEach((catName, index) => {
-        var itemsHTML = grouped[catName].map(item => {
-            var priceStr = getDisplayPrice(item);
-            // Thiết kế dạng: Tên món ................. 25K | 29K
-            return `
-                <div class="menu-line">
-                    <span class="m-name">${item.name}</span>
-                    <div class="m-dots"></div>
-                    <span class="m-price">${priceStr}</span>
-                </div>
-            `;
-        }).join('');
-
-        var catHtml = `
-            <div class="cat-block">
-                <div class="cat-title">${catName}</div>
-                ${itemsHTML}
-            </div>
-        `;
-
-        if (index % 2 === 0) colLeft.innerHTML += catHtml;
-        else colRight.innerHTML += catHtml;
-    });
-
-    // Ép khung menu nếu quá dài
-    setTimeout(() => {
-        var container = document.getElementById('menu-list-container');
-        var contentHeight = Math.max(colLeft.scrollHeight, colRight.scrollHeight);
-        var availableHeight = container.clientHeight;
-        
-        if (contentHeight > availableHeight) {
-            var scale = availableHeight / contentHeight;
-            container.style.transform = `scale(${scale})`;
-            container.style.transformOrigin = `top center`;
-        }
-    }, 200);
-}
 
 // ══════════════════════════════════════════════════════
-// 5. SLIDES BANNER
+// 4. SLIDES BÊN TRÁI
 // ══════════════════════════════════════════════════════
 var DEFAULT_SLIDES = [
     { type:'image', src:'https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/1768316658706.jpg?alt=media', duration:6000 },
@@ -430,6 +273,9 @@ var slidePlaylist = DEFAULT_SLIDES.slice(), slideIndex = -1, slideActiveLayer = 
 function nextSlide() {
     if (!slidePlaylist.length) return;
     slideIndex = (slideIndex + 1) % slidePlaylist.length;
+    var dots = document.querySelectorAll('.s-dot');
+    dots.forEach(function(d,i){ d.classList.toggle('active', i===slideIndex); });
+    
     var item = slidePlaylist[slideIndex];
     var backId = slideActiveLayer === 1 ? 'slide-l2' : 'slide-l1';
     var frontId = slideActiveLayer === 1 ? 'slide-l1' : 'slide-l2';
@@ -447,10 +293,15 @@ function nextSlide() {
 }
 
 // ══════════════════════════════════════════════════════
-// 6. LẮNG NGHE ĐƠN HÀNG XOLIFA
+// 5. LẮNG NGHE POS ĐỂ HIỂN THỊ GIỎ HÀNG
 // ══════════════════════════════════════════════════════
 auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty").then(function() {
-    nextSlide(); loadMenu(); listenToPOS();
+    nextSlide(); 
+    renderSoldOutStickers(); // Gọi hàm dán tem hết hàng lúc khởi động
+    listenToPOS();
+    
+    // Nếu bạn muốn TV tự động cập nhật tem hết hàng mỗi 1 phút thì mở dòng này ra
+    // setInterval(renderSoldOutStickers, 60000); 
 });
 
 function listenToPOS() {
@@ -495,8 +346,8 @@ function renderCart(data) {
 
     if (cart.length === 0) { 
         listEl.innerHTML = `
-            <div style="text-align:center; color:var(--text-muted); margin-top: 100px; font-weight: 800; font-size: 24px;">
-                <span class="material-symbols-outlined" style="font-size: 80px; opacity: 0.2; display:block; margin-bottom: 15px;">receipt_long</span>
+            <div style="text-align:center; color:#9ca3af; margin-top: 80px; font-weight: 800; font-size: 20px;">
+                <span class="material-symbols-outlined" style="font-size: 70px; opacity: 0.2; display:block; margin-bottom: 15px;">receipt_long</span>
                 Chưa có món nào
             </div>`;
         return; 
@@ -525,8 +376,8 @@ function resetScreen() {
     document.getElementById('cart-customer-info').style.display = 'none';
     document.getElementById('total-price').textContent = '0đ';
     document.getElementById('cart-list').innerHTML = `
-        <div style="text-align:center; color:var(--text-muted); margin-top: 100px; font-weight: 800; font-size: 24px;">
-            <span class="material-symbols-outlined" style="font-size: 80px; opacity: 0.2; display:block; margin-bottom: 15px;">receipt_long</span>
+        <div style="text-align:center; color:#9ca3af; margin-top: 80px; font-weight: 800; font-size: 20px;">
+            <span class="material-symbols-outlined" style="font-size: 70px; opacity: 0.2; display:block; margin-bottom: 15px;">receipt_long</span>
             Chưa có món nào
         </div>`;
 }
