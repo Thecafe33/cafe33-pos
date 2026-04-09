@@ -191,7 +191,8 @@ body { display: flex; flex-direction: column; }
     justify-content: space-between;
     gap: 10px;
 }
-#mobile-bottom-bar.hidden { display: none !important; }
+#mobile-bottom-bar[style*="display: none"],
+#mobile-bottom-bar.bar-hidden { display: none !important; }
 
 /* ── Sidebar drawer ── */
 #mobile-sidebar { z-index: 10002; }
@@ -1759,10 +1760,17 @@ function clearFullOrder() {
 
 function openHistory() {
     document.getElementById('loading-overlay').style.display = 'flex';
+    // Ẩn sidebar nếu đang mở
+    var _sb = document.getElementById('mobile-sidebar');
+    var _ol = document.getElementById('mobile-overlay');
+    if (_sb && !_sb.classList.contains('-translate-x-full')) {
+        _sb.classList.add('-translate-x-full');
+        if (_ol) _ol.classList.add('hidden');
+    }
     var histMob = document.getElementById('view-history-mobile');
     if (histMob) histMob.classList.remove('hidden');
     var mobBar = document.getElementById('mobile-bottom-bar');
-    if (mobBar) mobBar.classList.add('hidden');
+    if (mobBar) mobBar.style.display = 'none';
 
     // Lấy 7 ngày gần nhất + node cũ
     const today = new Date();
@@ -2672,8 +2680,8 @@ function switchView(v) {
     // Bottom bar: chỉ hiện ở menu
     var mobBar = document.getElementById('mobile-bottom-bar');
     if (mobBar) {
-        if (v === 'menu') { mobBar.classList.remove('hidden'); }
-        else              { mobBar.classList.add('hidden'); }
+        if (v === 'menu') { mobBar.style.display = ''; }
+        else              { mobBar.style.display = 'none'; }
     }
 
     // Ẩn tất cả views
@@ -2699,8 +2707,7 @@ function switchView(v) {
                 custNameEl.style.height = 'auto';
             }
         }
-        var mobBar2 = document.getElementById('mobile-bottom-bar');
-        if (mobBar2) mobBar2.classList.add('hidden');
+          // bottom bar already hidden by main logic above
     } else if (v === 'discount') {
         document.getElementById('view-discount').classList.remove('hidden');
     } else if (v === 'history') {
@@ -2709,6 +2716,10 @@ function switchView(v) {
     } else if (v === 'revenue') {
         openRevenueMobile();
         return;
+    }
+    // Push history state
+    if (v !== 'menu') {
+        if (typeof pushHistoryState === 'function') pushHistoryState(v);
     }
 }
 
@@ -3294,7 +3305,7 @@ function openRevenueMobile() {
         if (_ol) _ol.classList.add('hidden');
     }
     var mobBar = document.getElementById('mobile-bottom-bar');
-    if (mobBar) mobBar.classList.add('hidden');
+    if (mobBar) mobBar.style.display = 'none';
 
     ['view-menu', 'view-payment', 'view-discount'].forEach(function(id) {
         var el = document.getElementById(id);
@@ -5863,7 +5874,7 @@ function discountFormDelete() {
         <div id="qr-status" class="text-gray-400 font-bold text-xs animate-pulse">Đang đợi tiền về...</div>
     </div>
 </div>
-    <div id="mobile-bottom-bar" class="fixed bottom-0 left-0 right-0 z-[9000] transition-all duration-300" style="background:rgba(255,255,255,0.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid rgba(0,0,0,0.06);box-shadow:0 -8px 32px rgba(0,0,0,0.08);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <div id="mobile-bottom-bar" class="fixed bottom-0 left-0 right-0 z-[9000] transition-all duration-300" style="background:rgba(255,255,255,0.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid rgba(0,0,0,0.06);box-shadow:0 -8px 32px rgba(0,0,0,0.08);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px;">
 
     <div onclick="openCartModal()" class="flex-1 flex flex-col justify-center cursor-pointer group pl-2">
         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5 group-active:text-[#006241]">Tổng tạm tính</p>
@@ -6086,20 +6097,8 @@ function pushHistoryState(name) {
     history.pushState({ view: name }, null, "");
 }
 
-const originalSwitchView = switchView;
-switchView = function(v) {
-    // Đóng sidebar khi chuyển view
-    var _sb2 = document.getElementById('mobile-sidebar');
-    var _ol2 = document.getElementById('mobile-overlay');
-    if (_sb2 && !_sb2.classList.contains('-translate-x-full')) {
-        _sb2.classList.add('-translate-x-full');
-        if (_ol2) _ol2.classList.add('hidden');
-    }
-    originalSwitchView(v);
-    if (v !== 'menu') {
-        pushHistoryState(v);
-    }
-};
+// pushHistoryState integrated into switchView directly
+const originalSwitchView = null; // removed PC wrapper
 
 window.addEventListener('popstate', function(event) {
 
