@@ -303,6 +303,8 @@
   .conn-dot.online  { background: var(--green); }
   .conn-dot.offline { background: var(--red); }
 </style>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
 <body>
 <div id="app">
@@ -363,95 +365,102 @@
   </div>
 
 </div>
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-
-function getConfig() {
-  try { return JSON.parse(localStorage.getItem('kiosk_config') || '{}'); } catch { return {}; }
-}
+<script>
+/* FIREBASE CONFIG — fix cứng */
+var firebaseConfig = {
+  apiKey:        "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain:    "the-cafe-33.firebaseapp.com",
+  databaseURL:   "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:     "the-cafe-33",
+  storageBucket: "the-cafe-33.firebasestorage.app",
+  messagingSenderId: "...",
+  appId:         "..."
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
 
 /* CLOCK */
 function tick() {
-  const n = new Date();
-  const hh = n.getHours().toString().padStart(2,'0');
-  const mm = n.getMinutes().toString().padStart(2,'0');
-  document.getElementById('clock').textContent = `${hh}:${mm}`;
-  const days = ['CN','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+  var n   = new Date();
+  var hh  = ('0'+n.getHours()).slice(-2);
+  var mm  = ('0'+n.getMinutes()).slice(-2);
+  document.getElementById('clock').textContent = hh + ':' + mm;
+  var days = ['CN','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
   document.getElementById('date-display').textContent =
-    `${days[n.getDay()]}  ${n.getDate()}/${n.getMonth()+1}/${n.getFullYear()}`;
+    days[n.getDay()] + '  ' + n.getDate() + '/' + (n.getMonth()+1) + '/' + n.getFullYear();
 }
 setInterval(tick, 1000); tick();
 
 /* SLIDESHOW */
-let slides = [], cur = 0, slideTimer = null;
+var slides = [], cur = 0, slideTimer = null;
 
 function buildSlides(items, dur) {
-  const c = document.getElementById('slide-container');
-  const d = document.getElementById('slide-dots');
-  c.innerHTML = ''; d.innerHTML = ''; slides = [];
+  var c = document.getElementById('slide-container');
+  var d = document.getElementById('slide-dots');
+  c.innerHTML = ''; d.innerHTML = ''; slides = []; cur = 0;
+  if (slideTimer) clearTimeout(slideTimer);
 
-  if (!items?.length) {
-    c.innerHTML = `<div class="slide-placeholder"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="m10 9 6 3-6 3V9z"/></svg><span>Không có nội dung</span></div>`;
+  if (!items || !items.length) {
+    c.innerHTML = '<div class="slide-placeholder"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="m10 9 6 3-6 3V9z"/></svg><span>Không có nội dung</span></div>';
     return;
   }
 
-  items.forEach((item, i) => {
-    const s = document.createElement('div');
+  items.forEach(function(item, i) {
+    var s = document.createElement('div');
     s.className = 'slide' + (i === 0 ? ' active' : '');
     if (item.type === 'video') {
-      const v = document.createElement('video');
+      var v = document.createElement('video');
       v.src = item.url; v.muted = true; v.playsInline = true; v.loop = false; v.preload = 'auto';
       s.appendChild(v);
     } else {
-      const img = document.createElement('img');
+      var img = document.createElement('img');
       img.src = item.url; img.loading = 'lazy';
       s.appendChild(img);
     }
     c.appendChild(s); slides.push(s);
-    const dot = document.createElement('div');
+    var dot = document.createElement('div');
     dot.className = 'dot' + (i === 0 ? ' active' : '');
     d.appendChild(dot);
   });
 
   function go(idx) {
-    const dots = d.querySelectorAll('.dot');
+    var dots = d.querySelectorAll('.dot');
     slides[cur].classList.remove('active'); dots[cur].classList.remove('active');
-    const pv = slides[cur].querySelector('video');
+    var pv = slides[cur].querySelector('video');
     if (pv) { pv.pause(); pv.currentTime = 0; }
     cur = (idx + slides.length) % slides.length;
     slides[cur].classList.add('active'); dots[cur].classList.add('active');
-    const v = slides[cur].querySelector('video');
-    if (v) { v.play().catch(()=>{}); v.onended = () => go(cur + 1); }
-    else { if (slideTimer) clearTimeout(slideTimer); slideTimer = setTimeout(() => go(cur + 1), dur); }
+    var v = slides[cur].querySelector('video');
+    if (v) { v.play().catch(function(){}); v.onended = function() { go(cur + 1); }; }
+    else { if (slideTimer) clearTimeout(slideTimer); slideTimer = setTimeout(function() { go(cur + 1); }, dur); }
   }
 
-  const fv = slides[0].querySelector('video');
-  if (fv) { fv.play().catch(()=>{}); fv.onended = () => go(1); }
-  else slideTimer = setTimeout(() => go(1), dur);
+  var fv = slides[0].querySelector('video');
+  if (fv) { fv.play().catch(function(){}); fv.onended = function() { go(1); }; }
+  else slideTimer = setTimeout(function() { go(1); }, dur);
 }
 
 /* MENU */
-let menuTimer = null;
+var menuTimer = null;
 
 function buildMenu(pages) {
-  const el = document.getElementById('menu-pages');
+  var el = document.getElementById('menu-pages');
   el.innerHTML = '';
   if (menuTimer) clearInterval(menuTimer);
-  if (!pages?.length) {
-    el.innerHTML = `<div class="menu-page active"><div class="menu-placeholder"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 6h16M4 12h16M4 18h10"/></svg><p>Menu chưa cấu hình</p></div></div>`;
+  if (!pages || !pages.length) {
+    el.innerHTML = '<div class="menu-page active"><div class="menu-placeholder"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 6h16M4 12h16M4 18h10"/></svg><p>Menu chưa cấu hình</p></div></div>';
     return;
   }
-  pages.forEach((p, i) => {
-    const d = document.createElement('div');
+  pages.forEach(function(p, i) {
+    var d = document.createElement('div');
     d.className = 'menu-page' + (i === 0 ? ' active' : '');
-    const img = document.createElement('img'); img.src = p.url;
+    var img = document.createElement('img'); img.src = p.url;
     d.appendChild(img); el.appendChild(d);
   });
   if (pages.length > 1) {
-    let idx = 0;
-    menuTimer = setInterval(() => {
-      const ps = el.querySelectorAll('.menu-page');
+    var idx = 0;
+    menuTimer = setInterval(function() {
+      var ps = el.querySelectorAll('.menu-page');
       ps[idx].classList.remove('active');
       idx = (idx + 1) % pages.length;
       ps[idx].classList.add('active');
@@ -460,94 +469,93 @@ function buildMenu(pages) {
 }
 
 /* ORDERS */
-const cards = new Map();
-const LABELS = { pending:'Chờ xử lý', preparing:'Đang pha chế', ready:'Sẵn sàng', cancelled:'Đã hủy', done:'Hoàn thành' };
+var cards = {};
+var LABELS = { pending:'Chờ xử lý', preparing:'Đang pha chế', ready:'Sẵn sàng', cancelled:'Đã hủy', done:'Hoàn thành' };
+
+function fmtT(ts) { if (!ts) return ''; var d = new Date(ts); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
+function fmtP(p)  { return p != null ? new Intl.NumberFormat('vi-VN').format(p)+'đ' : ''; }
 
 function renderOrder(id, data) {
-  const list = document.getElementById('orders-list');
-  const empty = document.getElementById('orders-empty');
+  var list  = document.getElementById('orders-list');
+  var empty = document.getElementById('orders-empty');
   if (empty) empty.style.display = 'none';
 
-  let el = document.getElementById('oc-' + id);
+  var el = document.getElementById('oc-' + id);
   if (!el) {
     el = document.createElement('div'); el.id = 'oc-' + id;
-    list.prepend(el); cards.set(id, { el, timer: null });
+    list.prepend(el); cards[id] = { el: el, timer: null };
   }
 
-  const st = (data.status || 'pending').toLowerCase();
-  el.className = `order-card status-${st}`;
+  var st    = (data.status || 'pending').toLowerCase();
+  el.className = 'order-card status-' + st;
 
-  const items = Array.isArray(data.items) ? data.items : (data.items ? Object.values(data.items) : []);
-  const num = data.orderNumber || id.slice(-4).toUpperCase();
-  const fmtT = ts => { if (!ts) return ''; const d = new Date(ts); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); };
-  const fmtP = p => p != null ? new Intl.NumberFormat('vi-VN').format(p)+'đ' : '';
+  var items = Array.isArray(data.items) ? data.items : (data.items ? Object.values(data.items) : []);
+  var num   = data.orderNumber || id.slice(-4).toUpperCase();
 
-  el.innerHTML = `
-    <div class="card-top">
-      <div class="card-order-num">#${num}</div>
-      <div class="card-status-pill">${LABELS[st] || st}</div>
-    </div>
-    ${data.customerName ? `<div class="card-name">${data.customerName}</div>` : ''}
-    <ul class="card-items">
-      ${items.slice(0,4).map(it=>`<li class="card-item">${it.qty?it.qty+'× ':''}${it.name||it}</li>`).join('')}
-      ${items.length>4?`<li class="card-item">+${items.length-4} món khác</li>`:''}
-    </ul>
-    <div class="card-footer">
-      <div class="card-time">${fmtT(data.createdAt||data.timestamp)}</div>
-      ${data.total?`<div class="card-price">${fmtP(data.total)}</div>`:''}
-    </div>`;
+  el.innerHTML =
+    '<div class="card-top">' +
+      '<div class="card-order-num">#' + num + '</div>' +
+      '<div class="card-status-pill">' + (LABELS[st] || st) + '</div>' +
+    '</div>' +
+    (data.customerName ? '<div class="card-name">' + data.customerName + '</div>' : '') +
+    '<ul class="card-items">' +
+      items.slice(0,4).map(function(it){ return '<li class="card-item">' + (it.qty ? it.qty+'× ' : '') + (it.name||it) + '</li>'; }).join('') +
+      (items.length > 4 ? '<li class="card-item">+' + (items.length-4) + ' món khác</li>' : '') +
+    '</ul>' +
+    '<div class="card-footer">' +
+      '<div class="card-time">' + fmtT(data.createdAt||data.timestamp) + '</div>' +
+      (data.total ? '<div class="card-price">' + fmtP(data.total) + '</div>' : '') +
+    '</div>';
 
   list.scrollTop = 0;
-  document.getElementById('orders-count').textContent = cards.size;
+  document.getElementById('orders-count').textContent = Object.keys(cards).length;
 
-  const entry = cards.get(id);
+  var entry = cards[id];
   if (entry.timer) clearTimeout(entry.timer);
   if (st === 'done' || st === 'cancelled')
-    entry.timer = setTimeout(() => remove(id), 5 * 60 * 1000);
+    entry.timer = setTimeout(function() { removeCard(id); }, 5 * 60 * 1000);
 
-  const all = list.querySelectorAll('.order-card');
-  if (all.length > 15) remove(all[all.length-1].id.replace('oc-',''));
+  var all = list.querySelectorAll('.order-card');
+  if (all.length > 15) removeCard(all[all.length-1].id.replace('oc-',''));
 }
 
-function remove(id) {
-  const e = cards.get(id); if (!e) return;
+function removeCard(id) {
+  var e = cards[id]; if (!e) return;
   e.el.classList.add('removing');
-  setTimeout(() => {
-    e.el.remove(); cards.delete(id);
-    document.getElementById('orders-count').textContent = cards.size;
-    if (cards.size === 0) { const em = document.getElementById('orders-empty'); if(em) em.style.display=''; }
+  setTimeout(function() {
+    e.el.remove(); delete cards[id];
+    document.getElementById('orders-count').textContent = Object.keys(cards).length;
+    if (Object.keys(cards).length === 0) {
+      var em = document.getElementById('orders-empty'); if (em) em.style.display = '';
+    }
   }, 450);
 }
 
-/* FIREBASE */
+/* FIREBASE LISTENERS */
 function setConn(ok) {
-  document.getElementById('conn-dot').className = 'conn-dot ' + (ok ? 'online' : 'offline');
+  document.getElementById('conn-dot').className  = 'conn-dot ' + (ok ? 'online' : 'offline');
   document.getElementById('conn-text').textContent = ok ? 'Đã kết nối' : 'Mất kết nối';
 }
 
-function init(cfg) {
-  if (!cfg.apiKey || !cfg.projectId) { setConn(false); document.getElementById('conn-text').textContent = 'Chưa cấu hình'; return; }
-  const app = initializeApp(cfg, 'kiosk-' + Date.now());
-  const db  = getDatabase(app);
-  setConn(false);
-  onValue(ref(db, cfg.ordersPath || 'orders'), snap => {
-    setConn(true);
-    const d = snap.val(); if (!d) return;
-    Object.entries(d).forEach(([id, o]) => renderOrder(id, o));
-  }, () => setConn(false));
-  onValue(ref(db, 'kiosk_config'), snap => {
-    const kc = snap.val(); if (!kc) return;
-    if (kc.slides?.length)     buildSlides(kc.slides, (kc.slideDuration || 6) * 1000);
-    if (kc.menuPages?.length)  buildMenu(kc.menuPages);
-  });
-}
+// Đọc orders
+var ordersPath = (function() {
+  try { return JSON.parse(localStorage.getItem('kiosk_config') || '{}').ordersPath || 'orders'; } catch(e) { return 'orders'; }
+})();
 
-window.addEventListener('load', () => {
-  const cfg = getConfig();
-  if (cfg.apiKey) init(cfg);
-  else { setConn(false); document.getElementById('conn-text').textContent = 'Chưa cấu hình'; }
+db.ref('.info/connected').on('value', function(snap) { setConn(snap.val()); });
+
+db.ref(ordersPath).on('value', function(snap) {
+  var d = snap.val(); if (!d) return;
+  Object.keys(d).forEach(function(id) { renderOrder(id, d[id]); });
 });
-window.addEventListener('storage', e => { if (e.key === 'kiosk_config') location.reload(); });
+
+// Đọc slides & menu từ Firebase RTDB
+db.ref('kiosk_config').on('value', function(snap) {
+  var kc = snap.val();
+  if (!kc) return;
+  if (kc.slides && kc.slides.length)     buildSlides(kc.slides, (kc.slideDuration || 6) * 1000);
+  if (kc.menuPages && kc.menuPages.length) buildMenu(kc.menuPages);
+});
 </script>
 </body>
 </html>
