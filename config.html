@@ -531,6 +531,30 @@
   </div>
 </div>
 
+<!-- DEBUG PANEL -->
+<div id="debug-panel" style="
+  position:fixed; bottom:20px; left:calc(var(--sidebar) + 16px);
+  width:420px; max-height:260px;
+  background:#1a1714; border:1px solid #3a3530; border-radius:8px;
+  font-family:'Google Sans Text',monospace; font-size:11px;
+  z-index:8000; display:flex; flex-direction:column; overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #3a3530;background:#111">
+    <span style="color:#a89e90;letter-spacing:1px;font-size:10px;text-transform:uppercase">Debug Log</span>
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('debug-log').innerHTML=''" style="background:none;border:none;color:#6b6558;cursor:pointer;font-size:10px;padding:0">Xóa</button>
+      <button onclick="document.getElementById('debug-panel').style.display='none'" style="background:none;border:none;color:#6b6558;cursor:pointer;font-size:10px;padding:0">Ẩn</button>
+    </div>
+  </div>
+  <div id="debug-log" style="flex:1;overflow-y:auto;padding:8px 12px;line-height:1.8;"></div>
+</div>
+<button id="debug-toggle" onclick="var p=document.getElementById('debug-panel');p.style.display=p.style.display==='none'?'flex':'none'" style="
+  display:none; position:fixed; bottom:20px; left:calc(var(--sidebar) + 16px);
+  background:#1a1714; border:1px solid #3a3530; border-radius:6px;
+  color:#a89e90; font-size:11px; padding:6px 12px; cursor:pointer; z-index:8000;
+">📋 Debug</button>
+
 <div id="toasts"></div>
 
 <script>
@@ -551,6 +575,24 @@ var auth    = firebase.auth();
 
 var slides = [], menuPages = [];
 
+/* ── ON-SCREEN DEBUG ── */
+function dbg(msg, type) {
+  // type: 'info'(default) | 'ok' | 'err' | 'warn'
+  var colors = { info:'#a89e90', ok:'#4caf7d', err:'#e57373', warn:'#ffb74d' };
+  var color  = colors[type || 'info'];
+  var el = document.getElementById('debug-log');
+  if (!el) return;
+  var now = new Date();
+  var ts  = ('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2)+':'+('0'+now.getSeconds()).slice(-2);
+  var line = document.createElement('div');
+  line.style.cssText = 'color:' + color + ';border-bottom:1px solid #2a2520;padding:2px 0;';
+  line.textContent = '[' + ts + '] ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+  // cũng ghi console
+  if (type === 'err') console.error(msg); else console.log(msg);
+}
+
 /* ── AUTH ── */
 auth.onAuthStateChanged(function(user) {
   var overlay = document.getElementById('auth-overlay');
@@ -566,6 +608,8 @@ auth.onAuthStateChanged(function(user) {
       if (confirm('Đăng xuất khỏi ' + user.email + '?')) auth.signOut();
     };
     setStatus(true);
+    dbg('✅ Đã đăng nhập: ' + user.email, 'ok');
+    dbg('UID: ' + user.uid, 'info');
   } else {
     overlay.classList.remove('hidden');
     label.textContent = 'Chưa đăng nhập';
@@ -573,6 +617,7 @@ auth.onAuthStateChanged(function(user) {
     row.title = 'Đăng nhập';
     row.onclick = function() { overlay.classList.remove('hidden'); };
     setStatus(false);
+    dbg('⚠️ Chưa đăng nhập — upload sẽ bị từ chối', 'warn');
   }
 });
 
@@ -697,33 +742,49 @@ window.saveAndApply = function() {
 /* ── UPLOAD ── */
 function doUpload(file, path, progFill, progPct, progName) {
   return new Promise(function(resolve, reject) {
-    var r    = storage.ref(path);
-    var task = r.put(file);
     // Hiển thị tên file & trạng thái chờ ngay
     if (progName) document.getElementById(progName).textContent = file.name;
-    document.getElementById(progPct).textContent = 'Đang kết nối...';
+    document.getElementById(progPct).textContent = 'Đang tải...';
+    document.getElementById(progFill).style.width = '0%';
+
+    dbg('📤 ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)', 'info');
+    dbg('Auth: ' + (auth.currentUser ? '✅ ' + auth.currentUser.email : '❌ CHƯA LOGIN'), auth.currentUser ? 'ok' : 'err');
+    dbg('Path: ' + path, 'info');
+
+    var r    = storage.ref(path);
+    var task = r.put(file);
+    dbg('task tạo xong, chờ state_changed...', 'info');
 
     task.on('state_changed',
       function(snapshot) {
-        var total = snapshot.totalBytes;
+        var total       = snapshot.totalBytes;
         var transferred = snapshot.bytesTransferred;
-        var p = (total > 0) ? Math.round(transferred / total * 100) : 0;
+        var p = (total > 0) ? Math.round(transferred / total * 100) : 50;
+        dbg('⏳ ' + transferred + ' / ' + total + ' = ' + p + '%', 'info');
         document.getElementById(progFill).style.width = p + '%';
         document.getElementById(progPct).textContent = p + '%';
-        if (progName) document.getElementById(progName).textContent = file.name;
       },
       function(err) {
+        dbg('❌ [' + err.code + '] ' + err.message, 'err');
         var msg = err.message || err.code || 'Upload thất bại';
-        if (err.code === 'storage/unauthorized') msg = 'Firebase Storage Rules chặn upload — kiểm tra Rules';
+        if (err.code === 'storage/unauthorized') msg = '⛔ Không có quyền upload — kiểm tra auth';
         else if (err.code === 'storage/canceled') msg = 'Upload bị hủy';
-        else if (err.code === 'storage/unknown')  msg = 'Lỗi không xác định — kiểm tra kết nối mạng';
+        else if (err.code === 'storage/unknown')  msg = 'Lỗi mạng — thử lại';
         reject(new Error(msg));
       },
       function() {
+        dbg('✅ Upload xong, đang lấy URL...', 'ok');
+        document.getElementById(progFill).style.width = '100%';
         document.getElementById(progPct).textContent = '✓';
-        task.snapshot.ref.getDownloadURL().then(resolve).catch(reject);
+        task.snapshot.ref.getDownloadURL()
+          .then(function(url) { dbg('🔗 ' + url.substring(0,70) + '...', 'ok'); resolve(url); })
+          .catch(function(e)  { dbg('❌ Lỗi lấy URL: ' + e.message, 'err'); reject(e); });
       }
     );
+
+    task.then(function() {
+      dbg('task.then() fired', 'info');
+    }).catch(function() {});
   });
 }
 
