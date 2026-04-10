@@ -1716,6 +1716,45 @@ luv u</textarea>
 
 
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain: "the-cafe-33.firebaseapp.com",
+  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "the-cafe-33",
+  storageBucket: "the-cafe-33.appspot.com",
+  messagingSenderId: "...",
+  appId: "..."
+};
+
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const originalRef = firebase.database.Database.prototype.ref;
+firebase.database.Database.prototype.ref = function(path) {
+    if (typeof path === 'string' && path.trim() !== '') {
+        const parts = path.split('/');
+        if (parts[0] !== 'customers' && parts[0] !== '' && !parts[0].endsWith('_xolifa') && !path.startsWith('https://')) {
+            parts[0] = parts[0] + '_xolifa';
+            path = parts.join('/');
+        }
+    }
+    return originalRef.call(this, path);
+};
+const originalColl = firebase.firestore.Firestore.prototype.collection;
+firebase.firestore.Firestore.prototype.collection = function(path) {
+    if (typeof path === 'string' && path.trim() !== '') {
+        const parts = path.split('/');
+        if (parts[0] !== 'customers' && parts[0] !== '' && !parts[0].endsWith('_xolifa')) {
+            parts[0] = parts[0] + '_xolifa';
+            path = parts.join('/');
+        }
+    }
+    return originalColl.call(this, path);
+};
+const db = firebase.database();
+const fstore = firebase.firestore();
+const auth = firebase.auth();
+
 
 function openRevenue(mode) {
     if (!mode) mode = 'day';
