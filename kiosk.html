@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Café Kiosk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;700&family=Google+Sans+Text:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #f5f4f0;
+    --surface:   #ffffff;
+    --surface2:  #f0ede8;
+    --border:    #e2ddd6;
+    --border2:   #cdc7bf;
+    --accent:    #b5822a;
+    --text:      #1a1714;
+    --text2:     #6b6558;
+    --text3:     #a89e90;
+    --red:       #c0392b;
+    --red-bg:    #fdf0ee;
+    --green:     #2e7d32;
+    --green-bg:  #edf7ee;
+    --amber:     #b5822a;
+    --amber-bg:  #fdf3e0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Google Sans Text', 'Google Sans', sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
+    touch-action: none;
+    cursor: none;
+  }
+
+  #app {
+    display: flex;
+    width: 100vw; height: 100vh;
+  }
+
+  /* ══ LEFT: SLIDESHOW 20% ══ */
+  #panel-left {
+    width: 20%; height: 100%;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #e8e4de;
+    border-right: 1px solid var(--border);
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    opacity: 0;
+    transition: opacity 1.4s cubic-bezier(0.4,0,0.2,1);
+  }
+  .slide.active { opacity: 1; }
+
+  .slide img, .slide video {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+
+  #panel-left::after {
+    content: '';
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 72px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.2));
+    pointer-events: none; z-index: 5;
+  }
+
+  #slide-dots {
+    position: absolute; bottom: 14px;
+    left: 50%; transform: translateX(-50%);
+    display: flex; gap: 5px; z-index: 10;
+  }
+
+  .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: rgba(255,255,255,0.45);
+    transition: all 0.35s ease;
+  }
+  .dot.active {
+    background: #fff; width: 18px; border-radius: 3px;
+  }
+
+  .slide-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px;
+    background: var(--surface2); color: var(--text3);
+  }
+  .slide-placeholder span {
+    font-size: 11px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* ══ MID: MENU 60% ══ */
+  #panel-mid {
+    width: 60%; height: 100%;
+    position: relative; background: var(--surface);
+    overflow: hidden; flex-shrink: 0;
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--border);
+  }
+
+  #menu-topbar {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 28px; height: 52px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    gap: 14px;
+  }
+
+  #date-display {
+    font-size: 13px; font-weight: 400;
+    color: var(--text3); letter-spacing: 0.2px;
+  }
+
+  #clock {
+    font-family: 'Google Sans Display', 'Google Sans', sans-serif;
+    font-size: 28px; font-weight: 400;
+    color: var(--text); letter-spacing: -0.5px; line-height: 1;
+  }
+
+  #menu-scroll {
+    flex: 1; overflow: hidden; position: relative;
+  }
+
+  .menu-page {
+    position: absolute; inset: 0;
+    opacity: 0; transition: opacity 0.9s ease;
+  }
+  .menu-page.active { opacity: 1; }
+
+  .menu-page img {
+    width: 100%; height: 100%;
+    object-fit: contain; object-position: top center; display: block;
+  }
+
+  .menu-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 14px; color: var(--text3);
+  }
+  .menu-placeholder p {
+    font-size: 13px; letter-spacing: 1px;
+    text-transform: uppercase; opacity: 0.5;
+  }
+
+  /* ══ RIGHT: ORDERS 20% ══ */
+  #panel-right {
+    width: 20%; height: 100%;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    flex-shrink: 0; overflow: hidden;
+  }
+
+  #orders-header {
+    flex-shrink: 0;
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .orders-title {
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 2px; text-transform: uppercase; color: var(--text3);
+  }
+
+  .orders-badge {
+    background: var(--accent); color: #fff;
+    font-size: 11px; font-weight: 700;
+    padding: 2px 10px; border-radius: 20px;
+    min-width: 26px; text-align: center;
+  }
+
+  #orders-list {
+    flex: 1; overflow: hidden;
+    padding: 10px; display: flex;
+    flex-direction: column; gap: 8px;
+  }
+
+  /* ORDER CARD */
+  .order-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 13px 11px;
+    position: relative; overflow: hidden;
+    animation: cardIn 0.45s cubic-bezier(0.16,1,0.3,1);
+    transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.4s ease, padding 0.4s ease;
+    max-height: 220px;
+  }
+
+  .order-card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--border2); border-radius: 0;
+  }
+  .order-card.status-preparing::before { background: var(--amber); }
+  .order-card.status-ready::before     { background: var(--green); }
+  .order-card.status-cancelled::before { background: var(--red); }
+
+  .order-card.removing {
+    opacity: 0; transform: translateX(10px);
+    max-height: 0 !important; padding: 0 13px; margin: 0;
+  }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; margin-bottom: 7px; gap: 6px;
+  }
+
+  .card-order-num {
+    font-family: 'Google Sans Display', 'Google Sans', sans-serif;
+    font-size: 21px; font-weight: 700;
+    color: var(--text); line-height: 1; letter-spacing: -0.5px;
+  }
+  .status-ready    .card-order-num { color: var(--green); }
+  .status-cancelled .card-order-num { color: var(--red); }
+  .status-preparing .card-order-num { color: var(--amber); }
+
+  .card-status-pill {
+    font-size: 10px; font-weight: 500;
+    padding: 3px 8px; border-radius: 20px;
+    white-space: nowrap; flex-shrink: 0;
+    background: var(--surface2); color: var(--text3);
+  }
+  .status-preparing .card-status-pill { background: var(--amber-bg); color: var(--amber); }
+  .status-ready     .card-status-pill { background: var(--green-bg); color: var(--green); }
+  .status-cancelled .card-status-pill { background: var(--red-bg);   color: var(--red); }
+
+  .card-name {
+    font-size: 13px; font-weight: 500; color: var(--text);
+    margin-bottom: 5px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .card-items { list-style: none; margin-bottom: 8px; }
+
+  .card-item {
+    font-size: 12px; color: var(--text2);
+    padding: 1.5px 0; display: flex; align-items: center; gap: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .card-item::before {
+    content: ''; width: 3px; height: 3px;
+    border-radius: 50%; background: var(--text3); flex-shrink: 0;
+  }
+
+  .card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px;
+  }
+
+  .card-time { font-size: 11px; color: var(--text3); }
+
+  .card-price {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 14px; font-weight: 700; color: var(--accent);
+  }
+
+  .orders-empty {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px; color: var(--text3);
+    padding: 20px; text-align: center;
+    flex: 1;
+  }
+  .orders-empty svg { opacity: 0.2; }
+  .orders-empty p {
+    font-size: 11px; letter-spacing: 1px;
+    text-transform: uppercase; opacity: 0.4; line-height: 1.9;
+  }
+
+  #conn-status {
+    flex-shrink: 0; padding: 9px 14px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--text3);
+  }
+
+  .conn-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--border2); flex-shrink: 0;
+  }
+  .conn-dot.online  { background: var(--green); }
+  .conn-dot.offline { background: var(--red); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- LEFT -->
+  <div id="panel-left">
+    <div id="slide-container">
+      <div class="slide-placeholder" id="slide-placeholder">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="5" width="20" height="14" rx="2"/>
+          <path d="m10 9 6 3-6 3V9z"/>
+        </svg>
+        <span>Chưa có nội dung</span>
+      </div>
+    </div>
+    <div id="slide-dots"></div>
+  </div>
+
+  <!-- MID -->
+  <div id="panel-mid">
+    <div id="menu-topbar">
+      <div id="date-display"></div>
+      <div id="clock">--:--</div>
+    </div>
+    <div id="menu-scroll">
+      <div id="menu-pages">
+        <div class="menu-page active" id="menu-placeholder-page">
+          <div class="menu-placeholder">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+              <path d="M4 6h16M4 12h16M4 18h10"/>
+            </svg>
+            <p>Menu chưa được cấu hình</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="panel-right">
+    <div id="orders-header">
+      <div class="orders-title">Đơn hàng</div>
+      <div class="orders-badge" id="orders-count">0</div>
+    </div>
+    <div id="orders-list">
+      <div class="orders-empty" id="orders-empty">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+          <circle cx="12" cy="12" r="9"/>
+          <path d="M12 8v4l3 3"/>
+        </svg>
+        <p>Chưa có<br>đơn mới</p>
+      </div>
+    </div>
+    <div id="conn-status">
+      <div class="conn-dot" id="conn-dot"></div>
+      <span id="conn-text">Đang kết nối...</span>
+    </div>
+  </div>
+
+</div>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+function getConfig() {
+  try { return JSON.parse(localStorage.getItem('kiosk_config') || '{}'); } catch { return {}; }
+}
+
+/* CLOCK */
+function tick() {
+  const n = new Date();
+  const hh = n.getHours().toString().padStart(2,'0');
+  const mm = n.getMinutes().toString().padStart(2,'0');
+  document.getElementById('clock').textContent = `${hh}:${mm}`;
+  const days = ['CN','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+  document.getElementById('date-display').textContent =
+    `${days[n.getDay()]}  ${n.getDate()}/${n.getMonth()+1}/${n.getFullYear()}`;
+}
+setInterval(tick, 1000); tick();
+
+/* SLIDESHOW */
+let slides = [], cur = 0, slideTimer = null;
+
+function buildSlides(items, dur) {
+  const c = document.getElementById('slide-container');
+  const d = document.getElementById('slide-dots');
+  c.innerHTML = ''; d.innerHTML = ''; slides = [];
+
+  if (!items?.length) {
+    c.innerHTML = `<div class="slide-placeholder"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="m10 9 6 3-6 3V9z"/></svg><span>Không có nội dung</span></div>`;
+    return;
+  }
+
+  items.forEach((item, i) => {
+    const s = document.createElement('div');
+    s.className = 'slide' + (i === 0 ? ' active' : '');
+    if (item.type === 'video') {
+      const v = document.createElement('video');
+      v.src = item.url; v.muted = true; v.playsInline = true; v.loop = false; v.preload = 'auto';
+      s.appendChild(v);
+    } else {
+      const img = document.createElement('img');
+      img.src = item.url; img.loading = 'lazy';
+      s.appendChild(img);
+    }
+    c.appendChild(s); slides.push(s);
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    d.appendChild(dot);
+  });
+
+  function go(idx) {
+    const dots = d.querySelectorAll('.dot');
+    slides[cur].classList.remove('active'); dots[cur].classList.remove('active');
+    const pv = slides[cur].querySelector('video');
+    if (pv) { pv.pause(); pv.currentTime = 0; }
+    cur = (idx + slides.length) % slides.length;
+    slides[cur].classList.add('active'); dots[cur].classList.add('active');
+    const v = slides[cur].querySelector('video');
+    if (v) { v.play().catch(()=>{}); v.onended = () => go(cur + 1); }
+    else { if (slideTimer) clearTimeout(slideTimer); slideTimer = setTimeout(() => go(cur + 1), dur); }
+  }
+
+  const fv = slides[0].querySelector('video');
+  if (fv) { fv.play().catch(()=>{}); fv.onended = () => go(1); }
+  else slideTimer = setTimeout(() => go(1), dur);
+}
+
+/* MENU */
+let menuTimer = null;
+
+function buildMenu(pages) {
+  const el = document.getElementById('menu-pages');
+  el.innerHTML = '';
+  if (menuTimer) clearInterval(menuTimer);
+  if (!pages?.length) {
+    el.innerHTML = `<div class="menu-page active"><div class="menu-placeholder"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 6h16M4 12h16M4 18h10"/></svg><p>Menu chưa cấu hình</p></div></div>`;
+    return;
+  }
+  pages.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'menu-page' + (i === 0 ? ' active' : '');
+    const img = document.createElement('img'); img.src = p.url;
+    d.appendChild(img); el.appendChild(d);
+  });
+  if (pages.length > 1) {
+    let idx = 0;
+    menuTimer = setInterval(() => {
+      const ps = el.querySelectorAll('.menu-page');
+      ps[idx].classList.remove('active');
+      idx = (idx + 1) % pages.length;
+      ps[idx].classList.add('active');
+    }, 15000);
+  }
+}
+
+/* ORDERS */
+const cards = new Map();
+const LABELS = { pending:'Chờ xử lý', preparing:'Đang pha chế', ready:'Sẵn sàng', cancelled:'Đã hủy', done:'Hoàn thành' };
+
+function renderOrder(id, data) {
+  const list = document.getElementById('orders-list');
+  const empty = document.getElementById('orders-empty');
+  if (empty) empty.style.display = 'none';
+
+  let el = document.getElementById('oc-' + id);
+  if (!el) {
+    el = document.createElement('div'); el.id = 'oc-' + id;
+    list.prepend(el); cards.set(id, { el, timer: null });
+  }
+
+  const st = (data.status || 'pending').toLowerCase();
+  el.className = `order-card status-${st}`;
+
+  const items = Array.isArray(data.items) ? data.items : (data.items ? Object.values(data.items) : []);
+  const num = data.orderNumber || id.slice(-4).toUpperCase();
+  const fmtT = ts => { if (!ts) return ''; const d = new Date(ts); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'); };
+  const fmtP = p => p != null ? new Intl.NumberFormat('vi-VN').format(p)+'đ' : '';
+
+  el.innerHTML = `
+    <div class="card-top">
+      <div class="card-order-num">#${num}</div>
+      <div class="card-status-pill">${LABELS[st] || st}</div>
+    </div>
+    ${data.customerName ? `<div class="card-name">${data.customerName}</div>` : ''}
+    <ul class="card-items">
+      ${items.slice(0,4).map(it=>`<li class="card-item">${it.qty?it.qty+'× ':''}${it.name||it}</li>`).join('')}
+      ${items.length>4?`<li class="card-item">+${items.length-4} món khác</li>`:''}
+    </ul>
+    <div class="card-footer">
+      <div class="card-time">${fmtT(data.createdAt||data.timestamp)}</div>
+      ${data.total?`<div class="card-price">${fmtP(data.total)}</div>`:''}
+    </div>`;
+
+  list.scrollTop = 0;
+  document.getElementById('orders-count').textContent = cards.size;
+
+  const entry = cards.get(id);
+  if (entry.timer) clearTimeout(entry.timer);
+  if (st === 'done' || st === 'cancelled')
+    entry.timer = setTimeout(() => remove(id), 5 * 60 * 1000);
+
+  const all = list.querySelectorAll('.order-card');
+  if (all.length > 15) remove(all[all.length-1].id.replace('oc-',''));
+}
+
+function remove(id) {
+  const e = cards.get(id); if (!e) return;
+  e.el.classList.add('removing');
+  setTimeout(() => {
+    e.el.remove(); cards.delete(id);
+    document.getElementById('orders-count').textContent = cards.size;
+    if (cards.size === 0) { const em = document.getElementById('orders-empty'); if(em) em.style.display=''; }
+  }, 450);
+}
+
+/* FIREBASE */
+function setConn(ok) {
+  document.getElementById('conn-dot').className = 'conn-dot ' + (ok ? 'online' : 'offline');
+  document.getElementById('conn-text').textContent = ok ? 'Đã kết nối' : 'Mất kết nối';
+}
+
+function init(cfg) {
+  if (!cfg.apiKey || !cfg.projectId) { setConn(false); document.getElementById('conn-text').textContent = 'Chưa cấu hình'; return; }
+  const app = initializeApp(cfg, 'kiosk-' + Date.now());
+  const db  = getDatabase(app);
+  setConn(false);
+  onValue(ref(db, cfg.ordersPath || 'orders'), snap => {
+    setConn(true);
+    const d = snap.val(); if (!d) return;
+    Object.entries(d).forEach(([id, o]) => renderOrder(id, o));
+  }, () => setConn(false));
+  onValue(ref(db, 'kiosk_config'), snap => {
+    const kc = snap.val(); if (!kc) return;
+    if (kc.slides?.length)     buildSlides(kc.slides, (kc.slideDuration || 6) * 1000);
+    if (kc.menuPages?.length)  buildMenu(kc.menuPages);
+  });
+}
+
+window.addEventListener('load', () => {
+  const cfg = getConfig();
+  if (cfg.apiKey) init(cfg);
+  else { setConn(false); document.getElementById('conn-text').textContent = 'Chưa cấu hình'; }
+});
+window.addEventListener('storage', e => { if (e.key === 'kiosk_config') location.reload(); });
+</script>
+</body>
+</html>
