@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;700&family=Google+Sans+Text:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -275,7 +276,38 @@
   .toast.inf { border-left: 3px solid var(--accent); }
   @keyframes tin { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
-  /* info callout */
+  /* ── AUTH OVERLAY ── */
+  #auth-overlay {
+    position: fixed; inset: 0; z-index: 9000;
+    background: rgba(26,23,20,0.55); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #auth-overlay.hidden { display: none; }
+  .auth-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px 28px 24px;
+    width: 320px; box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+  }
+  .auth-title {
+    font-family: 'Google Sans Display','Google Sans',sans-serif;
+    font-size: 17px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px;
+  }
+  .auth-sub { font-size: 12px; color: var(--text3); margin-bottom: 20px; }
+  .auth-err { font-size: 12px; color: var(--red); margin-top: 10px; min-height: 18px; }
+
+  /* ── SIDEBAR AUTH ROW ── */
+  .auth-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 10px; border-radius: 6px;
+    background: var(--bg); font-size: 12px; color: var(--text2);
+    margin-top: 6px; cursor: pointer;
+    transition: background 0.12s;
+  }
+  .auth-row:hover { background: var(--border); }
+  .auth-row .auth-label { flex: 1; }
+  .auth-row .auth-icon { color: var(--text3); font-size: 11px; }
+
   .callout {
     padding: 12px 14px; border-radius: 6px;
     background: var(--accent-bg); border: 1px solid #e8d4a8;
@@ -314,6 +346,31 @@
       <div class="s-dot" id="sb-dot"></div>
       <span id="sb-text">Chưa kết nối</span>
     </div>
+    <div class="auth-row" id="auth-row" onclick="window.showLoginOverlay && window.showLoginOverlay()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="auth-label" id="auth-label">Chưa đăng nhập</span>
+      <span class="auth-icon" id="auth-icon">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN OVERLAY -->
+<div id="auth-overlay">
+  <div class="auth-card">
+    <div class="auth-title">🔐 Đăng nhập Admin</div>
+    <div class="auth-sub">Yêu cầu xác thực để upload ảnh/video lên Firebase Storage</div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="text" id="login-email" placeholder="admin@thecafe33.com" value="elio@thecafe33.com">
+    </div>
+    <div class="form-group">
+      <label>Mật khẩu</label>
+      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')window.doLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="window.doLogin()">
+      Đăng nhập
+    </button>
+    <div class="auth-err" id="auth-err"></div>
   </div>
 </div>
 
@@ -490,8 +547,57 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var db      = firebase.database();
 var storage = firebase.storage();
+var auth    = firebase.auth();
 
 var slides = [], menuPages = [];
+
+/* ── AUTH ── */
+auth.onAuthStateChanged(function(user) {
+  var overlay = document.getElementById('auth-overlay');
+  var label   = document.getElementById('auth-label');
+  var icon    = document.getElementById('auth-icon');
+  var row     = document.getElementById('auth-row');
+  if (user) {
+    overlay.classList.add('hidden');
+    label.textContent = user.email;
+    icon.textContent  = '↩';
+    row.title = 'Click để đăng xuất';
+    row.onclick = function() {
+      if (confirm('Đăng xuất khỏi ' + user.email + '?')) auth.signOut();
+    };
+    setStatus(true);
+  } else {
+    overlay.classList.remove('hidden');
+    label.textContent = 'Chưa đăng nhập';
+    icon.textContent  = '›';
+    row.title = 'Đăng nhập';
+    row.onclick = function() { overlay.classList.remove('hidden'); };
+    setStatus(false);
+  }
+});
+
+window.showLoginOverlay = function() {
+  document.getElementById('auth-overlay').classList.remove('hidden');
+};
+
+window.doLogin = function() {
+  var email = document.getElementById('login-email').value.trim();
+  var pass  = document.getElementById('login-pass').value;
+  var errEl = document.getElementById('auth-err');
+  errEl.textContent = '';
+  if (!email || !pass) { errEl.textContent = 'Vui lòng nhập đầy đủ email và mật khẩu'; return; }
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(function() {
+      toast('Đăng nhập thành công!', 'ok');
+    })
+    .catch(function(e) {
+      var msg = e.message;
+      if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') msg = 'Sai mật khẩu';
+      else if (e.code === 'auth/user-not-found') msg = 'Email không tồn tại';
+      else if (e.code === 'auth/invalid-email')  msg = 'Email không hợp lệ';
+      errEl.textContent = msg;
+    });
+};
 
 /* ── TOAST ── */
 window.toast = function(msg, type) {
@@ -593,15 +699,30 @@ function doUpload(file, path, progFill, progPct, progName) {
   return new Promise(function(resolve, reject) {
     var r    = storage.ref(path);
     var task = r.put(file);
+    // Hiển thị tên file & trạng thái chờ ngay
+    if (progName) document.getElementById(progName).textContent = file.name;
+    document.getElementById(progPct).textContent = 'Đang kết nối...';
+
     task.on('state_changed',
-      function(s) {
-        var p = s.bytesTransferred / s.totalBytes * 100;
+      function(snapshot) {
+        var total = snapshot.totalBytes;
+        var transferred = snapshot.bytesTransferred;
+        var p = (total > 0) ? Math.round(transferred / total * 100) : 0;
         document.getElementById(progFill).style.width = p + '%';
-        document.getElementById(progPct).textContent = Math.round(p) + '%';
+        document.getElementById(progPct).textContent = p + '%';
         if (progName) document.getElementById(progName).textContent = file.name;
       },
-      reject,
-      function() { task.snapshot.ref.getDownloadURL().then(resolve).catch(reject); }
+      function(err) {
+        var msg = err.message || err.code || 'Upload thất bại';
+        if (err.code === 'storage/unauthorized') msg = 'Firebase Storage Rules chặn upload — kiểm tra Rules';
+        else if (err.code === 'storage/canceled') msg = 'Upload bị hủy';
+        else if (err.code === 'storage/unknown')  msg = 'Lỗi không xác định — kiểm tra kết nối mạng';
+        reject(new Error(msg));
+      },
+      function() {
+        document.getElementById(progPct).textContent = '✓';
+        task.snapshot.ref.getDownloadURL().then(resolve).catch(reject);
+      }
     );
   });
 }
@@ -701,10 +822,6 @@ function drag(container, arr, render) {
 }
 
 loadCfg();
-// Tự động kiểm tra kết nối khi load
-db.ref('.info/connected').once('value', function(snap) {
-  setStatus(snap.val());
-});
 </script>
 </body>
 </html>
