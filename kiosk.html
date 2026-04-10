@@ -524,9 +524,9 @@ function updateBillDisplay() {
   });
 
   var data = sessionCards[latest];
-  var total = data.total || 0;
-  var paid  = data.paid  || 0;
-  var change = data.change != null ? data.change : (paid - total);
+  var total  = data.total  || 0;
+  var paid   = data.paid   || 0;
+  var change = (data.change != null) ? data.change : Math.max(0, paid - total);
 
   billEmpty.style.display = 'none';
   billContent.style.display = '';
@@ -578,12 +578,12 @@ function renderSession(sessionId, data) {
     done:         'Hoàn thành'
   };
 
-  // Tên hiển thị ngắn từ sessionId
-  var shortId = sessionId.replace('session_display_', '').slice(0, 12);
+  // Tên khách hoặc fallback sessionId ngắn
+  var displayName = data.customerName || sessionId.replace('session_display_', '');
 
   el.innerHTML =
     '<div class="card-top">' +
-      '<div class="card-session-id">' + shortId + '</div>' +
+      '<div class="card-session-id">' + displayName + '</div>' +
       '<div class="card-status-pill">' + (STATE_LABELS[st] || st) + '</div>' +
     '</div>' +
     '<ul class="card-items">' +
@@ -629,26 +629,15 @@ function setConn(ok) {
 
 db.ref('.info/connected').on('value', function(snap) { setConn(snap.val()); });
 
-// Lắng nghe tất cả node bắt đầu bằng session_display_
-// Firebase không hỗ trợ prefix query trực tiếp trên key,
-// nên ta lắng nghe root và lọc phía client.
-db.ref('/').on('value', function(snap) {
-  var root = snap.val();
-  if (!root) return;
-
-  Object.keys(root).forEach(function(key) {
-    if (key.startsWith('session_display_')) {
-      var data = root[key];
-      if (data && typeof data === 'object') {
-        renderSession(key, data);
-      }
-    }
-  });
-
-  // Xóa card nếu node biến mất
-  Object.keys(sessionCards).forEach(function(k) {
-    if (!root[k]) removeSession(k);
-  });
+// Lắng nghe trực tiếp node session_display_xolifa
+db.ref('session_display_xolifa').on('value', function(snap) {
+  var data = snap.val();
+  if (data && typeof data === 'object') {
+    renderSession('session_display_xolifa', data);
+  } else {
+    // Node bị xóa hoặc rỗng → clear
+    removeSession('session_display_xolifa');
+  }
 });
 
 // Slides & menu từ Firebase
