@@ -6,6 +6,9 @@
 <title>Kiosk — Cấu hình</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;700&family=Google+Sans+Text:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -333,7 +336,7 @@
   <!-- PAGE: FIREBASE -->
   <div class="page active" id="page-firebase">
     <div class="callout">
-      Vào <strong>Firebase Console → Project Settings → Your apps → SDK setup and configuration</strong> để lấy các giá trị bên dưới.
+      Firebase đã được <strong>cấu hình cố định</strong> cho project <strong>the-cafe-33</strong>. Các trường bên dưới chỉ để tham khảo — không cần chỉnh sửa.
     </div>
     <div class="card">
       <div class="card-head">
@@ -347,36 +350,36 @@
         <div class="row2">
           <div class="form-group">
             <label>API Key</label>
-            <input type="password" id="fb-apiKey" placeholder="AIzaSy...">
+            <input type="password" id="fb-apiKey" readonly style="background:var(--surface2);color:var(--text3);cursor:default">
           </div>
           <div class="form-group">
             <label>Auth Domain</label>
-            <input type="text" id="fb-authDomain" placeholder="project.firebaseapp.com">
+            <input type="text" id="fb-authDomain" readonly style="background:var(--surface2);color:var(--text3);cursor:default">
           </div>
         </div>
         <div class="row2">
           <div class="form-group">
             <label>Project ID</label>
-            <input type="text" id="fb-projectId" placeholder="my-cafe">
+            <input type="text" id="fb-projectId" readonly style="background:var(--surface2);color:var(--text3);cursor:default">
           </div>
           <div class="form-group">
             <label>Storage Bucket</label>
-            <input type="text" id="fb-storageBucket" placeholder="my-cafe.appspot.com">
+            <input type="text" id="fb-storageBucket" readonly style="background:var(--surface2);color:var(--text3);cursor:default">
           </div>
         </div>
         <div class="row2">
           <div class="form-group">
             <label>Messaging Sender ID</label>
-            <input type="text" id="fb-senderId" placeholder="123456789">
+            <input type="text" id="fb-senderId" readonly style="background:var(--surface2);color:var(--text3);cursor:default">
           </div>
           <div class="form-group">
             <label>App ID</label>
-            <input type="text" id="fb-appId" placeholder="1:123:web:abc">
+            <input type="text" id="fb-appId" readonly style="background:var(--surface2);color:var(--text3);cursor:default">
           </div>
         </div>
         <div class="form-group">
           <label>Database URL</label>
-          <input type="text" id="fb-dbURL" placeholder="https://project-default-rtdb.firebaseio.com">
+          <input type="text" id="fb-dbURL" readonly style="background:var(--surface2);color:var(--text3);cursor:default">
           <div class="hint">Realtime Database URL — bắt buộc để nhận đơn hàng</div>
         </div>
         <div class="form-group">
@@ -473,28 +476,38 @@
 
 <div id="toasts"></div>
 
-<script type="module">
-import { initializeApp, deleteApp } from 'https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js';
-import { getDatabase, ref as dbRef, set, onValue } from 'https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js';
-import { getStorage, ref as stRef, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+<script>
+// ── FIREBASE CONFIG (fixed) ──────────────────────────────────────
+var firebaseConfig = {
+  apiKey:            "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain:        "the-cafe-33.firebaseapp.com",
+  databaseURL:       "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "the-cafe-33",
+  storageBucket:     "the-cafe-33.appspot.com",
+  messagingSenderId: "...",
+  appId:             "..."
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+var db      = firebase.database();
+var storage = firebase.storage();
 
-let fbApp = null, db = null, storage = null;
-let slides = [], menuPages = [];
+var slides = [], menuPages = [];
 
 /* ── TOAST ── */
-window.toast = (msg, type='inf') => {
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
+window.toast = function(msg, type) {
+  type = type || 'inf';
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
   t.textContent = msg;
   document.getElementById('toasts').appendChild(t);
-  setTimeout(() => t.remove(), 3200);
+  setTimeout(function() { t.remove(); }, 3200);
 };
 
 /* ── NAV ── */
-document.querySelectorAll('.nav-item').forEach(n => {
-  n.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+document.querySelectorAll('.nav-item').forEach(function(n) {
+  n.addEventListener('click', function() {
+    document.querySelectorAll('.nav-item').forEach(function(x) { x.classList.remove('active'); });
+    document.querySelectorAll('.page').forEach(function(x) { x.classList.remove('active'); });
     n.classList.add('active');
     document.getElementById('page-' + n.dataset.page).classList.add('active');
     document.getElementById('page-title').textContent = n.textContent.trim();
@@ -504,171 +517,164 @@ document.querySelectorAll('.nav-item').forEach(n => {
 /* ── CONFIG ── */
 function loadCfg() {
   try {
-    const c = JSON.parse(localStorage.getItem('kiosk_config') || '{}');
-    const f = id => document.getElementById(id);
-    if (c.apiKey)       f('fb-apiKey').value = c.apiKey;
-    if (c.authDomain)   f('fb-authDomain').value = c.authDomain;
-    if (c.projectId)    f('fb-projectId').value = c.projectId;
-    if (c.storageBucket)f('fb-storageBucket').value = c.storageBucket;
-    if (c.messagingSenderId) f('fb-senderId').value = c.messagingSenderId;
-    if (c.appId)        f('fb-appId').value = c.appId;
-    if (c.databaseURL)  f('fb-dbURL').value = c.databaseURL;
-    if (c.ordersPath)   f('fb-ordersPath').value = c.ordersPath;
+    var c = JSON.parse(localStorage.getItem('kiosk_config') || '{}');
+    var f = function(id){ return document.getElementById(id); };
+    // Hiển thị config cố định vào các input (read-only / reference)
+    f('fb-apiKey').value       = firebaseConfig.apiKey;
+    f('fb-authDomain').value   = firebaseConfig.authDomain;
+    f('fb-projectId').value    = firebaseConfig.projectId;
+    f('fb-storageBucket').value= firebaseConfig.storageBucket;
+    f('fb-senderId').value     = firebaseConfig.messagingSenderId;
+    f('fb-appId').value        = firebaseConfig.appId;
+    f('fb-dbURL').value        = firebaseConfig.databaseURL;
+    // ordersPath & settings từ localStorage
+    if (c.ordersPath)    f('fb-ordersPath').value = c.ordersPath;
     if (c.slideDuration){ f('slide-dur').value = c.slideDuration; document.getElementById('dur-val').textContent = c.slideDuration + 's'; }
-    if (c.slides)   { slides = c.slides; renderSlides(); }
-    if (c.menuPages){ menuPages = c.menuPages; renderMenu(); }
-    if (c.projectId) { document.getElementById('fb-badge').textContent = c.projectId; document.getElementById('fb-badge').className = 'badge badge-ok'; }
+    if (c.slides)    { slides = c.slides; renderSlides(); }
+    if (c.menuPages) { menuPages = c.menuPages; renderMenu(); }
+    // Badge luôn xanh vì config đã fix cứng
+    document.getElementById('fb-badge').textContent = firebaseConfig.projectId;
+    document.getElementById('fb-badge').className = 'badge badge-ok';
   } catch(e) {}
 }
 
 function collectCfg() {
   return {
-    apiKey:            document.getElementById('fb-apiKey').value.trim(),
-    authDomain:        document.getElementById('fb-authDomain').value.trim(),
-    projectId:         document.getElementById('fb-projectId').value.trim(),
-    storageBucket:     document.getElementById('fb-storageBucket').value.trim(),
-    messagingSenderId: document.getElementById('fb-senderId').value.trim(),
-    appId:             document.getElementById('fb-appId').value.trim(),
-    databaseURL:       document.getElementById('fb-dbURL').value.trim(),
+    apiKey:            firebaseConfig.apiKey,
+    authDomain:        firebaseConfig.authDomain,
+    projectId:         firebaseConfig.projectId,
+    storageBucket:     firebaseConfig.storageBucket,
+    messagingSenderId: firebaseConfig.messagingSenderId,
+    appId:             firebaseConfig.appId,
+    databaseURL:       firebaseConfig.databaseURL,
     ordersPath:        document.getElementById('fb-ordersPath').value.trim() || 'orders',
     slideDuration:     parseInt(document.getElementById('slide-dur').value) || 6,
-    slides,
-    menuPages,
+    slides: slides,
+    menuPages: menuPages,
   };
 }
 
 /* ── FIREBASE ── */
-function getFB() {
-  const c = collectCfg();
-  if (!c.apiKey || !c.projectId) { toast('Chưa nhập Firebase config', 'err'); return null; }
-  if (fbApp) try { deleteApp(fbApp); } catch(e) {}
-  fbApp = initializeApp(c, 'cfg-' + Date.now());
-  db = getDatabase(fbApp);
-  storage = getStorage(fbApp);
-  return { db, storage };
-}
-
 function setStatus(ok) {
   document.getElementById('sb-dot').className = 's-dot ' + (ok ? 'ok' : 'err');
   document.getElementById('sb-text').textContent = ok ? 'Đã kết nối' : 'Không kết nối';
 }
 
 window.testConn = function() {
-  const fb = getFB(); if (!fb) return;
-  onValue(dbRef(fb.db, '.info/connected'), snap => {
-    const ok = snap.val();
+  db.ref('.info/connected').once('value', function(snap) {
+    var ok = snap.val();
     setStatus(ok);
     if (ok) {
       toast('Kết nối Firebase thành công!', 'ok');
-      const pid = collectCfg().projectId;
-      document.getElementById('fb-badge').textContent = pid;
+      document.getElementById('fb-badge').textContent = firebaseConfig.projectId;
       document.getElementById('fb-badge').className = 'badge badge-ok';
     } else {
       toast('Không thể kết nối Firebase', 'err');
     }
-  }, { onlyOnce: true });
+  });
 };
 
-window.saveAndApply = async function() {
-  const c = collectCfg();
+window.saveAndApply = function() {
+  var c = collectCfg();
   localStorage.setItem('kiosk_config', JSON.stringify(c));
-  if (c.apiKey && c.projectId && c.databaseURL) {
-    try {
-      const fb = getFB(); if (!fb) return;
-      await set(dbRef(fb.db, 'kiosk_config'), {
-        slideDuration: c.slideDuration,
-        slides:    c.slides || [],
-        menuPages: c.menuPages || [],
-      });
-      toast('Đã lưu & đồng bộ lên Firebase', 'ok');
-    } catch(e) { toast('Lỗi: ' + e.message, 'err'); }
-  } else {
-    toast('Đã lưu cục bộ (chưa cấu hình Firebase)', 'inf');
-  }
+  db.ref('kiosk_config').set({
+    slideDuration: c.slideDuration,
+    slides:    c.slides || [],
+    menuPages: c.menuPages || [],
+  }).then(function() {
+    toast('Đã lưu & đồng bộ lên Firebase', 'ok');
+  }).catch(function(e) {
+    toast('Lỗi: ' + e.message, 'err');
+  });
 };
 
 /* ── UPLOAD ── */
 function doUpload(file, path, progFill, progPct, progName) {
-  return new Promise((resolve, reject) => {
-    const fb = getFB(); if (!fb) { reject(new Error('Firebase chưa cấu hình')); return; }
-    const r = stRef(fb.storage, path);
-    const task = uploadBytesResumable(r, file);
+  return new Promise(function(resolve, reject) {
+    var r    = storage.ref(path);
+    var task = r.put(file);
     task.on('state_changed',
-      s => {
-        const p = s.bytesTransferred / s.totalBytes * 100;
+      function(s) {
+        var p = s.bytesTransferred / s.totalBytes * 100;
         document.getElementById(progFill).style.width = p + '%';
         document.getElementById(progPct).textContent = Math.round(p) + '%';
         if (progName) document.getElementById(progName).textContent = file.name;
       },
       reject,
-      async () => { const url = await getDownloadURL(task.snapshot.ref); resolve(url); }
+      function() { task.snapshot.ref.getDownloadURL().then(resolve).catch(reject); }
     );
   });
 }
 
-window.uploadSlides = async function(e) {
-  const files = Array.from(e.target.files); if (!files.length) return;
+window.uploadSlides = function(e) {
+  var files = Array.from(e.target.files); if (!files.length) return;
   document.getElementById('slide-prog').style.display = 'block';
-  for (const f of files) {
-    try {
-      const url = await doUpload(f, `kiosk/slides/${Date.now()}_${f.name}`, 'slide-prog-fill', 'slide-prog-pct', 'slide-prog-name');
-      slides.push({ url, type: f.type.startsWith('video') ? 'video' : 'image', name: f.name });
-      renderSlides();
-      toast('Đã tải: ' + f.name, 'ok');
-    } catch(err) { toast('Lỗi: ' + err.message, 'err'); }
+  var idx = 0;
+  function next() {
+    if (idx >= files.length) { document.getElementById('slide-prog').style.display = 'none'; e.target.value = ''; return; }
+    var f = files[idx++];
+    doUpload(f, 'kiosk/slides/' + Date.now() + '_' + f.name, 'slide-prog-fill', 'slide-prog-pct', 'slide-prog-name')
+      .then(function(url) {
+        slides.push({ url: url, type: f.type.startsWith('video') ? 'video' : 'image', name: f.name });
+        renderSlides();
+        toast('Đã tải: ' + f.name, 'ok');
+        next();
+      })
+      .catch(function(err) { toast('Lỗi: ' + err.message, 'err'); next(); });
   }
-  document.getElementById('slide-prog').style.display = 'none';
-  e.target.value = '';
+  next();
 };
 
-window.uploadMenu = async function(e) {
-  const files = Array.from(e.target.files); if (!files.length) return;
+window.uploadMenu = function(e) {
+  var files = Array.from(e.target.files); if (!files.length) return;
   document.getElementById('menu-prog').style.display = 'block';
-  for (const f of files) {
-    try {
-      const url = await doUpload(f, `kiosk/menu/${Date.now()}_${f.name}`, 'menu-prog-fill', 'menu-prog-pct', 'menu-prog-name');
-      menuPages.push({ url, name: f.name, label: `Trang ${menuPages.length + 1}` });
-      renderMenu();
-      toast('Đã tải: ' + f.name, 'ok');
-    } catch(err) { toast('Lỗi: ' + err.message, 'err'); }
+  var idx = 0;
+  function next() {
+    if (idx >= files.length) { document.getElementById('menu-prog').style.display = 'none'; e.target.value = ''; return; }
+    var f = files[idx++];
+    doUpload(f, 'kiosk/menu/' + Date.now() + '_' + f.name, 'menu-prog-fill', 'menu-prog-pct', 'menu-prog-name')
+      .then(function(url) {
+        menuPages.push({ url: url, name: f.name, label: 'Trang ' + menuPages.length });
+        renderMenu();
+        toast('Đã tải: ' + f.name, 'ok');
+        next();
+      })
+      .catch(function(err) { toast('Lỗi: ' + err.message, 'err'); next(); });
   }
-  document.getElementById('menu-prog').style.display = 'none';
-  e.target.value = '';
+  next();
 };
 
 /* ── RENDER LISTS ── */
 function renderSlides() {
-  const el = document.getElementById('slide-list');
+  var el = document.getElementById('slide-list');
   document.getElementById('slide-badge').textContent = slides.length + ' slides';
-  if (!slides.length) { el.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center">Chưa có slide nào</div>`; return; }
-  el.innerHTML = slides.map((s,i) => `
-    <div class="item-row" draggable="true" data-idx="${i}">
-      <span class="drag-h">⠿</span>
-      ${s.type==='video' ? `<video class="item-thumb" src="${s.url}" muted></video>` : `<img class="item-thumb" src="${s.url}" loading="lazy">`}
-      <div class="item-info">
-        <div class="item-name">${s.name || 'Slide '+(i+1)}</div>
-        <div class="item-sub">${s.type==='video' ? '▶ Video' : '🖼 Ảnh'}</div>
-      </div>
-      <button class="btn btn-danger btn-sm" onclick="slides.splice(${i},1);renderSlides()">Xóa</button>
-    </div>`).join('');
+  if (!slides.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center">Chưa có slide nào</div>'; return; }
+  el.innerHTML = slides.map(function(s, i) { return (
+    '<div class="item-row" draggable="true" data-idx="' + i + '">' +
+    '<span class="drag-h">⠿</span>' +
+    (s.type==='video' ? '<video class="item-thumb" src="' + s.url + '" muted></video>' : '<img class="item-thumb" src="' + s.url + '" loading="lazy">') +
+    '<div class="item-info"><div class="item-name">' + (s.name || 'Slide '+(i+1)) + '</div>' +
+    '<div class="item-sub">' + (s.type==='video' ? '▶ Video' : '🖼 Ảnh') + '</div></div>' +
+    '<button class="btn btn-danger btn-sm" onclick="slides.splice(' + i + ',1);renderSlides()">Xóa</button>' +
+    '</div>');
+  }).join('');
   drag(el, slides, renderSlides);
 }
 
 function renderMenu() {
-  const el = document.getElementById('menu-list');
+  var el = document.getElementById('menu-list');
   document.getElementById('menu-badge').textContent = menuPages.length + ' trang';
-  if (!menuPages.length) { el.innerHTML = `<div style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center">Chưa có ảnh menu nào</div>`; return; }
-  el.innerHTML = menuPages.map((p,i) => `
-    <div class="item-row" draggable="true" data-idx="${i}">
-      <span class="drag-h">⠿</span>
-      <img class="item-thumb-sq" src="${p.url}" loading="lazy">
-      <div class="item-info">
-        <div class="item-name">${p.name}</div>
-        <input type="text" value="${p.label||'Trang '+(i+1)}" onchange="menuPages[${i}].label=this.value"
-          style="margin-top:4px;padding:4px 8px;font-size:11px;width:100%" placeholder="Tên trang">
-      </div>
-      <button class="btn btn-danger btn-sm" onclick="menuPages.splice(${i},1);renderMenu()">Xóa</button>
-    </div>`).join('');
+  if (!menuPages.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:16px 0;text-align:center">Chưa có ảnh menu nào</div>'; return; }
+  el.innerHTML = menuPages.map(function(p, i) { return (
+    '<div class="item-row" draggable="true" data-idx="' + i + '">' +
+    '<span class="drag-h">⠿</span>' +
+    '<img class="item-thumb-sq" src="' + p.url + '" loading="lazy">' +
+    '<div class="item-info"><div class="item-name">' + p.name + '</div>' +
+    '<input type="text" value="' + (p.label||'Trang '+(i+1)) + '" onchange="menuPages[' + i + '].label=this.value"' +
+    ' style="margin-top:4px;padding:4px 8px;font-size:11px;width:100%" placeholder="Tên trang"></div>' +
+    '<button class="btn btn-danger btn-sm" onclick="menuPages.splice(' + i + ',1);renderMenu()">Xóa</button>' +
+    '</div>');
+  }).join('');
   drag(el, menuPages, renderMenu);
 }
 
@@ -677,15 +683,15 @@ window.renderMenu   = renderMenu;
 
 /* ── DRAG SORT ── */
 function drag(container, arr, render) {
-  let from = null;
-  container.querySelectorAll('[draggable]').forEach(row => {
-    row.addEventListener('dragstart', () => { from = +row.dataset.idx; row.style.opacity = '0.4'; });
-    row.addEventListener('dragend',   () => row.style.opacity = '');
-    row.addEventListener('dragover',  e => { e.preventDefault(); row.style.borderColor = 'var(--accent)'; });
-    row.addEventListener('dragleave', () => row.style.borderColor = '');
-    row.addEventListener('drop', e => {
+  var from = null;
+  container.querySelectorAll('[draggable]').forEach(function(row) {
+    row.addEventListener('dragstart', function() { from = +row.dataset.idx; row.style.opacity = '0.4'; });
+    row.addEventListener('dragend',   function() { row.style.opacity = ''; });
+    row.addEventListener('dragover',  function(e) { e.preventDefault(); row.style.borderColor = 'var(--accent)'; });
+    row.addEventListener('dragleave', function() { row.style.borderColor = ''; });
+    row.addEventListener('drop', function(e) {
       e.preventDefault(); row.style.borderColor = '';
-      const to = +row.dataset.idx;
+      var to = +row.dataset.idx;
       if (from !== null && from !== to) {
         arr.splice(to, 0, arr.splice(from, 1)[0]);
         render();
@@ -695,6 +701,10 @@ function drag(container, arr, render) {
 }
 
 loadCfg();
+// Tự động kiểm tra kết nối khi load
+db.ref('.info/connected').once('value', function(snap) {
+  setStatus(snap.val());
+});
 </script>
 </body>
 </html>
