@@ -329,8 +329,9 @@
   .conn-dot.online  { background: var(--green); }
   .conn-dot.offline { background: var(--red); }
 </style>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 </head>
 <body>
 <div id="app">
@@ -414,7 +415,8 @@ var firebaseConfig = {
   appId:         "..."
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-var db = firebase.database();
+var db   = firebase.database();
+var auth = firebase.auth();
 
 /* ── SLIDESHOW ── */
 var slides = [], cur = 0, slideTimer = null;
@@ -621,37 +623,49 @@ function removeSession(sessionId) {
   }
 }
 
-/* ── FIREBASE LISTENERS ── */
+/* ── FIREBASE LISTENERS — đăng nhập trước như screen.html ── */
 function setConn(ok) {
   document.getElementById('conn-dot').className   = 'conn-dot ' + (ok ? 'online' : 'offline');
   document.getElementById('conn-text').textContent = ok ? 'Đã kết nối' : 'Mất kết nối';
 }
 
-db.ref('.info/connected').on('value', function(snap) { setConn(snap.val()); });
+function startListeners() {
+  db.ref('.info/connected').on('value', function(snap) { setConn(snap.val()); });
 
-// Lắng nghe trực tiếp node session_display_xolifa
-db.ref('session_display_xolifa').on('value', function(snap) {
-  var data = snap.val();
-  if (data && typeof data === 'object') {
-    renderSession('session_display_xolifa', data);
-  } else {
-    // Node bị xóa hoặc rỗng → clear
-    removeSession('session_display_xolifa');
-  }
-});
+  // Lắng nghe trực tiếp node session_display_xolifa
+  db.ref('session_display_xolifa').on('value', function(snap) {
+    var data = snap.val();
+    if (data && typeof data === 'object') {
+      renderSession('session_display_xolifa', data);
+    } else {
+      removeSession('session_display_xolifa');
+    }
+  });
 
-// Slides & menu từ Firebase
-db.ref('kiosk_config').on('value', function(snap) {
-  var kc = snap.val();
-  if (!kc) {
-    try { kc = JSON.parse(localStorage.getItem('kiosk_config') || 'null'); } catch(e) {}
-  }
-  if (!kc) return;
-  if (kc.slides && kc.slides.length)
-    buildSlides(kc.slides, (kc.slideDuration || 6) * 1000);
-  if (kc.menuPages && kc.menuPages.length)
-    buildMenu(kc.menuPages);
-});
+  // Slides & menu từ Firebase
+  db.ref('kiosk_config').on('value', function(snap) {
+    var kc = snap.val();
+    if (!kc) {
+      try { kc = JSON.parse(localStorage.getItem('kiosk_config') || 'null'); } catch(e) {}
+    }
+    if (!kc) return;
+    if (kc.slides && kc.slides.length)
+      buildSlides(kc.slides, (kc.slideDuration || 6) * 1000);
+    if (kc.menuPages && kc.menuPages.length)
+      buildMenu(kc.menuPages);
+  });
+}
+
+auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty")
+  .then(function() {
+    console.log("Kiosk connected");
+    startListeners();
+  })
+  .catch(function(e) {
+    console.error("Auth error:", e);
+    // Thử lắng nghe dù không login (nếu rules public)
+    startListeners();
+  });
 </script>
 </body>
 </html>
