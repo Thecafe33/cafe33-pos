@@ -740,51 +740,66 @@ window.saveAndApply = function() {
 };
 
 /* ── UPLOAD ── */
-function doUpload(file, path, progFill, progPct, progName) {
+function doUpload(file, storagePath, progFill, progPct, progName) {
   return new Promise(function(resolve, reject) {
-    // Hiển thị tên file & trạng thái chờ ngay
     if (progName) document.getElementById(progName).textContent = file.name;
-    document.getElementById(progPct).textContent = 'Đang tải...';
+    document.getElementById(progPct).textContent = 'Đang chuẩn bị...';
     document.getElementById(progFill).style.width = '0%';
 
     dbg('📤 ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)', 'info');
-    dbg('Auth: ' + (auth.currentUser ? '✅ ' + auth.currentUser.email : '❌ CHƯA LOGIN'), auth.currentUser ? 'ok' : 'err');
-    dbg('Path: ' + path, 'info');
 
-    var r    = storage.ref(path);
-    var task = r.put(file);
-    dbg('task tạo xong, chờ state_changed...', 'info');
+    // Lấy token từ user hiện tại
+    var user = auth.currentUser;
+    if (!user) { var e = new Error('Chưa đăng nhập'); dbg('❌ ' + e.message, 'err'); reject(e); return; }
 
-    task.on('state_changed',
-      function(snapshot) {
-        var total       = snapshot.totalBytes;
-        var transferred = snapshot.bytesTransferred;
-        var p = (total > 0) ? Math.round(transferred / total * 100) : 50;
-        dbg('⏳ ' + transferred + ' / ' + total + ' = ' + p + '%', 'info');
-        document.getElementById(progFill).style.width = p + '%';
-        document.getElementById(progPct).textContent = p + '%';
-      },
-      function(err) {
-        dbg('❌ [' + err.code + '] ' + err.message, 'err');
-        var msg = err.message || err.code || 'Upload thất bại';
-        if (err.code === 'storage/unauthorized') msg = '⛔ Không có quyền upload — kiểm tra auth';
-        else if (err.code === 'storage/canceled') msg = 'Upload bị hủy';
-        else if (err.code === 'storage/unknown')  msg = 'Lỗi mạng — thử lại';
-        reject(new Error(msg));
-      },
-      function() {
-        dbg('✅ Upload xong, đang lấy URL...', 'ok');
-        document.getElementById(progFill).style.width = '100%';
-        document.getElementById(progPct).textContent = '✓';
-        task.snapshot.ref.getDownloadURL()
-          .then(function(url) { dbg('🔗 ' + url.substring(0,70) + '...', 'ok'); resolve(url); })
-          .catch(function(e)  { dbg('❌ Lỗi lấy URL: ' + e.message, 'err'); reject(e); });
-      }
-    );
+    dbg('🔑 Đang lấy ID token...', 'info');
+    user.getIdToken(true).then(function(token) {
+      dbg('🔑 Token OK, bắt đầu upload XHR...', 'ok');
 
-    task.then(function() {
-      dbg('task.then() fired', 'info');
-    }).catch(function() {});
+      var bucket   = firebaseConfig.storageBucket;
+      var encoded  = encodeURIComponent(storagePath);
+      var url      = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o?uploadType=media&name=' + encoded;
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+
+      xhr.upload.onprogress = function(e) {
+        if (e.lengthComputable) {
+          var p = Math.round(e.loaded / e.total * 100);
+          dbg('⏳ ' + e.loaded + ' / ' + e.total + ' = ' + p + '%', 'info');
+          document.getElementById(progFill).style.width = p + '%';
+          document.getElementById(progPct).textContent = p + '%';
+        }
+      };
+
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          var res = JSON.parse(xhr.responseText);
+          var downloadUrl = 'https://firebasestorage.googleapis.com/v0/b/' + bucket + '/o/' + encoded + '?alt=media&token=' + res.downloadTokens;
+          dbg('✅ Upload xong! URL lấy được', 'ok');
+          document.getElementById(progFill).style.width = '100%';
+          document.getElementById(progPct).textContent = '✓';
+          resolve(downloadUrl);
+        } else {
+          dbg('❌ HTTP ' + xhr.status + ': ' + xhr.responseText.substring(0, 120), 'err');
+          reject(new Error('Upload thất bại HTTP ' + xhr.status));
+        }
+      };
+
+      xhr.onerror = function() {
+        dbg('❌ XHR network error', 'err');
+        reject(new Error('Lỗi mạng khi upload'));
+      };
+
+      xhr.send(file);
+      dbg('📡 XHR sent, chờ response...', 'info');
+
+    }).catch(function(e) {
+      dbg('❌ Lỗi lấy token: ' + e.message, 'err');
+      reject(e);
+    });
   });
 }
 
