@@ -9,11 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;700&family=Google+Sans+Text:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:        #f5f4f0;
+    --bg:        #ffffff;
     --surface:   #ffffff;
-    --surface2:  #f0ede8;
-    --border:    #e2ddd6;
-    --border2:   #cdc7bf;
+    --surface2:  #f5f5f5;
+    --border:    #e8e8e8;
+    --border2:   #d0d0d0;
     --accent:    #b5822a;
     --text:      #1a1714;
     --text2:     #6b6558;
@@ -44,6 +44,7 @@
   #app {
     display: flex;
     width: 100vw; height: 100vh;
+    background: #ffffff;
   }
 
   /* ══ LEFT: SLIDESHOW 20% ══ */
@@ -52,7 +53,7 @@
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
-    background: #e8e4de;
+    background: #f5f5f5;
     border-right: 1px solid var(--border);
   }
 
@@ -102,37 +103,16 @@
     text-transform: uppercase;
   }
 
-  /* ══ MID: MENU 60% ══ */
+  /* ══ MID: MENU 60% — full height, no topbar ══ */
   #panel-mid {
     width: 60%; height: 100%;
-    position: relative; background: var(--surface);
+    position: relative; background: #ffffff;
     overflow: hidden; flex-shrink: 0;
-    display: flex; flex-direction: column;
     border-right: 1px solid var(--border);
   }
 
-  #menu-topbar {
-    flex-shrink: 0;
-    display: flex; align-items: center; justify-content: flex-end;
-    padding: 0 28px; height: 52px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    gap: 14px;
-  }
-
-  #date-display {
-    font-size: 13px; font-weight: 400;
-    color: var(--text3); letter-spacing: 0.2px;
-  }
-
-  #clock {
-    font-family: 'Google Sans Display', 'Google Sans', sans-serif;
-    font-size: 28px; font-weight: 400;
-    color: var(--text); letter-spacing: -0.5px; line-height: 1;
-  }
-
-  #menu-scroll {
-    flex: 1; overflow: hidden; position: relative;
+  #menu-pages {
+    position: absolute; inset: 0;
   }
 
   .menu-page {
@@ -157,10 +137,10 @@
     text-transform: uppercase; opacity: 0.5;
   }
 
-  /* ══ RIGHT: ORDERS 20% ══ */
+  /* ══ RIGHT: CART / SESSION DISPLAY 20% ══ */
   #panel-right {
     width: 20%; height: 100%;
-    background: var(--bg);
+    background: #ffffff;
     display: flex; flex-direction: column;
     flex-shrink: 0; overflow: hidden;
   }
@@ -186,11 +166,11 @@
 
   #orders-list {
     flex: 1; overflow: hidden;
-    padding: 10px; display: flex;
+    padding: 10px 10px 0; display: flex;
     flex-direction: column; gap: 8px;
   }
 
-  /* ORDER CARD */
+  /* ORDER / CART CARD */
   .order-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -199,7 +179,7 @@
     position: relative; overflow: hidden;
     animation: cardIn 0.45s cubic-bezier(0.16,1,0.3,1);
     transition: opacity 0.4s ease, transform 0.4s ease, max-height 0.4s ease, padding 0.4s ease;
-    max-height: 220px;
+    max-height: 300px;
   }
 
   .order-card::before {
@@ -207,9 +187,9 @@
     left: 0; top: 0; bottom: 0; width: 3px;
     background: var(--border2); border-radius: 0;
   }
-  .order-card.status-preparing::before { background: var(--amber); }
-  .order-card.status-ready::before     { background: var(--green); }
-  .order-card.status-cancelled::before { background: var(--red); }
+  .order-card.status-cash_payment::before { background: var(--amber); }
+  .order-card.status-ready::before        { background: var(--green); }
+  .order-card.status-cancelled::before    { background: var(--red); }
 
   .order-card.removing {
     opacity: 0; transform: translateX(10px);
@@ -226,14 +206,13 @@
     justify-content: space-between; margin-bottom: 7px; gap: 6px;
   }
 
-  .card-order-num {
+  .card-session-id {
     font-family: 'Google Sans Display', 'Google Sans', sans-serif;
-    font-size: 21px; font-weight: 700;
-    color: var(--text); line-height: 1; letter-spacing: -0.5px;
+    font-size: 13px; font-weight: 700;
+    color: var(--text2); line-height: 1; letter-spacing: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 70%;
   }
-  .status-ready    .card-order-num { color: var(--green); }
-  .status-cancelled .card-order-num { color: var(--red); }
-  .status-preparing .card-order-num { color: var(--amber); }
 
   .card-status-pill {
     font-size: 10px; font-weight: 500;
@@ -241,21 +220,15 @@
     white-space: nowrap; flex-shrink: 0;
     background: var(--surface2); color: var(--text3);
   }
-  .status-preparing .card-status-pill { background: var(--amber-bg); color: var(--amber); }
-  .status-ready     .card-status-pill { background: var(--green-bg); color: var(--green); }
-  .status-cancelled .card-status-pill { background: var(--red-bg);   color: var(--red); }
-
-  .card-name {
-    font-size: 13px; font-weight: 500; color: var(--text);
-    margin-bottom: 5px; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis;
-  }
+  .status-cash_payment .card-status-pill { background: var(--amber-bg); color: var(--amber); }
+  .status-ready        .card-status-pill { background: var(--green-bg); color: var(--green); }
+  .status-cancelled    .card-status-pill { background: var(--red-bg);   color: var(--red); }
 
   .card-items { list-style: none; margin-bottom: 8px; }
 
   .card-item {
     font-size: 12px; color: var(--text2);
-    padding: 1.5px 0; display: flex; align-items: center; gap: 6px;
+    padding: 2px 0; display: flex; align-items: center; gap: 6px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .card-item::before {
@@ -263,18 +236,70 @@
     border-radius: 50%; background: var(--text3); flex-shrink: 0;
   }
 
+  .card-item-price {
+    margin-left: auto; font-size: 11px;
+    color: var(--text3); flex-shrink: 0;
+  }
+
   .card-footer {
     display: flex; align-items: center; justify-content: space-between;
     border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px;
   }
 
-  .card-time { font-size: 11px; color: var(--text3); }
-
+  .card-time  { font-size: 11px; color: var(--text3); }
   .card-price {
     font-family: 'Google Sans', sans-serif;
     font-size: 14px; font-weight: 700; color: var(--accent);
   }
 
+  /* ── TOTAL BILL BLOCK ── */
+  #bill-total-block {
+    flex-shrink: 0;
+    padding: 16px 16px 14px;
+    border-top: 2px solid var(--border);
+    background: #ffffff;
+  }
+
+  .bill-label {
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text3); margin-bottom: 6px;
+  }
+
+  .bill-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 8px;
+  }
+
+  .bill-amount {
+    font-family: 'Google Sans Display', 'Google Sans', sans-serif;
+    font-size: 36px; font-weight: 700;
+    color: var(--accent); letter-spacing: -1px; line-height: 1;
+  }
+
+  .bill-change-row {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 8px; padding-top: 8px;
+    border-top: 1px dashed var(--border2);
+  }
+
+  .bill-change-label {
+    font-size: 11px; color: var(--text3);
+  }
+
+  .bill-change-val {
+    font-family: 'Google Sans', sans-serif;
+    font-size: 16px; font-weight: 700; color: var(--green);
+  }
+
+  .bill-empty {
+    font-size: 11px; color: var(--text3);
+    text-align: center; padding: 10px 0;
+    letter-spacing: 1px; text-transform: uppercase;
+    opacity: 0.5;
+  }
+
+  /* ── ORDERS EMPTY ── */
   .orders-empty {
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
@@ -289,11 +314,12 @@
   }
 
   #conn-status {
-    flex-shrink: 0; padding: 9px 14px;
+    flex-shrink: 0; padding: 7px 14px;
     border-top: 1px solid var(--border);
     display: flex; align-items: center; gap: 6px;
     font-size: 10px; letter-spacing: 1px;
     text-transform: uppercase; color: var(--text3);
+    background: #ffffff;
   }
 
   .conn-dot {
@@ -309,7 +335,7 @@
 <body>
 <div id="app">
 
-  <!-- LEFT -->
+  <!-- LEFT: SLIDESHOW -->
   <div id="panel-left">
     <div id="slide-container">
       <div class="slide-placeholder" id="slide-placeholder">
@@ -323,41 +349,52 @@
     <div id="slide-dots"></div>
   </div>
 
-  <!-- MID -->
+  <!-- MID: MENU ONLY (no topbar) -->
   <div id="panel-mid">
-    <div id="menu-topbar">
-      <div id="date-display"></div>
-      <div id="clock">--:--</div>
-    </div>
-    <div id="menu-scroll">
-      <div id="menu-pages">
-        <div class="menu-page active" id="menu-placeholder-page">
-          <div class="menu-placeholder">
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-              <path d="M4 6h16M4 12h16M4 18h10"/>
-            </svg>
-            <p>Menu chưa được cấu hình</p>
-          </div>
+    <div id="menu-pages">
+      <div class="menu-page active" id="menu-placeholder-page">
+        <div class="menu-placeholder">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+            <path d="M4 6h16M4 12h16M4 18h10"/>
+          </svg>
+          <p>Menu chưa được cấu hình</p>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- RIGHT -->
+  <!-- RIGHT: SESSION / CART -->
   <div id="panel-right">
     <div id="orders-header">
-      <div class="orders-title">Đơn hàng</div>
+      <div class="orders-title">Giỏ hàng</div>
       <div class="orders-badge" id="orders-count">0</div>
     </div>
+
     <div id="orders-list">
       <div class="orders-empty" id="orders-empty">
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
           <circle cx="12" cy="12" r="9"/>
           <path d="M12 8v4l3 3"/>
         </svg>
-        <p>Chưa có<br>đơn mới</p>
+        <p>Chưa có<br>giỏ hàng</p>
       </div>
     </div>
+
+    <!-- TOTAL BILL -->
+    <div id="bill-total-block">
+      <div class="bill-label">Tổng thanh toán</div>
+      <div id="bill-empty" class="bill-empty">—</div>
+      <div id="bill-content" style="display:none">
+        <div class="bill-row">
+          <div class="bill-amount" id="bill-amount">0đ</div>
+        </div>
+        <div class="bill-change-row" id="bill-change-row" style="display:none">
+          <span class="bill-change-label">Tiền thối</span>
+          <span class="bill-change-val" id="bill-change-val">0đ</span>
+        </div>
+      </div>
+    </div>
+
     <div id="conn-status">
       <div class="conn-dot" id="conn-dot"></div>
       <span id="conn-text">Đang kết nối...</span>
@@ -366,7 +403,7 @@
 
 </div>
 <script>
-/* FIREBASE CONFIG — fix cứng */
+/* ── FIREBASE CONFIG ── */
 var firebaseConfig = {
   apiKey:        "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
   authDomain:    "the-cafe-33.firebaseapp.com",
@@ -379,19 +416,7 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
 
-/* CLOCK */
-function tick() {
-  var n   = new Date();
-  var hh  = ('0'+n.getHours()).slice(-2);
-  var mm  = ('0'+n.getMinutes()).slice(-2);
-  document.getElementById('clock').textContent = hh + ':' + mm;
-  var days = ['CN','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
-  document.getElementById('date-display').textContent =
-    days[n.getDay()] + '  ' + n.getDate() + '/' + (n.getMonth()+1) + '/' + n.getFullYear();
-}
-setInterval(tick, 1000); tick();
-
-/* SLIDESHOW */
+/* ── SLIDESHOW ── */
 var slides = [], cur = 0, slideTimer = null;
 
 function buildSlides(items, dur) {
@@ -440,7 +465,7 @@ function buildSlides(items, dur) {
   else slideTimer = setTimeout(function() { go(1); }, dur);
 }
 
-/* MENU */
+/* ── MENU ── */
 var menuTimer = null;
 
 function buildMenu(pages) {
@@ -468,93 +493,175 @@ function buildMenu(pages) {
   }
 }
 
-/* ORDERS */
-var cards = {};
-var LABELS = { pending:'Chờ xử lý', preparing:'Đang pha chế', ready:'Sẵn sàng', cancelled:'Đã hủy', done:'Hoàn thành' };
+/* ── HELPERS ── */
+function fmtP(p) {
+  return p != null ? new Intl.NumberFormat('vi-VN').format(p) + 'đ' : '';
+}
 
-function fmtT(ts) { if (!ts) return ''; var d = new Date(ts); return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); }
-function fmtP(p)  { return p != null ? new Intl.NumberFormat('vi-VN').format(p)+'đ' : ''; }
+/* ── SESSION DISPLAY (giỏ hàng từ node session_display_*) ── */
+var sessionCards = {}; // sessionId -> { el, data }
 
-function renderOrder(id, data) {
+function updateBillDisplay() {
+  var keys = Object.keys(sessionCards);
+  var billEmpty  = document.getElementById('bill-empty');
+  var billContent = document.getElementById('bill-content');
+  var billAmount  = document.getElementById('bill-amount');
+  var billChangeRow = document.getElementById('bill-change-row');
+  var billChangeVal = document.getElementById('bill-change-val');
+
+  if (!keys.length) {
+    billEmpty.style.display = '';
+    billContent.style.display = 'none';
+    document.getElementById('orders-count').textContent = '0';
+    return;
+  }
+
+  // Lấy session mới nhất (updatedAt lớn nhất)
+  var latest = null;
+  keys.forEach(function(k) {
+    var d = sessionCards[k];
+    if (!latest || (d.updatedAt || 0) > (sessionCards[latest].updatedAt || 0)) latest = k;
+  });
+
+  var data = sessionCards[latest];
+  var total = data.total || 0;
+  var paid  = data.paid  || 0;
+  var change = data.change != null ? data.change : (paid - total);
+
+  billEmpty.style.display = 'none';
+  billContent.style.display = '';
+  billAmount.textContent = fmtP(total);
+
+  if (paid > 0 && change >= 0) {
+    billChangeRow.style.display = '';
+    billChangeVal.textContent = fmtP(change);
+  } else {
+    billChangeRow.style.display = 'none';
+  }
+
+  document.getElementById('orders-count').textContent = keys.length;
+}
+
+function renderSession(sessionId, data) {
   var list  = document.getElementById('orders-list');
   var empty = document.getElementById('orders-empty');
   if (empty) empty.style.display = 'none';
 
-  var el = document.getElementById('oc-' + id);
+  // Lưu data để tính bill
+  sessionCards[sessionId] = data;
+  sessionCards[sessionId].updatedAt = data.updatedAt || 0;
+
+  var el = document.getElementById('sc-' + sessionId);
   if (!el) {
-    el = document.createElement('div'); el.id = 'oc-' + id;
-    list.prepend(el); cards[id] = { el: el, timer: null };
+    el = document.createElement('div');
+    el.id = 'sc-' + sessionId;
+    list.prepend(el);
   }
 
-  var st    = (data.status || 'pending').toLowerCase();
+  var st = (data.state || 'pending').toLowerCase();
   el.className = 'order-card status-' + st;
 
-  var items = Array.isArray(data.items) ? data.items : (data.items ? Object.values(data.items) : []);
-  var num   = data.orderNumber || id.slice(-4).toUpperCase();
+  // Cart items — Firebase có thể là array hoặc object
+  var cartItems = [];
+  if (Array.isArray(data.cart)) {
+    cartItems = data.cart;
+  } else if (data.cart && typeof data.cart === 'object') {
+    cartItems = Object.values(data.cart);
+  }
+
+  // Label trạng thái
+  var STATE_LABELS = {
+    cash_payment: 'Tiền mặt',
+    pending:      'Chờ',
+    ready:        'Sẵn sàng',
+    cancelled:    'Đã hủy',
+    done:         'Hoàn thành'
+  };
+
+  // Tên hiển thị ngắn từ sessionId
+  var shortId = sessionId.replace('session_display_', '').slice(0, 12);
 
   el.innerHTML =
     '<div class="card-top">' +
-      '<div class="card-order-num">#' + num + '</div>' +
-      '<div class="card-status-pill">' + (LABELS[st] || st) + '</div>' +
+      '<div class="card-session-id">' + shortId + '</div>' +
+      '<div class="card-status-pill">' + (STATE_LABELS[st] || st) + '</div>' +
     '</div>' +
-    (data.customerName ? '<div class="card-name">' + data.customerName + '</div>' : '') +
     '<ul class="card-items">' +
-      items.slice(0,4).map(function(it){ return '<li class="card-item">' + (it.qty ? it.qty+'× ' : '') + (it.name||it) + '</li>'; }).join('') +
-      (items.length > 4 ? '<li class="card-item">+' + (items.length-4) + ' món khác</li>' : '') +
-    '</ul>' +
-    '<div class="card-footer">' +
-      '<div class="card-time">' + fmtT(data.createdAt||data.timestamp) + '</div>' +
-      (data.total ? '<div class="card-price">' + fmtP(data.total) + '</div>' : '') +
-    '</div>';
+      cartItems.map(function(it) {
+        var name = it.name || '?';
+        var qty  = it.qty  || it.quantity || 1;
+        var size = it.size ? ' (' + it.size + ')' : '';
+        var price = it.price ? fmtP(it.price * qty) : '';
+        return '<li class="card-item">' +
+          '<span style="flex:1;overflow:hidden;text-overflow:ellipsis">' + qty + '× ' + name + size + '</span>' +
+          (price ? '<span class="card-item-price">' + price + '</span>' : '') +
+        '</li>';
+      }).join('') +
+    '</ul>';
 
-  list.scrollTop = 0;
-  document.getElementById('orders-count').textContent = Object.keys(cards).length;
-
-  var entry = cards[id];
-  if (entry.timer) clearTimeout(entry.timer);
-  if (st === 'done' || st === 'cancelled')
-    entry.timer = setTimeout(function() { removeCard(id); }, 5 * 60 * 1000);
-
-  var all = list.querySelectorAll('.order-card');
-  if (all.length > 15) removeCard(all[all.length-1].id.replace('oc-',''));
+  updateBillDisplay();
 }
 
-function removeCard(id) {
-  var e = cards[id]; if (!e) return;
-  e.el.classList.add('removing');
-  setTimeout(function() {
-    e.el.remove(); delete cards[id];
-    document.getElementById('orders-count').textContent = Object.keys(cards).length;
-    if (Object.keys(cards).length === 0) {
-      var em = document.getElementById('orders-empty'); if (em) em.style.display = '';
-    }
-  }, 450);
+function removeSession(sessionId) {
+  var el = document.getElementById('sc-' + sessionId);
+  if (el) {
+    el.classList.add('removing');
+    setTimeout(function() {
+      el.remove();
+      delete sessionCards[sessionId];
+      updateBillDisplay();
+      if (Object.keys(sessionCards).length === 0) {
+        var em = document.getElementById('orders-empty');
+        if (em) em.style.display = '';
+      }
+    }, 450);
+  } else {
+    delete sessionCards[sessionId];
+    updateBillDisplay();
+  }
 }
 
-/* FIREBASE LISTENERS */
+/* ── FIREBASE LISTENERS ── */
 function setConn(ok) {
-  document.getElementById('conn-dot').className  = 'conn-dot ' + (ok ? 'online' : 'offline');
+  document.getElementById('conn-dot').className   = 'conn-dot ' + (ok ? 'online' : 'offline');
   document.getElementById('conn-text').textContent = ok ? 'Đã kết nối' : 'Mất kết nối';
 }
 
-// Đọc orders
-var ordersPath = (function() {
-  try { return JSON.parse(localStorage.getItem('kiosk_config') || '{}').ordersPath || 'orders'; } catch(e) { return 'orders'; }
-})();
-
 db.ref('.info/connected').on('value', function(snap) { setConn(snap.val()); });
 
-db.ref(ordersPath).on('value', function(snap) {
-  var d = snap.val(); if (!d) return;
-  Object.keys(d).forEach(function(id) { renderOrder(id, d[id]); });
+// Lắng nghe tất cả node bắt đầu bằng session_display_
+// Firebase không hỗ trợ prefix query trực tiếp trên key,
+// nên ta lắng nghe root và lọc phía client.
+db.ref('/').on('value', function(snap) {
+  var root = snap.val();
+  if (!root) return;
+
+  Object.keys(root).forEach(function(key) {
+    if (key.startsWith('session_display_')) {
+      var data = root[key];
+      if (data && typeof data === 'object') {
+        renderSession(key, data);
+      }
+    }
+  });
+
+  // Xóa card nếu node biến mất
+  Object.keys(sessionCards).forEach(function(k) {
+    if (!root[k]) removeSession(k);
+  });
 });
 
-// Đọc slides & menu từ Firebase RTDB
+// Slides & menu từ Firebase
 db.ref('kiosk_config').on('value', function(snap) {
   var kc = snap.val();
+  if (!kc) {
+    try { kc = JSON.parse(localStorage.getItem('kiosk_config') || 'null'); } catch(e) {}
+  }
   if (!kc) return;
-  if (kc.slides && kc.slides.length)     buildSlides(kc.slides, (kc.slideDuration || 6) * 1000);
-  if (kc.menuPages && kc.menuPages.length) buildMenu(kc.menuPages);
+  if (kc.slides && kc.slides.length)
+    buildSlides(kc.slides, (kc.slideDuration || 6) * 1000);
+  if (kc.menuPages && kc.menuPages.length)
+    buildMenu(kc.menuPages);
 });
 </script>
 </body>
