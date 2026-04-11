@@ -19,14 +19,23 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 .bch{background:var(--gd);color:#fff;border:none;border-radius:24px;padding:10px 16px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;position:relative;}
 .cb{background:#e74c3c;color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;position:absolute;top:-6px;right:-6px;}
 .cb.show{display:flex;}
-.mf-wrap{display:flex;justify-content:flex-end;padding:12px 16px;}
+
+/* FILTER BAR */
+.filter-bar{display:flex;gap:8px;padding:12px 12px 8px;overflow-x:auto;scrollbar-width:none;}
+.filter-bar::-webkit-scrollbar{display:none;}
+.ftag{border:none;border-radius:20px;padding:8px 16px;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.ftag.all{background:var(--gd);color:#fff;}
+.ftag.type{background:#f0f0f0;color:#666;}
+.ftag.type.active{background:var(--gd);color:#fff;}
+
+.mf-wrap{display:flex;justify-content:flex-end;padding:4px 16px 8px;}
 .fp{background:var(--gd);color:#fff;border:none;border-radius:24px;padding:10px 20px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;}
 .mg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:4px 12px 120px;flex:1;overflow-y:auto;}
-.mi{background:var(--gd);border-radius:16px;padding:16px 10px 12px;display:flex;flex-direction:column;gap:20px;cursor:pointer;transition:transform .12s,opacity .12s;min-height:110px;justify-content:space-between;position:relative;overflow:hidden;}
+.mi{border-radius:16px;padding:16px 10px 12px;display:flex;flex-direction:column;gap:20px;cursor:pointer;transition:transform .12s,opacity .12s;min-height:110px;justify-content:space-between;position:relative;overflow:hidden;}
 .mi:active{transform:scale(.96);opacity:.85;}
 .mn{font-size:13px;font-weight:700;color:#fff;line-height:1.3;text-transform:uppercase;}
 .mp{background:rgba(0,0,0,.25);color:#fff;border-radius:20px;padding:5px 10px;font-size:13px;font-weight:700;align-self:flex-start;}
-.qb{position:absolute;top:8px;right:8px;background:#fff;color:var(--gd);border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.qb{position:absolute;top:8px;right:8px;background:#fff;border-radius:50%;width:22px;height:22px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;}
 .mfooter{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;padding:12px 16px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 -4px 20px rgba(0,0,0,.08);z-index:20;}
 .ftl{font-size:11px;color:var(--gt);font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
 .ftv{font-size:22px;font-weight:700;color:var(--td);}
@@ -165,7 +174,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 </head>
 <body>
 
-<!-- MENU -->
+<!-- MENU SCREEN -->
 <div id="sm" class="screen active">
   <div class="mh">
     <button class="hbg" onclick="openSdb()"><span></span><span></span><span style="width:14px"></span></button>
@@ -175,12 +184,13 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       GIỎ HÀNG<span class="cb" id="cb">0</span>
     </button>
   </div>
-  <div class="mf-wrap">
-    <button class="fp">MENU <span style="opacity:.4">|</span> TẤT CẢ
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5l3 3 3-3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    </button>
+
+  <!-- Filter/type bar -->
+  <div class="filter-bar" id="filterBar">
+    <button class="ftag all" onclick="filterType('all',this)">TẤT CẢ</button>
   </div>
-  <div class="mg" id="mg"><div style="grid-column:1/-1;text-align:center;padding:50px;color:#bbb">Đang tải...</div></div>
+
+  <div class="mg" id="mg"><div style="grid-column:1/-1;text-align:center;padding:50px;color:#bbb">Đang tải menu...</div></div>
   <div class="mfooter">
     <div><div class="ftl">TỔNG TẠM TÍNH</div><div class="ftv" id="ftv">0đ</div></div>
     <button class="bco" onclick="showScreen('sc')">THANH TOÁN
@@ -313,29 +323,94 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 
 <div class="toast" id="toastEl"></div>
 
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, onValue, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ============================================================
+// CẤU HÌNH FIREBASE — thay bằng config của bạn
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyDEMO_REPLACE_WITH_YOUR_KEY",
+  authDomain: "your-project.firebaseapp.com",
+  databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+  projectId: "your-project",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:0000000000000000"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+
+// Đăng nhập ẩn danh tự động
+signInAnonymously(auth)
+  .then(() => {
+    // Sau khi đăng nhập, load menu từ menu_xolifa
+    const menuRef = ref(db, 'menu_xolifa');
+    onValue(menuRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) { loadMenu([]); return; }
+
+      // Chuyển đổi từ cấu trúc Firebase sang cấu trúc MENU
+      // Mỗi item: { color, name, priceL, priceM, type }
+      const items = Object.entries(data).map(([key, val]) => ({
+        id: key,
+        name: val.name || '',
+        color: val.color || '#1a4a2e',
+        type: val.type || '',
+        sizes: [
+          { label: 'M', price: Number(val.priceM) || 0 },
+          { label: 'L', price: Number(val.priceL) || 0 }
+        ]
+      }));
+
+      loadMenu(items);
+    });
+  })
+  .catch(err => {
+    console.warn('Firebase auth:', err.message);
+    // Fallback nếu Firebase chưa cấu hình
+    loadMenu([]);
+  });
+</script>
+
 <script>
 // ============================================================
 // DATA LAYER
-// Kết nối Firebase: thay initData() bằng Firestore calls
-//
-// Cấu trúc MENU:
-// { id:"item01", name:"TRÀ ĐÀO", sizes:[{label:"M",price:20000},{label:"L",price:25000}] }
-//
-// Cấu trúc ORDER (tự sinh khi thanh toán):
-// { id, time, date, items:[{name,size,price,qty}], total, method, phone }
-//
-// Sau khi fetch:
-//   loadMenu(menuArray);
-//   loadOrders(ordersArray);
 // ============================================================
-
 let MENU=[], orders=[], cart={}, curPay='cash', curOid=null, nextId=1;
+let curFilter='all';
 
-function loadMenu(items){ MENU=items; renderMenu(); }
+function loadMenu(items){
+  MENU=items;
+  buildFilterBar();
+  renderMenu();
+}
 function loadOrders(data){ orders=data; nextId=data.reduce((a,o)=>Math.max(a,Number(o.id)||0),0)+1; }
 
-// Xóa khi có Firebase thật
-function initData(){ loadMenu([]); loadOrders([]); }
+// ============================================================
+// FILTER BAR
+// ============================================================
+function buildFilterBar(){
+  const bar=document.getElementById('filterBar');
+  const types=[...new Set(MENU.map(m=>m.type).filter(Boolean))];
+  let html=`<button class="ftag all ${curFilter==='all'?'active':''}" onclick="filterType('all',this)">TẤT CẢ</button>`;
+  types.forEach(t=>{
+    html+=`<button class="ftag type ${curFilter===t?'active':''}" onclick="filterType('${t}',this)">${t.toUpperCase()}</button>`;
+  });
+  bar.innerHTML=html;
+}
+
+function filterType(type, btn){
+  curFilter=type;
+  document.querySelectorAll('.ftag').forEach(b=>b.classList.remove('active','all'));
+  btn.classList.add('active');
+  renderMenu();
+}
 
 // ============================================================
 // NAV
@@ -352,19 +427,31 @@ function openSdb(){ document.getElementById('sdb').classList.add('open'); docume
 function closeSdb(){ document.getElementById('sdb').classList.remove('open'); document.getElementById('ov').classList.remove('show'); }
 
 // ============================================================
-// MENU
+// MENU RENDER
 // ============================================================
-function fmtK(n){ return (n/1000)+'k'; }
+function fmtK(n){ return Math.round(n/1000)+'k'; }
 function fmt(n){ return n.toLocaleString('vi-VN')+'đ'; }
 function getCartTotal(){ return Object.values(cart).reduce((a,b)=>a+b.price*b.qty,0); }
 function getQty(itemId){ return Object.values(cart).filter(c=>c.itemId===itemId).reduce((a,b)=>a+b.qty,0); }
 
 function renderMenu(){
   const g=document.getElementById('mg');
-  if(!MENU.length){ g.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:50px;color:#bbb;font-size:14px">Chưa có sản phẩm<br><small style="font-size:12px;margin-top:8px;display:block">Kết nối Firebase để tải menu</small></div>`; return; }
-  g.innerHTML=MENU.map(m=>{
-    const q=getQty(m.id), minP=Math.min(...m.sizes.map(s=>s.price));
-    return `<div class="mi" onclick="openPO('${m.id}')"><span class="mn">${m.name}</span><span class="mp">${fmtK(minP)}</span>${q?`<span class="qb">${q}</span>`:''}</div>`;
+  let filtered = curFilter==='all' ? MENU : MENU.filter(m=>m.type===curFilter);
+  if(!filtered.length){
+    g.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:50px;color:#bbb;font-size:14px">Chưa có sản phẩm</div>`;
+    return;
+  }
+  g.innerHTML=filtered.map(m=>{
+    const q=getQty(m.id);
+    const minP=Math.min(...m.sizes.map(s=>s.price).filter(p=>p>0));
+    const bg=m.color||'#1a4a2e';
+    // Chữ màu qb theo màu nền
+    const qbColor=m.color||'#1a4a2e';
+    return `<div class="mi" style="background:${bg}" onclick="openPO('${m.id}')">
+      <span class="mn">${m.name}</span>
+      <span class="mp">${fmtK(minP)}</span>
+      ${q?`<span class="qb" style="color:${qbColor}">${q}</span>`:''}
+    </div>`;
   }).join('');
   updFooter();
 }
@@ -381,16 +468,20 @@ function updFooter(){
 // ============================================================
 function openPO(itemId){
   const m=MENU.find(x=>x.id===itemId); if(!m) return;
-  if(m.sizes.length===1){ addCart(m,m.sizes[0]); return; }
+  const validSizes=m.sizes.filter(s=>s.price>0);
+  if(validSizes.length===1){ addCart(m,validSizes[0]); return; }
   document.getElementById('spn').textContent=m.name;
-  document.getElementById('so').innerHTML=m.sizes.map((s,i)=>{
-    const big=i===m.sizes.length-1;
-    return `<button class="sb" onclick="onSize('${m.id}',${i})">${cupSVG(big?1:.82)}<span class="sbl">SIZE ${s.label}</span><span class="sbp">${fmt(s.price)}</span></button>`;
+  document.getElementById('so').innerHTML=validSizes.map((s,i)=>{
+    const big=i===validSizes.length-1;
+    return `<button class="sb" onclick="onSize('${m.id}','${s.label}')">${cupSVG(big?1:.82)}<span class="sbl">SIZE ${s.label}</span><span class="sbp">${fmt(s.price)}</span></button>`;
   }).join('');
   document.getElementById('po').classList.add('show');
 }
 function closePO(e){ if(e.target===document.getElementById('po')) document.getElementById('po').classList.remove('show'); }
-function onSize(id,i){ const m=MENU.find(x=>x.id===id); if(m){ addCart(m,m.sizes[i]); document.getElementById('po').classList.remove('show'); } }
+function onSize(id,label){
+  const m=MENU.find(x=>x.id===id);
+  if(m){ const s=m.sizes.find(x=>x.label===label); if(s){ addCart(m,s); document.getElementById('po').classList.remove('show'); } }
+}
 
 function cupSVG(sc){
   const w=Math.round(52*sc),h=Math.round(62*sc);
@@ -400,7 +491,7 @@ function cupSVG(sc){
 function addCart(item,size){
   const k=item.id+'_'+size.label;
   if(cart[k]) cart[k].qty++; else cart[k]={itemId:item.id,name:item.name,size:size.label,price:size.price,qty:1};
-  renderMenu(); toast('Thêm: '+item.name+' size '+size.label);
+  renderMenu(); toast('Thêm: '+item.name+' '+size.label);
 }
 
 // ============================================================
@@ -427,7 +518,6 @@ function confirmPay(){
   const total=getCartTotal(), now=new Date(), p=n=>String(n).padStart(2,'0');
   const order={id:nextId++,time:`${p(now.getHours())}:${p(now.getMinutes())}`,date:`${p(now.getDate())}/${p(now.getMonth()+1)}/${now.getFullYear()}`,items:items.map(c=>({...c})),total,method:curPay==='cash'?'TIỀN MẶT':'CHUYỂN KHOẢN',phone:document.getElementById('cuph').value||''};
   orders.unshift(order);
-  // TODO: db.collection('orders').add(order)
   cart={}; document.getElementById('cuph').value='';
   renderMenu(); toast('Thanh toán thành công!'); showScreen('sm');
 }
@@ -480,8 +570,6 @@ function delOrder(){ if(!confirm('Xóa đơn này?')) return; orders=orders.filt
 // TOAST
 // ============================================================
 function toast(msg){ const t=document.getElementById('toastEl'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
-
-initData();
 </script>
 </body>
 </html>
