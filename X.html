@@ -698,16 +698,19 @@ function cartAdj(k, delta) {
   if (cart[k].qty <= 0) delete cart[k];
   renderMenu();
   renderCartDrawer();
+  syncDisplay('ordering');
 }
 function cartDel(k) {
   delete cart[k];
   renderMenu();
   renderCartDrawer();
+  syncDisplay('ordering');
 }
 function cartClear() {
   cart = {};
   renderMenu();
   renderCartDrawer();
+  syncDisplay('ordering');
 }
 
 // ============================================================
@@ -738,6 +741,32 @@ function addCart(item, size) {
   const k = item.id + '_' + size.label;
   if (cart[k]) cart[k].qty++; else cart[k] = { itemId: item.id, name: item.name, size: size.label, price: size.price, qty: 1 };
   renderMenu(); toast('Thêm: ' + item.name + ' ' + size.label);
+  syncDisplay('ordering');
+}
+
+// ============================================================
+// SESSION DISPLAY — Đẩy realtime lên session_display_xolifa
+// ============================================================
+function syncDisplay(state, extra) {
+  const cartArr = Object.values(cart).map(c => ({ name: c.name, size: c.size, price: c.price, qty: c.qty }));
+  const total = getCartTotal();
+  const payload = {
+    state,                          // 'ordering' | 'cash_payment' | 'idle'
+    cart: cartArr,
+    total,
+    updatedAt: Date.now(),
+    ...extra
+  };
+  db.ref('session_display_xolifa').set(payload).catch(() => {});
+}
+
+function resetDisplay() {
+  db.ref('session_display_xolifa').set({
+    state: 'idle',
+    cart: [],
+    total: 0,
+    updatedAt: Date.now()
+  }).catch(() => {});
 }
 
 // ============================================================
@@ -883,7 +912,8 @@ function openCashScreen() {
   // Điền sẵn đúng bằng tổng bill, không highlight gợi ý nào
   const inp = document.getElementById('cp-input');
   inp.value = total.toLocaleString('vi-VN');
-  updCpChange();
+  // Đẩy trạng thái cash_payment lên màn hình khách
+  syncDisplay('cash_payment');
   showScreen('cp');
 }
 
@@ -956,7 +986,11 @@ function confirmCashPay() {
   const total = getCartTotal();
   const given = getCpInputVal();
   const change = given - total;
-  confirmPay(given > 0 ? given : total, change >= 0 ? change : 0);
+  const cashGiven = given > 0 ? given : total;
+  const cashChange = change >= 0 ? change : 0;
+  // Cập nhật màn hình khách với số tiền thanh toán
+  syncDisplay('cash_payment', { paid: cashGiven, change: cashChange });
+  confirmPay(cashGiven, cashChange);
 }
 
 // ============================================================
@@ -1006,6 +1040,7 @@ function confirmPay(cashGiven, cashChange) {
     document.getElementById('cuph').value = '';
     clearCustomer();
     selectedVoucher = null;
+    resetDisplay();
     renderMenu();
     toast('✅ Thanh toán thành công!');
     showScreen('sm');
