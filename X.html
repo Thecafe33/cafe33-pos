@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>The Cafe 33 - POS</title>
+<title>XOLIFA - POS</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@700&display=swap" rel="stylesheet">
 <!-- Firebase SDK compat — cùng version với index.html -->
@@ -232,8 +232,8 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 .cp-total-unit{font-size:22px;font-weight:700;color:var(--gt);}
 .cp-suggest-card{background:#fff;border-radius:22px;padding:20px;}
 .cp-suggest-label{font-size:12px;font-weight:600;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;margin-bottom:14px;}
-.cp-suggest-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-.cp-suggest-btn{background:var(--gl);border:2px solid transparent;border-radius:16px;padding:14px 8px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:700;color:var(--gd);cursor:pointer;transition:all .15s;text-align:center;}
+.cp-suggest-grid{display:flex;flex-wrap:wrap;gap:8px;}
+.cp-suggest-btn{background:var(--gl);border:2px solid transparent;border-radius:30px;padding:10px 18px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:700;color:var(--gd);cursor:pointer;transition:all .15s;white-space:nowrap;}
 .cp-suggest-btn:active{transform:scale(.95);}
 .cp-suggest-btn.active-sug{border-color:var(--gm);background:#d0ead8;}
 .cp-input-card{background:#fff;border-radius:22px;padding:20px;}
@@ -344,7 +344,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
     </div>
 
     <div class="pmr">
-      <div class="pmc sel" id="pmca" onclick="selM('cash')">
+      <div class="pmc" id="pmca" onclick="selM('cash')">
         <div class="pmw cash"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="1" y="5" width="22" height="14" rx="2" fill="#2d8a50"/><circle cx="12" cy="12" r="3.5" fill="white" opacity=".9"/><rect x="3" y="7" width="3.5" height="2.5" rx=".5" fill="rgba(255,255,255,.4)"/><rect x="17.5" y="14.5" width="3.5" height="2.5" rx=".5" fill="rgba(255,255,255,.4)"/></svg></div>
         <span class="pmn">Tiền mặt</span>
       </div>
@@ -514,7 +514,7 @@ const auth   = firebase.auth();
 // ============================================================
 // STATE — khai báo trước khi gọi bất kỳ hàm nào
 // ============================================================
-let MENU = [], orders = [], cart = {}, curPay = 'cash', curOid = null, curFilter = 'all';
+let MENU = [], orders = [], cart = {}, curPay = null, curOid = null, curFilter = 'all';
 let curCustomer = null;
 let selectedVoucher = null;
 let _rvFrom = null, _rvTo = null;
@@ -758,6 +758,14 @@ function selM(m) {
   document.getElementById('cap').classList.toggle('show', m === 'cash');
   document.getElementById('cr').classList.remove('show');
 }
+function resetPayMethod() {
+  curPay = null;
+  document.getElementById('pmca').classList.remove('sel');
+  document.getElementById('pmba').classList.remove('sel');
+  document.getElementById('cap').classList.remove('show');
+  document.getElementById('cr').classList.remove('show');
+  document.getElementById('cai').value = '';
+}
 function calcChange() {
   const total = getCartTotal(), given = parseInt(document.getElementById('cai').value) || 0, cr = document.getElementById('cr');
   if (given > 0) { document.getElementById('crv').textContent = given >= total ? fmt(given - total) : '⚠ Thiếu ' + fmt(total - given); cr.classList.add('show'); }
@@ -854,10 +862,11 @@ function clearCustomer() {
 function proceedPay() {
   const items = Object.values(cart);
   if (!items.length) { toast('Giỏ hàng trống!'); return; }
+  if (!curPay) { toast('Vui lòng chọn phương thức thanh toán!'); return; }
   if (curPay === 'cash') {
     openCashScreen();
   } else {
-    confirmPay(null, null); // chuyển khoản → không cần tiền mặt
+    confirmPay(null, null);
   }
 }
 
@@ -865,31 +874,29 @@ function openCashScreen() {
   const total = getCartTotal();
   document.getElementById('cp-total-amt').textContent = total.toLocaleString('vi-VN');
 
-  // Gợi ý số tiền: tổng bill, làm tròn lên các mức 5k, 10k, 50k, 100k, 200k, 500k
+  // Gợi ý: mỗi mệnh giá d → total + d (thối đúng 1 tờ d)
   const suggestions = buildSuggestions(total);
-  document.getElementById('cp-suggest-grid').innerHTML = suggestions.map(s =>
-    `<button class="cp-suggest-btn" onclick="selectSuggest(${s})">${s.toLocaleString('vi-VN')}đ</button>`
-  ).join('');
+  document.getElementById('cp-suggest-grid').innerHTML = suggestions.map(s => {
+    const label = s >= 1000000
+      ? (s / 1000000 % 1 === 0 ? s/1000000 + 'M' : (s/1000000).toFixed(1) + 'M')
+      : (s % 1000 === 0 ? s/1000 + 'k' : s.toLocaleString('vi-VN'));
+    return `<button class="cp-suggest-btn" onclick="selectSuggest(${s})">${label}</button>`;
+  }).join('');
 
-  // Mặc định điền đúng bằng tổng bill
+  // Điền sẵn đúng bằng tổng bill, không highlight gợi ý nào
   const inp = document.getElementById('cp-input');
   inp.value = total.toLocaleString('vi-VN');
-  // Mark suggest button nếu khớp
-  markActiveSuggest(total);
   updCpChange();
   showScreen('cp');
 }
 
 function buildSuggestions(total) {
-  const units = [5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000];
-  const set = new Set();
-  set.add(total); // luôn có đúng tổng bill
-  for (const u of units) {
-    const rounded = Math.ceil(total / u) * u;
-    set.add(rounded);
-    if (set.size >= 6) break;
-  }
-  return [...set].slice(0, 6).sort((a, b) => a - b);
+  // Logic: gợi ý = total + d với mỗi mệnh giá d
+  // → khách đưa vừa đủ để nhận lại ĐÚNG 1 tờ tiền mệnh giá d
+  // Ví dụ: bill 98k, d=10k → gợi ý 108k → thối đúng 1 tờ 10k
+  //        bill 104k, d=10k → gợi ý 114k → thối đúng 1 tờ 10k ✓
+  const denoms = [5000, 10000, 20000, 50000, 100000, 200000, 500000];
+  return denoms.map(d => total + d);
 }
 
 function selectSuggest(amt) {
@@ -998,15 +1005,10 @@ function confirmPay(cashGiven, cashChange) {
 
     // Reset
     cart = {};
-    curPay = 'cash';
+    resetPayMethod();
     document.getElementById('cuph').value = '';
     clearCustomer();
     selectedVoucher = null;
-    // Reset checkout screen UI
-    document.getElementById('pmca').classList.add('sel');
-    document.getElementById('pmba').classList.remove('sel');
-    document.getElementById('cap').classList.remove('show');
-    document.getElementById('cr').classList.remove('show');
     renderMenu();
     toast('✅ Thanh toán thành công!');
     showScreen('sm');
@@ -1202,8 +1204,8 @@ function renderH(f = '') {
     `<div class="hdg"><div class="hdl">${d}</div>${grp[d].map(o =>
       `<div class="hit" onclick="showDet('${o.id}')">
         <div class="hii"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></div>
-        <div class="hin"><div class="hitime">${o.time}</div><div class="himeta"><span>#${String(o.id).slice(-4)}</span> • ${o.phone||'Khách vãng lai'}</div></div>
-        <div><div class="hip">${o.total.toLocaleString('vi-VN')}<sup>đ</sup></div><div class="him">${o.method}</div></div>
+        <div class="hin"><div class="hitime">${o.time}</div><div class="himeta">${o.phone||'Khách vãng lai'}</div></div>
+        <div style="text-align:right;flex-shrink:0;min-width:110px;"><div class="hip">${o.total.toLocaleString('vi-VN')}<sup>đ</sup></div><div class="him">${o.method}</div></div>
       </div>`).join('')}</div>`).join('');
 }
 function filterH() { renderH(document.getElementById('hsi').value); }
