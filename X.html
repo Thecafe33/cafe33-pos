@@ -370,28 +370,12 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db     = firebase.database();   // Realtime Database
 const fstore = firebase.firestore();  // Firestore Archive
-const auth   = firebase.auth();
 
 // ============================================================
-// 🔐 ANONYMOUS AUTH — SDK tự xử lý token, không cần làm tay
+// 🚀 KHỞI ĐỘNG TRỰC TIẾP — không cần auth (giống index.html)
 // ============================================================
-auth.signInAnonymously().catch(err => {
-  console.error('[Auth] Lỗi đăng nhập:', err);
-  document.getElementById('mg').innerHTML =
-    `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#e74c3c;font-size:13px;line-height:2">
-      🔐 Lỗi xác thực Firebase<br>
-      <span style="color:#aaa;font-size:12px">${err.message}</span>
-     </div>`;
-});
-
-// Khi auth xong → load app
-auth.onAuthStateChanged(user => {
-  if (user) {
-    console.log('[Auth] OK — UID:', user.uid);
-    initMenu();
-    runArchiveIfNeeded();
-  }
-});
+initMenu();
+runArchiveIfNeeded();
 
 // ============================================================
 // STATE
@@ -846,7 +830,7 @@ function runArchiveIfNeeded() {
   });
 }
 
-// initMenu() và runArchiveIfNeeded() được gọi từ auth.onAuthStateChanged() ở trên
+// initMenu() và runArchiveIfNeeded() được gọi trực tiếp sau initializeApp
 </script>
 </body>
 </html>
