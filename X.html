@@ -68,11 +68,26 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 .cotc{background:#fff;border-radius:22px;padding:24px;text-align:center;}
 .cotl{font-size:12px;font-weight:600;color:var(--gt);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;}
 .cotn{font-size:52px;font-weight:700;color:var(--td);line-height:1;}
-.cuc{background:#fff;border-radius:22px;padding:18px 20px;display:flex;align-items:center;gap:14px;}
+/* Customer lookup card */
+.cuc{background:#fff;border-radius:22px;padding:18px 20px;display:flex;flex-direction:column;gap:12px;}
+.cuc-row{display:flex;align-items:center;gap:14px;}
 .cuic{width:44px;height:44px;background:var(--bb);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .cull{font-size:11px;font-weight:600;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;}
 .cui{width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:18px;color:#bbb;background:transparent;}
 .cui:focus{color:var(--td);}
+/* Customer info display */
+.cust-info{background:var(--gl);border-radius:14px;padding:12px 16px;display:none;flex-direction:column;gap:8px;}
+.cust-info.show{display:flex;}
+.cust-name{font-size:16px;font-weight:700;color:var(--gd);}
+.cust-pts{font-size:13px;color:var(--gm);font-weight:600;}
+.cust-note{font-size:12px;color:var(--gt);}
+/* Voucher list */
+.voucher-list{display:flex;flex-direction:column;gap:8px;margin-top:4px;}
+.voucher-item{background:#fff;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border:1.5px solid #e0e0e0;cursor:pointer;transition:all .15s;}
+.voucher-item.selected{border-color:var(--gm);background:var(--gl);}
+.voucher-name{font-size:14px;font-weight:700;color:var(--td);}
+.voucher-btn{font-size:12px;font-weight:600;color:var(--gm);background:var(--gl);border:none;border-radius:8px;padding:4px 10px;cursor:pointer;}
+.voucher-applied{font-size:12px;font-weight:700;color:#e74c3c;}
 .pmr{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .pmc{background:#fff;border-radius:22px;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;border:2.5px solid transparent;transition:all .15s;}
 .pmc:active{transform:scale(.97);}
@@ -163,6 +178,8 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--gd);color:#fff;padding:12px 24px;border-radius:30px;font-size:14px;font-weight:600;z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 ::-webkit-scrollbar{width:0;}
+/* Archive status badge */
+.arc-badge{font-size:11px;color:var(--gm);background:var(--gl);border-radius:8px;padding:2px 8px;font-weight:600;}
 </style>
 </head>
 <body>
@@ -234,10 +251,31 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   </div>
   <div class="cob">
     <div class="cotc"><div class="cotl">TỔNG HOÁ ĐƠN</div><div class="cotn" id="cotn">0đ</div></div>
+
+    <!-- Customer Lookup Card -->
     <div class="cuc">
-      <div class="cuic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" fill="#3b6ec4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" fill="#3b6ec4" opacity=".4"/></svg></div>
-      <div style="flex:1"><div class="cull">KHÁCH HÀNG / TÍCH ĐIỂM</div><input class="cui" type="tel" placeholder="Nhập SĐT..." id="cuph"></div>
+      <div class="cuc-row">
+        <div class="cuic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" fill="#3b6ec4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" fill="#3b6ec4" opacity=".4"/></svg></div>
+        <div style="flex:1">
+          <div class="cull">KHÁCH HÀNG / TÍCH ĐIỂM</div>
+          <input class="cui" type="tel" placeholder="Nhập SĐT..." id="cuph" oninput="onPhoneInput(this.value)">
+        </div>
+        <button id="btnLookup" onclick="lookupCustomer()" style="background:var(--gd);color:#fff;border:none;border-radius:12px;padding:8px 14px;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Tìm</button>
+      </div>
+      <!-- Customer info panel -->
+      <div class="cust-info" id="custInfo">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="cust-name" id="custName"></div>
+            <div class="cust-pts" id="custPts"></div>
+            <div class="cust-note" id="custNote"></div>
+          </div>
+          <button onclick="clearCustomer()" style="background:#f0f0f0;border:none;border-radius:8px;padding:4px 10px;font-size:12px;color:#666;cursor:pointer;">✕ Xoá</button>
+        </div>
+        <div class="voucher-list" id="voucherList"></div>
+      </div>
     </div>
+
     <div class="pmr">
       <div class="pmc sel" id="pmca" onclick="selM('cash')">
         <div class="pmw cash"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="1" y="5" width="22" height="14" rx="2" fill="#2d8a50"/><circle cx="12" cy="12" r="3.5" fill="white" opacity=".9"/><rect x="3" y="7" width="3.5" height="2.5" rx=".5" fill="rgba(255,255,255,.4)"/><rect x="17.5" y="14.5" width="3.5" height="2.5" rx=".5" fill="rgba(255,255,255,.4)"/></svg></div>
@@ -248,7 +286,6 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
         <span class="pmn">Chuyển khoản</span>
       </div>
     </div>
-    <button class="bcc" onclick="toast('Chức năng thu tiền riêng')">THU TIỀN RIÊNG</button>
     <div class="cap" id="cap">
       <div class="capl">Khách đưa (đ)</div>
       <input class="cai" type="number" id="cai" placeholder="0" oninput="calcChange()">
@@ -313,19 +350,21 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 
 <script>
 // ============================================================
-// ⚙️  CHỈ CẦN SỬA DÒNG NÀY — lấy từ Firebase Console
-// Project Settings > General > databaseURL
-// Dạng: https://TÊN-PROJECT-default-rtdb.firebaseio.com
+// ⚙️  CONFIG — Sửa 2 dòng này
 // ============================================================
-const DB_URL = "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app";
+const DB_URL    = "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app";
+const FIRESTORE = "https://firestore.googleapis.com/v1/projects/the-cafe-33/databases/(default)/documents";
+// Thay "the-cafe-33" bằng Firebase Project ID thực của bạn
 
 // ============================================================
 // STATE
 // ============================================================
-let MENU = [], orders = [], cart = {}, curPay = 'cash', curOid = null, nextId = 1, curFilter = 'all';
+let MENU = [], orders = [], cart = {}, curPay = 'cash', curOid = null, curFilter = 'all';
+let curCustomer = null;   // { phone, name, points, note, myGifts }
+let selectedVoucher = null; // { key, giftName }
 
 // ============================================================
-// LOAD MENU — REST API, không cần auth vì menu_xolifa ".read": true
+// 1. NHÁNH MENU — Lắng nghe realtime qua REST polling
 // ============================================================
 async function initMenu() {
   try {
@@ -334,12 +373,13 @@ async function initMenu() {
     const data = await res.json();
     if (!data) { loadMenu([]); return; }
 
-    // Cấu trúc mỗi item: { color, name, priceL, priceM, type }
+    // Convert Object → Array, lấy đúng field cần thiết
     const items = Object.entries(data).map(([key, val]) => {
+      const { color, name, priceM, priceL, type } = val; // chỉ lấy field cần
       const sizes = [];
-      if (val.priceM && Number(val.priceM) > 0) sizes.push({ label: "M", price: Number(val.priceM) });
-      if (val.priceL && Number(val.priceL) > 0) sizes.push({ label: "L", price: Number(val.priceL) });
-      return { id: key, name: val.name || "", color: val.color || "#1a4a2e", type: val.type || "", sizes };
+      if (priceM && Number(priceM) > 0) sizes.push({ label: "M", price: Number(priceM) });
+      if (priceL && Number(priceL) > 0) sizes.push({ label: "L", price: Number(priceL) });
+      return { id: key, name: name || "", color: color || "#1a4a2e", type: type || "", sizes };
     }).filter(m => m.name && m.sizes.length > 0);
 
     loadMenu(items);
@@ -461,9 +501,13 @@ function addCart(item, size) {
 }
 
 // ============================================================
-// CHECKOUT
+// CHECKOUT — tổng & phương thức thanh toán
 // ============================================================
-function updCoTotal() { document.getElementById('cotn').textContent = fmt(getCartTotal()); document.getElementById('cai').value = ''; document.getElementById('cr').classList.remove('show'); }
+function updCoTotal() {
+  document.getElementById('cotn').textContent = fmt(getCartTotal());
+  document.getElementById('cai').value = '';
+  document.getElementById('cr').classList.remove('show');
+}
 function selM(m) {
   curPay = m;
   document.getElementById('pmca').classList.toggle('sel', m === 'cash');
@@ -476,21 +520,182 @@ function calcChange() {
   if (given > 0) { document.getElementById('crv').textContent = given >= total ? fmt(given - total) : '⚠ Thiếu ' + fmt(total - given); cr.classList.add('show'); }
   else cr.classList.remove('show');
 }
-function confirmPay() {
-  const items = Object.values(cart); if (!items.length) { toast('Giỏ hàng trống!'); return; }
-  const total = getCartTotal(), now = new Date(), p = n => String(n).padStart(2, '0');
-  const order = { id: nextId++, time: `${p(now.getHours())}:${p(now.getMinutes())}`, date: `${p(now.getDate())}/${p(now.getMonth()+1)}/${now.getFullYear()}`, items: items.map(c => ({ ...c })), total, method: curPay === 'cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN', phone: document.getElementById('cuph').value || '' };
-  orders.unshift(order);
-  cart = {}; document.getElementById('cuph').value = '';
-  renderMenu(); toast('Thanh toán thành công!'); showScreen('sm');
+
+// ============================================================
+// 3. NHÁNH CUSTOMER — Tra cứu & Voucher
+// ============================================================
+function onPhoneInput(val) {
+  // Auto-lookup khi đủ 10 số
+  if (val.length === 10) lookupCustomer();
+  if (val.length < 6) clearCustomer();
+}
+
+async function lookupCustomer() {
+  const phone = document.getElementById('cuph').value.trim();
+  if (!phone) return;
+  try {
+    const res = await fetch(`${DB_URL}/customers/${phone}.json`);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+
+    if (!data) {
+      toast('Không tìm thấy khách: ' + phone);
+      clearCustomer();
+      return;
+    }
+
+    // Lọc CHỈ lấy field cần thiết — bỏ qua trường comp... của app khác
+    const { name, points, note, myGifts } = data;
+    curCustomer = { phone, name: name || 'Khách hàng', points: points || 0, note: note || '', myGifts: myGifts || {} };
+
+    renderCustomerInfo();
+  } catch (err) {
+    console.error("Lỗi tra cứu:", err);
+    toast('Lỗi tra cứu: ' + err.message);
+  }
+}
+
+function renderCustomerInfo() {
+  if (!curCustomer) return;
+  const panel = document.getElementById('custInfo');
+  document.getElementById('custName').textContent = curCustomer.name;
+  document.getElementById('custPts').textContent = `⭐ ${curCustomer.points} điểm`;
+  document.getElementById('custNote').textContent = curCustomer.note;
+
+  // Lọc Voucher chưa dùng (used !== true)
+  const gifts = curCustomer.myGifts || {};
+  const available = Object.entries(gifts).filter(([, g]) => !g.used);
+
+  const vList = document.getElementById('voucherList');
+  if (available.length === 0) {
+    vList.innerHTML = `<div style="font-size:12px;color:#bbb;text-align:center;padding:4px">Không có voucher khả dụng</div>`;
+  } else {
+    vList.innerHTML = available.map(([key, g]) => `
+      <div class="voucher-item" id="vi_${key}">
+        <span class="voucher-name">🎁 ${g.giftName || key}</span>
+        <button class="voucher-btn" onclick="applyVoucher('${key}','${(g.giftName||key).replace(/'/g,"\\'")}')">Áp dụng</button>
+      </div>`).join('');
+  }
+  panel.classList.add('show');
+}
+
+async function applyVoucher(key, giftName) {
+  if (!curCustomer) return;
+  // Cập nhật used: true và usedAt ngay vào Firebase
+  const phone = curCustomer.phone;
+  const payload = { used: true, usedAt: new Date().toISOString() };
+  try {
+    const res = await fetch(`${DB_URL}/customers/${phone}/myGifts/${key}.json`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    selectedVoucher = { key, giftName };
+    // Đánh dấu UI
+    document.querySelectorAll('.voucher-item').forEach(el => el.classList.remove('selected'));
+    const vi = document.getElementById('vi_' + key);
+    if (vi) {
+      vi.classList.add('selected');
+      vi.querySelector('.voucher-btn').outerHTML = `<span class="voucher-applied">✓ Đã áp dụng</span>`;
+    }
+    toast('Áp dụng: ' + giftName);
+  } catch (err) {
+    console.error("Lỗi cập nhật voucher:", err);
+    toast('Lỗi áp dụng voucher');
+  }
+}
+
+function clearCustomer() {
+  curCustomer = null;
+  selectedVoucher = null;
+  document.getElementById('custInfo').classList.remove('show');
+  document.getElementById('voucherList').innerHTML = '';
+}
+
+// ============================================================
+// 2. NHÁNH ORDER — Ghi đơn hàng vào RT theo tháng/ngày
+// ============================================================
+const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
+async function confirmPay() {
+  const items = Object.values(cart);
+  if (!items.length) { toast('Giỏ hàng trống!'); return; }
+
+  const total = getCartTotal();
+  const now = new Date();
+  const p = n => String(n).padStart(2, '0');
+
+  const month = MONTH_KEYS[now.getMonth()];   // "apr"
+  const day   = p(now.getDate());             // "11"
+
+  // Tóm tắt items (string) để hiện nhanh + chi tiết (array) để báo cáo
+  const itemsArray = items.map(c => ({ ...c }));
+  const itemsSummary = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
+
+  const order = {
+    time: `${p(now.getHours())}:${p(now.getMinutes())}`,
+    date: `${day}/${p(now.getMonth()+1)}/${now.getFullYear()}`,
+    items: itemsSummary,       // chuỗi tóm tắt
+    itemsArray,                // mảng chi tiết
+    total,
+    method: curPay === 'cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN',
+    phone: document.getElementById('cuph').value || '',
+    voucherUsed: selectedVoucher ? selectedVoucher.giftName : null,
+    createdAt: now.toISOString()
+  };
+
+  try {
+    // push() vào path: orders_xolifa/{month}/{day}/
+    const res = await fetch(`${DB_URL}/orders_xolifa/${month}/${day}.json`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    // Lấy key Firebase trả về để dùng làm ID hiển thị
+    const { name: firebaseKey } = await res.json();
+
+    // Lưu vào local orders để hiện History
+    const localOrder = {
+      id: firebaseKey,
+      ...order,
+      items: itemsArray   // dùng array cho renderH / showDet
+    };
+    orders.unshift(localOrder);
+
+    // Reset
+    cart = {};
+    document.getElementById('cuph').value = '';
+    clearCustomer();
+    selectedVoucher = null;
+    renderMenu();
+    toast('✅ Thanh toán thành công!');
+    showScreen('sm');
+  } catch (err) {
+    console.error("Lỗi ghi đơn:", err);
+    toast('❌ Lỗi lưu đơn — thử lại!');
+  }
 }
 
 // ============================================================
 // REVENUE
 // ============================================================
 function todayKey() { const n = new Date(), p = x => String(x).padStart(2, '0'); return `${p(n.getDate())}/${p(n.getMonth()+1)}/${n.getFullYear()}`; }
-function updRv() { const t = orders.filter(o => o.date === todayKey()).reduce((a, o) => a + o.total, 0); document.getElementById('rvt').textContent = t.toLocaleString('vi-VN'); document.getElementById('rvtb').textContent = fmt(t); }
-function setTab(btn, period) { document.querySelectorAll('.tbb').forEach(b => b.classList.remove('active')); btn.classList.add('active'); const base = orders.filter(o => o.date === todayKey()).reduce((a, o) => a + o.total, 0), mult = { today: 1, week: 7, month: 30, year: 365 }, v = base * mult[period]; document.getElementById('rvt').textContent = v.toLocaleString('vi-VN'); document.getElementById('rvtb').textContent = fmt(v); }
+function updRv() {
+  const t = orders.filter(o => o.date === todayKey()).reduce((a, o) => a + o.total, 0);
+  document.getElementById('rvt').textContent = t.toLocaleString('vi-VN');
+  document.getElementById('rvtb').textContent = fmt(t);
+}
+function setTab(btn, period) {
+  document.querySelectorAll('.tbb').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  const base = orders.filter(o => o.date === todayKey()).reduce((a, o) => a + o.total, 0);
+  const mult = { today: 1, week: 7, month: 30, year: 365 }, v = base * mult[period];
+  document.getElementById('rvt').textContent = v.toLocaleString('vi-VN');
+  document.getElementById('rvtb').textContent = fmt(v);
+}
 function drawChart() {
   const canvas = document.getElementById('rvc2'); if (!canvas) return;
   const ctx = canvas.getContext('2d'), W = canvas.offsetWidth || 360, H = 160;
@@ -511,10 +716,20 @@ function drawChart() {
 // ============================================================
 function renderH(f = '') {
   const list = document.getElementById('hl'), fl = f.toLowerCase();
-  const filtered = fl ? orders.filter(o => o.total.toString().includes(fl) || (o.phone && o.phone.includes(fl)) || String(o.id).includes(fl)) : orders;
+  const filtered = fl ? orders.filter(o =>
+    o.total.toString().includes(fl) ||
+    (o.phone && o.phone.includes(fl)) ||
+    String(o.id).includes(fl)
+  ) : orders;
   if (!filtered.length) { list.innerHTML = `<div style="text-align:center;padding:40px;color:#bbb">Không có đơn hàng</div>`; return; }
   const grp = {}; filtered.forEach(o => { if (!grp[o.date]) grp[o.date] = []; grp[o.date].push(o); });
-  list.innerHTML = Object.keys(grp).map(d => `<div class="hdg"><div class="hdl">${d}</div>${grp[d].map(o => `<div class="hit" onclick="showDet(${o.id})"><div class="hii"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></div><div class="hin"><div class="hitime">${o.time}</div><div class="himeta"><span>#${o.id}</span> • ${o.phone||'Khách vãng lai'}</div></div><div><div class="hip">${o.total.toLocaleString('vi-VN')}<sup>đ</sup></div><div class="him">${o.method}</div></div></div>`).join('')}</div>`).join('');
+  list.innerHTML = Object.keys(grp).map(d =>
+    `<div class="hdg"><div class="hdl">${d}</div>${grp[d].map(o =>
+      `<div class="hit" onclick="showDet('${o.id}')">
+        <div class="hii"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></div>
+        <div class="hin"><div class="hitime">${o.time}</div><div class="himeta"><span>#${String(o.id).slice(-4)}</span> • ${o.phone||'Khách vãng lai'}</div></div>
+        <div><div class="hip">${o.total.toLocaleString('vi-VN')}<sup>đ</sup></div><div class="him">${o.method}</div></div>
+      </div>`).join('')}</div>`).join('');
 }
 function filterH() { renderH(document.getElementById('hsi').value); }
 
@@ -522,19 +737,122 @@ function filterH() { renderH(document.getElementById('hsi').value); }
 // DETAIL
 // ============================================================
 function showDet(id) {
-  curOid = id; const o = orders.find(x => x.id === id); if (!o) return;
-  document.getElementById('dc2').innerHTML = `<div class="dc"><div class="dsn">The cafe 33</div><div class="dit"><span class="gdot"></span> HÓA ĐƠN ĐIỆN TỬ</div><div class="dis">${o.items.map((it,i) => `<div class="dr"><div class="drn">${i+1}</div><div class="dri"><div class="drna">${it.name}</div><span class="drs">${it.size}</span><div class="drsu">${it.price.toLocaleString('vi-VN')}</div></div><div class="drp">${(it.price*it.qty).toLocaleString('vi-VN')}</div></div>`).join('')}</div></div><div class="dmg"><div class="dmc"><span class="dml">THỜI GIAN</span><span class="dmv">${o.time} · ${o.date.substring(0,5)}</span></div><div class="dmc"><span class="dml">KHÁCH</span><span class="dmv">${o.phone||'Vãng lai'}</span></div><div class="dmc"><span class="dml">THANH TOÁN</span><span class="dmv g">${o.method}</span></div></div><div class="dtc"><div class="dtl">TỔNG BILL</div><span class="dtb">${o.total.toLocaleString('vi-VN')}<span style="font-size:22px">đ</span></span><div class="dts">Số lượng: ${o.items.reduce((a,b)=>a+b.qty,0)} món</div><div class="dtln"><span class="dtll">KHÁCH ĐƯA</span><span class="dtlv">${fmt(o.total)}</span></div><div class="dtln"><span class="dtll">TIỀN THỪA</span><span class="dtlv">0đ</span></div></div>`;
+  curOid = id;
+  const o = orders.find(x => x.id === id); if (!o) return;
+  const itemsList = o.items.map ? o.items : [];
+  document.getElementById('dc2').innerHTML = `
+    <div class="dc">
+      <div class="dsn">The cafe 33</div>
+      <div class="dit"><span class="gdot"></span> HÓA ĐƠN ĐIỆN TỬ</div>
+      <div class="dis">${itemsList.map((it,i) =>
+        `<div class="dr"><div class="drn">${i+1}</div>
+         <div class="dri"><div class="drna">${it.name}</div><span class="drs">${it.size}</span><div class="drsu">${it.price.toLocaleString('vi-VN')}</div></div>
+         <div class="drp">${(it.price*it.qty).toLocaleString('vi-VN')}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="dmg">
+      <div class="dmc"><span class="dml">THỜI GIAN</span><span class="dmv">${o.time} · ${o.date.substring(0,5)}</span></div>
+      <div class="dmc"><span class="dml">KHÁCH</span><span class="dmv">${o.phone||'Vãng lai'}</span></div>
+      <div class="dmc"><span class="dml">THANH TOÁN</span><span class="dmv g">${o.method}</span></div>
+    </div>
+    <div class="dtc">
+      <div class="dtl">TỔNG BILL</div>
+      <span class="dtb">${o.total.toLocaleString('vi-VN')}<span style="font-size:22px">đ</span></span>
+      <div class="dts">Số lượng: ${itemsList.reduce((a,b)=>a+b.qty,0)} món${o.voucherUsed ? ' · 🎁 '+o.voucherUsed : ''}</div>
+      <div class="dtln"><span class="dtll">KHÁCH ĐƯA</span><span class="dtlv">${fmt(o.total)}</span></div>
+      <div class="dtln"><span class="dtll">TIỀN THỪA</span><span class="dtlv">0đ</span></div>
+    </div>`;
   showScreen('de');
 }
-function delOrder() { if (!confirm('Xóa đơn này?')) return; orders = orders.filter(o => o.id !== curOid); toast('Đã xóa đơn'); showScreen('hi'); }
+function delOrder() {
+  if (!confirm('Xóa đơn này?')) return;
+  orders = orders.filter(o => o.id !== curOid);
+  toast('Đã xóa đơn');
+  showScreen('hi');
+}
 
 // ============================================================
 // TOAST
 // ============================================================
 function toast(msg) { const t = document.getElementById('toastEl'); t.textContent = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2200); }
 
+// ============================================================
+// 4. NHÁNH ARCHIVE — Dọn RT → Firestore (chạy 1 lần/ngày khi mở app)
+// ============================================================
+async function runArchiveIfNeeded() {
+  const today = new Date().toDateString();
+  const lastCleanup = localStorage.getItem('lastCleanup_pos');
+  if (lastCleanup === today) return; // Đã dọn hôm nay → bỏ qua
+
+  console.log('[Archive] Bắt đầu dọn dẹp RT → Firestore...');
+  const now = new Date();
+
+  // Chỉ quét "cửa sổ" từ ngày 3 đến ngày 7 trước hôm nay (tránh treo máy)
+  const daysToArchive = [];
+  for (let i = 3; i <= 7; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    daysToArchive.push(d);
+  }
+
+  let archived = 0;
+  for (const d of daysToArchive) {
+    const month = MONTH_KEYS[d.getMonth()];
+    const day   = String(d.getDate()).padStart(2, '0');
+    const docId = `${month}_${day}_${d.getFullYear()}`;
+
+    try {
+      // Đọc data từ RT
+      const res = await fetch(`${DB_URL}/orders_xolifa/${month}/${day}.json`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (!data) continue; // Không có data → bỏ qua
+
+      // Ghi vào Firestore Archive
+      const fsRes = await fetch(
+        `${FIRESTORE}/orders_xolifa_archive/${docId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(toFirestoreDoc({ orders: data, archivedAt: new Date().toISOString(), month, day }))
+        }
+      );
+
+      if (fsRes.ok) {
+        // Ghi Firestore thành công → Xóa node RT
+        await fetch(`${DB_URL}/orders_xolifa/${month}/${day}.json`, { method: 'DELETE' });
+        archived++;
+        console.log(`[Archive] ✓ ${month}/${day} → Firestore, xóa RT`);
+      }
+    } catch (e) {
+      console.warn(`[Archive] Lỗi ngày ${month}/${day}:`, e);
+    }
+  }
+
+  // Đánh dấu đã dọn hôm nay
+  localStorage.setItem('lastCleanup_pos', today);
+  if (archived > 0) toast(`📦 Đã archive ${archived} ngày cũ`);
+  console.log(`[Archive] Hoàn thành. Archived: ${archived} ngày`);
+}
+
+// Helper: chuyển object JS thành Firestore document format
+function toFirestoreDoc(obj) {
+  const fields = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === 'string') fields[k] = { stringValue: v };
+    else if (typeof v === 'number') fields[k] = { doubleValue: v };
+    else if (typeof v === 'boolean') fields[k] = { booleanValue: v };
+    else if (v === null) fields[k] = { nullValue: null };
+    else fields[k] = { stringValue: JSON.stringify(v) };
+  }
+  return { fields };
+}
+
+// ============================================================
 // KHỞI ĐỘNG
+// ============================================================
 initMenu();
+runArchiveIfNeeded();
 </script>
 </body>
 </html>
