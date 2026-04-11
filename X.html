@@ -912,8 +912,9 @@ function openCashScreen() {
   // Điền sẵn đúng bằng tổng bill, không highlight gợi ý nào
   const inp = document.getElementById('cp-input');
   inp.value = total.toLocaleString('vi-VN');
-  // Đẩy trạng thái cash_payment lên màn hình khách
-  syncDisplay('cash_payment');
+  // Đẩy ngay lên RT: paid = tổng bill, change = 0
+  syncDisplay('cash_payment', { paid: total, change: 0 });
+  updCpChange();
   showScreen('cp');
 }
 
@@ -962,6 +963,12 @@ function updCpChange() {
   const changeLabel = document.getElementById('cp-change-label');
   const btn = document.getElementById('cp-confirm-btn');
 
+  const paid = given > 0 ? given : total;
+  const change = Math.max(0, paid - total);
+
+  // Đẩy realtime lên màn hình khách mỗi khi số tiền thay đổi
+  syncDisplay('cash_payment', { paid, change });
+
   if (given <= 0) {
     changeCard.style.display = 'none';
     btn.disabled = false;
@@ -978,7 +985,7 @@ function updCpChange() {
     changeLabel.textContent = 'THIẾU';
     changeAmt.className = 'cp-change-amt cp-change-warn';
     changeAmt.textContent = '⚠ ' + Math.abs(diff).toLocaleString('vi-VN') + 'đ';
-    btn.disabled = false; // vẫn cho xác nhận nếu muốn
+    btn.disabled = false;
   }
 }
 
@@ -988,8 +995,6 @@ function confirmCashPay() {
   const change = given - total;
   const cashGiven = given > 0 ? given : total;
   const cashChange = change >= 0 ? change : 0;
-  // Cập nhật màn hình khách với số tiền thanh toán
-  syncDisplay('cash_payment', { paid: cashGiven, change: cashChange });
   confirmPay(cashGiven, cashChange);
 }
 
