@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>The Cafe 33 - POS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@700&display=swap" rel="stylesheet">
 <!-- Firebase SDK compat — cùng version với index.html -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -370,21 +371,24 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const db     = firebase.database();   // Realtime Database
 const fstore = firebase.firestore();  // Firestore Archive
+const auth   = firebase.auth();
 
 // ============================================================
-// 🚀 KHỞI ĐỘNG TRỰC TIẾP — không cần auth (giống index.html)
-// ============================================================
-initMenu();
-runArchiveIfNeeded();
-
-// ============================================================
-// STATE
+// STATE — khai báo trước khi gọi bất kỳ hàm nào
 // ============================================================
 let MENU = [], orders = [], cart = {}, curPay = 'cash', curOid = null, curFilter = 'all';
 let curCustomer = null;   // { phone, name, points, note, myGifts }
 let selectedVoucher = null; // { key, giftName }
 
 const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
+// ============================================================
+// 🚀 KHỞI ĐỘNG — đọc menu ngay, auth chạy nền (không block)
+// ============================================================
+initMenu();                  // đọc menu ngay lập tức (không cần auth)
+runArchiveIfNeeded();        // archive chạy nền
+auth.signInAnonymously()     // auth nền — cần để ghi đơn hàng
+  .catch(err => console.warn('[Auth] Không đăng nhập được (write sẽ bị từ chối):', err.message));
 
 // ============================================================
 // 1. NHÁNH MENU — onValue realtime qua Firebase SDK
