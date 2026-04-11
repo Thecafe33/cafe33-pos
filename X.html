@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>XOLIFA - POS</title>
+<title>The Cafe 33 - POS</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@700&display=swap" rel="stylesheet">
 <!-- Firebase SDK compat — cùng version với index.html -->
@@ -353,12 +353,9 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
         <span class="pmn">Chuyển khoản</span>
       </div>
     </div>
-    <div class="cap" id="cap">
-      <div class="capl">Khách đưa (đ)</div>
-      <input class="cai" type="number" id="cai" placeholder="0" oninput="calcChange()">
-      <div class="cr" id="cr"><span class="crl">TIỀN THỪA</span><span class="crv" id="crv">0đ</span></div>
+    <div id="bank-confirm-area" style="display:none;">
+      <button class="bconf" onclick="proceedPay()">XÁC NHẬN CHUYỂN KHOẢN</button>
     </div>
-    <button class="bconf" onclick="proceedPay()">XÁC NHẬN THANH TOÁN</button>
   </div>
 </div>
 
@@ -755,16 +752,13 @@ function selM(m) {
   curPay = m;
   document.getElementById('pmca').classList.toggle('sel', m === 'cash');
   document.getElementById('pmba').classList.toggle('sel', m === 'bank');
-  document.getElementById('cap').classList.toggle('show', m === 'cash');
-  document.getElementById('cr').classList.remove('show');
-}
-function resetPayMethod() {
-  curPay = null;
-  document.getElementById('pmca').classList.remove('sel');
-  document.getElementById('pmba').classList.remove('sel');
-  document.getElementById('cap').classList.remove('show');
-  document.getElementById('cr').classList.remove('show');
-  document.getElementById('cai').value = '';
+  document.getElementById('bank-confirm-area').style.display = m === 'bank' ? 'block' : 'none';
+  // Bấm tiền mặt → vào màn hình nhập tiền ngay
+  if (m === 'cash') {
+    const items = Object.values(cart);
+    if (!items.length) { toast('Giỏ hàng trống!'); return; }
+    openCashScreen();
+  }
 }
 function calcChange() {
   const total = getCartTotal(), given = parseInt(document.getElementById('cai').value) || 0, cr = document.getElementById('cr');
@@ -860,14 +854,17 @@ function clearCustomer() {
 // CASH PAYMENT SCREEN
 // ============================================================
 function proceedPay() {
+  // Chỉ gọi cho chuyển khoản (tiền mặt đã navigate qua selM)
   const items = Object.values(cart);
   if (!items.length) { toast('Giỏ hàng trống!'); return; }
-  if (!curPay) { toast('Vui lòng chọn phương thức thanh toán!'); return; }
-  if (curPay === 'cash') {
-    openCashScreen();
-  } else {
-    confirmPay(null, null);
-  }
+  confirmPay(null, null);
+}
+
+function resetPayMethod() {
+  curPay = null;
+  document.getElementById('pmca').classList.remove('sel');
+  document.getElementById('pmba').classList.remove('sel');
+  document.getElementById('bank-confirm-area').style.display = 'none';
 }
 
 function openCashScreen() {
