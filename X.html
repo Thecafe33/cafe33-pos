@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>The Cafe 33 - POS</title>
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@700&display=swap" rel="stylesheet">
+<!-- Firebase SDK compat — cùng version với index.html -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <style>
 :root{--gd:#1a4a2e;--gm:#1e6b3c;--gl:#e8f5ee;--bg:#f2f2f2;--gt:#999;--td:#111;--bb:#e8eef8;--bi:#3b6ec4;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -350,11 +355,43 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 
 <script>
 // ============================================================
-// ⚙️  CONFIG — Sửa 2 dòng này
+// ⚙️  FIREBASE CONFIG — Copy từ index.html, dùng chung project
 // ============================================================
-const DB_URL    = "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app";
-const FIRESTORE = "https://firestore.googleapis.com/v1/projects/the-cafe-33/databases/(default)/documents";
-// Thay "the-cafe-33" bằng Firebase Project ID thực của bạn
+const firebaseConfig = {
+  apiKey:            "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain:        "the-cafe-33.firebaseapp.com",
+  databaseURL:       "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "the-cafe-33",
+  storageBucket:     "the-cafe-33.appspot.com",
+  messagingSenderId: "...",
+  appId:             "..."
+};
+
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db     = firebase.database();   // Realtime Database
+const fstore = firebase.firestore();  // Firestore Archive
+const auth   = firebase.auth();
+
+// ============================================================
+// 🔐 ANONYMOUS AUTH — SDK tự xử lý token, không cần làm tay
+// ============================================================
+auth.signInAnonymously().catch(err => {
+  console.error('[Auth] Lỗi đăng nhập:', err);
+  document.getElementById('mg').innerHTML =
+    `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#e74c3c;font-size:13px;line-height:2">
+      🔐 Lỗi xác thực Firebase<br>
+      <span style="color:#aaa;font-size:12px">${err.message}</span>
+     </div>`;
+});
+
+// Khi auth xong → load app
+auth.onAuthStateChanged(user => {
+  if (user) {
+    console.log('[Auth] OK — UID:', user.uid);
+    initMenu();
+    runArchiveIfNeeded();
+  }
+});
 
 // ============================================================
 // STATE
@@ -363,35 +400,34 @@ let MENU = [], orders = [], cart = {}, curPay = 'cash', curOid = null, curFilter
 let curCustomer = null;   // { phone, name, points, note, myGifts }
 let selectedVoucher = null; // { key, giftName }
 
+const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+
 // ============================================================
-// 1. NHÁNH MENU — Lắng nghe realtime qua REST polling
+// 1. NHÁNH MENU — onValue realtime qua Firebase SDK
 // ============================================================
-async function initMenu() {
-  try {
-    const res = await fetch(DB_URL + "/menu_xolifa.json");
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
+function initMenu() {
+  db.ref('menu_xolifa').on('value', snap => {
+    const data = snap.val();
     if (!data) { loadMenu([]); return; }
 
     // Convert Object → Array, lấy đúng field cần thiết
     const items = Object.entries(data).map(([key, val]) => {
       const { color, name, priceM, priceL, type } = val; // chỉ lấy field cần
       const sizes = [];
-      if (priceM && Number(priceM) > 0) sizes.push({ label: "M", price: Number(priceM) });
-      if (priceL && Number(priceL) > 0) sizes.push({ label: "L", price: Number(priceL) });
-      return { id: key, name: name || "", color: color || "#1a4a2e", type: type || "", sizes };
+      if (priceM && Number(priceM) > 0) sizes.push({ label: 'M', price: Number(priceM) });
+      if (priceL && Number(priceL) > 0) sizes.push({ label: 'L', price: Number(priceL) });
+      return { id: key, name: name || '', color: color || '#1a4a2e', type: type || '', sizes };
     }).filter(m => m.name && m.sizes.length > 0);
 
     loadMenu(items);
-  } catch (err) {
-    console.error("Lỗi tải menu:", err);
+  }, err => {
+    console.error('Lỗi tải menu:', err);
     document.getElementById('mg').innerHTML =
       `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#e74c3c;font-size:13px;line-height:2">
         ⚠️ Không tải được menu<br>
-        <span style="color:#aaa;font-size:12px">${err.message}</span><br>
-        <span style="color:#aaa;font-size:11px">Kiểm tra DB_URL trong file</span>
+        <span style="color:#aaa;font-size:12px">${err.message}</span>
        </div>`;
-  }
+  });
 }
 
 function loadMenu(items) {
@@ -522,22 +558,19 @@ function calcChange() {
 }
 
 // ============================================================
-// 3. NHÁNH CUSTOMER — Tra cứu & Voucher
+// 3. NHÁNH CUSTOMER — Tra cứu & Voucher qua Firebase SDK
 // ============================================================
 function onPhoneInput(val) {
-  // Auto-lookup khi đủ 10 số
   if (val.length === 10) lookupCustomer();
   if (val.length < 6) clearCustomer();
 }
 
-async function lookupCustomer() {
+function lookupCustomer() {
   const phone = document.getElementById('cuph').value.trim();
   if (!phone) return;
-  try {
-    const res = await fetch(`${DB_URL}/customers/${phone}.json`);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
 
+  db.ref('customers/' + phone).once('value').then(snap => {
+    const data = snap.val();
     if (!data) {
       toast('Không tìm thấy khách: ' + phone);
       clearCustomer();
@@ -547,12 +580,19 @@ async function lookupCustomer() {
     // Lọc CHỈ lấy field cần thiết — bỏ qua trường comp... của app khác
     const { name, points, note, myGifts } = data;
     curCustomer = { phone, name: name || 'Khách hàng', points: points || 0, note: note || '', myGifts: myGifts || {} };
+    renderCustomerInfo();
+  }).catch(err => {
+    console.error('Lỗi tra cứu:', err);
+    toast('Lỗi tra cứu: ' + err.message);
+  });
+}
+    }
+
+    // Lọc CHỈ lấy field cần thiết — bỏ qua trường comp... của app khác
+    const { name, points, note, myGifts } = data;
+    curCustomer = { phone, name: name || 'Khách hàng', points: points || 0, note: note || '', myGifts: myGifts || {} };
 
     renderCustomerInfo();
-  } catch (err) {
-    console.error("Lỗi tra cứu:", err);
-    toast('Lỗi tra cứu: ' + err.message);
-  }
 }
 
 function renderCustomerInfo() {
@@ -579,21 +619,16 @@ function renderCustomerInfo() {
   panel.classList.add('show');
 }
 
-async function applyVoucher(key, giftName) {
+function applyVoucher(key, giftName) {
   if (!curCustomer) return;
-  // Cập nhật used: true và usedAt ngay vào Firebase
   const phone = curCustomer.phone;
-  const payload = { used: true, usedAt: new Date().toISOString() };
-  try {
-    const res = await fetch(`${DB_URL}/customers/${phone}/myGifts/${key}.json`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    if (!res.ok) throw new Error("HTTP " + res.status);
 
+  // Cập nhật used: true và usedAt ngay vào Firebase SDK
+  db.ref('customers/' + phone + '/myGifts/' + key).update({
+    used: true,
+    usedAt: new Date().toISOString()
+  }).then(() => {
     selectedVoucher = { key, giftName };
-    // Đánh dấu UI
     document.querySelectorAll('.voucher-item').forEach(el => el.classList.remove('selected'));
     const vi = document.getElementById('vi_' + key);
     if (vi) {
@@ -601,10 +636,10 @@ async function applyVoucher(key, giftName) {
       vi.querySelector('.voucher-btn').outerHTML = `<span class="voucher-applied">✓ Đã áp dụng</span>`;
     }
     toast('Áp dụng: ' + giftName);
-  } catch (err) {
-    console.error("Lỗi cập nhật voucher:", err);
+  }).catch(err => {
+    console.error('Lỗi cập nhật voucher:', err);
     toast('Lỗi áp dụng voucher');
-  }
+  });
 }
 
 function clearCustomer() {
@@ -617,9 +652,7 @@ function clearCustomer() {
 // ============================================================
 // 2. NHÁNH ORDER — Ghi đơn hàng vào RT theo tháng/ngày
 // ============================================================
-const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-
-async function confirmPay() {
+function confirmPay() {
   const items = Object.values(cart);
   if (!items.length) { toast('Giỏ hàng trống!'); return; }
 
@@ -637,8 +670,8 @@ async function confirmPay() {
   const order = {
     time: `${p(now.getHours())}:${p(now.getMinutes())}`,
     date: `${day}/${p(now.getMonth()+1)}/${now.getFullYear()}`,
-    items: itemsSummary,       // chuỗi tóm tắt
-    itemsArray,                // mảng chi tiết
+    items: itemsSummary,
+    itemsArray,
     total,
     method: curPay === 'cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN',
     phone: document.getElementById('cuph').value || '',
@@ -646,25 +679,14 @@ async function confirmPay() {
     createdAt: now.toISOString()
   };
 
-  try {
-    // push() vào path: orders_xolifa/{month}/{day}/
-    const res = await fetch(`${DB_URL}/orders_xolifa/${month}/${day}.json`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(order)
-    });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-
-    // Lấy key Firebase trả về để dùng làm ID hiển thị
-    const { name: firebaseKey } = await res.json();
-
+  // push() vào path: orders_xolifa/{month}/{day}/
+  db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
     // Lưu vào local orders để hiện History
-    const localOrder = {
-      id: firebaseKey,
+    orders.unshift({
+      id: ref.key,
       ...order,
-      items: itemsArray   // dùng array cho renderH / showDet
-    };
-    orders.unshift(localOrder);
+      items: itemsArray
+    });
 
     // Reset
     cart = {};
@@ -674,10 +696,10 @@ async function confirmPay() {
     renderMenu();
     toast('✅ Thanh toán thành công!');
     showScreen('sm');
-  } catch (err) {
-    console.error("Lỗi ghi đơn:", err);
+  }).catch(err => {
+    console.error('Lỗi ghi đơn:', err);
     toast('❌ Lỗi lưu đơn — thử lại!');
-  }
+  });
 }
 
 // ============================================================
@@ -779,80 +801,52 @@ function toast(msg) { const t = document.getElementById('toastEl'); t.textConten
 // ============================================================
 // 4. NHÁNH ARCHIVE — Dọn RT → Firestore (chạy 1 lần/ngày khi mở app)
 // ============================================================
-async function runArchiveIfNeeded() {
+function runArchiveIfNeeded() {
   const today = new Date().toDateString();
-  const lastCleanup = localStorage.getItem('lastCleanup_pos');
-  if (lastCleanup === today) return; // Đã dọn hôm nay → bỏ qua
+  if (localStorage.getItem('lastCleanup_pos') === today) return;
 
   console.log('[Archive] Bắt đầu dọn dẹp RT → Firestore...');
   const now = new Date();
+  let archived = 0;
 
-  // Chỉ quét "cửa sổ" từ ngày 3 đến ngày 7 trước hôm nay (tránh treo máy)
-  const daysToArchive = [];
+  // Chỉ quét "cửa sổ" 3 → 7 ngày trước (tránh treo máy)
+  const jobs = [];
   for (let i = 3; i <= 7; i++) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    daysToArchive.push(d);
-  }
-
-  let archived = 0;
-  for (const d of daysToArchive) {
     const month = MONTH_KEYS[d.getMonth()];
     const day   = String(d.getDate()).padStart(2, '0');
-    const docId = `${month}_${day}_${d.getFullYear()}`;
 
-    try {
-      // Đọc data từ RT
-      const res = await fetch(`${DB_URL}/orders_xolifa/${month}/${day}.json`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (!data) continue; // Không có data → bỏ qua
+    const job = db.ref('orders_xolifa/' + month + '/' + day).once('value')
+      .then(snap => {
+        if (!snap.exists() || !snap.val()) return;
+        const data = snap.val();
+        const docId = month + '_' + day + '_' + d.getFullYear();
 
-      // Ghi vào Firestore Archive
-      const fsRes = await fetch(
-        `${FIRESTORE}/orders_xolifa_archive/${docId}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(toFirestoreDoc({ orders: data, archivedAt: new Date().toISOString(), month, day }))
-        }
-      );
+        // Ghi vào Firestore Archive, rồi xóa node RT
+        return fstore.collection('orders_xolifa_archive').doc(docId).set({
+          orders: data,
+          archivedAt: new Date().toISOString(),
+          month, day
+        }).then(() => {
+          return snap.ref.remove();
+        }).then(() => {
+          archived++;
+          console.log('[Archive] ✓ ' + month + '/' + day + ' → Firestore, xóa RT');
+        });
+      }).catch(e => console.warn('[Archive] Lỗi:', e));
 
-      if (fsRes.ok) {
-        // Ghi Firestore thành công → Xóa node RT
-        await fetch(`${DB_URL}/orders_xolifa/${month}/${day}.json`, { method: 'DELETE' });
-        archived++;
-        console.log(`[Archive] ✓ ${month}/${day} → Firestore, xóa RT`);
-      }
-    } catch (e) {
-      console.warn(`[Archive] Lỗi ngày ${month}/${day}:`, e);
-    }
+    jobs.push(job);
   }
 
-  // Đánh dấu đã dọn hôm nay
-  localStorage.setItem('lastCleanup_pos', today);
-  if (archived > 0) toast(`📦 Đã archive ${archived} ngày cũ`);
-  console.log(`[Archive] Hoàn thành. Archived: ${archived} ngày`);
+  Promise.all(jobs).then(() => {
+    localStorage.setItem('lastCleanup_pos', today);
+    if (archived > 0) toast('📦 Đã archive ' + archived + ' ngày cũ');
+    console.log('[Archive] Hoàn thành. Archived:', archived, 'ngày');
+  });
 }
 
-// Helper: chuyển object JS thành Firestore document format
-function toFirestoreDoc(obj) {
-  const fields = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (typeof v === 'string') fields[k] = { stringValue: v };
-    else if (typeof v === 'number') fields[k] = { doubleValue: v };
-    else if (typeof v === 'boolean') fields[k] = { booleanValue: v };
-    else if (v === null) fields[k] = { nullValue: null };
-    else fields[k] = { stringValue: JSON.stringify(v) };
-  }
-  return { fields };
-}
-
-// ============================================================
-// KHỞI ĐỘNG
-// ============================================================
-initMenu();
-runArchiveIfNeeded();
+// initMenu() và runArchiveIfNeeded() được gọi từ auth.onAuthStateChanged() ở trên
 </script>
 </body>
 </html>
