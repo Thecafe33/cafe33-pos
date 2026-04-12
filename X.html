@@ -505,39 +505,52 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 </div>
 
 <!-- MENU ITEM FORM POPUP -->
-<div id="mn-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);">
-  <div style="background:#fff;border-radius:28px 28px 0 0;padding:28px 20px 40px;width:100%;max-width:430px;animation:pi .22s ease;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+<div id="mn-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);padding:24px;" onclick="if(event.target===this)closeMenuForm()">
+  <div style="background:#f2f2f2;border-radius:28px;padding:24px 20px 24px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;animation:pi .22s ease;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
       <span id="mn-form-title" style="font-size:18px;font-weight:700;color:var(--td);">Thêm món mới</span>
-      <button onclick="closeMenuForm()" style="background:#f0f0f0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+      <button onclick="closeMenuForm()" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:14px;">
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Tên món *</div>
-        <input id="mn-f-name" type="text" placeholder="VD: Trà sữa nguyên lá" style="width:100%;border:1.5px solid #e0e0e0;border-radius:14px;padding:13px 16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;color:var(--td);outline:none;" onfocus="this.style.borderColor='var(--gm)'" onblur="this.style.borderColor='#e0e0e0'">
+    <div style="display:flex;flex-direction:column;gap:12px;">
+
+      <!-- Tên món -->
+      <div style="background:#fff;border-radius:18px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Tên món *</div>
+        <input id="mn-f-name" type="text" placeholder="VD: Trà sữa nguyên lá" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;color:var(--td);background:transparent;">
       </div>
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Phân loại</div>
-        <input id="mn-f-type" type="text" placeholder="VD: Trà sữa, Cà phê, Nước ép..." style="width:100%;border:1.5px solid #e0e0e0;border-radius:14px;padding:13px 16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;color:var(--td);outline:none;" onfocus="this.style.borderColor='var(--gm)'" onblur="this.style.borderColor='#e0e0e0'">
+
+      <!-- Phân loại với dropdown -->
+      <div style="background:#fff;border-radius:18px;padding:16px;position:relative;">
+        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Phân loại</div>
+        <input id="mn-f-type" type="text" placeholder="Chọn hoặc nhập phân loại mới..." autocomplete="off"
+          style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;color:var(--td);background:transparent;"
+          oninput="filterTypeDropdown(this.value)" onfocus="showTypeDropdown()">
+        <div id="mn-type-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border-radius:0 0 18px 18px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:10;overflow:hidden;"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Giá Size M (đ)</div>
-          <input id="mn-f-pm" type="text" inputmode="numeric" placeholder="0" style="width:100%;border:1.5px solid #e0e0e0;border-radius:14px;padding:13px 16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;color:var(--td);outline:none;" onfocus="this.style.borderColor='var(--gm)'" onblur="this.style.borderColor='#e0e0e0'" oninput="fmtPriceInput(this)">
+
+      <!-- Giá M và L -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:#fff;border-radius:18px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Size M (đ)</div>
+          <input id="mn-f-pm" type="text" inputmode="numeric" placeholder="Bỏ trống nếu không có"
+            style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;color:var(--td);background:transparent;"
+            oninput="fmtPriceInput(this)">
         </div>
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Giá Size L (đ)</div>
-          <input id="mn-f-pl" type="text" inputmode="numeric" placeholder="0" style="width:100%;border:1.5px solid #e0e0e0;border-radius:14px;padding:13px 16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;color:var(--td);outline:none;" onfocus="this.style.borderColor='var(--gm)'" onblur="this.style.borderColor='#e0e0e0'" oninput="fmtPriceInput(this)">
+        <div style="background:#fff;border-radius:18px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Size L (đ)</div>
+          <input id="mn-f-pl" type="text" inputmode="numeric" placeholder="Bỏ trống nếu không có"
+            style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;color:var(--td);background:transparent;"
+            oninput="fmtPriceInput(this)">
         </div>
       </div>
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Màu thẻ</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="mn-color-picker">
-          ${['#1a4a2e','#2d6a4f','#1a5276','#6c3483','#922b21','#784212','#1a5276','#0e6655','#4a235a','#2e4057'].map(c =>
-            `<div onclick="selectMenuColor('${c}')" data-color="${c}" style="width:32px;height:32px;border-radius:50%;background:${c};cursor:pointer;border:3px solid transparent;transition:border-color .15s;"></div>`
-          ).join('')}
-        </div>
+
+      <!-- Màu thẻ -->
+      <div style="background:#fff;border-radius:18px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Màu thẻ</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;" id="mn-color-picker"></div>
       </div>
+
+      <!-- Buttons -->
       <div style="display:flex;gap:10px;margin-top:4px;">
         <button id="mn-f-del" onclick="deleteMenuItem()" style="display:none;flex:0 0 auto;padding:14px 18px;background:#fee2e2;color:#e74c3c;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Xoá</button>
         <button onclick="saveMenuItem()" style="flex:1;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">Lưu</button>
@@ -1556,9 +1569,26 @@ function renderMnList() {
     </div>`).join('');
 }
 
+const MN_COLORS = ['#1a4a2e','#2d6a4f','#1a5276','#6c3483','#922b21','#784212','#0e6655','#4a235a','#2e4057','#d35400','#1a6b6b','#5d4037'];
+
+function buildColorPicker() {
+  const picker = document.getElementById('mn-color-picker');
+  picker.innerHTML = '';
+  MN_COLORS.forEach(c => {
+    const el = document.createElement('div');
+    el.dataset.color = c;
+    el.style.cssText = 'width:32px;height:32px;border-radius:50%;cursor:pointer;transition:all .15s;flex-shrink:0;';
+    el.style.background = c;
+    el.onclick = () => selectMenuColor(c);
+    picker.appendChild(el);
+  });
+}
+
 function openMenuForm(id) {
   _mnEditId = id;
-  const popup = document.getElementById('mn-popup');
+  buildColorPicker();
+  hideTypeDropdown();
+
   const title = document.getElementById('mn-form-title');
   const delBtn = document.getElementById('mn-f-del');
 
@@ -1568,8 +1598,8 @@ function openMenuForm(id) {
     title.textContent = 'Chỉnh sửa món';
     document.getElementById('mn-f-name').value = m.name;
     document.getElementById('mn-f-type').value = m.type || '';
-    const pm = m.sizes.find(s => s.label==='M');
-    const pl = m.sizes.find(s => s.label==='L');
+    const pm = m.sizes.find(s => s.label === 'M');
+    const pl = m.sizes.find(s => s.label === 'L');
     document.getElementById('mn-f-pm').value = pm ? pm.price.toLocaleString('vi-VN') : '';
     document.getElementById('mn-f-pl').value = pl ? pl.price.toLocaleString('vi-VN') : '';
     _mnColor = m.color || '#1a4a2e';
@@ -1583,25 +1613,62 @@ function openMenuForm(id) {
     _mnColor = '#1a4a2e';
     delBtn.style.display = 'none';
   }
-  // Highlight màu đang chọn
+  refreshColorPicker();
+  document.getElementById('mn-popup').style.display = 'flex';
+}
+
+function refreshColorPicker() {
   document.querySelectorAll('#mn-color-picker div').forEach(el => {
-    el.style.borderColor = el.dataset.color === _mnColor ? '#fff' : 'transparent';
-    el.style.outline = el.dataset.color === _mnColor ? '2px solid var(--gm)' : 'none';
+    const sel = el.dataset.color === _mnColor;
+    el.style.outline = sel ? '3px solid var(--gm)' : 'none';
+    el.style.outlineOffset = sel ? '2px' : '0';
+    el.style.transform = sel ? 'scale(1.15)' : 'scale(1)';
   });
-  popup.style.display = 'flex';
 }
 
 function closeMenuForm() {
   document.getElementById('mn-popup').style.display = 'none';
+  hideTypeDropdown();
 }
 
 function selectMenuColor(c) {
   _mnColor = c;
-  document.querySelectorAll('#mn-color-picker div').forEach(el => {
-    el.style.borderColor = el.dataset.color === c ? '#fff' : 'transparent';
-    el.style.outline = el.dataset.color === c ? '2px solid var(--gm)' : 'none';
-  });
+  refreshColorPicker();
 }
+
+// ---- Type dropdown ----
+function getExistingTypes() {
+  return [...new Set(MENU.map(m => m.type).filter(Boolean))];
+}
+
+function showTypeDropdown() {
+  filterTypeDropdown(document.getElementById('mn-f-type').value);
+}
+
+function filterTypeDropdown(val) {
+  const dd = document.getElementById('mn-type-dropdown');
+  const types = getExistingTypes().filter(t => t.toLowerCase().includes(val.toLowerCase()));
+  if (!types.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = types.map(t =>
+    '<div onclick="pickType(\'' + t.replace(/'/g,"\\'") + '\')" style="padding:12px 16px;font-family:\'Google Sans\',sans-serif;font-size:15px;font-weight:600;color:var(--td);cursor:pointer;border-bottom:1px solid #f5f5f5;">' + t + '</div>'
+  ).join('');
+  dd.style.display = 'block';
+}
+
+function pickType(t) {
+  document.getElementById('mn-f-type').value = t;
+  hideTypeDropdown();
+}
+
+function hideTypeDropdown() {
+  const dd = document.getElementById('mn-type-dropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+// Đóng dropdown khi click ra ngoài
+document.addEventListener('click', e => {
+  if (!e.target.closest('#mn-f-type') && !e.target.closest('#mn-type-dropdown')) hideTypeDropdown();
+});
 
 function fmtPriceInput(el) {
   const raw = el.value.replace(/[^0-9]/g, '');
