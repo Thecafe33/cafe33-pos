@@ -1526,7 +1526,44 @@ function showDet(id) {
         <span style="width:8px;height:8px;border-radius:50%;background:var(--gm);display:inline-block;"></span>
         <span style="font-size:12px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.8px;">Hóa đơn điện tử</span>
       </div>
-      ${itemsList.map((it, i) => `
+      ${o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length
+        ? o.splitGroups.map((grp, gi) => {
+            const isCashGrp = grp.method === 'TIỀN MẶT';
+            const iconBg = isCashGrp ? '#d4f0da' : 'var(--bb)';
+            const iconColor = isCashGrp ? 'var(--gm)' : 'var(--bi)';
+            const methodLabel = isCashGrp ? '💵 Tiền mặt' : '🏦 Chuyển khoản';
+            return `
+            <div style="border:2px solid ${isCashGrp ? 'var(--gm)' : 'var(--bi)'};border-radius:18px;padding:16px;margin-bottom:${gi < o.splitGroups.length-1 ? '14px' : '0'};">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f0f0f0;">
+                <div style="width:32px;height:32px;background:${iconBg};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;">${isCashGrp ? '💵' : '🏦'}</div>
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:${iconColor};text-transform:uppercase;letter-spacing:.5px;">${grp.method}</div>
+                  <div style="font-size:11px;color:var(--gt);">${grp.items.length} món · ${grp.total.toLocaleString('vi-VN')}đ</div>
+                </div>
+              </div>
+              ${grp.items.map((it, ii) => `
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 0;${ii < grp.items.length-1 ? 'border-bottom:1px solid #f7f7f7;' : ''}">
+                  <span style="font-size:14px;font-weight:700;color:var(--gt);min-width:18px;">${ii+1}</span>
+                  <div style="flex:1;">
+                    <div style="font-size:15px;font-weight:700;color:var(--td);">${it.name}</div>
+                    <span style="display:inline-flex;align-items:center;gap:4px;background:var(--gl);color:var(--gd);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-top:3px;">Size ${it.size}&nbsp;&nbsp;${it.price.toLocaleString('vi-VN')}</span>
+                  </div>
+                  <div style="font-size:15px;font-weight:700;color:var(--td);">${it.price.toLocaleString('vi-VN')}</div>
+                </div>`).join('')}
+              ${isCashGrp ? `
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f0f0f0;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;">Khách đưa</span>
+                  <span style="font-size:13px;font-weight:700;color:var(--td);">${(grp.cashGiven||grp.total).toLocaleString('vi-VN')}đ</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;">Tiền thừa</span>
+                  <span style="font-size:13px;font-weight:700;color:${(grp.cashChange||0)>0?'var(--gm)':'var(--td)'};">${(grp.cashChange||0).toLocaleString('vi-VN')}đ</span>
+                </div>
+              </div>` : ''}
+            </div>`;
+          }).join('')
+        : itemsList.map((it, i) => `
         <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;${i < itemsList.length - 1 ? 'border-bottom:1px solid #f0f0f0;' : ''}">
           <span style="font-size:17px;font-weight:700;color:var(--td);min-width:20px;">${i+1}</span>
           <div style="flex:1;">
@@ -1549,7 +1586,7 @@ function showDet(id) {
       </div>
       <div style="padding:16px 14px;">
         <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px;">Thanh toán</div>
-        <div style="font-size:13px;font-weight:700;color:var(--gm);">${o.method}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--gm);">${o.method === 'TÍNH RIÊNG' ? 'TÍNH RIÊNG' : o.method}${o.splitGroups && o.splitGroups.length ? `<div style="font-size:11px;font-weight:600;color:var(--gt);margin-top:3px;">${o.splitGroups.length} nhóm</div>` : ''}</div>
       </div>
     </div>
 
@@ -1557,7 +1594,8 @@ function showDet(id) {
     <div style="background:#fff;border-radius:20px;padding:22px 24px;">
       <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Tổng Bill</div>
       <div style="font-size:52px;font-weight:700;color:var(--td);line-height:1;letter-spacing:-1px;">${o.total.toLocaleString('vi-VN')}<span style="font-size:24px;color:var(--gt);">đ</span></div>
-      <div style="font-size:13px;color:var(--gt);margin-top:6px;margin-bottom:16px;">Số lượng: ${totalQty} món${o.voucherUsed ? ' · 🎁 ' + o.voucherUsed : ''}</div>
+      <div style="font-size:13px;color:var(--gt);margin-top:6px;margin-bottom:${(o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length) ? '0' : '16px'};">Số lượng: ${totalQty} món${o.voucherUsed ? ' · 🎁 ' + o.voucherUsed : ''}</div>
+      ${!(o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length) ? `
       <div style="border-top:1px solid #f0f0f0;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f5f5f5;">
           <span style="font-size:12px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;">Khách đưa</span>
@@ -1567,7 +1605,7 @@ function showDet(id) {
           <span style="font-size:12px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;">Tiền thừa</span>
           <span style="font-size:15px;font-weight:700;color:${cashChange > 0 ? 'var(--gm)' : 'var(--td)'};">${cashChange.toLocaleString('vi-VN')}đ</span>
         </div>
-      </div>
+      </div>` : ''}
     </div>`;
   showScreen('de');
 }
@@ -1828,6 +1866,7 @@ let spItems = [];        // { name, size, price, paid: false }
 let spPaidAmt = 0;
 let spSelected = new Set();
 let _spCurrentMethod = null; // 'cash' | 'bank' cho popup hiện tại
+let spGroups = [];       // [{ method, items:[{name,size,price}], total, cashGiven?, cashChange? }]
 
 function openSplitPay() {
   if (!Object.keys(cart).length) { toast('Giỏ hàng trống!'); return; }
@@ -1840,6 +1879,7 @@ function openSplitPay() {
   });
   spPaidAmt = 0;
   spSelected = new Set();
+  spGroups = [];
   renderSpItems();
   updSpTotals();
   showScreen('sp');
@@ -1944,18 +1984,27 @@ function updSpCashChange() {
 }
 
 function confirmSpCash() {
-  markSpSelectedPaid('TIỀN MẶT');
+  const raw = document.getElementById('sp-cash-input').value.replace(/[^0-9]/g, '');
+  const cashGiven = parseInt(raw) || 0;
+  const subTotal = [...spSelected].reduce((a, i) => a + spItems[i].price, 0);
+  const cashChange = Math.max(0, cashGiven - subTotal);
+  markSpSelectedPaid('TIỀN MẶT', cashGiven, cashChange);
   closeSpCashPopup();
 }
 
 function confirmSpBank() {
-  markSpSelectedPaid('CHUYỂN KHOẢN');
+  markSpSelectedPaid('CHUYỂN KHOẢN', null, null);
   closeSpBankPopup();
 }
 
-function markSpSelectedPaid(method) {
+function markSpSelectedPaid(method, cashGiven, cashChange) {
   const subTotal = [...spSelected].reduce((a, i) => a + spItems[i].price, 0);
+  const groupItems = [...spSelected].map(i => ({ name: spItems[i].name, size: spItems[i].size, price: spItems[i].price }));
   spSelected.forEach(i => { spItems[i].paid = true; spItems[i].method = method; });
+  // Lưu nhóm
+  const grp = { method, items: groupItems, total: subTotal };
+  if (method === 'TIỀN MẶT') { grp.cashGiven = cashGiven || subTotal; grp.cashChange = cashChange || 0; }
+  spGroups.push(grp);
   spPaidAmt += subTotal;
   spSelected = new Set();
   renderSpItems();
@@ -1982,6 +2031,7 @@ function finalizeSplitPay() {
     date: `${day}/${p(now.getMonth()+1)}/${now.getFullYear()}`,
     items: itemsSummary, itemsArray, total,
     method: 'TÍNH RIÊNG',
+    splitGroups: spGroups,
     phone: document.getElementById('cuph').value || '',
     voucherUsed: selectedVoucher ? selectedVoucher.giftName : null,
     cashGiven: total, cashChange: 0,
