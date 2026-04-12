@@ -555,27 +555,81 @@ function loadMenu(items) {
   MENU = items;
   buildFilterBar();
   renderMenu();
-  loadTodayOrders(); // load lịch sử đơn hàng hôm nay từ Firebase
+  loadRecentOrders(); // load 3 ngày gần nhất từ RT
 }
 
-function loadTodayOrders() {
+function loadRecentOrders() {
+  // Load hôm nay + 2 ngày trước từ RT (3 ngày gần nhất còn trong RT)
   const now = new Date();
-  const month = MONTH_KEYS[now.getMonth()];
-  const day = String(now.getDate()).padStart(2, '0');
-  db.ref('orders_xolifa/' + month + '/' + day).once('value').then(snap => {
-    const data = snap.val();
-    if (!data) return;
-    const loaded = Object.entries(data).map(([key, o]) => ({
-      id: key,
-      ...o,
-      items: o.itemsArray || []
-    }));
-    // Chỉ thêm các đơn chưa có trong RAM (tránh duplicate sau khi tạo đơn mới)
-    loaded.forEach(lo => {
-      if (!orders.find(o => o.id === lo.id)) orders.push(lo);
-    });
+  const jobs = [];
+  for (let i = 0; i <= 2; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const month = MONTH_KEYS[d.getMonth()];
+    const day = String(d.getDate()).padStart(2, '0');
+    jobs.push(
+      db.ref('orders_xolifa/' + month + '/' + day).once('value').then(snap => {
+        const data = snap.val();
+        if (!data) return;
+        Object.entries(data).forEach(([key, o]) => {
+          if (!orders.find(x => x.id === key))
+            orders.push({ id: key, ...o, items: o.itemsArray || [] });
+        });
+      }).catch(() => {})
+    );
+  }
+  Promise.all(jobs).then(() => {
     orders.sort((a, b) => b.createdAt > a.createdAt ? 1 : -1);
-  }).catch(() => {});
+  });
+}
+
+// Load dữ liệu từ Firestore Archive cho các ngày cũ hơn 3 ngày
+// dateList: mảng { month:'apr', day:'09', year:2026 }
+function loadArchiveDates(dateList) {
+  const needed = dateList.filter(({ month, day, year }) => {
+    const key = `${day}/${String(MONTH_KEYS.indexOf(month)+1).padStart(2,'0')}/${year}`;
+    return !orders.find(o => o.date === key); // chưa có trong RAM
+  });
+  if (!needed.length) return Promise.resolve();
+
+  // Nhóm các ngày theo docId (mỗi doc = 1 ngày)
+  const jobs = needed.map(({ month, day, year }) => {
+    const docId = month + '_' + day + '_' + year;
+    return fstore.collection('orders_xolifa_archive').doc(docId).get()
+      .then(doc => {
+        if (!doc.exists) return;
+        const data = doc.data().orders || {};
+        Object.entries(data).forEach(([key, o]) => {
+          if (!orders.find(x => x.id === key))
+            orders.push({ id: key, ...o, items: o.itemsArray || [] });
+        });
+      }).catch(() => {});
+  });
+  return Promise.all(jobs).then(() => {
+    orders.sort((a, b) => b.createdAt > a.createdAt ? 1 : -1);
+  });
+}
+
+// Tạo danh sách các ngày trong khoảng [fromDate, toDate] (Date objects)
+// bỏ qua 3 ngày gần nhất (đã có trong RT/RAM)
+function archiveDatesInRange(fromDate, toDate) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 2);
+  cutoff.setHours(0, 0, 0, 0);
+  const result = [];
+  const cur = new Date(fromDate);
+  cur.setHours(0, 0, 0, 0);
+  while (cur <= toDate) {
+    if (cur < cutoff) {
+      result.push({
+        month: MONTH_KEYS[cur.getMonth()],
+        day: String(cur.getDate()).padStart(2, '0'),
+        year: cur.getFullYear()
+      });
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return result;
 }
 
 // ============================================================
@@ -607,7 +661,13 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
   if (id === 'sc') updCoTotal();
-  if (id === 'hi') renderH();
+  if (id === 'hi') {
+    // Load 7 ngày gần nhất (3 ngày RT đã có, fetch thêm ngày 4-7 từ archive)
+    const now = new Date();
+    const from = new Date(now); from.setDate(from.getDate() - 6); from.setHours(0,0,0,0);
+    loadArchiveDates(archiveDatesInRange(from, now)).then(() => renderH());
+    return; // renderH sẽ gọi lại sau khi fetch xong
+  }
   if (id === 'rv') {
     _rvFrom = null; _rvTo = null;
     document.getElementById('rv-date-label').textContent = '';
@@ -1075,12 +1135,18 @@ function applyDateFilter() {
   if (!from || !to) return;
   _rvFrom = from; _rvTo = to;
   closeDatePicker();
-  // Hiện label ngày đang lọc
   const fmt2 = s => { const [y,m,d]=s.split('-'); return `${d}/${m}/${y}`; };
   document.getElementById('rv-date-label').textContent =
     from === to ? `📅 Ngày ${fmt2(from)}` : `📅 ${fmt2(from)} → ${fmt2(to)}`;
-  updRv();
-  drawChart('custom');
+
+  const fromDate = new Date(from);
+  const toDate   = new Date(to);
+  toDate.setHours(23,59,59,999);
+
+  loadArchiveDates(archiveDatesInRange(fromDate, toDate)).then(() => {
+    updRv();
+    drawChart('custom');
+  });
 }
 
 function _ordersInRange(from, to) {
@@ -1108,25 +1174,40 @@ function updRv(filtered) {
 }
 function setTab(btn, period) {
   document.querySelectorAll('.tbb').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-  // Reset date filter khi chuyển tab
   _rvFrom = null; _rvTo = null;
   document.getElementById('rv-date-label').textContent = '';
   const now = new Date();
-  let filtered;
+
+  const render = () => {
+    let filtered;
+    if (period === 'today') {
+      filtered = orders.filter(o => o.date === todayKey());
+    } else if (period === 'week') {
+      const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 6); cutoff.setHours(0,0,0,0);
+      filtered = orders.filter(o => { const [d,m,y]=o.date.split('/'); return new Date(+y,+m-1,+d) >= cutoff; });
+    } else if (period === 'month') {
+      const mm = String(now.getMonth()+1).padStart(2,'0'), yyyy = now.getFullYear();
+      filtered = orders.filter(o => o.date.slice(3,10) === `${mm}/${yyyy}`);
+    } else {
+      const yyyy = String(now.getFullYear());
+      filtered = orders.filter(o => o.date.endsWith(yyyy));
+    }
+    updRv(filtered);
+    drawChart(period, filtered);
+  };
+
   if (period === 'today') {
-    filtered = orders.filter(o => o.date === todayKey());
+    render();
   } else if (period === 'week') {
-    const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 6); cutoff.setHours(0,0,0,0);
-    filtered = orders.filter(o => { const [d,m,y]=o.date.split('/'); return new Date(+y,+m-1,+d) >= cutoff; });
+    const from = new Date(now); from.setDate(from.getDate() - 6); from.setHours(0,0,0,0);
+    loadArchiveDates(archiveDatesInRange(from, now)).then(render);
   } else if (period === 'month') {
-    const mm = String(now.getMonth()+1).padStart(2,'0'), yyyy = now.getFullYear();
-    filtered = orders.filter(o => o.date.slice(3,10) === `${mm}/${yyyy}`);
-  } else {
-    const yyyy = String(now.getFullYear());
-    filtered = orders.filter(o => o.date.endsWith(yyyy));
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    loadArchiveDates(archiveDatesInRange(from, now)).then(render);
+  } else { // year
+    const from = new Date(now.getFullYear(), 0, 1);
+    loadArchiveDates(archiveDatesInRange(from, now)).then(render);
   }
-  updRv(filtered);
-  drawChart(period, filtered);
 }
 function drawChart(period, filteredOrders) {
   const _orders = filteredOrders || orders;
