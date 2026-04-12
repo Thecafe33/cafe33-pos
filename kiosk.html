@@ -397,9 +397,9 @@
 
   /* ── THANK YOU OVERLAY ── */
   #thankyou-overlay {
-    position: fixed; inset: 0;
+    position: absolute; inset: 0;
     background: rgba(255,255,255,0.97);
-    z-index: 1000;
+    z-index: 50;
     display: none;
     flex-direction: column;
     align-items: center; justify-content: center;
@@ -474,7 +474,7 @@
   </div>
 
   <!-- RIGHT: SESSION / CART -->
-  <div id="panel-right">
+  <div id="panel-right" style="position:relative;">
 
     <!-- HEADER + TÊN KHÁCH CÙNG BOX -->
     <div style="flex-shrink:0; border-bottom: 1px solid var(--border);">
@@ -524,21 +524,19 @@
       </div>
     </div>
 
-  </div>
+    <!-- THANK YOU — chỉ hiện trong vùng giỏ hàng -->
+    <div id="thankyou-overlay">
+      <div class="ty-icon">
+        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      </div>
+      <div class="ty-title">Cảm ơn<br>quý khách! ☕</div>
+      <div class="ty-divider"></div>
+      <div class="ty-sub">Vui lòng chờ<br><strong>5 – 10 phút</strong><br>để chúng tôi chuẩn bị.</div>
+    </div>
 
-</div><!-- end #app -->
-
-<!-- THANK YOU OVERLAY -->
-<div id="thankyou-overlay">
-  <div class="ty-icon">
-    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M20 6L9 17l-5-5"/>
-    </svg>
   </div>
-  <div class="ty-title">Cảm ơn quý khách!<br>☕</div>
-  <div class="ty-divider"></div>
-  <div class="ty-sub">Đơn hàng của bạn đã được xác nhận.<br>Vui lòng chờ <strong>5 – 10 phút</strong> để chúng tôi chuẩn bị.</div>
-</div>
 
 <script>
 /* ── FIREBASE CONFIG ── */
@@ -758,16 +756,14 @@ function renderSplitItems(splitItems, splitSelected) {
     var row = document.createElement('div');
     row.className = 'cart-item-row';
 
-    // Xám nếu đã trả, highlight nếu đang chọn
-    if (isPaid) {
-      row.style.opacity = '0.35';
-    } else if (isSel) {
+    // Highlight nếu đang chọn, bình thường nếu đã trả hoặc chưa chọn
+    if (isSel) {
       row.style.background = '#fdf3e0';
       row.style.borderLeft = '3px solid var(--accent)';
     }
 
     var dot = isPaid
-      ? '<div style="width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;"></div>'
+      ? '<div style="width:16px;height:16px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="3.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>'
       : isSel
         ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>'
         : '<div style="width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;"></div>';
@@ -775,10 +771,10 @@ function renderSplitItems(splitItems, splitSelected) {
     row.innerHTML =
       dot +
       '<div class="cart-item-info">' +
-        '<div class="cart-item-name"' + (isPaid ? ' style="text-decoration:line-through;color:var(--text3);"' : '') + '>' + (item.name || '?') + '</div>' +
+        '<div class="cart-item-name">' + (item.name || '?') + '</div>' +
         (item.size ? '<div class="cart-item-meta">Size ' + item.size + (item.method ? ' · ' + item.method : '') + '</div>' : '') +
       '</div>' +
-      '<div class="cart-item-price"' + (isPaid ? ' style="color:var(--text3);"' : '') + '>' + fmtP(item.price) + '</div>';
+      '<div class="cart-item-price">' + fmtP(item.price) + '</div>';
 
     list.appendChild(row);
   });
