@@ -395,64 +395,6 @@
     opacity: 0.5;
   }
 
-  /* ── SPLIT PAY GROUPS ── */
-  .split-group {
-    margin: 8px 10px 0;
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1.5px solid var(--border);
-    transition: opacity 0.4s ease;
-  }
-  .split-group.paid {
-    opacity: 0.38;
-  }
-  .split-group-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 7px 10px;
-    font-size: 10px; font-weight: 700;
-    letter-spacing: .5px;
-  }
-  .split-group.method-cash .split-group-header  { background: #fdf3e0; color: var(--amber); }
-  .split-group.method-bank .split-group-header  { background: #edf3fd; color: #2c5fb3; }
-  .split-group.paid .split-group-header          { background: var(--surface2); color: var(--text3); }
-
-  .split-group-badge {
-    font-size: 9px; font-weight: 700;
-    padding: 2px 7px; border-radius: 10px;
-  }
-  .split-group.method-cash:not(.paid) .split-group-badge { background: var(--amber); color: #fff; }
-  .split-group.method-bank:not(.paid) .split-group-badge { background: #2c5fb3; color: #fff; }
-  .split-group.paid .split-group-badge                   { background: var(--green); color: #fff; }
-
-  .split-group-items { padding: 4px 0; }
-
-  .split-item-row {
-    display: flex; align-items: center;
-    padding: 6px 10px 6px 8px; gap: 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .split-item-row:last-child { border-bottom: none; }
-
-  .split-group-footer {
-    padding: 7px 10px;
-    border-top: 1px dashed var(--border2);
-    background: #fafafa;
-    display: flex; flex-direction: column; gap: 3px;
-  }
-  .split-footer-total {
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .split-footer-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .8px; }
-  .split-footer-amount {
-    font-family: 'Google Sans Display', 'Google Sans', sans-serif;
-    font-size: 16px; font-weight: 700; color: var(--accent);
-  }
-  .split-cash-row {
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .split-cash-label { font-size: 9px; color: var(--text3); }
-  .split-cash-val   { font-size: 11px; font-weight: 700; color: var(--green); }
-
   /* ── THANK YOU OVERLAY ── */
   #thankyou-overlay {
     position: fixed; inset: 0;
@@ -593,9 +535,9 @@
       <path d="M20 6L9 17l-5-5"/>
     </svg>
   </div>
-  <div class="ty-title">Cảm ơn Bạn!<br>☕</div>
+  <div class="ty-title">Cảm ơn quý khách!<br>☕</div>
   <div class="ty-divider"></div>
-  <div class="ty-sub">Thanh toán thành công<br>Bạn chờ <strong>5 – 10 phút</strong> để XOLIFA làm nhé</div>
+  <div class="ty-sub">Đơn hàng của bạn đã được xác nhận.<br>Vui lòng chờ <strong>5 – 10 phút</strong> để chúng tôi chuẩn bị.</div>
 </div>
 
 <script>
@@ -732,22 +674,49 @@ function updateBillDisplay(data) {
   }
 
   var total  = Number(data.total  || 0);
-  var paid   = Number(data.paid   || 0);
-  var change = data.change != null ? Number(data.change) : Math.max(0, paid - total);
   var st     = (data.state || 'cart').toLowerCase();
 
   billEmpty.style.display = 'none';
   billContent.style.display = '';
 
-  document.getElementById('bill-amount').textContent = fmtP(total);
-
   var subRows   = document.getElementById('bill-sub-rows');
   var paidRow   = document.getElementById('bill-paid-row');
   var changeRow = document.getElementById('bill-change-row');
 
-  // Với TÍNH RIÊNG có splitGroups thì ẩn bill-sub-rows tổng (đã hiện từng nhóm)
-  var isSplit = data.splitMode && data.splitGroups && data.splitGroups.length;
-  if (!isSplit && st === 'cash_payment' && paid > 0) {
+  // Chế độ TÍNH RIÊNG
+  if (data.splitMode && data.splitItems) {
+    var selSet = {};
+    (data.splitSelected || []).forEach(function(i) { selSet[i] = true; });
+
+    // Tính tổng món đang chọn
+    var selTotal = 0;
+    data.splitItems.forEach(function(it, i) {
+      if (selSet[i]) selTotal += Number(it.price || 0);
+    });
+
+    if (selTotal > 0) {
+      // Hiện tổng nhóm đang chọn thay cho tổng bill
+      document.getElementById('bill-amount').textContent = fmtP(selTotal);
+      document.getElementById('bill-amount').previousElementSibling.textContent = 'Nhóm đang chọn';
+    } else {
+      document.getElementById('bill-amount').textContent = fmtP(total);
+      document.getElementById('bill-amount').previousElementSibling.textContent = 'Tổng thanh toán';
+    }
+
+    subRows.style.display = 'none';
+    paidRow.style.display = 'none';
+    changeRow.style.display = 'none';
+    return;
+  }
+
+  // Chế độ thường
+  document.getElementById('bill-amount').textContent = fmtP(total);
+  document.getElementById('bill-amount').previousElementSibling.textContent = 'Tổng thanh toán';
+
+  var paid   = Number(data.paid   || 0);
+  var change = data.change != null ? Number(data.change) : Math.max(0, paid - total);
+
+  if (st === 'cash_payment' && paid > 0) {
     subRows.style.display = '';
     paidRow.style.display = '';
     document.getElementById('bill-paid-val').textContent = fmtP(paid);
@@ -764,68 +733,54 @@ function updateBillDisplay(data) {
   }
 }
 
-function renderSplitGroups(splitGroups) {
-  // Xoá nhóm cũ
-  var list = document.getElementById('orders-list');
-  list.querySelectorAll('.split-group').forEach(function(el) { el.remove(); });
+function renderSplitItems(splitItems, splitSelected) {
+  var list  = document.getElementById('orders-list');
+  var empty = document.getElementById('orders-empty');
 
-  if (!splitGroups || !splitGroups.length) return;
+  list.querySelectorAll('.cart-item-row, .split-group').forEach(function(el) { el.remove(); });
 
-  splitGroups.forEach(function(grp, gi) {
-    var isCash   = grp.method === 'TIỀN MẶT';
-    var isPaid   = !!grp.paid;
-    var methodCls = isCash ? 'method-cash' : 'method-bank';
-    var icon     = isCash ? '💵' : '🏦';
-    var badge    = isPaid ? '✓ Đã trả' : (isCash ? 'Tiền mặt' : 'CK');
+  if (!splitItems || !splitItems.length) {
+    empty.style.display = '';
+    document.getElementById('orders-count').textContent = '0';
+    return;
+  }
 
-    var div = document.createElement('div');
-    div.className = 'split-group ' + methodCls + (isPaid ? ' paid' : '');
+  empty.style.display = 'none';
+  document.getElementById('orders-count').textContent = splitItems.length;
 
-    // Header
-    var header = '<div class="split-group-header">'
-      + '<span>' + icon + ' ' + grp.method + '</span>'
-      + '<span class="split-group-badge">' + badge + '</span>'
-      + '</div>';
+  var selSet = {};
+  (splitSelected || []).forEach(function(i) { selSet[i] = true; });
 
-    // Items
-    var itemsHtml = '<div class="split-group-items">';
-    if (grp.items && grp.items.length) {
-      grp.items.forEach(function(it) {
-        itemsHtml +=
-          '<div class="split-item-row">'
-          + '<div class="cart-qty-badge">1</div>'
-          + '<div class="cart-item-info">'
-          +   '<div class="cart-item-name">' + (it.name || '?') + '</div>'
-          +   (it.size ? '<div class="cart-item-meta">Size ' + it.size + '</div>' : '')
-          + '</div>'
-          + '<div class="cart-item-price">' + fmtP(it.price) + '</div>'
-          + '</div>';
-      });
+  splitItems.forEach(function(item, i) {
+    var isPaid = !!item.paid;
+    var isSel  = !!selSet[i];
+
+    var row = document.createElement('div');
+    row.className = 'cart-item-row';
+
+    // Xám nếu đã trả, highlight nếu đang chọn
+    if (isPaid) {
+      row.style.opacity = '0.35';
+    } else if (isSel) {
+      row.style.background = '#fdf3e0';
+      row.style.borderLeft = '3px solid var(--accent)';
     }
-    itemsHtml += '</div>';
 
-    // Footer: tổng + tiền thừa nếu cash
-    var footerHtml = '<div class="split-group-footer">';
-    footerHtml += '<div class="split-footer-total">'
-      + '<span class="split-footer-label">Tổng nhóm</span>'
-      + '<span class="split-footer-amount">' + fmtP(grp.total) + '</span>'
-      + '</div>';
-    if (isCash && grp.cashGiven != null) {
-      footerHtml += '<div class="split-cash-row">'
-        + '<span class="split-cash-label">Khách đưa</span>'
-        + '<span style="font-size:10px;font-weight:600;color:var(--text2);">' + fmtP(grp.cashGiven) + '</span>'
-        + '</div>';
-      if (grp.cashChange != null && grp.cashChange >= 0) {
-        footerHtml += '<div class="split-cash-row">'
-          + '<span class="split-cash-label">Tiền thối</span>'
-          + '<span class="split-cash-val">' + fmtP(grp.cashChange) + '</span>'
-          + '</div>';
-      }
-    }
-    footerHtml += '</div>';
+    var dot = isPaid
+      ? '<div style="width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;"></div>'
+      : isSel
+        ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>'
+        : '<div style="width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;"></div>';
 
-    div.innerHTML = header + itemsHtml + footerHtml;
-    list.appendChild(div);
+    row.innerHTML =
+      dot +
+      '<div class="cart-item-info">' +
+        '<div class="cart-item-name"' + (isPaid ? ' style="text-decoration:line-through;color:var(--text3);"' : '') + '>' + (item.name || '?') + '</div>' +
+        (item.size ? '<div class="cart-item-meta">Size ' + item.size + (item.method ? ' · ' + item.method : '') + '</div>' : '') +
+      '</div>' +
+      '<div class="cart-item-price"' + (isPaid ? ' style="color:var(--text3);"' : '') + '>' + fmtP(item.price) + '</div>';
+
+    list.appendChild(row);
   });
 }
 
@@ -863,13 +818,11 @@ function renderSession(sessionId, data) {
   list.querySelectorAll('.cart-item-row').forEach(function(el) { el.remove(); });
   list.querySelectorAll('.split-group').forEach(function(el) { el.remove(); });
 
-  // Chế độ TÍNH RIÊNG: splitMode + splitGroups
-  if (data.splitMode && data.splitGroups && data.splitGroups.length) {
+  // Chế độ TÍNH RIÊNG: splitMode + splitItems
+  if (data.splitMode && data.splitItems && data.splitItems.length) {
     empty.style.display = 'none';
-    var totalItems = 0;
-    data.splitGroups.forEach(function(g) { if (g.items) totalItems += g.items.length; });
-    document.getElementById('orders-count').textContent = totalItems;
-    renderSplitGroups(data.splitGroups);
+    document.getElementById('orders-count').textContent = data.splitItems.length;
+    renderSplitItems(data.splitItems, data.splitSelected || []);
     updateBillDisplay(data);
     return;
   }
