@@ -358,6 +358,17 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
         <span class="pmn">Chuyển khoản</span>
       </div>
     </div>
+    <!-- Tính riêng button - full width -->
+    <div onclick="openSplitPay()" style="background:#fff;border-radius:22px;padding:20px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;" id="pmsp">
+      <div style="width:60px;height:60px;border-radius:16px;background:#fff3e0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M16 3h5v5M8 3H3v5M3 16v5h5M16 21h5v-5" stroke="#e67e22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="8" x2="12" y2="16" stroke="#e67e22" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="#e67e22" stroke-width="2" stroke-linecap="round"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:16px;font-weight:700;color:#c0550a;">Tính riêng</div>
+        <div style="font-size:12px;color:#aaa;margin-top:2px;">Tách bill cho từng khách</div>
+      </div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
     <div id="bank-confirm-area" style="display:none;">
       <button class="bconf" onclick="proceedPay()">XÁC NHẬN CHUYỂN KHOẢN</button>
     </div>
@@ -484,6 +495,96 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#fff3cd"/><path d="M12 7v5.5l3.5 2" stroke="#c8820a" stroke-width="2" stroke-linecap="round"/></svg>
     </div>
     <button class="cp-confirm-btn" id="cp-confirm-btn" onclick="confirmCashPay()">XÁC NHẬN THANH TOÁN</button>
+  </div>
+</div>
+
+<!-- SPLIT PAY SCREEN -->
+<div id="sp" class="screen" style="background:var(--bg);">
+  <div style="background:var(--bg);padding:16px 16px 0;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;">
+    <button class="bbc" onclick="showScreen('sc')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+    <span style="flex:1;font-size:18px;font-weight:700;color:var(--td);text-align:center;">TÍNH RIÊNG</span>
+    <div style="width:44px;"></div>
+  </div>
+
+  <!-- Tổng đã tính / còn lại -->
+  <div style="padding:12px 16px 0;display:flex;gap:10px;">
+    <div style="flex:1;background:#fff;border-radius:16px;padding:14px 16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">Đã tính</div>
+      <div style="font-size:22px;font-weight:700;color:var(--gm);" id="sp-paid-total">0đ</div>
+    </div>
+    <div style="flex:1;background:#fff;border-radius:16px;padding:14px 16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">Còn lại</div>
+      <div style="font-size:22px;font-weight:700;color:var(--td);" id="sp-remain-total">0đ</div>
+    </div>
+  </div>
+
+  <!-- Hướng dẫn -->
+  <div style="margin:10px 16px 0;background:#fff3e0;border-radius:14px;padding:12px 16px;font-size:12px;color:#c0550a;font-weight:600;">
+    ✓ Tick chọn món của từng khách → chọn cách thanh toán
+  </div>
+
+  <!-- Danh sách món (tách từng unit) -->
+  <div style="overflow-y:auto;flex:1;padding:12px 16px 120px;" id="sp-item-list"></div>
+
+  <!-- Bottom bar: subtotal + pay buttons -->
+  <div style="position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:#fff;padding:12px 16px 24px;box-shadow:0 -4px 20px rgba(0,0,0,.08);z-index:20;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;" id="sp-bottom-info">
+      <div>
+        <div style="font-size:11px;color:var(--gt);font-weight:600;text-transform:uppercase;">ĐÃ CHỌN</div>
+        <div style="font-size:20px;font-weight:700;color:var(--td);" id="sp-selected-total">0đ</div>
+      </div>
+      <div style="font-size:13px;color:var(--gt);" id="sp-selected-count">0 món</div>
+    </div>
+    <div style="display:flex;gap:10px;" id="sp-pay-btns">
+      <button onclick="spPay('cash')" style="flex:1;padding:14px;background:var(--gl);color:var(--gd);border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">💵 Tiền mặt</button>
+      <button onclick="spPay('bank')" style="flex:1;padding:14px;background:var(--bb);color:var(--bi);border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">🏦 Chuyển khoản</button>
+    </div>
+    <!-- Nút hoàn thành (hiện khi tất cả đã tính) -->
+    <button id="sp-done-btn" onclick="finalizeSplitPay()" style="display:none;width:100%;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">✅ Xác nhận đã thanh toán thành công</button>
+  </div>
+</div>
+
+<!-- SPLIT CASH MINI POPUP -->
+<div id="sp-cash-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:none;align-items:center;justify-content:center;padding:24px;" onclick="if(event.target===this)closeSpCashPopup()">
+  <div style="background:#f2f2f2;border-radius:24px;padding:24px 20px;width:100%;max-width:380px;animation:pi .2s ease;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-size:17px;font-weight:700;color:var(--td);">Tiền mặt</span>
+      <button onclick="closeSpCashPopup()" style="background:#e0e0e0;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#666;font-size:15px;">✕</button>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:16px 18px;margin-bottom:12px;text-align:center;">
+      <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Tổng cần thu</div>
+      <div style="font-size:38px;font-weight:700;color:var(--td);" id="sp-cash-total">0đ</div>
+    </div>
+    <!-- Gợi ý -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;" id="sp-cash-suggests"></div>
+    <!-- Nhập -->
+    <div style="background:#fff;border-radius:16px;padding:14px 16px;display:flex;align-items:center;margin-bottom:12px;">
+      <input id="sp-cash-input" type="text" inputmode="numeric" placeholder="Nhập tiền khách đưa..."
+        style="flex:1;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:20px;font-weight:700;color:var(--td);background:transparent;"
+        oninput="onSpCashInput(this)">
+      <span style="font-size:15px;font-weight:700;color:var(--gt);">đ</span>
+    </div>
+    <!-- Tiền thừa -->
+    <div id="sp-cash-change-row" style="display:none;background:#fffbe8;border-radius:14px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <span id="sp-cash-change-label" style="font-size:12px;font-weight:700;color:#c8820a;text-transform:uppercase;">Tiền thừa</span>
+      <span id="sp-cash-change-val" style="font-size:18px;font-weight:700;color:#d4820a;">0đ</span>
+    </div>
+    <button onclick="confirmSpCash()" style="width:100%;padding:15px;background:var(--gd);color:#fff;border:none;border-radius:14px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">Xác nhận</button>
+  </div>
+</div>
+
+<!-- SPLIT BANK CONFIRM POPUP -->
+<div id="sp-bank-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:none;align-items:center;justify-content:center;padding:24px;" onclick="if(event.target===this)closeSpBankPopup()">
+  <div style="background:#f2f2f2;border-radius:24px;padding:24px 20px;width:100%;max-width:380px;animation:pi .2s ease;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-size:17px;font-weight:700;color:var(--td);">Chuyển khoản</span>
+      <button onclick="closeSpBankPopup()" style="background:#e0e0e0;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#666;font-size:15px;">✕</button>
+    </div>
+    <div style="background:#fff;border-radius:16px;padding:16px 18px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Số tiền</div>
+      <div style="font-size:38px;font-weight:700;color:var(--bi);" id="sp-bank-total">0đ</div>
+    </div>
+    <button onclick="confirmSpBank()" style="width:100%;padding:15px;background:var(--bi);color:#fff;border:none;border-radius:14px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">✓ Đã chuyển khoản</button>
   </div>
 </div>
 
@@ -1714,6 +1815,189 @@ function deleteMenuItem() {
     toast('🗑 Đã xoá món');
     closeMenuForm();
     initMenu();
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
+// ============================================================
+// SPLIT PAY — Tính riêng từng khách
+// ============================================================
+// spItems: mảng các unit món (mỗi qty=1 là 1 phần tử riêng)
+// spPaidAmt: tổng đã thu được
+// spSelected: Set of indices đang được tick
+let spItems = [];        // { name, size, price, paid: false }
+let spPaidAmt = 0;
+let spSelected = new Set();
+let _spCurrentMethod = null; // 'cash' | 'bank' cho popup hiện tại
+
+function openSplitPay() {
+  if (!Object.keys(cart).length) { toast('Giỏ hàng trống!'); return; }
+  // Tách cart thành từng unit riêng lẻ
+  spItems = [];
+  Object.values(cart).forEach(c => {
+    for (let i = 0; i < c.qty; i++) {
+      spItems.push({ name: c.name, size: c.size, price: c.price, paid: false });
+    }
+  });
+  spPaidAmt = 0;
+  spSelected = new Set();
+  renderSpItems();
+  updSpTotals();
+  showScreen('sp');
+}
+
+function renderSpItems() {
+  const el = document.getElementById('sp-item-list');
+  el.innerHTML = spItems.map((item, i) => {
+    const isPaid = item.paid;
+    const isSel  = spSelected.has(i);
+    return `<div id="sp-row-${i}" onclick="toggleSpItem(${i})"
+      style="background:#fff;border-radius:18px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;cursor:${isPaid?'default':'pointer'};transition:opacity .2s;opacity:${isPaid?'0.35':'1'};">
+      <div style="flex:1;">
+        <div style="font-size:16px;font-weight:700;color:var(--td);">${item.name}</div>
+        <div style="font-size:12px;color:var(--gt);margin-top:3px;">Size ${item.size} · ${item.price.toLocaleString('vi-VN')}đ</div>
+      </div>
+      <div style="width:28px;height:28px;border-radius:50%;border:2px solid ${isSel?'var(--gm)':isPaid?'#ccc':'#ddd'};background:${isSel?'var(--gm)':isPaid?'#e8f5ee':'#fff'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;">
+        ${isSel ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>' : isPaid ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5L20 7"/></svg>' : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSpItem(i) {
+  if (spItems[i].paid) return; // đã tính rồi không toggle được
+  if (spSelected.has(i)) spSelected.delete(i); else spSelected.add(i);
+  renderSpItems();
+  updSpBottomBar();
+}
+
+function updSpTotals() {
+  const grandTotal = getCartTotal();
+  const remain = grandTotal - spPaidAmt;
+  document.getElementById('sp-paid-total').textContent = spPaidAmt.toLocaleString('vi-VN') + 'đ';
+  document.getElementById('sp-remain-total').textContent = remain.toLocaleString('vi-VN') + 'đ';
+  // Kiểm tra tất cả đã tính xong chưa
+  const allPaid = spItems.every(x => x.paid);
+  document.getElementById('sp-pay-btns').style.display = allPaid ? 'none' : 'flex';
+  document.getElementById('sp-done-btn').style.display  = allPaid ? 'block' : 'none';
+  document.getElementById('sp-bottom-info').style.display = allPaid ? 'none' : 'flex';
+}
+
+function updSpBottomBar() {
+  const selArr = [...spSelected];
+  const subTotal = selArr.reduce((a, i) => a + spItems[i].price, 0);
+  document.getElementById('sp-selected-total').textContent = subTotal.toLocaleString('vi-VN') + 'đ';
+  document.getElementById('sp-selected-count').textContent = selArr.length + ' món';
+}
+
+function spPay(method) {
+  if (spSelected.size === 0) { toast('Chưa chọn món nào!'); return; }
+  const subTotal = [...spSelected].reduce((a, i) => a + spItems[i].price, 0);
+  _spCurrentMethod = method;
+  if (method === 'cash') {
+    // Mở mini cash popup
+    document.getElementById('sp-cash-total').textContent = subTotal.toLocaleString('vi-VN') + 'đ';
+    document.getElementById('sp-cash-input').value = subTotal.toLocaleString('vi-VN');
+    // Build gợi ý
+    const sugs = buildSuggestions(subTotal);
+    document.getElementById('sp-cash-suggests').innerHTML = sugs.map(s => {
+      const label = s >= 1000000 ? (s/1000000)+'M' : s/1000+'k';
+      return `<button onclick="spCashSelectSug(${s})" style="background:var(--gl);border:2px solid transparent;border-radius:24px;padding:8px 14px;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:700;color:var(--gd);cursor:pointer;" id="sp-sug-${s}">${label}</button>`;
+    }).join('');
+    updSpCashChange();
+    document.getElementById('sp-cash-popup').style.display = 'flex';
+  } else {
+    // Bank popup
+    document.getElementById('sp-bank-total').textContent = subTotal.toLocaleString('vi-VN') + 'đ';
+    document.getElementById('sp-bank-popup').style.display = 'flex';
+  }
+}
+
+function spCashSelectSug(amt) {
+  document.getElementById('sp-cash-input').value = amt.toLocaleString('vi-VN');
+  updSpCashChange();
+}
+
+function onSpCashInput(el) {
+  const raw = el.value.replace(/[^0-9]/g, '');
+  const num = parseInt(raw) || 0;
+  el.value = num > 0 ? num.toLocaleString('vi-VN') : '';
+  updSpCashChange();
+}
+
+function updSpCashChange() {
+  const subTotal = [...spSelected].reduce((a, i) => a + spItems[i].price, 0);
+  const raw = document.getElementById('sp-cash-input').value.replace(/[^0-9]/g, '');
+  const given = parseInt(raw) || 0;
+  const row = document.getElementById('sp-cash-change-row');
+  if (given <= 0) { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  const diff = given - subTotal;
+  const lbl = document.getElementById('sp-cash-change-label');
+  const val = document.getElementById('sp-cash-change-val');
+  if (diff >= 0) {
+    lbl.textContent = 'TIỀN THỪA'; lbl.style.color = '#c8820a';
+    val.textContent = diff.toLocaleString('vi-VN') + 'đ'; val.style.color = '#d4820a';
+  } else {
+    lbl.textContent = 'THIẾU'; lbl.style.color = '#e74c3c';
+    val.textContent = '⚠ ' + Math.abs(diff).toLocaleString('vi-VN') + 'đ'; val.style.color = '#e74c3c';
+  }
+}
+
+function confirmSpCash() {
+  markSpSelectedPaid('TIỀN MẶT');
+  closeSpCashPopup();
+}
+
+function confirmSpBank() {
+  markSpSelectedPaid('CHUYỂN KHOẢN');
+  closeSpBankPopup();
+}
+
+function markSpSelectedPaid(method) {
+  const subTotal = [...spSelected].reduce((a, i) => a + spItems[i].price, 0);
+  spSelected.forEach(i => { spItems[i].paid = true; spItems[i].method = method; });
+  spPaidAmt += subTotal;
+  spSelected = new Set();
+  renderSpItems();
+  updSpTotals();
+  updSpBottomBar();
+  toast('✓ Đã tính ' + subTotal.toLocaleString('vi-VN') + 'đ — ' + method);
+}
+
+function closeSpCashPopup() { document.getElementById('sp-cash-popup').style.display = 'none'; }
+function closeSpBankPopup() { document.getElementById('sp-bank-popup').style.display = 'none'; }
+
+function finalizeSplitPay() {
+  // Ghi 1 đơn tổng hợp lên Firebase với method = TÍNH RIÊNG
+  const items = Object.values(cart);
+  const total = getCartTotal();
+  const now = new Date();
+  const p = n => String(n).padStart(2, '0');
+  const month = MONTH_KEYS[now.getMonth()];
+  const day   = p(now.getDate());
+  const itemsArray = items.map(c => ({ ...c }));
+  const itemsSummary = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
+  const order = {
+    time: `${p(now.getHours())}:${p(now.getMinutes())}`,
+    date: `${day}/${p(now.getMonth()+1)}/${now.getFullYear()}`,
+    items: itemsSummary, itemsArray, total,
+    method: 'TÍNH RIÊNG',
+    phone: document.getElementById('cuph').value || '',
+    voucherUsed: selectedVoucher ? selectedVoucher.giftName : null,
+    cashGiven: total, cashChange: 0,
+    createdAt: now.toISOString()
+  };
+  db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
+    orders.unshift({ id: ref.key, ...order, items: itemsArray });
+    cart = {};
+    resetPayMethod();
+    document.getElementById('cuph').value = '';
+    clearCustomer();
+    selectedVoucher = null;
+    resetDisplay();
+    renderMenu();
+    toast('✅ Đã hoàn tất tính riêng!');
+    showScreen('sm');
   }).catch(err => toast('❌ Lỗi: ' + err.message));
 }
 
