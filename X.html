@@ -306,6 +306,11 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <div style="flex:1"><div class="sdit">Lịch sử</div><div class="sdid">Giao dịch gần đây</div></div>
       <span class="sdar">›</span>
     </div>
+    <div class="sdi" onclick="closeSdb();showScreen('mn')">
+      <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></div>
+      <div style="flex:1"><div class="sdit">Quản lý Menu</div><div class="sdid">Thêm, sửa món</div></div>
+      <span class="sdar">›</span>
+    </div>
   </div>
 </div>
 
@@ -479,6 +484,65 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="11" fill="#fff3cd"/><path d="M12 7v5.5l3.5 2" stroke="#c8820a" stroke-width="2" stroke-linecap="round"/></svg>
     </div>
     <button class="cp-confirm-btn" id="cp-confirm-btn" onclick="confirmCashPay()">XÁC NHẬN THANH TOÁN</button>
+  </div>
+</div>
+
+<!-- MENU MANAGEMENT SCREEN -->
+<div id="mn" class="screen" style="background:var(--bg);">
+  <div style="background:var(--bg);padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;">
+    <button class="btn-close-screen" onclick="showScreen('sm')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <span style="font-size:20px;font-weight:700;color:var(--td);">QUẢN LÝ MENU</span>
+    <button onclick="openMenuForm(null)" style="background:var(--gd);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Thêm món
+    </button>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:16px 16px 40px;" id="mn-list">
+    <div style="text-align:center;padding:40px;color:#bbb;">Đang tải...</div>
+  </div>
+</div>
+
+<!-- MENU ITEM FORM POPUP -->
+<div id="mn-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);">
+  <div style="background:#fff;border-radius:28px 28px 0 0;padding:28px 20px 40px;width:100%;max-width:430px;animation:pi .22s ease;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <span id="mn-form-title" style="font-size:18px;font-weight:700;color:var(--td);">Thêm món mới</span>
+      <button onclick="closeMenuForm()" style="background:#f0f0f0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Tên món *</div>
+        <input id="mn-f-name" type="text" placeholder="VD: Trà sữa nguyên lá" style="width:100%;border:1.5px solid #e0e0e0;border-radius:14px;padding:13px 16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;color:var(--td);outline:none;" onfocus="this.style.borderColor='var(--gm)'" onblur="this.style.borderColor='#e0e0e0'">
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Phân loại</div>
+        <input id="mn-f-type" type="text" placeholder="VD: Trà sữa, Cà phê, Nước ép..." style="width:100%;border:1.5px solid #e0e0e0;border-radius:14px;padding:13px 16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;color:var(--td);outline:none;" onfocus="this.style.borderColor='var(--gm)'" onblur="this.style.borderColor='#e0e0e0'">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Giá Size M (đ)</div>
+          <input id="mn-f-pm" type="text" inputmode="numeric" placeholder="0" style="width:100%;border:1.5px solid #e0e0e0;border-radius:14px;padding:13px 16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;color:var(--td);outline:none;" onfocus="this.style.borderColor='var(--gm)'" onblur="this.style.borderColor='#e0e0e0'" oninput="fmtPriceInput(this)">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Giá Size L (đ)</div>
+          <input id="mn-f-pl" type="text" inputmode="numeric" placeholder="0" style="width:100%;border:1.5px solid #e0e0e0;border-radius:14px;padding:13px 16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;color:var(--td);outline:none;" onfocus="this.style.borderColor='var(--gm)'" onblur="this.style.borderColor='#e0e0e0'" oninput="fmtPriceInput(this)">
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Màu thẻ</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="mn-color-picker">
+          ${['#1a4a2e','#2d6a4f','#1a5276','#6c3483','#922b21','#784212','#1a5276','#0e6655','#4a235a','#2e4057'].map(c =>
+            `<div onclick="selectMenuColor('${c}')" data-color="${c}" style="width:32px;height:32px;border-radius:50%;background:${c};cursor:pointer;border:3px solid transparent;transition:border-color .15s;"></div>`
+          ).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button id="mn-f-del" onclick="deleteMenuItem()" style="display:none;flex:0 0 auto;padding:14px 18px;background:#fee2e2;color:#e74c3c;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Xoá</button>
+        <button onclick="saveMenuItem()" style="flex:1;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">Lưu</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -661,12 +725,12 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
   if (id === 'sc') updCoTotal();
+  if (id === 'mn') renderMnList();
   if (id === 'hi') {
-    // Load 7 ngày gần nhất (3 ngày RT đã có, fetch thêm ngày 4-7 từ archive)
     const now = new Date();
     const from = new Date(now); from.setDate(from.getDate() - 6); from.setHours(0,0,0,0);
     loadArchiveDates(archiveDatesInRange(from, now)).then(() => renderH());
-    return; // renderH sẽ gọi lại sau khi fetch xong
+    return;
   }
   if (id === 'rv') {
     _rvFrom = null; _rvTo = null;
@@ -1451,6 +1515,139 @@ function runArchiveIfNeeded() {
     if (archived > 0) toast('📦 Đã archive ' + archived + ' ngày cũ');
     console.log('[Archive] Hoàn thành. Archived:', archived, 'ngày');
   });
+}
+
+// ============================================================
+// MENU MANAGEMENT
+// ============================================================
+let _mnEditId = null; // null = thêm mới, string = id món đang sửa
+let _mnColor = '#1a4a2e';
+
+function renderMnList() {
+  const el = document.getElementById('mn-list');
+  if (!MENU.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#bbb;font-size:14px;">Chưa có món nào</div>`;
+    return;
+  }
+  // Nhóm theo type
+  const grp = {};
+  MENU.forEach(m => {
+    const t = m.type || 'Khác';
+    if (!grp[t]) grp[t] = [];
+    grp[t].push(m);
+  });
+  el.innerHTML = Object.entries(grp).map(([type, items]) => `
+    <div style="margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:8px 4px 10px;">${type}</div>
+      ${items.map(m => {
+        const priceM = m.sizes.find(s => s.label==='M');
+        const priceL = m.sizes.find(s => s.label==='L');
+        return `<div onclick="openMenuForm('${m.id}')" style="background:#fff;border-radius:18px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;cursor:pointer;transition:transform .12s;active:scale(.98);">
+          <div style="width:44px;height:44px;border-radius:12px;background:${m.color||'#1a4a2e'};flex-shrink:0;"></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:16px;font-weight:700;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
+            <div style="font-size:12px;color:var(--gt);margin-top:3px;">
+              ${priceM ? 'M: '+priceM.price.toLocaleString('vi-VN') : ''}${priceM && priceL ? ' · ' : ''}${priceL ? 'L: '+priceL.price.toLocaleString('vi-VN') : ''}đ
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+function openMenuForm(id) {
+  _mnEditId = id;
+  const popup = document.getElementById('mn-popup');
+  const title = document.getElementById('mn-form-title');
+  const delBtn = document.getElementById('mn-f-del');
+
+  if (id) {
+    const m = MENU.find(x => x.id === id);
+    if (!m) return;
+    title.textContent = 'Chỉnh sửa món';
+    document.getElementById('mn-f-name').value = m.name;
+    document.getElementById('mn-f-type').value = m.type || '';
+    const pm = m.sizes.find(s => s.label==='M');
+    const pl = m.sizes.find(s => s.label==='L');
+    document.getElementById('mn-f-pm').value = pm ? pm.price.toLocaleString('vi-VN') : '';
+    document.getElementById('mn-f-pl').value = pl ? pl.price.toLocaleString('vi-VN') : '';
+    _mnColor = m.color || '#1a4a2e';
+    delBtn.style.display = 'block';
+  } else {
+    title.textContent = 'Thêm món mới';
+    document.getElementById('mn-f-name').value = '';
+    document.getElementById('mn-f-type').value = '';
+    document.getElementById('mn-f-pm').value = '';
+    document.getElementById('mn-f-pl').value = '';
+    _mnColor = '#1a4a2e';
+    delBtn.style.display = 'none';
+  }
+  // Highlight màu đang chọn
+  document.querySelectorAll('#mn-color-picker div').forEach(el => {
+    el.style.borderColor = el.dataset.color === _mnColor ? '#fff' : 'transparent';
+    el.style.outline = el.dataset.color === _mnColor ? '2px solid var(--gm)' : 'none';
+  });
+  popup.style.display = 'flex';
+}
+
+function closeMenuForm() {
+  document.getElementById('mn-popup').style.display = 'none';
+}
+
+function selectMenuColor(c) {
+  _mnColor = c;
+  document.querySelectorAll('#mn-color-picker div').forEach(el => {
+    el.style.borderColor = el.dataset.color === c ? '#fff' : 'transparent';
+    el.style.outline = el.dataset.color === c ? '2px solid var(--gm)' : 'none';
+  });
+}
+
+function fmtPriceInput(el) {
+  const raw = el.value.replace(/[^0-9]/g, '');
+  const num = parseInt(raw) || 0;
+  el.value = num > 0 ? num.toLocaleString('vi-VN') : '';
+}
+
+function getPriceVal(id) {
+  const raw = document.getElementById(id).value.replace(/[^0-9]/g, '');
+  return parseInt(raw) || 0;
+}
+
+function saveMenuItem() {
+  const name = document.getElementById('mn-f-name').value.trim();
+  if (!name) { toast('Vui lòng nhập tên món!'); return; }
+  const priceM = getPriceVal('mn-f-pm');
+  const priceL = getPriceVal('mn-f-pl');
+  if (!priceM && !priceL) { toast('Vui lòng nhập ít nhất 1 giá!'); return; }
+
+  const data = {
+    name,
+    type: document.getElementById('mn-f-type').value.trim(),
+    color: _mnColor,
+    priceM: priceM || 0,
+    priceL: priceL || 0
+  };
+
+  const ref = _mnEditId
+    ? db.ref('menu_xolifa/' + _mnEditId)
+    : db.ref('menu_xolifa').push();
+
+  ref.set(data).then(() => {
+    toast(_mnEditId ? '✅ Đã cập nhật món!' : '✅ Đã thêm món mới!');
+    closeMenuForm();
+    initMenu(); // reload menu từ RT
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
+function deleteMenuItem() {
+  if (!_mnEditId) return;
+  if (!confirm('Xoá món này khỏi menu?')) return;
+  db.ref('menu_xolifa/' + _mnEditId).remove().then(() => {
+    toast('🗑 Đã xoá món');
+    closeMenuForm();
+    initMenu();
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
 }
 
 // initMenu() và runArchiveIfNeeded() được gọi trực tiếp sau initializeApp
