@@ -1283,7 +1283,9 @@ function confirmPay(cashGiven, cashChange) {
     document.getElementById('cuph').value = '';
     clearCustomer();
     selectedVoucher = null;
-    resetDisplay();
+    // Đẩy state done lên kiosk → hiện thank you, 5s sau reset
+    syncDisplay('done');
+    setTimeout(() => resetDisplay(), 5000);
     renderMenu();
     toast('✅ Thanh toán thành công!');
     showScreen('sm');
@@ -1883,6 +1885,7 @@ function openSplitPay() {
   renderSpItems();
   updSpTotals();
   showScreen('sp');
+  syncDisplay('split', { splitMode: true, splitGroups: spGroups }); // push lên kiosk ngay khi mở tính riêng
 }
 
 function renderSpItems() {
@@ -2002,7 +2005,7 @@ function markSpSelectedPaid(method, cashGiven, cashChange) {
   const groupItems = [...spSelected].map(i => ({ name: spItems[i].name, size: spItems[i].size, price: spItems[i].price }));
   spSelected.forEach(i => { spItems[i].paid = true; spItems[i].method = method; });
   // Lưu nhóm
-  const grp = { method, items: groupItems, total: subTotal };
+  const grp = { method, items: groupItems, total: subTotal, paid: true };
   if (method === 'TIỀN MẶT') { grp.cashGiven = cashGiven || subTotal; grp.cashChange = cashChange || 0; }
   spGroups.push(grp);
   spPaidAmt += subTotal;
@@ -2010,6 +2013,7 @@ function markSpSelectedPaid(method, cashGiven, cashChange) {
   renderSpItems();
   updSpTotals();
   updSpBottomBar();
+  syncDisplay('split', { splitMode: true, splitGroups: spGroups }); // cập nhật kiosk: nhóm vừa trả xong
   toast('✓ Đã tính ' + subTotal.toLocaleString('vi-VN') + 'đ — ' + method);
 }
 
@@ -2044,7 +2048,9 @@ function finalizeSplitPay() {
     document.getElementById('cuph').value = '';
     clearCustomer();
     selectedVoucher = null;
-    resetDisplay();
+    // Đẩy state done lên kiosk → hiện thank you, 5s sau reset
+    syncDisplay('done');
+    setTimeout(() => resetDisplay(), 5000);
     renderMenu();
     toast('✅ Đã hoàn tất tính riêng!');
     showScreen('sm');
