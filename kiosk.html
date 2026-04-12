@@ -394,49 +394,6 @@
     letter-spacing: 1px; text-transform: uppercase;
     opacity: 0.5;
   }
-
-  /* ── THANK YOU OVERLAY ── */
-  #thankyou-overlay {
-    position: absolute; inset: 0;
-    background: rgba(255,255,255,0.97);
-    z-index: 50;
-    display: none;
-    flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 0;
-    animation: tyFadeIn 0.6s ease;
-  }
-  #thankyou-overlay.show { display: flex; }
-  @keyframes tyFadeIn {
-    from { opacity: 0; transform: scale(0.96); }
-    to   { opacity: 1; transform: scale(1); }
-  }
-  .ty-icon {
-    width: 80px; height: 80px; border-radius: 50%;
-    background: var(--green-bg);
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 24px;
-  }
-  .ty-title {
-    font-family: 'Google Sans Display', 'Google Sans', sans-serif;
-    font-size: 36px; font-weight: 700;
-    color: var(--text); text-align: center;
-    letter-spacing: -1px; line-height: 1.15;
-    margin-bottom: 12px;
-  }
-  .ty-sub {
-    font-size: 15px; color: var(--text2); text-align: center;
-    line-height: 1.6; max-width: 480px;
-  }
-  .ty-divider {
-    width: 40px; height: 3px; border-radius: 2px;
-    background: var(--accent); margin: 20px auto;
-  }
-  .ty-wait {
-    font-size: 13px; font-weight: 600;
-    color: var(--amber); text-align: center;
-    letter-spacing: .5px;
-  }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
@@ -474,7 +431,7 @@
   </div>
 
   <!-- RIGHT: SESSION / CART -->
-  <div id="panel-right" style="position:relative;">
+  <div id="panel-right">
 
     <!-- HEADER + TÊN KHÁCH CÙNG BOX -->
     <div style="flex-shrink:0; border-bottom: 1px solid var(--border);">
@@ -524,20 +481,9 @@
       </div>
     </div>
 
-    <!-- THANK YOU — chỉ hiện trong vùng giỏ hàng -->
-    <div id="thankyou-overlay">
-      <div class="ty-icon">
-        <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 6L9 17l-5-5"/>
-        </svg>
-      </div>
-      <div class="ty-title">Cảm ơn<br>quý khách! ☕</div>
-      <div class="ty-divider"></div>
-      <div class="ty-sub">Vui lòng chờ<br><strong>5 – 10 phút</strong><br>để chúng tôi chuẩn bị.</div>
-    </div>
-
   </div>
 
+</div>
 <script>
 /* ── FIREBASE CONFIG ── */
 var firebaseConfig = {
@@ -635,21 +581,8 @@ function fmtP(p) {
   return p != null ? new Intl.NumberFormat('vi-VN').format(p) + 'đ' : '';
 }
 
-/* ── THANK YOU OVERLAY ── */
-var tyTimer = null;
-function showThankYou() {
-  var ov = document.getElementById('thankyou-overlay');
-  ov.classList.add('show');
-  if (tyTimer) clearTimeout(tyTimer);
-  tyTimer = setTimeout(function() {
-    ov.classList.remove('show');
-    tyTimer = null;
-  }, 5000);
-}
-
 /* ── SESSION DISPLAY ── */
 var sessionCards = {};
-var lastState = null;
 
 var STATE_LABELS = {
   cart:         'Giỏ hàng',
@@ -658,6 +591,15 @@ var STATE_LABELS = {
   ready:        'Sẵn sàng',
   cancelled:    'Đã hủy',
   done:         'Hoàn thành'
+};
+
+var STATE_PILL_CLASS = {
+  cart:         'state-cart',
+  cash_payment: 'state-cash',
+  pending:      'state-cart',
+  ready:        'state-done',
+  done:         'state-done',
+  cancelled:    'state-cancelled'
 };
 
 function updateBillDisplay(data) {
@@ -672,47 +614,19 @@ function updateBillDisplay(data) {
   }
 
   var total  = Number(data.total  || 0);
+  var paid   = Number(data.paid   || 0);
+  var change = data.change != null ? Number(data.change) : Math.max(0, paid - total);
   var st     = (data.state || 'cart').toLowerCase();
 
   billEmpty.style.display = 'none';
   billContent.style.display = '';
 
+  document.getElementById('bill-amount').textContent = fmtP(total);
+
+  // Paid & change — chỉ hiện khi state = cash_payment và có paid
   var subRows   = document.getElementById('bill-sub-rows');
   var paidRow   = document.getElementById('bill-paid-row');
   var changeRow = document.getElementById('bill-change-row');
-
-  // Chế độ TÍNH RIÊNG
-  if (data.splitMode && data.splitItems) {
-    var selSet = {};
-    (data.splitSelected || []).forEach(function(i) { selSet[i] = true; });
-
-    // Tính tổng món đang chọn
-    var selTotal = 0;
-    data.splitItems.forEach(function(it, i) {
-      if (selSet[i]) selTotal += Number(it.price || 0);
-    });
-
-    if (selTotal > 0) {
-      // Hiện tổng nhóm đang chọn thay cho tổng bill
-      document.getElementById('bill-amount').textContent = fmtP(selTotal);
-      document.getElementById('bill-amount').previousElementSibling.textContent = 'Nhóm đang chọn';
-    } else {
-      document.getElementById('bill-amount').textContent = fmtP(total);
-      document.getElementById('bill-amount').previousElementSibling.textContent = 'Tổng thanh toán';
-    }
-
-    subRows.style.display = 'none';
-    paidRow.style.display = 'none';
-    changeRow.style.display = 'none';
-    return;
-  }
-
-  // Chế độ thường
-  document.getElementById('bill-amount').textContent = fmtP(total);
-  document.getElementById('bill-amount').previousElementSibling.textContent = 'Tổng thanh toán';
-
-  var paid   = Number(data.paid   || 0);
-  var change = data.change != null ? Number(data.change) : Math.max(0, paid - total);
 
   if (st === 'cash_payment' && paid > 0) {
     subRows.style.display = '';
@@ -731,69 +645,14 @@ function updateBillDisplay(data) {
   }
 }
 
-function renderSplitItems(splitItems, splitSelected) {
+function renderSession(sessionId, data) {
   var list  = document.getElementById('orders-list');
   var empty = document.getElementById('orders-empty');
 
-  list.querySelectorAll('.cart-item-row, .split-group').forEach(function(el) { el.remove(); });
-
-  if (!splitItems || !splitItems.length) {
-    empty.style.display = '';
-    document.getElementById('orders-count').textContent = '0';
-    return;
-  }
-
-  empty.style.display = 'none';
-  document.getElementById('orders-count').textContent = splitItems.length;
-
-  var selSet = {};
-  (splitSelected || []).forEach(function(i) { selSet[i] = true; });
-
-  splitItems.forEach(function(item, i) {
-    var isPaid = !!item.paid;
-    var isSel  = !!selSet[i];
-
-    var row = document.createElement('div');
-    row.className = 'cart-item-row';
-
-    // Highlight nếu đang chọn, bình thường nếu đã trả hoặc chưa chọn
-    if (isSel) {
-      row.style.background = '#fdf3e0';
-      row.style.borderLeft = '3px solid var(--accent)';
-    }
-
-    var dot = isPaid
-      ? '<div style="width:16px;height:16px;border-radius:50%;background:var(--green-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="3.5" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></div>'
-      : isSel
-        ? '<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;"></div>'
-        : '<div style="width:8px;height:8px;border-radius:50%;background:var(--border2);flex-shrink:0;"></div>';
-
-    row.innerHTML =
-      dot +
-      '<div class="cart-item-info">' +
-        '<div class="cart-item-name">' + (item.name || '?') + '</div>' +
-        (item.size ? '<div class="cart-item-meta">Size ' + item.size + (item.method ? ' · ' + item.method : '') + '</div>' : '') +
-      '</div>' +
-      '<div class="cart-item-price">' + fmtP(item.price) + '</div>';
-
-    list.appendChild(row);
-  });
-}
-
-function renderSession(sessionId, data) {
+  // Lưu data
   sessionCards[sessionId] = data;
 
-  var st = (data.state || 'cart').toLowerCase();
-
-  // Phát hiện chuyển sang done → thank you
-  if (st === 'done' && lastState !== 'done') {
-    lastState = 'done';
-    showThankYou();
-    return;
-  }
-  lastState = st;
-
-  // Tên khách
+  // --- Tên khách hàng: chỉ hiện nếu có tên thật (không phải Khách mới/lẻ) ---
   var custBar    = document.getElementById('customer-bar');
   var custName   = document.getElementById('customer-name-text');
   var custPoints = document.getElementById('customer-points-text');
@@ -807,33 +666,23 @@ function renderSession(sessionId, data) {
     custBar.classList.remove('visible');
   }
 
-  // Danh sách món thường
-  var list  = document.getElementById('orders-list');
-  var empty = document.getElementById('orders-empty');
-
-  list.querySelectorAll('.cart-item-row').forEach(function(el) { el.remove(); });
-  list.querySelectorAll('.split-group').forEach(function(el) { el.remove(); });
-
-  // Chế độ TÍNH RIÊNG: splitMode + splitItems
-  if (data.splitMode && data.splitItems && data.splitItems.length) {
-    empty.style.display = 'none';
-    document.getElementById('orders-count').textContent = data.splitItems.length;
-    renderSplitItems(data.splitItems, data.splitSelected || []);
-    updateBillDisplay(data);
-    return;
-  }
-
-  // Chế độ thường
+  // --- Danh sách món: mỗi index trong cart là 1 loại món ---
+  // Firebase array: { 0: {name,price,qty,size}, 1: {...}, 2: {...} }
   var cartRaw = data.cart;
   var cartItems = [];
   if (Array.isArray(cartRaw)) {
-    cartItems = cartRaw.filter(Boolean);
+    cartItems = cartRaw.filter(Boolean); // lọc null slot
   } else if (cartRaw && typeof cartRaw === 'object') {
+    // Object với key 0,1,2... → sort theo key
     cartItems = Object.keys(cartRaw)
       .sort(function(a, b) { return Number(a) - Number(b); })
       .map(function(k) { return cartRaw[k]; })
       .filter(Boolean);
   }
+
+  // Xóa nội dung cũ (trừ empty state)
+  var existing = list.querySelectorAll('.cart-item-row');
+  existing.forEach(function(el) { el.remove(); });
 
   if (cartItems.length === 0) {
     empty.style.display = '';
@@ -841,32 +690,36 @@ function renderSession(sessionId, data) {
   } else {
     empty.style.display = 'none';
     document.getElementById('orders-count').textContent = cartItems.length;
+
     cartItems.forEach(function(it) {
+      var name  = it.name  || '?';
       var qty   = Number(it.qty || it.quantity || 1);
       var size  = it.size  || '';
       var price = Number(it.price || 0);
       var lineTotal = price * qty;
+
       var row = document.createElement('div');
       row.className = 'cart-item-row';
       row.innerHTML =
-        '<div class="cart-qty-badge">' + qty + '</div>'
-        + '<div class="cart-item-info">'
-        +   '<div class="cart-item-name">' + (it.name || '?') + '</div>'
-        +   (size ? '<div class="cart-item-meta">Size ' + size + '</div>' : '')
-        + '</div>'
-        + '<div class="cart-item-price">' + (lineTotal > 0 ? fmtP(lineTotal) : '') + '</div>';
+        '<div class="cart-qty-badge">' + qty + '</div>' +
+        '<div class="cart-item-info">' +
+          '<div class="cart-item-name">' + name + '</div>' +
+          (size ? '<div class="cart-item-meta">Size ' + size + '</div>' : '') +
+        '</div>' +
+        '<div class="cart-item-price">' + (lineTotal > 0 ? fmtP(lineTotal) : '') + '</div>';
       list.appendChild(row);
     });
   }
 
+  // Bill
   updateBillDisplay(data);
 }
 
 function removeSession(sessionId) {
   delete sessionCards[sessionId];
+  // Reset UI
   var list = document.getElementById('orders-list');
   list.querySelectorAll('.cart-item-row').forEach(function(el) { el.remove(); });
-  list.querySelectorAll('.split-group').forEach(function(el) { el.remove(); });
   document.getElementById('orders-empty').style.display = '';
   document.getElementById('customer-bar').classList.remove('visible');
   document.getElementById('orders-count').textContent = '0';
@@ -875,6 +728,7 @@ function removeSession(sessionId) {
 
 /* ── FIREBASE LISTENERS ── */
 function startListeners() {
+  // Lắng nghe trực tiếp node session_display_xolifa
   db.ref('session_display_xolifa').on('value', function(snap) {
     var data = snap.val();
     if (data && typeof data === 'object') {
@@ -884,6 +738,7 @@ function startListeners() {
     }
   });
 
+  // Slides & menu từ Firebase
   db.ref('kiosk_config').on('value', function(snap) {
     var kc = snap.val();
     if (!kc) {
