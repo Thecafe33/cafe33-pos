@@ -1885,7 +1885,7 @@ function openSplitPay() {
   renderSpItems();
   updSpTotals();
   showScreen('sp');
-  syncDisplay('split', { splitMode: true, splitGroups: spGroups }); // push lên kiosk ngay khi mở tính riêng
+  syncDisplay('split', { splitMode: true, splitItems: spItems, splitSelected: [...spSelected] }); // push lên kiosk ngay khi mở tính riêng
 }
 
 function renderSpItems() {
@@ -1907,10 +1907,11 @@ function renderSpItems() {
 }
 
 function toggleSpItem(i) {
-  if (spItems[i].paid) return; // đã tính rồi không toggle được
+  if (spItems[i].paid) return;
   if (spSelected.has(i)) spSelected.delete(i); else spSelected.add(i);
   renderSpItems();
   updSpBottomBar();
+  syncDisplay('split', { splitMode: true, splitItems: spItems, splitSelected: [...spSelected] });
 }
 
 function updSpTotals() {
@@ -2013,7 +2014,7 @@ function markSpSelectedPaid(method, cashGiven, cashChange) {
   renderSpItems();
   updSpTotals();
   updSpBottomBar();
-  syncDisplay('split', { splitMode: true, splitGroups: spGroups }); // cập nhật kiosk: nhóm vừa trả xong
+  syncDisplay('split', { splitMode: true, splitItems: spItems, splitSelected: [] }); // cập nhật kiosk: nhóm vừa trả xong
   toast('✓ Đã tính ' + subTotal.toLocaleString('vi-VN') + 'đ — ' + method);
 }
 
