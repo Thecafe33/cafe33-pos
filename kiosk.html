@@ -394,6 +394,107 @@
     letter-spacing: 1px; text-transform: uppercase;
     opacity: 0.5;
   }
+
+  /* ── SPLIT PAY GROUPS ── */
+  .split-group {
+    margin: 8px 10px 0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1.5px solid var(--border);
+    transition: opacity 0.4s ease;
+  }
+  .split-group.paid {
+    opacity: 0.38;
+  }
+  .split-group-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 10px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .5px;
+  }
+  .split-group.method-cash .split-group-header  { background: #fdf3e0; color: var(--amber); }
+  .split-group.method-bank .split-group-header  { background: #edf3fd; color: #2c5fb3; }
+  .split-group.paid .split-group-header          { background: var(--surface2); color: var(--text3); }
+
+  .split-group-badge {
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 10px;
+  }
+  .split-group.method-cash:not(.paid) .split-group-badge { background: var(--amber); color: #fff; }
+  .split-group.method-bank:not(.paid) .split-group-badge { background: #2c5fb3; color: #fff; }
+  .split-group.paid .split-group-badge                   { background: var(--green); color: #fff; }
+
+  .split-group-items { padding: 4px 0; }
+
+  .split-item-row {
+    display: flex; align-items: center;
+    padding: 6px 10px 6px 8px; gap: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .split-item-row:last-child { border-bottom: none; }
+
+  .split-group-footer {
+    padding: 7px 10px;
+    border-top: 1px dashed var(--border2);
+    background: #fafafa;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .split-footer-total {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .split-footer-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .8px; }
+  .split-footer-amount {
+    font-family: 'Google Sans Display', 'Google Sans', sans-serif;
+    font-size: 16px; font-weight: 700; color: var(--accent);
+  }
+  .split-cash-row {
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .split-cash-label { font-size: 9px; color: var(--text3); }
+  .split-cash-val   { font-size: 11px; font-weight: 700; color: var(--green); }
+
+  /* ── THANK YOU OVERLAY ── */
+  #thankyou-overlay {
+    position: fixed; inset: 0;
+    background: rgba(255,255,255,0.97);
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 0;
+    animation: tyFadeIn 0.6s ease;
+  }
+  #thankyou-overlay.show { display: flex; }
+  @keyframes tyFadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .ty-icon {
+    width: 80px; height: 80px; border-radius: 50%;
+    background: var(--green-bg);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px;
+  }
+  .ty-title {
+    font-family: 'Google Sans Display', 'Google Sans', sans-serif;
+    font-size: 36px; font-weight: 700;
+    color: var(--text); text-align: center;
+    letter-spacing: -1px; line-height: 1.15;
+    margin-bottom: 12px;
+  }
+  .ty-sub {
+    font-size: 15px; color: var(--text2); text-align: center;
+    line-height: 1.6; max-width: 480px;
+  }
+  .ty-divider {
+    width: 40px; height: 3px; border-radius: 2px;
+    background: var(--accent); margin: 20px auto;
+  }
+  .ty-wait {
+    font-size: 13px; font-weight: 600;
+    color: var(--amber); text-align: center;
+    letter-spacing: .5px;
+  }
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
@@ -483,7 +584,20 @@
 
   </div>
 
+</div><!-- end #app -->
+
+<!-- THANK YOU OVERLAY -->
+<div id="thankyou-overlay">
+  <div class="ty-icon">
+    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 6L9 17l-5-5"/>
+    </svg>
+  </div>
+  <div class="ty-title">Cảm ơn quý khách!<br>☕</div>
+  <div class="ty-divider"></div>
+  <div class="ty-sub">Đơn hàng của bạn đã được xác nhận.<br>Vui lòng chờ <strong>5 – 10 phút</strong> để chúng tôi chuẩn bị.</div>
 </div>
+
 <script>
 /* ── FIREBASE CONFIG ── */
 var firebaseConfig = {
@@ -581,8 +695,21 @@ function fmtP(p) {
   return p != null ? new Intl.NumberFormat('vi-VN').format(p) + 'đ' : '';
 }
 
+/* ── THANK YOU OVERLAY ── */
+var tyTimer = null;
+function showThankYou() {
+  var ov = document.getElementById('thankyou-overlay');
+  ov.classList.add('show');
+  if (tyTimer) clearTimeout(tyTimer);
+  tyTimer = setTimeout(function() {
+    ov.classList.remove('show');
+    tyTimer = null;
+  }, 5000);
+}
+
 /* ── SESSION DISPLAY ── */
 var sessionCards = {};
+var lastState = null;
 
 var STATE_LABELS = {
   cart:         'Giỏ hàng',
@@ -591,15 +718,6 @@ var STATE_LABELS = {
   ready:        'Sẵn sàng',
   cancelled:    'Đã hủy',
   done:         'Hoàn thành'
-};
-
-var STATE_PILL_CLASS = {
-  cart:         'state-cart',
-  cash_payment: 'state-cash',
-  pending:      'state-cart',
-  ready:        'state-done',
-  done:         'state-done',
-  cancelled:    'state-cancelled'
 };
 
 function updateBillDisplay(data) {
@@ -623,12 +741,13 @@ function updateBillDisplay(data) {
 
   document.getElementById('bill-amount').textContent = fmtP(total);
 
-  // Paid & change — chỉ hiện khi state = cash_payment và có paid
   var subRows   = document.getElementById('bill-sub-rows');
   var paidRow   = document.getElementById('bill-paid-row');
   var changeRow = document.getElementById('bill-change-row');
 
-  if (st === 'cash_payment' && paid > 0) {
+  // Với TÍNH RIÊNG có splitGroups thì ẩn bill-sub-rows tổng (đã hiện từng nhóm)
+  var isSplit = data.splitMode && data.splitGroups && data.splitGroups.length;
+  if (!isSplit && st === 'cash_payment' && paid > 0) {
     subRows.style.display = '';
     paidRow.style.display = '';
     document.getElementById('bill-paid-val').textContent = fmtP(paid);
@@ -645,14 +764,85 @@ function updateBillDisplay(data) {
   }
 }
 
-function renderSession(sessionId, data) {
-  var list  = document.getElementById('orders-list');
-  var empty = document.getElementById('orders-empty');
+function renderSplitGroups(splitGroups) {
+  // Xoá nhóm cũ
+  var list = document.getElementById('orders-list');
+  list.querySelectorAll('.split-group').forEach(function(el) { el.remove(); });
 
-  // Lưu data
+  if (!splitGroups || !splitGroups.length) return;
+
+  splitGroups.forEach(function(grp, gi) {
+    var isCash   = grp.method === 'TIỀN MẶT';
+    var isPaid   = !!grp.paid;
+    var methodCls = isCash ? 'method-cash' : 'method-bank';
+    var icon     = isCash ? '💵' : '🏦';
+    var badge    = isPaid ? '✓ Đã trả' : (isCash ? 'Tiền mặt' : 'CK');
+
+    var div = document.createElement('div');
+    div.className = 'split-group ' + methodCls + (isPaid ? ' paid' : '');
+
+    // Header
+    var header = '<div class="split-group-header">'
+      + '<span>' + icon + ' ' + grp.method + '</span>'
+      + '<span class="split-group-badge">' + badge + '</span>'
+      + '</div>';
+
+    // Items
+    var itemsHtml = '<div class="split-group-items">';
+    if (grp.items && grp.items.length) {
+      grp.items.forEach(function(it) {
+        itemsHtml +=
+          '<div class="split-item-row">'
+          + '<div class="cart-qty-badge">1</div>'
+          + '<div class="cart-item-info">'
+          +   '<div class="cart-item-name">' + (it.name || '?') + '</div>'
+          +   (it.size ? '<div class="cart-item-meta">Size ' + it.size + '</div>' : '')
+          + '</div>'
+          + '<div class="cart-item-price">' + fmtP(it.price) + '</div>'
+          + '</div>';
+      });
+    }
+    itemsHtml += '</div>';
+
+    // Footer: tổng + tiền thừa nếu cash
+    var footerHtml = '<div class="split-group-footer">';
+    footerHtml += '<div class="split-footer-total">'
+      + '<span class="split-footer-label">Tổng nhóm</span>'
+      + '<span class="split-footer-amount">' + fmtP(grp.total) + '</span>'
+      + '</div>';
+    if (isCash && grp.cashGiven != null) {
+      footerHtml += '<div class="split-cash-row">'
+        + '<span class="split-cash-label">Khách đưa</span>'
+        + '<span style="font-size:10px;font-weight:600;color:var(--text2);">' + fmtP(grp.cashGiven) + '</span>'
+        + '</div>';
+      if (grp.cashChange != null && grp.cashChange >= 0) {
+        footerHtml += '<div class="split-cash-row">'
+          + '<span class="split-cash-label">Tiền thối</span>'
+          + '<span class="split-cash-val">' + fmtP(grp.cashChange) + '</span>'
+          + '</div>';
+      }
+    }
+    footerHtml += '</div>';
+
+    div.innerHTML = header + itemsHtml + footerHtml;
+    list.appendChild(div);
+  });
+}
+
+function renderSession(sessionId, data) {
   sessionCards[sessionId] = data;
 
-  // --- Tên khách hàng: chỉ hiện nếu có tên thật (không phải Khách mới/lẻ) ---
+  var st = (data.state || 'cart').toLowerCase();
+
+  // Phát hiện chuyển sang done → thank you
+  if (st === 'done' && lastState !== 'done') {
+    lastState = 'done';
+    showThankYou();
+    return;
+  }
+  lastState = st;
+
+  // Tên khách
   var custBar    = document.getElementById('customer-bar');
   var custName   = document.getElementById('customer-name-text');
   var custPoints = document.getElementById('customer-points-text');
@@ -666,23 +856,35 @@ function renderSession(sessionId, data) {
     custBar.classList.remove('visible');
   }
 
-  // --- Danh sách món: mỗi index trong cart là 1 loại món ---
-  // Firebase array: { 0: {name,price,qty,size}, 1: {...}, 2: {...} }
+  // Danh sách món thường
+  var list  = document.getElementById('orders-list');
+  var empty = document.getElementById('orders-empty');
+
+  list.querySelectorAll('.cart-item-row').forEach(function(el) { el.remove(); });
+  list.querySelectorAll('.split-group').forEach(function(el) { el.remove(); });
+
+  // Chế độ TÍNH RIÊNG: splitMode + splitGroups
+  if (data.splitMode && data.splitGroups && data.splitGroups.length) {
+    empty.style.display = 'none';
+    var totalItems = 0;
+    data.splitGroups.forEach(function(g) { if (g.items) totalItems += g.items.length; });
+    document.getElementById('orders-count').textContent = totalItems;
+    renderSplitGroups(data.splitGroups);
+    updateBillDisplay(data);
+    return;
+  }
+
+  // Chế độ thường
   var cartRaw = data.cart;
   var cartItems = [];
   if (Array.isArray(cartRaw)) {
-    cartItems = cartRaw.filter(Boolean); // lọc null slot
+    cartItems = cartRaw.filter(Boolean);
   } else if (cartRaw && typeof cartRaw === 'object') {
-    // Object với key 0,1,2... → sort theo key
     cartItems = Object.keys(cartRaw)
       .sort(function(a, b) { return Number(a) - Number(b); })
       .map(function(k) { return cartRaw[k]; })
       .filter(Boolean);
   }
-
-  // Xóa nội dung cũ (trừ empty state)
-  var existing = list.querySelectorAll('.cart-item-row');
-  existing.forEach(function(el) { el.remove(); });
 
   if (cartItems.length === 0) {
     empty.style.display = '';
@@ -690,36 +892,32 @@ function renderSession(sessionId, data) {
   } else {
     empty.style.display = 'none';
     document.getElementById('orders-count').textContent = cartItems.length;
-
     cartItems.forEach(function(it) {
-      var name  = it.name  || '?';
       var qty   = Number(it.qty || it.quantity || 1);
       var size  = it.size  || '';
       var price = Number(it.price || 0);
       var lineTotal = price * qty;
-
       var row = document.createElement('div');
       row.className = 'cart-item-row';
       row.innerHTML =
-        '<div class="cart-qty-badge">' + qty + '</div>' +
-        '<div class="cart-item-info">' +
-          '<div class="cart-item-name">' + name + '</div>' +
-          (size ? '<div class="cart-item-meta">Size ' + size + '</div>' : '') +
-        '</div>' +
-        '<div class="cart-item-price">' + (lineTotal > 0 ? fmtP(lineTotal) : '') + '</div>';
+        '<div class="cart-qty-badge">' + qty + '</div>'
+        + '<div class="cart-item-info">'
+        +   '<div class="cart-item-name">' + (it.name || '?') + '</div>'
+        +   (size ? '<div class="cart-item-meta">Size ' + size + '</div>' : '')
+        + '</div>'
+        + '<div class="cart-item-price">' + (lineTotal > 0 ? fmtP(lineTotal) : '') + '</div>';
       list.appendChild(row);
     });
   }
 
-  // Bill
   updateBillDisplay(data);
 }
 
 function removeSession(sessionId) {
   delete sessionCards[sessionId];
-  // Reset UI
   var list = document.getElementById('orders-list');
   list.querySelectorAll('.cart-item-row').forEach(function(el) { el.remove(); });
+  list.querySelectorAll('.split-group').forEach(function(el) { el.remove(); });
   document.getElementById('orders-empty').style.display = '';
   document.getElementById('customer-bar').classList.remove('visible');
   document.getElementById('orders-count').textContent = '0';
@@ -728,7 +926,6 @@ function removeSession(sessionId) {
 
 /* ── FIREBASE LISTENERS ── */
 function startListeners() {
-  // Lắng nghe trực tiếp node session_display_xolifa
   db.ref('session_display_xolifa').on('value', function(snap) {
     var data = snap.val();
     if (data && typeof data === 'object') {
@@ -738,7 +935,6 @@ function startListeners() {
     }
   });
 
-  // Slides & menu từ Firebase
   db.ref('kiosk_config').on('value', function(snap) {
     var kc = snap.val();
     if (!kc) {
