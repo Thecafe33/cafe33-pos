@@ -1744,13 +1744,31 @@ function _ordersInRange(from, to) {
 
 function updRv(filtered) {
   const list = filtered || (_rvFrom ? _ordersInRange(_rvFrom, _rvTo) : orders.filter(o => o.date === todayKey()));
-  const cash  = list.filter(o => o.method === 'TIỀN MẶT').reduce((a,o) => a+o.total, 0);
-  const bank  = list.filter(o => o.method === 'CHUYỂN KHOẢN').reduce((a,o) => a+o.total, 0);
-  const total = list.reduce((a,o) => a+o.total, 0);
-  const togo    = list.filter(o => o.isToGo === true).reduce((a,o) => a+o.total, 0);
+
+  let cash = 0, bank = 0;
+  list.forEach(o => {
+    if (o.method === 'TIỀN MẶT') {
+      cash += o.total;
+    } else if (o.method === 'CHUYỂN KHOẢN') {
+      bank += o.total;
+    } else if (o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length) {
+      // Tính từng nhóm trong split
+      o.splitGroups.forEach(g => {
+        if (g.method === 'TIỀN MẶT') cash += g.total || 0;
+        else if (g.method === 'CHUYỂN KHOẢN') bank += g.total || 0;
+      });
+    } else {
+      // Fallback: gộp vào tiền mặt nếu không rõ
+      cash += o.total;
+    }
+  });
+
+  const total   = list.reduce((a,o) => a + o.total, 0);
+  const togo    = list.filter(o => o.isToGo === true).reduce((a,o) => a + o.total, 0);
   const instore = total - togo;
-  document.getElementById('rv-cash').textContent   = cash.toLocaleString('vi-VN');
-  document.getElementById('rv-bank').textContent   = bank.toLocaleString('vi-VN');
+
+  document.getElementById('rv-cash').textContent    = cash.toLocaleString('vi-VN');
+  document.getElementById('rv-bank').textContent    = bank.toLocaleString('vi-VN');
   document.getElementById('rv-instore').textContent = instore.toLocaleString('vi-VN');
   document.getElementById('rv-togo').textContent    = togo.toLocaleString('vi-VN');
   document.getElementById('rvtb').textContent       = fmt(total);
