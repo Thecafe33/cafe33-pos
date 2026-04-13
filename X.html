@@ -222,6 +222,42 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 ::-webkit-scrollbar{width:0;}
 /* Archive status badge */
 .arc-badge{font-size:11px;color:var(--gm);background:var(--gl);border-radius:8px;padding:2px 8px;font-weight:600;}
+/* To Go Toggle */
+.togo-toggle-wrap{display:flex;align-items:center;gap:8px;background:#f5f5f5;border-radius:20px;padding:5px 10px 5px 8px;cursor:pointer;user-select:none;transition:background .2s;}
+.togo-toggle-wrap.active{background:#fff3cd;}
+.togo-switch{width:36px;height:20px;background:#ccc;border-radius:10px;position:relative;transition:background .2s;flex-shrink:0;}
+.togo-switch::after{content:'';width:16px;height:16px;background:#fff;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.togo-toggle-wrap.active .togo-switch{background:#f59e0b;}
+.togo-toggle-wrap.active .togo-switch::after{left:18px;}
+.togo-label{font-size:11px;font-weight:700;color:#888;white-space:nowrap;transition:color .2s;}
+.togo-toggle-wrap.active .togo-label{color:#b45309;}
+/* To Go badge on history */
+.hit.togo-order{background:#fffbeb;border:1.5px solid #fde68a;}
+.hit.togo-order .hii{background:#fef3c7;}
+.hit.togo-order .hii svg{stroke:#d97706;}
+/* To Go admin screen */
+#tg{background:var(--bg);}
+.tg-section{background:#fff;border-radius:20px;margin:0 16px 16px;padding:20px;}
+.tg-section-title{font-size:13px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.tg-input-row{display:flex;gap:10px;margin-bottom:12px;}
+.tg-input-group{flex:1;background:#f5f5f5;border-radius:14px;padding:12px 14px;}
+.tg-input-label{font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.tg-input-group input{width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:18px;font-weight:700;color:var(--td);background:transparent;}
+.tg-save-btn{width:100%;padding:14px;background:var(--gd);color:#fff;border:none;border-radius:14px;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;}
+.tg-toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.tg-toggle-label{font-size:14px;font-weight:600;color:var(--td);}
+/* To Go gift popup */
+.togo-gift-popup{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
+.togo-gift-popup.show{display:flex;}
+.togo-gift-box{background:#fff;border-radius:28px 28px 0 0;padding:24px 20px 36px;width:100%;max-width:430px;max-height:70vh;display:flex;flex-direction:column;}
+.togo-gift-title{font-size:18px;font-weight:700;color:var(--td);margin-bottom:4px;}
+.togo-gift-sub{font-size:12px;font-weight:600;color:var(--gt);margin-bottom:16px;}
+.togo-gift-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.togo-gift-item{background:#f5f5f5;border-radius:16px;padding:16px;cursor:pointer;border:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:12px;}
+.togo-gift-item.selected{border-color:var(--gm);background:var(--gl);}
+.togo-gift-name{font-size:15px;font-weight:700;color:var(--td);flex:1;}
+.togo-gift-size{background:var(--gl);color:var(--gd);border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;}
+.togo-gift-confirm{width:100%;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;}
 /* Cash payment screen */
 #cp{background:var(--bg);}
 .cp-header{background:var(--bg);padding:16px 16px 0;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10;}
@@ -256,7 +292,10 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   <div class="mh">
     <button class="hbg" onclick="openSdb()"><span></span><span></span><span style="width:14px"></span></button>
     <span class="mt" style="font-family:'Google Sans Display',sans-serif;font-size:26px;font-weight:900;letter-spacing:-0.5px;">XOLIFA</span>
-    <div style="width:44px"></div>
+    <div class="togo-toggle-wrap" id="togoToggle" onclick="toggleTogo()">
+      <div class="togo-switch"></div>
+      <span class="togo-label" id="togoLabel">Tại quán</span>
+    </div>
   </div>
   <div class="filter-bar" id="filterBar">
     <button class="ftag active" onclick="filterType('all',this)">TẤT CẢ</button>
@@ -269,7 +308,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <div class="ftl">TỔNG TẠM TÍNH <span style="font-size:10px;color:var(--gm)">▲ GIỎ HÀNG</span></div>
       <div class="ftv" id="ftv">0đ</div>
     </div>
-    <button class="bco" onclick="showScreen('sc')">THANH TOÁN
+    <button class="bco" onclick="onCheckoutClick()">THANH TOÁN
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </button>
   </div>
@@ -309,6 +348,11 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
     <div class="sdi" onclick="closeSdb();showScreen('mn')">
       <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg></div>
       <div style="flex:1"><div class="sdit">Quản lý Menu</div><div class="sdid">Thêm, sửa món</div></div>
+      <span class="sdar">›</span>
+    </div>
+    <div class="sdi" onclick="closeSdb();showScreen('tg')">
+      <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg></div>
+      <div style="flex:1"><div class="sdit">To Go</div><div class="sdid">Cài đặt khuyến mãi mang về</div></div>
       <span class="sdar">›</span>
     </div>
   </div>
@@ -588,6 +632,88 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   </div>
 </div>
 
+<!-- TO GO ADMIN SCREEN -->
+<div id="tg" class="screen" style="background:var(--bg);">
+  <div style="background:var(--bg);padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;">
+    <button class="btn-close-screen" onclick="showScreen('sm')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <span style="font-size:20px;font-weight:700;color:var(--td);">CÀI ĐẶT TO GO</span>
+    <div style="width:44px;"></div>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:16px 0 40px;">
+
+    <!-- Chương trình Tặng quà -->
+    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">🎁 Chương trình Tặng quà (Mua X Tặng Y)</div></div>
+    <div class="tg-section">
+      <div class="tg-toggle-row">
+        <span class="tg-toggle-label">Kích hoạt chương trình</span>
+        <div class="togo-toggle-wrap" id="tgGiftToggle" onclick="toggleTgGift()" style="background:#f0f0f0;">
+          <div class="togo-switch" id="tgGiftSwitch"></div>
+          <span style="font-size:11px;font-weight:700;color:#888;" id="tgGiftStatus">Tắt</span>
+        </div>
+      </div>
+      <div class="tg-input-row">
+        <div class="tg-input-group">
+          <div class="tg-input-label">Số ly mua</div>
+          <input id="tg-buy-qty" type="number" inputmode="numeric" placeholder="VD: 5" min="1">
+        </div>
+        <div class="tg-input-group">
+          <div class="tg-input-label">Số ly tặng</div>
+          <input id="tg-free-qty" type="number" inputmode="numeric" placeholder="VD: 1" min="1">
+        </div>
+      </div>
+      <div style="background:#f5f5f5;border-radius:14px;padding:14px;margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Danh mục áp dụng (ly tặng)</div>
+        <div id="tg-category-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+      <div style="background:#fffbe8;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;color:#b45309;">
+        📌 Size ly tặng: Cố định <strong>Size M</strong>
+      </div>
+      <button class="tg-save-btn" onclick="saveTgGift()">💾 Lưu cài đặt tặng quà</button>
+    </div>
+
+    <!-- Chương trình Giảm giá Bill -->
+    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">🏷 Chương trình Giảm giá theo Bill</div></div>
+    <div class="tg-section">
+      <div class="tg-toggle-row">
+        <span class="tg-toggle-label">Kích hoạt chương trình</span>
+        <div class="togo-toggle-wrap" id="tgDiscToggle" onclick="toggleTgDisc()" style="background:#f0f0f0;">
+          <div class="togo-switch" id="tgDiscSwitch"></div>
+          <span style="font-size:11px;font-weight:700;color:#888;" id="tgDiscStatus">Tắt</span>
+        </div>
+      </div>
+      <div class="tg-input-row">
+        <div class="tg-input-group">
+          <div class="tg-input-label">Số ly điều kiện</div>
+          <input id="tg-disc-qty" type="number" inputmode="numeric" placeholder="VD: 3" min="1">
+        </div>
+        <div class="tg-input-group">
+          <div class="tg-input-label">% Giảm</div>
+          <input id="tg-disc-pct" type="number" inputmode="numeric" placeholder="VD: 10" min="1" max="100">
+        </div>
+      </div>
+      <div class="tg-input-row">
+        <div class="tg-input-group" style="flex:1;">
+          <div class="tg-input-label">Giảm tối đa (đ)</div>
+          <input id="tg-disc-max" type="text" inputmode="numeric" placeholder="VD: 50.000" oninput="fmtPriceInput(this)">
+        </div>
+      </div>
+      <button class="tg-save-btn" onclick="saveTgDisc()">💾 Lưu cài đặt giảm giá</button>
+    </div>
+  </div>
+</div>
+
+<!-- TO GO GIFT POPUP -->
+<div class="togo-gift-popup" id="togoGiftPopup">
+  <div class="togo-gift-box">
+    <div class="togo-gift-title">🎁 Chọn ly tặng miễn phí!</div>
+    <div class="togo-gift-sub" id="togoGiftSub">Bạn được tặng 1 ly Size M</div>
+    <div class="togo-gift-list" id="togoGiftList"></div>
+    <button class="togo-gift-confirm" onclick="confirmTogoGift()">Xác nhận chọn quà</button>
+  </div>
+</div>
+
 <!-- MENU MANAGEMENT SCREEN -->
 <div id="mn" class="screen" style="background:var(--bg);">
   <div style="background:var(--bg);padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;">
@@ -693,6 +819,14 @@ let MENU = [], orders = [], cart = {}, curPay = null, curOid = null, curFilter =
 let curCustomer = null;
 let selectedVoucher = null;
 let _rvFrom = null, _rvTo = null;
+let isToGo = false; // To Go toggle state
+
+// To Go settings (loaded from Firebase/localStorage)
+let togoSettings = {
+  gift: { enabled: false, buyQty: 5, freeQty: 1, categories: [] },
+  discount: { enabled: false, minQty: 3, pct: 10, maxAmt: 50000 }
+};
+let togoGiftSelected = null; // selected gift item in popup
 
 const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
@@ -702,6 +836,225 @@ const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct',
 initMenu();                  // đọc menu ngay lập tức (không cần auth)
 runArchiveIfNeeded();        // archive chạy nền
 auth.signInAnonymously().catch(() => {});  // auth nền cho phép ghi đơn
+loadTogoSettings();          // tải cài đặt To Go
+
+// ============================================================
+// TO GO — Toggle, Settings, Logic
+// ============================================================
+function toggleTogo() {
+  isToGo = !isToGo;
+  const wrap = document.getElementById('togoToggle');
+  const label = document.getElementById('togoLabel');
+  wrap.classList.toggle('active', isToGo);
+  label.textContent = isToGo ? 'To Go 🛍' : 'Tại quán';
+}
+
+function resetTogoToggle() {
+  isToGo = false;
+  const wrap = document.getElementById('togoToggle');
+  const label = document.getElementById('togoLabel');
+  wrap.classList.remove('active');
+  label.textContent = 'Tại quán';
+}
+
+function loadTogoSettings() {
+  try {
+    const raw = localStorage.getItem('togoSettings_xolifa');
+    if (raw) { togoSettings = JSON.parse(raw); }
+  } catch(e) {}
+}
+
+function saveTogoSettingsLocal() {
+  localStorage.setItem('togoSettings_xolifa', JSON.stringify(togoSettings));
+}
+
+function toggleTgGift() {
+  togoSettings.gift.enabled = !togoSettings.gift.enabled;
+  renderTgGiftToggle();
+}
+
+function toggleTgDisc() {
+  togoSettings.discount.enabled = !togoSettings.discount.enabled;
+  renderTgDiscToggle();
+}
+
+function renderTgGiftToggle() {
+  const wrap = document.getElementById('tgGiftToggle');
+  const status = document.getElementById('tgGiftStatus');
+  if (wrap) { wrap.classList.toggle('active', togoSettings.gift.enabled); }
+  if (status) status.textContent = togoSettings.gift.enabled ? 'Bật' : 'Tắt';
+}
+
+function renderTgDiscToggle() {
+  const wrap = document.getElementById('tgDiscToggle');
+  const status = document.getElementById('tgDiscStatus');
+  if (wrap) { wrap.classList.toggle('active', togoSettings.discount.enabled); }
+  if (status) status.textContent = togoSettings.discount.enabled ? 'Bật' : 'Tắt';
+}
+
+function renderTgCategoryList() {
+  const el = document.getElementById('tg-category-list');
+  if (!el) return;
+  const types = [...new Set(MENU.map(m => m.type).filter(Boolean))];
+  el.innerHTML = types.map(t => {
+    const checked = togoSettings.gift.categories.includes(t);
+    return `<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:6px 0;">
+      <input type="checkbox" value="${t}" ${checked ? 'checked' : ''} onchange="onTgCatChange(this)"
+        style="width:18px;height:18px;cursor:pointer;accent-color:var(--gm);">
+      <span style="font-size:14px;font-weight:600;color:var(--td);">${t}</span>
+    </label>`;
+  }).join('');
+  if (!types.length) el.innerHTML = '<div style="font-size:12px;color:#bbb;">Chưa có danh mục nào. Thêm món trước.</div>';
+}
+
+function onTgCatChange(cb) {
+  if (cb.checked) { if (!togoSettings.gift.categories.includes(cb.value)) togoSettings.gift.categories.push(cb.value); }
+  else { togoSettings.gift.categories = togoSettings.gift.categories.filter(c => c !== cb.value); }
+}
+
+function saveTgGift() {
+  const buyQty = parseInt(document.getElementById('tg-buy-qty').value) || 0;
+  const freeQty = parseInt(document.getElementById('tg-free-qty').value) || 0;
+  if (!buyQty || !freeQty) { toast('⚠ Nhập số ly mua và số ly tặng'); return; }
+  togoSettings.gift.buyQty = buyQty;
+  togoSettings.gift.freeQty = freeQty;
+  saveTogoSettingsLocal();
+  toast('✅ Đã lưu cài đặt tặng quà');
+}
+
+function saveTgDisc() {
+  const minQty = parseInt(document.getElementById('tg-disc-qty').value) || 0;
+  const pct = parseInt(document.getElementById('tg-disc-pct').value) || 0;
+  const maxAmt = parseInt(document.getElementById('tg-disc-max').value.replace(/[^0-9]/g,'')) || 0;
+  if (!minQty || !pct) { toast('⚠ Nhập số ly điều kiện và % giảm'); return; }
+  togoSettings.discount.minQty = minQty;
+  togoSettings.discount.pct = pct;
+  togoSettings.discount.maxAmt = maxAmt;
+  saveTogoSettingsLocal();
+  toast('✅ Đã lưu cài đặt giảm giá');
+}
+
+function loadTgAdminUI() {
+  // Fill inputs from stored settings
+  const g = togoSettings.gift, d = togoSettings.discount;
+  const buyEl = document.getElementById('tg-buy-qty');
+  const freeEl = document.getElementById('tg-free-qty');
+  const dQtyEl = document.getElementById('tg-disc-qty');
+  const dPctEl = document.getElementById('tg-disc-pct');
+  const dMaxEl = document.getElementById('tg-disc-max');
+  if (buyEl) buyEl.value = g.buyQty || '';
+  if (freeEl) freeEl.value = g.freeQty || '';
+  if (dQtyEl) dQtyEl.value = d.minQty || '';
+  if (dPctEl) dPctEl.value = d.pct || '';
+  if (dMaxEl) dMaxEl.value = d.maxAmt ? d.maxAmt.toLocaleString('vi-VN') : '';
+  renderTgGiftToggle();
+  renderTgDiscToggle();
+  renderTgCategoryList();
+}
+
+// ============================================================
+// TO GO — Checkout logic (check gift/discount before payment)
+// ============================================================
+function getCartTotalQty() {
+  return Object.values(cart).reduce((a, b) => a + b.qty, 0);
+}
+
+let togoDiscountAmt = 0; // amount to deduct from total
+
+function checkTogoBeforeCheckout(onProceed) {
+  if (!isToGo) { onProceed(); return; }
+
+  const totalQty = getCartTotalQty();
+  const g = togoSettings.gift;
+  const d = togoSettings.discount;
+
+  // Priority: check gift first
+  if (g.enabled && g.buyQty > 0 && totalQty >= g.buyQty) {
+    openTogoGiftPopup(g.freeQty, onProceed);
+    return;
+  }
+
+  // Check discount
+  if (d.enabled && d.minQty > 0 && totalQty >= d.minQty && d.pct > 0) {
+    const total = getCartTotal();
+    let disc = Math.round(total * d.pct / 100);
+    if (d.maxAmt > 0) disc = Math.min(disc, d.maxAmt);
+    togoDiscountAmt = disc;
+    toast(`🏷 To Go: Giảm ${fmt(disc)} (${d.pct}%)`);
+    onProceed();
+    return;
+  }
+
+  togoDiscountAmt = 0;
+  onProceed();
+}
+
+function openTogoGiftPopup(freeQty, onProceed) {
+  togoGiftSelected = null;
+  const g = togoSettings.gift;
+  const cats = g.categories;
+  // Filter menu: items with category in cats AND have Size M
+  let eligible = MENU.filter(m => {
+    const hasSizeM = m.sizes.some(s => s.label === 'M');
+    if (!hasSizeM) return false;
+    if (cats && cats.length > 0) return cats.includes(m.type);
+    return true;
+  });
+
+  const listEl = document.getElementById('togoGiftList');
+  const subEl = document.getElementById('togoGiftSub');
+  subEl.textContent = `Bạn được tặng ${freeQty} ly Size M miễn phí!`;
+
+  if (!eligible.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#bbb;">Không có món phù hợp</div>';
+  } else {
+    listEl.innerHTML = eligible.map(m => `
+      <div class="togo-gift-item" id="tgi_${m.id}" onclick="selectTogoGift('${m.id}')">
+        <div style="width:36px;height:36px;border-radius:10px;background:${m.color||'#1a4a2e'};flex-shrink:0;"></div>
+        <span class="togo-gift-name">${m.name}</span>
+        <span class="togo-gift-size">Size M · 0đ</span>
+      </div>`).join('');
+  }
+
+  document.getElementById('togoGiftPopup').classList.add('show');
+  // Store callback
+  document.getElementById('togoGiftPopup')._onProceed = onProceed;
+  document.getElementById('togoGiftPopup')._freeQty = freeQty;
+}
+
+function selectTogoGift(itemId) {
+  document.querySelectorAll('.togo-gift-item').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('tgi_' + itemId);
+  if (el) el.classList.add('selected');
+  togoGiftSelected = itemId;
+}
+
+function confirmTogoGift() {
+  if (!togoGiftSelected) { toast('⚠ Vui lòng chọn món quà'); return; }
+  const popup = document.getElementById('togoGiftPopup');
+  const freeQty = popup._freeQty || 1;
+  const onProceed = popup._onProceed;
+  popup.classList.remove('show');
+
+  const m = MENU.find(x => x.id === togoGiftSelected);
+  if (m) {
+    const sizeM = m.sizes.find(s => s.label === 'M');
+    if (sizeM) {
+      const k = m.id + '_M_free';
+      // Add free item(s) with price 0
+      if (cart[k]) cart[k].qty += freeQty;
+      else cart[k] = { itemId: m.id, name: m.name + ' (Tặng)', size: 'M', price: 0, qty: freeQty, isFree: true };
+      renderMenu();
+      toast(`🎁 Đã thêm ${freeQty}x ${m.name} M miễn phí!`);
+    }
+  }
+  togoDiscountAmt = 0;
+  if (onProceed) onProceed();
+}
+
+function getCartTotalWithDiscount() {
+  return Math.max(0, getCartTotal() - togoDiscountAmt);
+}
 
 // ============================================================
 // 1. NHÁNH MENU — onValue realtime qua Firebase SDK
@@ -840,6 +1193,7 @@ function showScreen(id) {
   window.scrollTo(0, 0);
   if (id === 'sc') updCoTotal();
   if (id === 'mn') renderMnList();
+  if (id === 'tg') { loadTogoSettings(); loadTgAdminUI(); }
   if (id === 'hi') {
     const now = new Date();
     const from = new Date(now); from.setDate(from.getDate() - 6); from.setHours(0,0,0,0);
@@ -1007,11 +1361,34 @@ function resetDisplay() {
   }).catch(() => {});
 }
 
+function onCheckoutClick() {
+  const items = Object.values(cart);
+  if (!items.length) { toast('Giỏ hàng trống!'); return; }
+  checkTogoBeforeCheckout(() => {
+    closeCartDrawer();
+    showScreen('sc');
+    // Update total display with discount if any
+    const base = getCartTotal();
+    const finalTotal = Math.max(0, base - togoDiscountAmt);
+    const el = document.getElementById('cotn');
+    if (el) {
+      if (togoDiscountAmt > 0) {
+        el.innerHTML = `${fmt(finalTotal)} <span style="font-size:14px;color:#e74c3c;font-weight:700;text-decoration:line-through;">${fmt(base)}</span>`;
+      } else {
+        el.textContent = fmt(finalTotal);
+      }
+    }
+  });
+}
+
 // ============================================================
 // CHECKOUT — tổng & phương thức thanh toán
 // ============================================================
 function updCoTotal() {
-  document.getElementById('cotn').textContent = fmt(getCartTotal());
+  const base = getCartTotal();
+  // Reset discount amount on entering checkout - recalculate on payment
+  togoDiscountAmt = 0;
+  document.getElementById('cotn').textContent = fmt(base);
   document.getElementById('cai').value = '';
   document.getElementById('cr').classList.remove('show');
 }
@@ -1121,7 +1498,6 @@ function clearCustomer() {
 // CASH PAYMENT SCREEN
 // ============================================================
 function proceedPay() {
-  // Chỉ gọi cho chuyển khoản (tiền mặt đã navigate qua selM)
   const items = Object.values(cart);
   if (!items.length) { toast('Giỏ hàng trống!'); return; }
   confirmPay(null, null);
@@ -1135,7 +1511,7 @@ function resetPayMethod() {
 }
 
 function openCashScreen() {
-  const total = getCartTotal();
+  const total = Math.max(0, getCartTotal() - togoDiscountAmt);
   document.getElementById('cp-total-amt').textContent = total.toLocaleString('vi-VN');
 
   // Gợi ý: mỗi mệnh giá d → total + d (thối đúng 1 tờ d)
@@ -1194,7 +1570,7 @@ function getCpInputVal() {
 }
 
 function updCpChange() {
-  const total = getCartTotal();
+  const total = Math.max(0, getCartTotal() - togoDiscountAmt);
   const given = getCpInputVal();
   const changeCard = document.getElementById('cp-change-card');
   const changeAmt = document.getElementById('cp-change-amt');
@@ -1228,7 +1604,7 @@ function updCpChange() {
 }
 
 function confirmCashPay() {
-  const total = getCartTotal();
+  const total = Math.max(0, getCartTotal() - togoDiscountAmt);
   const given = getCpInputVal();
   const change = given - total;
   const cashGiven = given > 0 ? given : total;
@@ -1243,14 +1619,14 @@ function confirmPay(cashGiven, cashChange) {
   const items = Object.values(cart);
   if (!items.length) { toast('Giỏ hàng trống!'); return; }
 
-  const total = getCartTotal();
+  const baseTotal = getCartTotal();
+  const total = Math.max(0, baseTotal - togoDiscountAmt);
   const now = new Date();
   const p = n => String(n).padStart(2, '0');
 
-  const month = MONTH_KEYS[now.getMonth()];   // "apr"
-  const day   = p(now.getDate());             // "11"
+  const month = MONTH_KEYS[now.getMonth()];
+  const day   = p(now.getDate());
 
-  // Tóm tắt items (string) để hiện nhanh + chi tiết (array) để báo cáo
   const itemsArray = items.map(c => ({ ...c }));
   const itemsSummary = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
 
@@ -1265,12 +1641,12 @@ function confirmPay(cashGiven, cashChange) {
     voucherUsed: selectedVoucher ? selectedVoucher.giftName : null,
     cashGiven: cashGiven !== null && cashGiven !== undefined ? cashGiven : total,
     cashChange: cashChange !== null && cashChange !== undefined ? cashChange : 0,
-    createdAt: now.toISOString()
+    createdAt: now.toISOString(),
+    isToGo: isToGo,
+    discountAmt: togoDiscountAmt > 0 ? togoDiscountAmt : null
   };
 
-  // push() vào path: orders_xolifa/{month}/{day}/
   db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
-    // Lưu vào local orders để hiện History
     orders.unshift({
       id: ref.key,
       ...order,
@@ -1279,11 +1655,12 @@ function confirmPay(cashGiven, cashChange) {
 
     // Reset
     cart = {};
+    togoDiscountAmt = 0;
     resetPayMethod();
+    resetTogoToggle();
     document.getElementById('cuph').value = '';
     clearCustomer();
     selectedVoucher = null;
-    // Đẩy state done lên kiosk → hiện thank you, 5s sau reset
     syncDisplay('done');
     setTimeout(() => resetDisplay(), 5000);
     renderMenu();
@@ -1499,12 +1876,16 @@ function renderH(f = '') {
   if (!filtered.length) { list.innerHTML = `<div style="text-align:center;padding:40px;color:#bbb">Không có đơn hàng</div>`; return; }
   const grp = {}; filtered.forEach(o => { if (!grp[o.date]) grp[o.date] = []; grp[o.date].push(o); });
   list.innerHTML = Object.keys(grp).map(d =>
-    `<div class="hdg"><div class="hdl">${d}</div>${grp[d].map(o =>
-      `<div class="hit" onclick="showDet('${o.id}')">
-        <div class="hii"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></div>
-        <div class="hin"><div class="hitime">${o.time}</div><div class="himeta">${o.phone||'Khách vãng lai'}</div></div>
+    `<div class="hdg"><div class="hdl">${d}</div>${grp[d].map(o => {
+      const isToGoOrder = o.isToGo === true;
+      const togoClass = isToGoOrder ? ' togo-order' : '';
+      const togoBadge = isToGoOrder ? '<span style="background:#fbbf24;color:#92400e;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">🛍 TO GO</span>' : '';
+      return `<div class="hit${togoClass}" onclick="showDet('${o.id}')">
+        <div class="hii"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${isToGoOrder ? '#d97706' : '#1e6b3c'}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></div>
+        <div class="hin"><div class="hitime">${o.time}${togoBadge}</div><div class="himeta">${o.phone||'Khách vãng lai'}</div></div>
         <div style="text-align:right;flex-shrink:0;min-width:110px;"><div class="hip">${o.total.toLocaleString('vi-VN')}<sup>đ</sup></div><div class="him">${o.method}</div></div>
-      </div>`).join('')}</div>`).join('');
+      </div>`;
+    }).join('')}</div>`).join('');
 }
 function filterH() { renderH(document.getElementById('hsi').value); }
 
@@ -1524,10 +1905,15 @@ function showDet(id) {
     <!-- Bill card -->
     <div style="background:#fff;border-radius:24px;padding:28px 24px 20px;margin-bottom:12px;">
       <div style="font-family:'Google Sans Display',sans-serif;font-size:32px;font-weight:900;color:var(--gd);letter-spacing:-1px;margin-bottom:2px;">The cafe 33</div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:${o.isToGo ? '8px' : '24px'};">
         <span style="width:8px;height:8px;border-radius:50%;background:var(--gm);display:inline-block;"></span>
         <span style="font-size:12px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.8px;">Hóa đơn điện tử</span>
       </div>
+      ${o.isToGo ? `<div style="background:#fef3c7;border-radius:12px;padding:8px 14px;margin-bottom:20px;display:inline-flex;align-items:center;gap:8px;">
+        <span style="font-size:18px;">🛍</span>
+        <span style="font-size:13px;font-weight:700;color:#92400e;">ĐƠN MANG VỀ (TO GO)</span>
+        ${o.discountAmt ? `<span style="font-size:12px;font-weight:700;color:#d97706;background:#fff;border-radius:8px;padding:2px 8px;">-${o.discountAmt.toLocaleString('vi-VN')}đ</span>` : ''}
+      </div>` : ''}
       ${o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length
         ? o.splitGroups.map((grp, gi) => {
             const isCashGrp = grp.method === 'TIỀN MẶT';
@@ -2040,12 +2426,14 @@ function finalizeSplitPay() {
     phone: document.getElementById('cuph').value || '',
     voucherUsed: selectedVoucher ? selectedVoucher.giftName : null,
     cashGiven: total, cashChange: 0,
-    createdAt: now.toISOString()
+    createdAt: now.toISOString(),
+    isToGo: isToGo
   };
   db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
     orders.unshift({ id: ref.key, ...order, items: itemsArray });
     cart = {};
     resetPayMethod();
+    resetTogoToggle();
     document.getElementById('cuph').value = '';
     clearCustomer();
     selectedVoucher = null;
@@ -2074,7 +2462,7 @@ function finalizeSplitPay() {
   <div class="cart-body" id="cartBody"></div>
   <div class="cart-footer" style="display:flex;gap:10px;">
     <button onclick="closeCartDrawer()" style="flex:1;padding:16px;background:#f0f0f0;color:var(--td);border:none;border-radius:18px;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Tiếp tục order</button>
-    <button onclick="closeCartDrawer();showScreen('sc')" style="flex:1;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:18px;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Thanh toán</button>
+    <button onclick="closeCartDrawer();onCheckoutClick()" style="flex:1;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:18px;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Thanh toán</button>
   </div>
 </div>
 
