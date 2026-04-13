@@ -644,7 +644,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   <div style="overflow-y:auto;flex:1;padding:16px 0 40px;">
 
     <!-- Chương trình Tặng quà -->
-    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">🎁 Chương trình Tặng quà (Mua X Tặng Y)</div></div>
+    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Chương trình Tặng quà (Mua X Tặng Y)</div></div>
     <div class="tg-section">
       <div class="tg-toggle-row">
         <span class="tg-toggle-label">Kích hoạt chương trình</span>
@@ -674,7 +674,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
     </div>
 
     <!-- Chương trình Giảm giá Bill -->
-    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">🏷 Chương trình Giảm giá theo Bill</div></div>
+    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Chương trình Giảm giá theo Bill</div></div>
     <div class="tg-section">
       <div class="tg-toggle-row">
         <span class="tg-toggle-label">Kích hoạt chương trình</span>
@@ -707,7 +707,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 <!-- TO GO GIFT POPUP -->
 <div class="togo-gift-popup" id="togoGiftPopup">
   <div class="togo-gift-box">
-    <div class="togo-gift-title">🎁 Chọn ly tặng miễn phí!</div>
+    <div class="togo-gift-title">Chọn ly tặng miễn phí!</div>
     <div class="togo-gift-sub" id="togoGiftSub">Bạn được tặng 1 ly Size M</div>
     <div class="togo-gift-list" id="togoGiftList"></div>
     <button class="togo-gift-confirm" onclick="confirmTogoGift()">Xác nhận chọn quà</button>
@@ -846,7 +846,7 @@ function toggleTogo() {
   const wrap = document.getElementById('togoToggle');
   const label = document.getElementById('togoLabel');
   wrap.classList.toggle('active', isToGo);
-  label.textContent = isToGo ? 'To Go 🛍' : 'Tại quán';
+  label.textContent = isToGo ? 'To Go' : 'Tại quán';
 }
 
 function resetTogoToggle() {
@@ -968,8 +968,11 @@ function checkTogoBeforeCheckout(onProceed) {
   const g = togoSettings.gift;
   const d = togoSettings.discount;
 
+  // Kiểm tra xem trong giỏ đã có ly tặng chưa (tránh popup lại lần 2)
+  const alreadyHasFreeItem = Object.values(cart).some(c => c.isFree === true);
+
   // Priority: check gift first
-  if (g.enabled && g.buyQty > 0 && totalQty >= g.buyQty) {
+  if (!alreadyHasFreeItem && g.enabled && g.buyQty > 0 && totalQty >= g.buyQty) {
     openTogoGiftPopup(g.freeQty, onProceed);
     return;
   }
@@ -980,7 +983,7 @@ function checkTogoBeforeCheckout(onProceed) {
     let disc = Math.round(total * d.pct / 100);
     if (d.maxAmt > 0) disc = Math.min(disc, d.maxAmt);
     togoDiscountAmt = disc;
-    toast(`🏷 To Go: Giảm ${fmt(disc)} (${d.pct}%)`);
+    toast(`To Go: Giam ${fmt(disc)} (${d.pct}%)`);
     onProceed();
     return;
   }
@@ -1041,11 +1044,14 @@ function confirmTogoGift() {
     const sizeM = m.sizes.find(s => s.label === 'M');
     if (sizeM) {
       const k = m.id + '_M_free';
-      // Add free item(s) with price 0
+      // Add free item(s) with price 0 vào cart
       if (cart[k]) cart[k].qty += freeQty;
       else cart[k] = { itemId: m.id, name: m.name + ' (Tặng)', size: 'M', price: 0, qty: freeQty, isFree: true };
+      // Cập nhật UI menu + cart drawer
       renderMenu();
-      toast(`🎁 Đã thêm ${freeQty}x ${m.name} M miễn phí!`);
+      // Đẩy lên RT session_display_xolifa để màn hình phụ thấy ly tặng
+      syncDisplay('ordering');
+      toast(`Đã thêm ${freeQty}x ${m.name} M miễn phí!`);
     }
   }
   togoDiscountAmt = 0;
@@ -1879,7 +1885,7 @@ function renderH(f = '') {
     `<div class="hdg"><div class="hdl">${d}</div>${grp[d].map(o => {
       const isToGoOrder = o.isToGo === true;
       const togoClass = isToGoOrder ? ' togo-order' : '';
-      const togoBadge = isToGoOrder ? '<span style="background:#fbbf24;color:#92400e;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">🛍 TO GO</span>' : '';
+      const togoBadge = isToGoOrder ? '<span style="background:#fbbf24;color:#92400e;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">TO GO</span>' : '';
       return `<div class="hit${togoClass}" onclick="showDet('${o.id}')">
         <div class="hii"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${isToGoOrder ? '#d97706' : '#1e6b3c'}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></div>
         <div class="hin"><div class="hitime">${o.time}${togoBadge}</div><div class="himeta">${o.phone||'Khách vãng lai'}</div></div>
@@ -1910,7 +1916,7 @@ function showDet(id) {
         <span style="font-size:12px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.8px;">Hóa đơn điện tử</span>
       </div>
       ${o.isToGo ? `<div style="background:#fef3c7;border-radius:12px;padding:8px 14px;margin-bottom:20px;display:inline-flex;align-items:center;gap:8px;">
-        <span style="font-size:18px;">🛍</span>
+        <span style="font-size:16px;font-weight:700;">TO GO</span>
         <span style="font-size:13px;font-weight:700;color:#92400e;">ĐƠN MANG VỀ (TO GO)</span>
         ${o.discountAmt ? `<span style="font-size:12px;font-weight:700;color:#d97706;background:#fff;border-radius:8px;padding:2px 8px;">-${o.discountAmt.toLocaleString('vi-VN')}đ</span>` : ''}
       </div>` : ''}
