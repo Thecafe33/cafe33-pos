@@ -289,10 +289,10 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 
 <!-- MENU SCREEN -->
 <div id="sm" class="screen active">
-  <div class="mh">
+  <div class="mh" style="position:relative;">
     <button class="hbg" onclick="openSdb()"><span></span><span></span><span style="width:14px"></span></button>
-    <span class="mt" style="font-family:'Google Sans Display',sans-serif;font-size:26px;font-weight:900;letter-spacing:-0.5px;">XOLIFA</span>
-    <div class="togo-toggle-wrap" id="togoToggle" onclick="toggleTogo()">
+    <span class="mt" style="font-family:'Google Sans Display',sans-serif;font-size:26px;font-weight:900;letter-spacing:-0.5px;position:absolute;left:50%;transform:translateX(-50%);pointer-events:none;">XOLIFA</span>
+    <div class="togo-toggle-wrap" id="togoToggle" onclick="toggleTogo()" style="margin-left:auto;">
       <div class="togo-switch"></div>
       <span class="togo-label" id="togoLabel">Tại quán</span>
     </div>
@@ -390,6 +390,15 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
         </div>
         <div class="voucher-list" id="voucherList"></div>
       </div>
+    </div>
+
+    <!-- Cart mini preview -->
+    <div id="sc-cart-preview" onclick="showScreen('sm');openCartDrawer()" style="background:#fff;border-radius:18px;padding:12px 14px;cursor:pointer;transition:background .15s;" onmousedown="this.style.background='#f5f5f5'" onmouseup="this.style.background='#fff'" ontouchstart="this.style.background='#f5f5f5'" ontouchend="this.style.background='#fff'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;">GIỎ HÀNG</span>
+        <span style="font-size:10px;font-weight:700;color:var(--gm);background:var(--gl);border-radius:6px;padding:2px 7px;">Chạm để sửa</span>
+      </div>
+      <div id="sc-cart-lines" style="display:flex;flex-direction:column;gap:4px;"></div>
     </div>
 
     <div class="pmr">
@@ -1408,11 +1417,32 @@ function onCheckoutClick() {
 // ============================================================
 function updCoTotal() {
   const base = getCartTotal();
-  // Reset discount amount on entering checkout - recalculate on payment
   togoDiscountAmt = 0;
   document.getElementById('cotn').textContent = fmt(base);
   document.getElementById('cai').value = '';
   document.getElementById('cr').classList.remove('show');
+  renderScCartPreview();
+}
+
+function renderScCartPreview() {
+  const el = document.getElementById('sc-cart-lines');
+  if (!el) return;
+  const items = Object.values(cart);
+  if (!items.length) {
+    el.innerHTML = '<div style="font-size:12px;color:#bbb;">Giỏ trống</div>';
+    return;
+  }
+  el.innerHTML = items.map(c => {
+    const isFree = c.isFree;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div style="display:flex;align-items:center;gap:5px;min-width:0;flex:1;">
+        <span style="font-size:11px;font-weight:700;color:var(--gt);flex-shrink:0;">${c.qty}x</span>
+        <span style="font-size:12px;font-weight:600;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</span>
+        <span style="font-size:10px;font-weight:700;color:var(--gt);background:#f0f0f0;border-radius:4px;padding:1px 5px;flex-shrink:0;">${c.size}</span>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:${isFree ? 'var(--gm)' : 'var(--td)'};flex-shrink:0;">${isFree ? '0đ' : fmt(c.price * c.qty)}</span>
+    </div>`;
+  }).join('');
 }
 function selM(m) {
   curPay = m;
