@@ -355,6 +355,12 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <div style="flex:1"><div class="sdit">To Go</div><div class="sdid">Cài đặt khuyến mãi mang về</div></div>
       <span class="sdar">›</span>
     </div>
+    <div class="sdi" onclick="closeSdb();showScreen('dgscreen')">
+      <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div>
+      <div style="flex:1"><div class="sdit">Đồng giá</div><div class="sdid">Khuyến mãi đồng giá theo giờ</div></div>
+      <span id="dg-sidebar-badge" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;">LIVE</span>
+      <span class="sdar">›</span>
+    </div>
   </div>
 </div>
 
@@ -729,6 +735,126 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   </div>
 </div>
 
+<!-- ĐỒNG GIÁ SCREEN -->
+<div id="dgscreen" class="screen" style="background:var(--bg);">
+  <div style="background:var(--bg);padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;">
+    <button class="btn-close-screen" onclick="showScreen('sm')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <span style="font-size:20px;font-weight:700;color:var(--td);">ĐỒNG GIÁ</span>
+    <div style="width:44px;"></div>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:16px 0 60px;">
+
+    <!-- Trạng thái hiện tại -->
+    <div id="dg-status-banner" style="display:none;margin:0 16px 16px;background:linear-gradient(135deg,#1a4a2e,#1e6b3c);border-radius:18px;padding:16px 20px;color:#fff;">
+      <div style="font-size:11px;font-weight:700;letter-spacing:.8px;opacity:.8;margin-bottom:4px;text-transform:uppercase;">🟢 ĐANG HOẠT ĐỘNG</div>
+      <div id="dg-status-text" style="font-size:16px;font-weight:700;"></div>
+    </div>
+
+    <!-- Kích hoạt -->
+    <div class="tg-section">
+      <div class="tg-toggle-row">
+        <span class="tg-toggle-label">Kích hoạt chương trình</span>
+        <div class="togo-toggle-wrap" id="dgToggle" onclick="toggleDg()" style="background:#f0f0f0;">
+          <div class="togo-switch" id="dgSwitch"></div>
+          <span style="font-size:11px;font-weight:700;color:#888;" id="dgStatus">Tắt</span>
+        </div>
+      </div>
+
+      <!-- Giờ áp dụng -->
+      <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin:4px 0 10px;">Khung giờ áp dụng</div>
+      <div class="tg-input-row">
+        <div class="tg-input-group">
+          <div class="tg-input-label">Giờ bắt đầu (24h)</div>
+          <input id="dg-time-start" type="time" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:18px;font-weight:700;color:var(--td);background:transparent;">
+        </div>
+        <div class="tg-input-group">
+          <div class="tg-input-label">Giờ kết thúc (24h)</div>
+          <input id="dg-time-end" type="time" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:18px;font-weight:700;color:var(--td);background:transparent;">
+        </div>
+      </div>
+
+      <!-- Thứ áp dụng -->
+      <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin:8px 0 10px;">Thứ áp dụng</div>
+      <div style="display:flex;gap:8px;flex-direction:column;">
+        <label style="display:flex;align-items:center;gap:10px;background:#f5f5f5;border-radius:12px;padding:12px 14px;cursor:pointer;">
+          <input type="radio" name="dg-days" value="2-6" style="width:18px;height:18px;accent-color:var(--gm);cursor:pointer;">
+          <span style="font-size:14px;font-weight:600;color:var(--td);">Thứ 2 – Thứ 6</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;background:#f5f5f5;border-radius:12px;padding:12px 14px;cursor:pointer;">
+          <input type="radio" name="dg-days" value="2-7" style="width:18px;height:18px;accent-color:var(--gm);cursor:pointer;">
+          <span style="font-size:14px;font-weight:600;color:var(--td);">Thứ 2 – Thứ 7</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;background:#f5f5f5;border-radius:12px;padding:12px 14px;cursor:pointer;">
+          <input type="radio" name="dg-days" value="all" checked style="width:18px;height:18px;accent-color:var(--gm);cursor:pointer;">
+          <span style="font-size:14px;font-weight:600;color:var(--td);">Cả tuần (Thứ 2 – CN)</span>
+        </label>
+      </div>
+
+      <!-- Điều kiện số ly -->
+      <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 10px;">Điều kiện áp dụng</div>
+      <div class="tg-input-row">
+        <div class="tg-input-group" style="flex:1;">
+          <div class="tg-input-label">Bill có tối thiểu (ly)</div>
+          <input id="dg-min-qty" type="number" inputmode="numeric" placeholder="VD: 2" min="1" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:18px;font-weight:700;color:var(--td);background:transparent;">
+        </div>
+        <div class="tg-input-group" style="flex:1;">
+          <div class="tg-input-label">Giá đồng giá (đ/ly)</div>
+          <input id="dg-fixed-price" type="text" inputmode="numeric" placeholder="VD: 20.000" oninput="fmtPriceInput(this)" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:18px;font-weight:700;color:var(--td);background:transparent;">
+        </div>
+      </div>
+    </div>
+
+    <!-- Chọn món giảm giá -->
+    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Món giảm giá (tối đa 5 món)</div></div>
+    <div class="tg-section">
+      <div id="dg-item-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
+      <div id="dg-add-btn-wrap" style="display:flex;justify-content:center;">
+        <button onclick="openDgItemPicker()" id="dg-add-item-btn" style="background:var(--gl);color:var(--gd);border:none;border-radius:14px;padding:12px 24px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Thêm món
+        </button>
+      </div>
+    </div>
+
+    <!-- Upload ảnh khuyến mãi -->
+    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Ảnh khuyến mãi (hiển thị trên kiosk)</div></div>
+    <div class="tg-section">
+      <div id="dg-img-preview" style="display:none;margin-bottom:12px;border-radius:14px;overflow:hidden;max-height:200px;">
+        <img id="dg-img-el" src="" style="width:100%;height:200px;object-fit:cover;">
+      </div>
+      <label style="display:flex;align-items:center;justify-content:center;gap:10px;background:#f5f5f5;border-radius:14px;padding:16px;cursor:pointer;border:2px dashed #ddd;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gm)" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span style="font-size:14px;font-weight:600;color:var(--gm);" id="dg-img-label">Chọn ảnh khuyến mãi</span>
+        <input type="file" accept="image/*" id="dg-img-input" onchange="onDgImgChange(this)" style="display:none;">
+      </label>
+      <div id="dg-img-url-row" style="margin-top:10px;display:none;background:#fff;border-radius:14px;padding:12px 14px;">
+        <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">URL ảnh (nếu không upload được)</div>
+        <input id="dg-img-url" type="url" placeholder="https://..." style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:13px;color:var(--td);background:transparent;" oninput="onDgImgUrlInput(this.value)">
+      </div>
+      <button onclick="document.getElementById('dg-img-url-row').style.display=document.getElementById('dg-img-url-row').style.display==='none'?'block':'none'" style="margin-top:8px;background:none;border:none;font-size:12px;color:#aaa;cursor:pointer;font-family:'Google Sans',sans-serif;">Hoặc nhập URL ảnh</button>
+    </div>
+
+    <div style="padding:0 16px;">
+      <button onclick="saveDgSettings()" class="tg-save-btn">💾 Lưu cài đặt đồng giá</button>
+    </div>
+  </div>
+</div>
+
+<!-- ĐỒNG GIÁ ITEM PICKER POPUP -->
+<div id="dg-picker-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);" onclick="if(event.target===this)closeDgItemPicker()">
+  <div style="background:#f2f2f2;border-radius:28px 28px 0 0;padding:24px 20px 36px;width:100%;max-width:430px;max-height:70vh;display:flex;flex-direction:column;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="font-size:17px;font-weight:700;color:var(--td);">Chọn món giảm giá</span>
+      <button onclick="closeDgItemPicker()" style="background:#e0e0e0;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#666;font-size:15px;">✕</button>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:var(--gt);margin-bottom:12px;" id="dg-picker-sub">Chọn tối đa 5 món</div>
+    <div style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;" id="dg-picker-list"></div>
+    <button onclick="confirmDgItems()" style="margin-top:16px;width:100%;padding:15px;background:var(--gd);color:#fff;border:none;border-radius:14px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">Xác nhận</button>
+  </div>
+</div>
+
 <!-- TO GO GIFT POPUP -->
 <div class="togo-gift-popup" id="togoGiftPopup">
   <div class="togo-gift-box">
@@ -853,6 +979,21 @@ let togoSettings = {
 };
 let togoGiftSelected = null; // selected gift item in popup
 
+// ============================================================
+// ĐỒNG GIÁ — State & Settings
+// ============================================================
+let dgSettings = {
+  enabled: false,
+  timeStart: '19:00',
+  timeEnd:   '21:00',
+  days:      'all',   // '2-6' | '2-7' | 'all'
+  minQty:    2,
+  fixedPrice: 20000,
+  items:     [],      // [{id, name, color}]
+  promoImg:  ''       // base64 or URL
+};
+let dgSelectedItems = []; // temp selection in picker
+
 const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
 // ============================================================
@@ -862,6 +1003,7 @@ initMenu();                  // đọc menu ngay lập tức (không cần auth)
 runArchiveIfNeeded();        // archive chạy nền
 auth.signInAnonymously().catch(() => {});  // auth nền cho phép ghi đơn
 loadTogoSettings();          // tải cài đặt To Go
+loadDgSettings();            // tải cài đặt Đồng giá
 
 // ============================================================
 // TO GO — Toggle, Settings, Logic
@@ -1088,6 +1230,275 @@ function getCartTotalWithDiscount() {
 }
 
 // ============================================================
+// ĐỒNG GIÁ — Core Functions
+// ============================================================
+
+function loadDgSettings() {
+  try {
+    const raw = localStorage.getItem('dgSettings_xolifa');
+    if (raw) dgSettings = { ...dgSettings, ...JSON.parse(raw) };
+  } catch(e) {}
+  // Also load from Firebase
+  db.ref('donggia_config').once('value').then(snap => {
+    const d = snap.val();
+    if (d) { dgSettings = { ...dgSettings, ...d }; }
+  }).catch(() => {});
+}
+
+function saveDgSettingsLocal() {
+  localStorage.setItem('dgSettings_xolifa', JSON.stringify(dgSettings));
+}
+
+function isDgActive() {
+  if (!dgSettings.enabled) return false;
+  const now   = new Date();
+  const dow   = now.getDay(); // 0=Sun,1=Mon,...,6=Sat
+  const hhmm  = now.getHours() * 60 + now.getMinutes();
+
+  // Parse time range
+  const [sh, sm] = (dgSettings.timeStart || '00:00').split(':').map(Number);
+  const [eh, em] = (dgSettings.timeEnd   || '00:00').split(':').map(Number);
+  const startMin = sh * 60 + sm;
+  const endMin   = eh * 60 + em;
+  const inTime   = hhmm >= startMin && hhmm < endMin;
+
+  // Check day
+  let inDay = false;
+  if (dgSettings.days === 'all')  inDay = true;
+  else if (dgSettings.days === '2-6') inDay = dow >= 1 && dow <= 5;
+  else if (dgSettings.days === '2-7') inDay = dow >= 1 && dow <= 6;
+
+  return inTime && inDay;
+}
+
+// Apply đồng giá discount to cart items — returns { discountAmt, appliedItems }
+function applyDgDiscount() {
+  if (!isDgActive()) return { discountAmt: 0, appliedItems: [] };
+  const dgItemIds = (dgSettings.items || []).map(i => i.id);
+  if (!dgItemIds.length) return { discountAmt: 0, appliedItems: [] };
+
+  // Count how many cart items are in dg list
+  let eligibleQty = 0;
+  const eligibleKeys = [];
+  Object.entries(cart).forEach(([k, c]) => {
+    if (c.isFree) return;
+    if (dgItemIds.includes(c.itemId)) {
+      eligibleQty += c.qty;
+      eligibleKeys.push(k);
+    }
+  });
+
+  const minQty = dgSettings.minQty || 2;
+  if (eligibleQty < minQty) return { discountAmt: 0, appliedItems: [] };
+
+  // Discount = (originalPrice - fixedPrice) * qty for each eligible item
+  let discountAmt = 0;
+  eligibleKeys.forEach(k => {
+    const c = cart[k];
+    const origPrice = c.price;
+    const fixedP    = dgSettings.fixedPrice || 0;
+    const diff      = origPrice - fixedP;
+    if (diff > 0) discountAmt += diff * c.qty;
+  });
+
+  return { discountAmt, appliedItems: eligibleKeys };
+}
+
+// Đồng giá Admin UI
+function toggleDg() {
+  dgSettings.enabled = !dgSettings.enabled;
+  renderDgToggle();
+}
+
+function renderDgToggle() {
+  const wrap   = document.getElementById('dgToggle');
+  const status = document.getElementById('dgStatus');
+  if (wrap)   wrap.classList.toggle('active', dgSettings.enabled);
+  if (status) status.textContent = dgSettings.enabled ? 'Bật' : 'Tắt';
+}
+
+function loadDgAdminUI() {
+  renderDgToggle();
+  const tsEl = document.getElementById('dg-time-start');
+  const teEl = document.getElementById('dg-time-end');
+  const mqEl = document.getElementById('dg-min-qty');
+  const fpEl = document.getElementById('dg-fixed-price');
+  if (tsEl) tsEl.value = dgSettings.timeStart || '19:00';
+  if (teEl) teEl.value = dgSettings.timeEnd   || '21:00';
+  if (mqEl) mqEl.value = dgSettings.minQty    || 2;
+  if (fpEl) fpEl.value = dgSettings.fixedPrice ? dgSettings.fixedPrice.toLocaleString('vi-VN') : '';
+  // Days radio
+  const dayVal = dgSettings.days || 'all';
+  const radios = document.querySelectorAll('input[name="dg-days"]');
+  radios.forEach(r => { r.checked = r.value === dayVal; });
+  // Items
+  renderDgItemList();
+  // Image
+  if (dgSettings.promoImg) {
+    document.getElementById('dg-img-el').src = dgSettings.promoImg;
+    document.getElementById('dg-img-preview').style.display = 'block';
+    document.getElementById('dg-img-label').textContent = '✓ Đã có ảnh (click để đổi)';
+  }
+  // Status banner
+  updDgStatusBanner();
+}
+
+function updDgStatusBanner() {
+  const banner = document.getElementById('dg-status-banner');
+  const text   = document.getElementById('dg-status-text');
+  if (!banner) return;
+  if (isDgActive()) {
+    banner.style.display = 'block';
+    const items = (dgSettings.items || []).map(i => i.name).join(', ');
+    text.textContent = `${dgSettings.timeStart}–${dgSettings.timeEnd} · Đồng giá ${fmt(dgSettings.fixedPrice||0)}/ly · ${items}`;
+    const badge = document.getElementById('dg-sidebar-badge');
+    if (badge) badge.style.display = 'inline-block';
+  } else {
+    banner.style.display = 'none';
+    const badge = document.getElementById('dg-sidebar-badge');
+    if (badge) badge.style.display = 'none';
+  }
+}
+
+function renderDgItemList() {
+  const el = document.getElementById('dg-item-list');
+  if (!el) return;
+  const items = dgSettings.items || [];
+  if (!items.length) {
+    el.innerHTML = '<div style="text-align:center;padding:16px;color:#bbb;font-size:13px;">Chưa có món nào được chọn</div>';
+  } else {
+    el.innerHTML = items.map((it, idx) => `
+      <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:12px 14px;">
+        <div style="width:34px;height:34px;border-radius:10px;background:${it.color||'#1a4a2e'};flex-shrink:0;"></div>
+        <span style="flex:1;font-size:14px;font-weight:700;color:var(--td);">${it.name}</span>
+        <button onclick="removeDgItem(${idx})" style="background:#fee2e2;border:none;border-radius:8px;padding:5px 10px;font-size:12px;color:#e74c3c;font-weight:700;cursor:pointer;">Xoá</button>
+      </div>`).join('');
+  }
+  const addBtn = document.getElementById('dg-add-item-btn');
+  if (addBtn) addBtn.style.display = items.length >= 5 ? 'none' : 'flex';
+}
+
+function removeDgItem(idx) {
+  dgSettings.items.splice(idx, 1);
+  renderDgItemList();
+}
+
+function openDgItemPicker() {
+  dgSelectedItems = (dgSettings.items || []).map(i => i.id);
+  const list = document.getElementById('dg-picker-list');
+  list.innerHTML = MENU.map(m => {
+    const checked = dgSelectedItems.includes(m.id);
+    return `<label style="display:flex;align-items:center;gap:12px;background:${checked?'var(--gl)':'#fff'};border-radius:14px;padding:12px 14px;cursor:pointer;border:2px solid ${checked?'var(--gm)':'transparent'};transition:all .15s;" id="dg-pi-${m.id}" onclick="toggleDgPickItem('${m.id}',this)">
+      <div style="width:32px;height:32px;border-radius:9px;background:${m.color||'#1a4a2e'};flex-shrink:0;"></div>
+      <span style="flex:1;font-size:14px;font-weight:700;color:var(--td);">${m.name}</span>
+      <span id="dg-pck-${m.id}" style="font-size:18px;">${checked?'✅':''}</span>
+    </label>`;
+  }).join('');
+  document.getElementById('dg-picker-popup').style.display = 'flex';
+}
+
+function toggleDgPickItem(id, labelEl) {
+  const already = dgSelectedItems.includes(id);
+  if (already) {
+    dgSelectedItems = dgSelectedItems.filter(x => x !== id);
+    labelEl.style.background = '#fff';
+    labelEl.style.borderColor = 'transparent';
+    document.getElementById('dg-pck-' + id).textContent = '';
+  } else {
+    if (dgSelectedItems.length >= 5) { toast('⚠ Tối đa 5 món'); return; }
+    dgSelectedItems.push(id);
+    labelEl.style.background = 'var(--gl)';
+    labelEl.style.borderColor = 'var(--gm)';
+    document.getElementById('dg-pck-' + id).textContent = '✅';
+  }
+  document.getElementById('dg-picker-sub').textContent = `Đã chọn ${dgSelectedItems.length}/5 món`;
+}
+
+function confirmDgItems() {
+  dgSettings.items = dgSelectedItems.map(id => {
+    const m = MENU.find(x => x.id === id);
+    return m ? { id: m.id, name: m.name, color: m.color } : null;
+  }).filter(Boolean);
+  renderDgItemList();
+  closeDgItemPicker();
+}
+
+function closeDgItemPicker() {
+  document.getElementById('dg-picker-popup').style.display = 'none';
+}
+
+function onDgImgChange(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    dgSettings.promoImg = e.target.result;
+    document.getElementById('dg-img-el').src = e.target.result;
+    document.getElementById('dg-img-preview').style.display = 'block';
+    document.getElementById('dg-img-label').textContent = '✓ ' + file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+function onDgImgUrlInput(val) {
+  dgSettings.promoImg = val;
+  if (val) {
+    document.getElementById('dg-img-el').src = val;
+    document.getElementById('dg-img-preview').style.display = 'block';
+  }
+}
+
+function saveDgSettings() {
+  const ts = document.getElementById('dg-time-start').value;
+  const te = document.getElementById('dg-time-end').value;
+  const mq = parseInt(document.getElementById('dg-min-qty').value) || 0;
+  const fp = parseInt((document.getElementById('dg-fixed-price').value||'').replace(/[^0-9]/g,'')) || 0;
+  const dayRadio = document.querySelector('input[name="dg-days"]:checked');
+
+  if (!ts || !te) { toast('⚠ Chọn giờ bắt đầu và kết thúc'); return; }
+  if (!mq) { toast('⚠ Nhập số ly điều kiện'); return; }
+  if (!fp) { toast('⚠ Nhập giá đồng giá'); return; }
+  if (!(dgSettings.items||[]).length) { toast('⚠ Chọn ít nhất 1 món giảm giá'); return; }
+
+  dgSettings.timeStart  = ts;
+  dgSettings.timeEnd    = te;
+  dgSettings.minQty     = mq;
+  dgSettings.fixedPrice = fp;
+  dgSettings.days       = dayRadio ? dayRadio.value : 'all';
+
+  saveDgSettingsLocal();
+  // Sync lên Firebase để kiosk nhận
+  const payload = {
+    enabled:    dgSettings.enabled,
+    timeStart:  dgSettings.timeStart,
+    timeEnd:    dgSettings.timeEnd,
+    days:       dgSettings.days,
+    minQty:     dgSettings.minQty,
+    fixedPrice: dgSettings.fixedPrice,
+    items:      dgSettings.items,
+    promoImg:   dgSettings.promoImg || ''
+  };
+  db.ref('donggia_config').set(payload).then(() => {
+    toast('✅ Đã lưu & đồng bộ cài đặt đồng giá');
+    updDgStatusBanner();
+  }).catch(err => toast('❌ Lỗi lưu: ' + err.message));
+}
+
+// ============================================================
+// ĐỒNG GIÁ — Checkout integration (override getCartTotalWithDiscount)
+// ============================================================
+let dgDiscountAmt = 0;
+
+function computeAllDiscounts() {
+  // Tính đồng giá discount
+  const dg = applyDgDiscount();
+  dgDiscountAmt = dg.discountAmt;
+  // Tg discount: chỉ áp dụng khi không có đồng giá
+  if (dgDiscountAmt > 0) togoDiscountAmt = 0;
+  return dgDiscountAmt + togoDiscountAmt;
+}
+
+// ============================================================
 // 1. NHÁNH MENU — onValue realtime qua Firebase SDK
 // ============================================================
 function initMenu() {
@@ -1225,6 +1636,7 @@ function showScreen(id) {
   if (id === 'sc') updCoTotal();
   if (id === 'mn') renderMnList();
   if (id === 'tg') { loadTogoSettings(); loadTgAdminUI(); }
+  if (id === 'dgscreen') { loadDgSettings(); loadDgAdminUI(); }
   if (id === 'hi') {
     const now = new Date();
     const from = new Date(now); from.setDate(from.getDate() - 6); from.setHours(0,0,0,0);
@@ -1397,18 +1809,24 @@ function onCheckoutClick() {
   if (!items.length) { toast('Giỏ hàng trống!'); return; }
   checkTogoBeforeCheckout(() => {
     closeCartDrawer();
-    showScreen('sc');
-    // Update total display with discount if any
+    // Compute đồng giá discount on top
+    const allDisc = computeAllDiscounts();
     const base = getCartTotal();
-    const finalTotal = Math.max(0, base - togoDiscountAmt);
+    const finalTotal = Math.max(0, base - allDisc);
+    showScreen('sc');
     const el = document.getElementById('cotn');
     if (el) {
-      if (togoDiscountAmt > 0) {
-        el.innerHTML = `${fmt(finalTotal)} <span style="font-size:14px;color:#e74c3c;font-weight:700;text-decoration:line-through;">${fmt(base)}</span>`;
+      if (allDisc > 0) {
+        let discLabel = '';
+        if (dgDiscountAmt > 0) discLabel = ` <span style="font-size:12px;background:#e8f5ee;color:var(--gm);border-radius:8px;padding:2px 8px;font-weight:700;">ĐỒNG GIÁ -${fmt(dgDiscountAmt)}</span>`;
+        else if (togoDiscountAmt > 0) discLabel = ` <span style="font-size:14px;color:#e74c3c;font-weight:700;text-decoration:line-through;">${fmt(base)}</span>`;
+        el.innerHTML = `${fmt(finalTotal)}${discLabel}`;
       } else {
         el.textContent = fmt(finalTotal);
       }
     }
+    // Push đồng giá state to kiosk
+    syncDisplay('ordering', { dgActive: isDgActive(), dgDiscount: dgDiscountAmt });
   });
 }
 
@@ -1563,7 +1981,8 @@ function resetPayMethod() {
 }
 
 function openCashScreen() {
-  const total = Math.max(0, getCartTotal() - togoDiscountAmt);
+  const allDisc = computeAllDiscounts();
+  const total = Math.max(0, getCartTotal() - allDisc);
   document.getElementById('cp-total-amt').textContent = total.toLocaleString('vi-VN');
 
   // Gợi ý: mỗi mệnh giá d → total + d (thối đúng 1 tờ d)
@@ -1622,7 +2041,8 @@ function getCpInputVal() {
 }
 
 function updCpChange() {
-  const total = Math.max(0, getCartTotal() - togoDiscountAmt);
+  const allDisc = dgDiscountAmt + togoDiscountAmt;
+  const total = Math.max(0, getCartTotal() - allDisc);
   const given = getCpInputVal();
   const changeCard = document.getElementById('cp-change-card');
   const changeAmt = document.getElementById('cp-change-amt');
@@ -1656,7 +2076,8 @@ function updCpChange() {
 }
 
 function confirmCashPay() {
-  const total = Math.max(0, getCartTotal() - togoDiscountAmt);
+  const allDisc = dgDiscountAmt + togoDiscountAmt;
+  const total = Math.max(0, getCartTotal() - allDisc);
   const given = getCpInputVal();
   const change = given - total;
   const cashGiven = given > 0 ? given : total;
@@ -1672,7 +2093,8 @@ function confirmPay(cashGiven, cashChange) {
   if (!items.length) { toast('Giỏ hàng trống!'); return; }
 
   const baseTotal = getCartTotal();
-  const total = Math.max(0, baseTotal - togoDiscountAmt);
+  const allDisc = dgDiscountAmt + togoDiscountAmt;
+  const total = Math.max(0, baseTotal - allDisc);
   const now = new Date();
   const p = n => String(n).padStart(2, '0');
 
@@ -1695,7 +2117,8 @@ function confirmPay(cashGiven, cashChange) {
     cashChange: cashChange !== null && cashChange !== undefined ? cashChange : 0,
     createdAt: now.toISOString(),
     isToGo: isToGo,
-    discountAmt: togoDiscountAmt > 0 ? togoDiscountAmt : null
+    discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0) ? (togoDiscountAmt + dgDiscountAmt) : null,
+    dgDiscount:  dgDiscountAmt > 0 ? dgDiscountAmt : null
   };
 
   db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
@@ -1708,6 +2131,7 @@ function confirmPay(cashGiven, cashChange) {
     // Reset
     cart = {};
     togoDiscountAmt = 0;
+    dgDiscountAmt = 0;
     resetPayMethod();
     resetTogoToggle();
     document.getElementById('cuph').value = '';
