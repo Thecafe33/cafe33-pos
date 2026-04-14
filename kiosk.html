@@ -550,6 +550,7 @@ function buildSlides(items, dur) {
 
 /* ── MENU ── */
 var menuTimer = null;
+var kioskConfig = null; // cache kiosk_config
 
 function buildMenu(pages) {
   var el = document.getElementById('menu-pages');
@@ -574,6 +575,15 @@ function buildMenu(pages) {
       ps[idx].classList.add('active');
     }, 15000);
   }
+}
+
+// Chuyển menu dựa theo isToGo flag
+function applyMenuMode(isToGo) {
+  if (!kioskConfig) return;
+  var pages = isToGo
+    ? (kioskConfig.togoMenuPages && kioskConfig.togoMenuPages.length ? kioskConfig.togoMenuPages : kioskConfig.menuPages)
+    : kioskConfig.menuPages;
+  buildMenu(pages || []);
 }
 
 /* ── HELPERS ── */
@@ -833,8 +843,12 @@ function startListeners() {
   db.ref('session_display_xolifa').on('value', function(snap) {
     var data = snap.val();
     if (data && typeof data === 'object') {
+      // Xử lý isToGo — chuyển menu khi flag thay đổi
+      var isToGo = data.isToGo === true;
+      applyMenuMode(isToGo);
       renderSession('session_display_xolifa', data);
     } else {
+      applyMenuMode(false);
       removeSession('session_display_xolifa');
     }
   });
@@ -846,10 +860,15 @@ function startListeners() {
       try { kc = JSON.parse(localStorage.getItem('kiosk_config') || 'null'); } catch(e) {}
     }
     if (!kc) return;
+    kioskConfig = kc; // cache để applyMenuMode dùng
     if (kc.slides && kc.slides.length)
       buildSlides(kc.slides, (kc.slideDuration || 6) * 1000);
-    if (kc.menuPages && kc.menuPages.length)
-      buildMenu(kc.menuPages);
+    // Menu: load theo trạng thái isToGo hiện tại
+    db.ref('session_display_xolifa/isToGo').once('value').then(function(s) {
+      applyMenuMode(s.val() === true);
+    }).catch(function() {
+      if (kc.menuPages && kc.menuPages.length) buildMenu(kc.menuPages);
+    });
   });
 
   // Đồng giá config
