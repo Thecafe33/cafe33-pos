@@ -2934,11 +2934,22 @@ let spGroups = [];       // [{ method, items:[{name,size,price}], total, cashGiv
 
 function openSplitPay() {
   if (!Object.keys(cart).length) { toast('Giỏ hàng trống!'); return; }
+  // Tính đồng giá (dùng isDgActive() giống renderCart / confirmPay)
+  const _dgActive    = isDgActive();
+  const _dgItemIds   = _dgActive ? (dgSettings.items || []).map(x => x.id) : [];
+  const _dgMinQty    = dgSettings.minQty || 2;
+  const _dgFixedP    = dgSettings.fixedPrice || 0;
+  const _eligibleQty = _dgActive
+    ? Object.values(cart).reduce((s, c) => s + (!c.isFree && _dgItemIds.includes(c.itemId) ? c.qty : 0), 0)
+    : 0;
+  const _applyDg = _dgActive && _eligibleQty >= _dgMinQty && _dgItemIds.length > 0;
   // Tách cart thành từng unit riêng lẻ
   spItems = [];
   Object.values(cart).forEach(c => {
+    const isDgItem  = _applyDg && !c.isFree && _dgItemIds.includes(c.itemId);
+    const unitPrice = isDgItem ? _dgFixedP : c.price;
     for (let i = 0; i < c.qty; i++) {
-      spItems.push({ name: c.name, size: c.size, price: c.price, paid: false });
+      spItems.push({ name: c.name, size: c.size, price: unitPrice, paid: false });
     }
   });
   spPaidAmt = 0;
