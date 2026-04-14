@@ -698,6 +698,22 @@ function renderSession(sessionId, data) {
       var price = Number(it.price || 0);
       var lineTotal = price * qty;
 
+      // Check if đồng giá applies to this item
+      var dgItemIds = (dgConfig && dgConfig.enabled && isDgNowActive(dgConfig) && dgConfig.items)
+        ? dgConfig.items.map(function(i) { return i.id; }) : [];
+      var itemId = it.itemId || '';
+      var isDgItem = dgItemIds.indexOf(itemId) >= 0;
+      var fixedP = (isDgItem && dgConfig) ? (dgConfig.fixedPrice || 0) : null;
+      var priceHtml;
+      if (isDgItem && fixedP !== null && fixedP < price) {
+        priceHtml = '<div style="text-align:right;">'
+          + '<div style="font-size:10px;color:var(--text3);text-decoration:line-through;">' + fmtP(lineTotal) + '</div>'
+          + '<div class="cart-item-price" style="color:#2e7d32;">' + fmtP(fixedP * qty) + '</div>'
+          + '</div>';
+      } else {
+        priceHtml = '<div class="cart-item-price">' + (lineTotal > 0 ? fmtP(lineTotal) : '') + '</div>';
+      }
+
       var row = document.createElement('div');
       row.className = 'cart-item-row';
       row.innerHTML =
@@ -706,7 +722,7 @@ function renderSession(sessionId, data) {
           '<div class="cart-item-name">' + name + '</div>' +
           (size ? '<div class="cart-item-meta">Size ' + size + '</div>' : '') +
         '</div>' +
-        '<div class="cart-item-price">' + (lineTotal > 0 ? fmtP(lineTotal) : '') + '</div>';
+        priceHtml;
       list.appendChild(row);
     });
   }
@@ -724,6 +740,106 @@ function removeSession(sessionId) {
   document.getElementById('customer-bar').classList.remove('visible');
   document.getElementById('orders-count').textContent = '0';
   updateBillDisplay(null);
+}
+
+/* ── ĐỒNG GIÁ PROMO SLIDE ── */
+var dgConfig = null;
+var dgCheckTimer = null;
+var dgPromoActive = false;
+
+function isDgNowActive(cfg) {
+  if (!cfg || !cfg.enabled) return false;
+  var now  = new Date();
+  var dow  = now.getDay();
+  var hhmm = now.getHours() * 60 + now.getMinutes();
+  var parts = function(t) { var a=(t||'00:00').split(':'); return [parseInt(a[0])||0, parseInt(a[1])||0]; };
+  var s = parts(cfg.timeStart), e = parts(cfg.timeEnd);
+  var startMin = s[0]*60+s[1], endMin = e[0]*60+e[1];
+  var inTime = hhmm >= startMin && hhmm < endMin;
+  var inDay  = false;
+  if (cfg.days === 'all') inDay = true;
+  else if (cfg.days === '2-6') inDay = dow >= 1 && dow <= 5;
+  else if (cfg.days === '2-7') inDay = dow >= 1 && dow <= 6;
+  return inTime && inDay;
+}
+
+function buildDgPromoSlide(cfg) {
+  var container = document.getElementById('slide-container');
+  var dots      = document.getElementById('slide-dots');
+
+  // Pause normal slideshow
+  if (slideTimer) { clearTimeout(slideTimer); slideTimer = null; }
+  if (slides.length) {
+    slides.forEach(function(s) { s.classList.remove('active'); var v = s.querySelector('video'); if (v) v.pause(); });
+  }
+  dots.innerHTML = '';
+
+  // Remove old promo slide if any
+  var old = document.getElementById('dg-promo-slide');
+  if (old) old.remove();
+
+  // Build promo slide
+  var slide = document.createElement('div');
+  slide.className = 'slide active';
+  slide.id = 'dg-promo-slide';
+  slide.style.cssText = 'background:linear-gradient(135deg,#0d2b1a 0%,#1a4a2e 60%,#1e6b3c 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:0;';
+
+  var fmtP = function(p) { return new Intl.NumberFormat('vi-VN').format(p); };
+
+  // Promo image
+  var imgHtml = '';
+  if (cfg.promoImg) {
+    imgHtml = '<img src="'+cfg.promoImg+'" style="width:100%;height:55%;object-fit:cover;position:absolute;top:0;left:0;opacity:0.35;">';
+  }
+
+  // Items list
+  var items = cfg.items || [];
+  var itemsHtml = items.map(function(it) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;">'
+      + '<div style="width:12px;height:12px;border-radius:50%;background:'+( it.color||'#4caf50')+'55;border:2px solid '+(it.color||'#4caf50')+';flex-shrink:0;"></div>'
+      + '<span style="font-size:14px;font-weight:700;color:#ffffff;letter-spacing:.3px;">'+it.name+'</span>'
+      + '</div>';
+  }).join('');
+
+  slide.innerHTML = imgHtml
+    + '<div style="position:relative;z-index:2;width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;">'
+    + '<div style="font-size:10px;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:4px;">KHUYẾN MÃI</div>'
+    + '<div style="font-size:38px;font-weight:900;color:#ffffff;letter-spacing:-1px;line-height:1;font-family:\'Google Sans Display\',sans-serif;">ĐỒNG GIÁ</div>'
+    + '<div style="font-size:46px;font-weight:900;color:#f9d857;letter-spacing:-2px;line-height:1;font-family:\'Google Sans Display\',sans-serif;">'+ fmtP(cfg.fixedPrice||0) +'đ</div>'
+    + '<div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;">/ ly — Bill từ '+(cfg.minQty||2)+' ly</div>'
+    + '<div style="width:48px;height:2px;background:rgba(255,255,255,.3);border-radius:2px;margin:8px 0;"></div>'
+    + '<div style="width:100%;padding:0 8px;">'+itemsHtml+'</div>'
+    + '<div style="margin-top:8px;background:rgba(255,255,255,.12);border-radius:20px;padding:6px 16px;">'
+    + '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.8);letter-spacing:.5px;">'+cfg.timeStart+' – '+cfg.timeEnd+'</span>'
+    + '</div>'
+    + '</div>';
+
+  container.insertBefore(slide, container.firstChild);
+  dgPromoActive = true;
+}
+
+function removeDgPromoSlide() {
+  var old = document.getElementById('dg-promo-slide');
+  if (old) { old.remove(); }
+  dgPromoActive = false;
+  // Restart normal slideshow if we have slides
+  if (slides.length > 0 && dgConfig) {
+    buildSlides(slides.map(function(s) {
+      var img = s.querySelector('img');
+      var vid = s.querySelector('video');
+      if (vid) return { type: 'video', url: vid.src };
+      return { type: 'image', url: img ? img.src : '' };
+    }).filter(function(x) { return x.url; }), 6000);
+  }
+}
+
+function checkDgState() {
+  var shouldBeActive = isDgNowActive(dgConfig);
+  if (shouldBeActive && !dgPromoActive) {
+    buildDgPromoSlide(dgConfig);
+  } else if (!shouldBeActive && dgPromoActive) {
+    removeDgPromoSlide();
+  }
 }
 
 /* ── FIREBASE LISTENERS ── */
@@ -750,6 +866,16 @@ function startListeners() {
     if (kc.menuPages && kc.menuPages.length)
       buildMenu(kc.menuPages);
   });
+
+  // Đồng giá config
+  db.ref('donggia_config').on('value', function(snap) {
+    dgConfig = snap.val();
+    checkDgState();
+  });
+
+  // Check đồng giá state mỗi 30s (để tự bật/tắt đúng giờ)
+  if (dgCheckTimer) clearInterval(dgCheckTimer);
+  dgCheckTimer = setInterval(checkDgState, 30000);
 }
 
 auth.signInWithEmailAndPassword("elio@thecafe33.com", "Thecafe33ty")
