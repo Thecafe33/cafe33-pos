@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>XOLIFA - POS</title>
+<title>The Cafe 33 - POS</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@700&display=swap" rel="stylesheet">
 <!-- Firebase SDK compat — cùng version với index.html -->
@@ -1783,10 +1783,36 @@ function addCart(item, size) {
 // SESSION DISPLAY — Đẩy realtime lên session_display_xolifa
 // ============================================================
 function syncDisplay(state, extra) {
-  const cartArr = Object.values(cart).map(c => ({ name: c.name, size: c.size, price: c.price, qty: c.qty }));
-  const total = getCartTotal();
+  const dgActive = isDgActive();
+  const dgItemIds = dgActive ? (dgSettings.items || []).map(i => i.id) : [];
+  const dgMinQty  = dgSettings.minQty || 2;
+  const dgFixedP  = dgSettings.fixedPrice || 0;
+
+  // Đếm số ly đủ điều kiện đồng giá
+  let eligibleQty = 0;
+  if (dgActive && dgItemIds.length) {
+    Object.values(cart).forEach(c => {
+      if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty;
+    });
+  }
+  const applyDg = dgActive && eligibleQty >= dgMinQty;
+
+  // Build cartArr — nếu áp đồng giá thì override price cho món trong danh sách
+  const cartArr = Object.values(cart).map(c => {
+    const isDgItem = applyDg && dgItemIds.includes(c.itemId);
+    return {
+      name:   c.name,
+      size:   c.size,
+      price:  isDgItem ? dgFixedP : c.price,
+      qty:    c.qty,
+      itemId: c.itemId || '',
+      isDgItem
+    };
+  });
+
+  const total = cartArr.reduce((a, c) => a + c.price * c.qty, 0);
   const payload = {
-    state,                          // 'ordering' | 'cash_payment' | 'idle'
+    state,
     cart: cartArr,
     total,
     updatedAt: Date.now(),
