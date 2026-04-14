@@ -1908,23 +1908,19 @@ function renderCartDrawer() {
          </div>`
       : `<span class="cart-price" style="flex-shrink:0;">${fmt(lineTotalWithToppings)}</span>`;
     return `
-    <div class="cart-row" style="flex-direction:column;align-items:stretch;gap:6px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
-          <span class="cart-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-decoration:underline dotted var(--gt);" onclick="openToppingPicker('${k}')">${c.name}</span>
-          <span class="cart-size">${c.size}</span>
-          ${isDgItem ? `<span style="font-size:10px;font-weight:700;background:#e8f5ee;color:var(--gm);border-radius:6px;padding:1px 6px;">ĐG</span>` : ''}
-        </div>
-        ${finalPriceHtml}
+    <div class="cart-row" style="flex-direction:column;align-items:stretch;gap:4px;padding:10px 0;">
+      <div style="display:flex;align-items:center;gap:5px;">
+        <span class="cart-name" style="font-size:16px;cursor:pointer;text-decoration:underline dotted var(--gt);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" onclick="openToppingPickerSplit('${k}')">${c.name}</span>
+        <span class="cart-size" style="flex-shrink:0;">${c.size}</span>
+        ${isDgItem ? `<span style="font-size:10px;font-weight:700;background:#e8f5ee;color:var(--gm);border-radius:6px;padding:1px 5px;flex-shrink:0;">ĐG</span>` : ''}
+        <button class="cqb minus" style="flex-shrink:0;" onclick="cartAdj('${k}',-1)">−</button>
+        <span class="cart-qn" style="flex-shrink:0;">${c.qty}</span>
+        <button class="cqb plus" style="flex-shrink:0;" onclick="cartAdj('${k}',1)">+</button>
+        <button class="cart-del" style="flex-shrink:0;" onclick="cartDel('${k}')"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
       </div>
-      ${toppingHtml ? `<div style="padding-left:2px;">${toppingHtml}</div>` : ''}
-      <div class="cart-qty" style="margin-left:0;">
-        <button class="cqb minus" onclick="cartAdj('${k}',-1)">−</button>
-        <span class="cart-qn">${c.qty}</span>
-        <button class="cqb plus" onclick="cartAdj('${k}',1)">+</button>
-        <button class="cart-del" onclick="cartDel('${k}')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-        </button>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;">
+        <div style="flex:1;">${toppingHtml ? `<div style="padding-left:2px;">${toppingHtml}</div>` : ''}</div>
+        <div style="flex-shrink:0;">${finalPriceHtml}</div>
       </div>
     </div>`;
   }).join('');
@@ -3094,6 +3090,79 @@ function deleteTopping() {
 }
 
 // ── Topping picker trong cart ──
+// Mở topping picker — nếu qty > 1 và chưa có topping, hỏi tách trước
+function openToppingPickerSplit(cartKey) {
+  if (!cart[cartKey]) return;
+  if (!TOPPINGS.length) { toast('Chưa có topping nào. Thêm trong Quản lý Menu!'); return; }
+
+  const c = cart[cartKey];
+
+  // Nếu qty > 1 và chưa có topping nào → hỏi thêm cho mấy ly
+  if (c.qty > 1 && !(c.toppings && c.toppings.length)) {
+    // Tạo popup chọn số ly tách
+    showSplitQtyPopup(cartKey, c.qty);
+    return;
+  }
+
+  // qty = 1 hoặc đã có topping rồi → mở picker thẳng
+  openToppingPicker(cartKey);
+}
+
+// Popup hỏi "thêm topping cho mấy ly?"
+function showSplitQtyPopup(cartKey, totalQty) {
+  // Tạo overlay nếu chưa có
+  let overlay = document.getElementById('split-qty-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'split-qty-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+  }
+
+  // Tạo nội dung
+  let btns = '';
+  for (let i = 1; i <= totalQty; i++) {
+    btns += `<button onclick="doSplitAndOpen('${cartKey}',${i},${totalQty})" style="flex:1;padding:14px 6px;background:#fff;border:2px solid #e0e0e0;border-radius:14px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;color:var(--td);cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='var(--gm)';this.style.background='var(--gl)'" onmouseout="this.style.borderColor='#e0e0e0';this.style.background='#fff'">${i} ly</button>`;
+  }
+
+  overlay.innerHTML = `
+    <div style="background:#f2f2f2;border-radius:28px 28px 0 0;padding:24px 20px 36px;width:100%;max-width:430px;animation:pi .2s ease;">
+      <div style="font-size:17px;font-weight:700;color:var(--td);margin-bottom:4px;">Thêm topping cho mấy ly?</div>
+      <div style="font-size:12px;font-weight:600;color:var(--gt);margin-bottom:20px;">Tổng: ${totalQty} ly — phần còn lại sẽ không có topping</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">${btns}</div>
+    </div>`;
+}
+
+// Tách món và mở picker
+function doSplitAndOpen(cartKey, splitQty, totalQty) {
+  // Đóng popup
+  const overlay = document.getElementById('split-qty-overlay');
+  if (overlay) overlay.remove();
+
+  if (!cart[cartKey]) return;
+  const c = cart[cartKey];
+
+  if (splitQty === totalQty) {
+    // Thêm topping cho tất cả → không cần tách
+    openToppingPicker(cartKey);
+    return;
+  }
+
+  // Tách: giảm qty gốc, tạo entry mới với splitQty để add topping
+  const newKey = cartKey + '_tp' + Date.now();
+  cart[newKey] = { itemId: c.itemId, name: c.name, size: c.size, price: c.price, qty: splitQty, toppings: [], isFree: c.isFree || false };
+  cart[cartKey].qty -= splitQty;
+  if (cart[cartKey].qty <= 0) delete cart[cartKey];
+
+  renderMenu();
+  renderCartDrawer();
+  syncDisplay('ordering');
+
+  // Mở picker cho entry mới
+  openToppingPicker(newKey);
+}
+
 function openToppingPicker(cartKey) {
   if (!cart[cartKey]) return;
   if (!TOPPINGS.length) { toast('Chưa có topping nào. Thêm trong Quản lý Menu!'); return; }
