@@ -1485,16 +1485,26 @@ function saveDgSettings() {
 }
 
 // ============================================================
-// ĐỒNG GIÁ — Checkout integration (override getCartTotalWithDiscount)
+// ĐỒNG GIÁ — Checkout integration
 // ============================================================
 let dgDiscountAmt = 0;
 
-function computeAllDiscounts() {
-  // Tính đồng giá discount
+// Tính discount đồng giá tại thời điểm gọi (không lưu state)
+function getDgDiscountAmt() {
   const dg = applyDgDiscount();
-  dgDiscountAmt = dg.discountAmt;
-  // Tg discount: chỉ áp dụng khi không có đồng giá
-  if (dgDiscountAmt > 0) togoDiscountAmt = 0;
+  return dg.discountAmt;
+}
+
+// Tổng thực tế khách phải trả (đã trừ đồng giá + togo)
+function getFinalTotal() {
+  const dgDisc   = getDgDiscountAmt();
+  const togoDisc = togoDiscountAmt;
+  return Math.max(0, getCartTotal() - dgDisc - togoDisc);
+}
+
+function computeAllDiscounts() {
+  dgDiscountAmt   = getDgDiscountAmt();
+  if (dgDiscountAmt > 0) togoDiscountAmt = 0; // không stack
   return dgDiscountAmt + togoDiscountAmt;
 }
 
@@ -1683,9 +1693,15 @@ function renderMenu() {
 }
 
 function updFooter() {
-  const total = getCartTotal(), count = Object.values(cart).reduce((a, b) => a + b.qty, 0);
-  document.getElementById('ftv').textContent = fmt(total);
-  // refresh cart drawer if open
+  const finalTotal = getFinalTotal();
+  const baseTotal  = getCartTotal();
+  const dgDisc     = getDgDiscountAmt();
+  const ftv        = document.getElementById('ftv');
+  if (dgDisc > 0) {
+    ftv.innerHTML = `${fmt(finalTotal)} <span style="font-size:12px;color:#e74c3c;font-weight:700;text-decoration:line-through;">${fmt(baseTotal)}</span>`;
+  } else {
+    ftv.textContent = fmt(finalTotal);
+  }
   if (document.getElementById('cartDrawer').classList.contains('open')) renderCartDrawer();
 }
 
@@ -1708,14 +1724,37 @@ function renderCartDrawer() {
     body.innerHTML = `<div style="text-align:center;padding:40px;color:#bbb;font-size:14px;">Giỏ hàng trống</div>`;
     return;
   }
-  body.innerHTML = items.map(([k, c]) => `
+
+  // Tính đồng giá để hiển thị
+  const dgActive  = isDgActive();
+  const dgItemIds = dgActive ? (dgSettings.items || []).map(i => i.id) : [];
+  const dgMinQty  = dgSettings.minQty || 2;
+  const dgFixedP  = dgSettings.fixedPrice || 0;
+  let eligibleQty = 0;
+  if (dgActive && dgItemIds.length) {
+    Object.values(cart).forEach(c => { if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty; });
+  }
+  const applyDg = dgActive && eligibleQty >= dgMinQty;
+
+  body.innerHTML = items.map(([k, c]) => {
+    const isDgItem   = applyDg && dgItemIds.includes(c.itemId);
+    const dispPrice  = isDgItem ? dgFixedP : c.price;
+    const lineTotal  = dispPrice * c.qty;
+    const priceHtml  = isDgItem
+      ? `<div style="text-align:right;">
+           <span style="font-size:11px;color:#bbb;text-decoration:line-through;">${fmt(c.price * c.qty)}</span>
+           <span class="cart-price" style="color:var(--gm);display:block;">${fmt(lineTotal)}</span>
+         </div>`
+      : `<span class="cart-price" style="flex-shrink:0;">${fmt(lineTotal)}</span>`;
+    return `
     <div class="cart-row">
       <div style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;">
         <div style="display:flex;align-items:center;gap:6px;min-width:0;">
           <span class="cart-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</span>
           <span class="cart-size">${c.size}</span>
+          ${isDgItem ? `<span style="font-size:10px;font-weight:700;background:#e8f5ee;color:var(--gm);border-radius:6px;padding:1px 6px;">ĐG</span>` : ''}
         </div>
-        <span class="cart-price" style="flex-shrink:0;">${fmt(c.price * c.qty)}</span>
+        ${priceHtml}
       </div>
       <div class="cart-qty" style="margin-left:10px;">
         <button class="cqb minus" onclick="cartAdj('${k}',-1)">−</button>
@@ -1725,7 +1764,8 @@ function renderCartDrawer() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
         </button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 function cartAdj(k, delta) {
   if (!cart[k]) return;
@@ -1783,41 +1823,25 @@ function addCart(item, size) {
 // SESSION DISPLAY — Đẩy realtime lên session_display_xolifa
 // ============================================================
 function syncDisplay(state, extra) {
-  const dgActive = isDgActive();
-  const dgItemIds = dgActive ? (dgSettings.items || []).map(i => i.id) : [];
+  const dgDisc    = getDgDiscountAmt();
+  const dgItemIds = dgDisc > 0 ? (dgSettings.items || []).map(i => i.id) : [];
   const dgMinQty  = dgSettings.minQty || 2;
   const dgFixedP  = dgSettings.fixedPrice || 0;
 
-  // Đếm số ly đủ điều kiện đồng giá
+  // Đếm eligible qty để biết có đủ điều kiện không
   let eligibleQty = 0;
-  if (dgActive && dgItemIds.length) {
-    Object.values(cart).forEach(c => {
-      if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty;
-    });
+  if (dgItemIds.length) {
+    Object.values(cart).forEach(c => { if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty; });
   }
-  const applyDg = dgActive && eligibleQty >= dgMinQty;
+  const applyDg = eligibleQty >= dgMinQty && dgItemIds.length > 0;
 
-  // Build cartArr — nếu áp đồng giá thì override price cho món trong danh sách
   const cartArr = Object.values(cart).map(c => {
     const isDgItem = applyDg && dgItemIds.includes(c.itemId);
-    return {
-      name:   c.name,
-      size:   c.size,
-      price:  isDgItem ? dgFixedP : c.price,
-      qty:    c.qty,
-      itemId: c.itemId || '',
-      isDgItem
-    };
+    return { name: c.name, size: c.size, price: isDgItem ? dgFixedP : c.price, qty: c.qty, itemId: c.itemId || '' };
   });
 
   const total = cartArr.reduce((a, c) => a + c.price * c.qty, 0);
-  const payload = {
-    state,
-    cart: cartArr,
-    total,
-    updatedAt: Date.now(),
-    ...extra
-  };
+  const payload = { state, cart: cartArr, total, updatedAt: Date.now(), ...extra };
   db.ref('session_display_xolifa').set(payload).catch(() => {});
 }
 
@@ -1838,7 +1862,7 @@ function onCheckoutClick() {
     // Compute đồng giá discount on top
     const allDisc = computeAllDiscounts();
     const base = getCartTotal();
-    const finalTotal = Math.max(0, base - allDisc);
+    const finalTotal = getFinalTotal();
     showScreen('sc');
     const el = document.getElementById('cotn');
     if (el) {
@@ -2008,7 +2032,7 @@ function resetPayMethod() {
 
 function openCashScreen() {
   const allDisc = computeAllDiscounts();
-  const total = Math.max(0, getCartTotal() - allDisc);
+  const total = getFinalTotal();
   document.getElementById('cp-total-amt').textContent = total.toLocaleString('vi-VN');
 
   // Gợi ý: mỗi mệnh giá d → total + d (thối đúng 1 tờ d)
@@ -2067,8 +2091,7 @@ function getCpInputVal() {
 }
 
 function updCpChange() {
-  const allDisc = dgDiscountAmt + togoDiscountAmt;
-  const total = Math.max(0, getCartTotal() - allDisc);
+  const total = getFinalTotal();
   const given = getCpInputVal();
   const changeCard = document.getElementById('cp-change-card');
   const changeAmt = document.getElementById('cp-change-amt');
@@ -2102,8 +2125,7 @@ function updCpChange() {
 }
 
 function confirmCashPay() {
-  const allDisc = dgDiscountAmt + togoDiscountAmt;
-  const total = Math.max(0, getCartTotal() - allDisc);
+  const total = getFinalTotal();
   const given = getCpInputVal();
   const change = given - total;
   const cashGiven = given > 0 ? given : total;
@@ -2119,8 +2141,8 @@ function confirmPay(cashGiven, cashChange) {
   if (!items.length) { toast('Giỏ hàng trống!'); return; }
 
   const baseTotal = getCartTotal();
-  const allDisc = dgDiscountAmt + togoDiscountAmt;
-  const total = Math.max(0, baseTotal - allDisc);
+  const allDisc   = computeAllDiscounts();
+  const total     = getFinalTotal();
   const now = new Date();
   const p = n => String(n).padStart(2, '0');
 
