@@ -325,6 +325,25 @@
     color: #1a1714; flex-shrink: 0;
   }
 
+  .cart-item-toppings {
+    display: flex; flex-direction: column; gap: 1px;
+    margin-top: 2px;
+  }
+
+  .cart-item-topping {
+    font-size: 9px; color: var(--text3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: flex; align-items: center; gap: 3px;
+  }
+
+  .cart-item-topping::before {
+    content: '+';
+    font-size: 8px;
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
   /* ── EMPTY STATE ── */
   .orders-empty {
     display: flex; flex-direction: column;
@@ -706,8 +725,23 @@ function renderSession(sessionId, data) {
       var qty   = Number(it.qty || it.quantity || 1);
       var size  = it.size  || '';
       var price = Number(it.price || 0);
-      var lineTotal = price * qty;
+      var toppingSum = Number(it.toppingSum || 0);
+      var lineTotal = (price + toppingSum) * qty;
       var priceHtml = '<div class="cart-item-price">' + (lineTotal > 0 ? fmtP(lineTotal) : '') + '</div>';
+
+      // Build topping HTML
+      var toppings = it.toppings;
+      var toppingHtml = '';
+      if (Array.isArray(toppings) && toppings.length > 0) {
+        toppingHtml = '<div class="cart-item-toppings">'
+          + toppings.map(function(t) {
+              return '<div class="cart-item-topping">'
+                + (t.name || '')
+                + (t.price > 0 ? ' <span style="color:var(--accent);font-weight:700;">' + fmtP(t.price) + '</span>' : '')
+                + '</div>';
+            }).join('')
+          + '</div>';
+      }
 
       var row = document.createElement('div');
       row.className = 'cart-item-row';
@@ -716,6 +750,7 @@ function renderSession(sessionId, data) {
         '<div class="cart-item-info">' +
           '<div class="cart-item-name">' + name + '</div>' +
           (size ? '<div class="cart-item-meta">Size ' + size + '</div>' : '') +
+          toppingHtml +
         '</div>' +
         priceHtml;
       list.appendChild(row);
