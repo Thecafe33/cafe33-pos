@@ -1999,10 +1999,19 @@ function syncDisplay(state, extra) {
 
   const cartArr = Object.values(cart).map(c => {
     const isDgItem = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
-    return { name: c.name, size: c.size, price: isDgItem ? dgFixedP : c.price, qty: c.qty, itemId: c.itemId || '' };
+    const toppingSum = (c.toppings || []).reduce((s, t) => s + (t.price || 0), 0);
+    return {
+      name: c.name,
+      size: c.size,
+      price: isDgItem ? dgFixedP : c.price,
+      qty: c.qty,
+      itemId: c.itemId || '',
+      toppings: (c.toppings || []).map(t => ({ name: t.name, price: t.price || 0 })),
+      toppingSum
+    };
   });
 
-  const total = cartArr.reduce((a, c) => a + c.price * c.qty, 0);
+  const total = cartArr.reduce((a, c) => a + (c.price + (c.toppingSum || 0)) * c.qty, 0);
   const payload = { state, cart: cartArr, total, isToGo: !!isToGo, updatedAt: Date.now(), ...extra };
   db.ref('session_display_xolifa').set(payload).catch(() => {});
 }
