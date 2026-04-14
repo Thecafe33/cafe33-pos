@@ -982,6 +982,11 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       Thêm món
     </button>
   </div>
+  <!-- Tabs Tại quán / To Go -->
+  <div style="display:flex;background:#e2e2e2;border-radius:28px;margin:12px 16px 0;padding:4px;gap:2px;">
+    <button class="tbb active" id="mn-tab-normal" onclick="switchMnTab('normal',this)">☕ Tại quán</button>
+    <button class="tbb" id="mn-tab-togo" onclick="switchMnTab('togo',this)">🛍 To Go</button>
+  </div>
   <div style="overflow-y:auto;flex:1;padding:16px 16px 40px;" id="mn-list">
     <div style="text-align:center;padding:40px;color:#bbb;">Đang tải...</div>
   </div>
@@ -1071,7 +1076,8 @@ const auth   = firebase.auth();
 // ============================================================
 // STATE — khai báo trước khi gọi bất kỳ hàm nào
 // ============================================================
-let MENU = [], orders = [], cart = {}, curPay = null, curOid = null, curFilter = 'all';
+let MENU = [], MENU_TOGO = [], orders = [], cart = {}, curPay = null, curOid = null, curFilter = 'all';
+let _curMenuTab = 'normal'; // 'normal' | 'togo' — active tab trong quản lý menu
 let curCustomer = null;
 let selectedVoucher = null;
 let _rvFrom = null, _rvTo = null;
@@ -1119,6 +1125,9 @@ function toggleTogo() {
   const label = document.getElementById('togoLabel');
   wrap.classList.toggle('active', isToGo);
   label.textContent = isToGo ? 'To Go' : 'Tại quán';
+  curFilter = 'all';
+  buildFilterBar();
+  renderMenu();
   // Báo kiosk chuyển menu
   db.ref('session_display_xolifa/isToGo').set(isToGo).catch(() => {});
 }
@@ -1129,6 +1138,9 @@ function resetTogoToggle() {
   const label = document.getElementById('togoLabel');
   wrap.classList.remove('active');
   label.textContent = 'Tại quán';
+  curFilter = 'all';
+  buildFilterBar();
+  renderMenu();
   // Báo kiosk thoát To Go
   db.ref('session_display_xolifa/isToGo').set(false).catch(() => {});
 }
@@ -1272,8 +1284,8 @@ function openTogoGiftPopup(freeQty, onProceed) {
   togoGiftSelected = null;
   const g = togoSettings.gift;
   const cats = g.categories;
-  // Filter menu: items with category in cats AND have Size M
-  let eligible = MENU.filter(m => {
+  // Filter menu: items with category in cats AND have Size M — dùng menu đang active (togo/thường)
+  let eligible = getActiveMenu().filter(m => {
     const hasSizeM = m.sizes.some(s => s.label === 'M');
     if (!hasSizeM) return false;
     if (cats && cats.length > 0) return cats.includes(m.type);
@@ -1620,19 +1632,26 @@ function computeAllDiscounts() {
 // ============================================================
 // 1. NHÁNH MENU — onValue realtime qua Firebase SDK
 // ============================================================
+function parseMenuSnap(data) {
+  if (!data) return [];
+  return Object.entries(data).map(([key, val]) => {
+    const { color, name, priceM, priceL, type } = val;
+    const sizes = [];
+    if (priceM && Number(priceM) > 0) sizes.push({ label: 'M', price: Number(priceM) });
+    if (priceL && Number(priceL) > 0) sizes.push({ label: 'L', price: Number(priceL) });
+    return { id: key, name: name || '', color: color || '#1a4a2e', type: type || '', sizes };
+  }).filter(m => m.name && m.sizes.length > 0);
+}
+
 function initMenu() {
-  // once() thay vì on() → load 1 lần, không giữ kết nối realtime, nhanh hơn
-  db.ref('menu_xolifa').once('value').then(snap => {
-    const data = snap.val();
-    if (!data) { loadMenu([]); return; }
-    const items = Object.entries(data).map(([key, val]) => {
-      const { color, name, priceM, priceL, type } = val;
-      const sizes = [];
-      if (priceM && Number(priceM) > 0) sizes.push({ label: 'M', price: Number(priceM) });
-      if (priceL && Number(priceL) > 0) sizes.push({ label: 'L', price: Number(priceL) });
-      return { id: key, name: name || '', color: color || '#1a4a2e', type: type || '', sizes };
-    }).filter(m => m.name && m.sizes.length > 0);
-    loadMenu(items);
+  // Load song song cả menu thường và menu togo
+  Promise.all([
+    db.ref('menu_xolifa').once('value'),
+    db.ref('menu_togo_xolifa').once('value')
+  ]).then(([snapNormal, snapTogo]) => {
+    MENU      = parseMenuSnap(snapNormal.val());
+    MENU_TOGO = parseMenuSnap(snapTogo.val());
+    loadMenu();
   }).catch(err => {
     console.error('Lỗi tải menu:', err);
     document.getElementById('mg').innerHTML =
@@ -1643,8 +1662,11 @@ function initMenu() {
   });
 }
 
-function loadMenu(items) {
-  MENU = items;
+function getActiveMenu() {
+  return isToGo && MENU_TOGO.length ? MENU_TOGO : MENU;
+}
+
+function loadMenu() {
   buildFilterBar();
   renderMenu();
   loadRecentOrders(); // load 3 ngày gần nhất từ RT
@@ -1729,7 +1751,7 @@ function archiveDatesInRange(fromDate, toDate) {
 // ============================================================
 function buildFilterBar() {
   const bar = document.getElementById('filterBar');
-  const types = [...new Set(MENU.map(m => m.type).filter(Boolean))];
+  const types = [...new Set(getActiveMenu().map(m => m.type).filter(Boolean))];
   let html = `<button class="ftag ${curFilter==='all'?'active':''}" onclick="filterType('all',this)">TẤT CẢ</button>`;
   types.forEach(t => {
     const safe = t.replace(/'/g, "\\'");
@@ -1784,7 +1806,8 @@ function getQty(itemId) { return Object.values(cart).filter(c => c.itemId === it
 
 function renderMenu() {
   const g = document.getElementById('mg');
-  const filtered = curFilter === 'all' ? MENU : MENU.filter(m => m.type === curFilter);
+  const activeMenu = getActiveMenu();
+  const filtered = curFilter === 'all' ? activeMenu : activeMenu.filter(m => m.type === curFilter);
   if (!filtered.length) {
     g.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:50px;color:#bbb;font-size:14px">Chưa có sản phẩm</div>`;
     return;
@@ -1902,7 +1925,7 @@ function cartClear() {
 // SIZE POPUP
 // ============================================================
 function openPO(itemId) {
-  const m = MENU.find(x => x.id === itemId); if (!m) return;
+  const m = getActiveMenu().find(x => x.id === itemId); if (!m) return;
   if (m.sizes.length === 1) { addCart(m, m.sizes[0]); return; }
   document.getElementById('spn').textContent = m.name;
   document.getElementById('so').innerHTML = m.sizes.map((s, i) => {
@@ -1913,7 +1936,7 @@ function openPO(itemId) {
 }
 function closePO(e) { if (e.target === document.getElementById('po')) document.getElementById('po').classList.remove('show'); }
 function onSize(id, label) {
-  const m = MENU.find(x => x.id === id);
+  const m = getActiveMenu().find(x => x.id === id);
   if (m) { const s = m.sizes.find(x => x.label === label); if (s) { addCart(m, s); document.getElementById('po').classList.remove('show'); } }
 }
 
@@ -1951,7 +1974,7 @@ function syncDisplay(state, extra) {
   });
 
   const total = cartArr.reduce((a, c) => a + c.price * c.qty, 0);
-  const payload = { state, cart: cartArr, total, updatedAt: Date.now(), ...extra };
+  const payload = { state, cart: cartArr, total, isToGo: !!isToGo, updatedAt: Date.now(), ...extra };
   db.ref('session_display_xolifa').set(payload).catch(() => {});
 }
 
@@ -1960,6 +1983,7 @@ function resetDisplay() {
     state: 'idle',
     cart: [],
     total: 0,
+    isToGo: !!isToGo,
     updatedAt: Date.now()
   }).catch(() => {});
 }
@@ -2739,15 +2763,24 @@ function runArchiveIfNeeded() {
 let _mnEditId = null; // null = thêm mới, string = id món đang sửa
 let _mnColor = '#1a4a2e';
 
+function switchMnTab(tab, btn) {
+  _curMenuTab = tab;
+  document.querySelectorAll('#mn .tbb').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMnList();
+}
+
 function renderMnList() {
   const el = document.getElementById('mn-list');
-  if (!MENU.length) {
-    el.innerHTML = `<div style="text-align:center;padding:40px;color:#bbb;font-size:14px;">Chưa có món nào</div>`;
+  const menuSrc = _curMenuTab === 'togo' ? MENU_TOGO : MENU;
+  const tabLabel = _curMenuTab === 'togo' ? 'To Go' : 'Tại quán';
+  if (!menuSrc.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#bbb;font-size:14px;">Chưa có món ${tabLabel} nào</div>`;
     return;
   }
   // Nhóm theo type
   const grp = {};
-  MENU.forEach(m => {
+  menuSrc.forEach(m => {
     const t = m.type || 'Khác';
     if (!grp[t]) grp[t] = [];
     grp[t].push(m);
@@ -2787,18 +2820,27 @@ function buildColorPicker() {
   });
 }
 
+function getMnMenuSrc() {
+  return _curMenuTab === 'togo' ? MENU_TOGO : MENU;
+}
+
+function getMnFirebaseRef() {
+  return _curMenuTab === 'togo' ? 'menu_togo_xolifa' : 'menu_xolifa';
+}
+
 function openMenuForm(id) {
   _mnEditId = id;
   buildColorPicker();
   hideTypeDropdown();
 
+  const tabLabel = _curMenuTab === 'togo' ? ' (To Go)' : ' (Tại quán)';
   const title = document.getElementById('mn-form-title');
   const delBtn = document.getElementById('mn-f-del');
 
   if (id) {
-    const m = MENU.find(x => x.id === id);
+    const m = getMnMenuSrc().find(x => x.id === id);
     if (!m) return;
-    title.textContent = 'Chỉnh sửa món';
+    title.textContent = 'Chỉnh sửa món' + tabLabel;
     document.getElementById('mn-f-name').value = m.name;
     document.getElementById('mn-f-type').value = m.type || '';
     const pm = m.sizes.find(s => s.label === 'M');
@@ -2808,7 +2850,7 @@ function openMenuForm(id) {
     _mnColor = m.color || '#1a4a2e';
     delBtn.style.display = 'block';
   } else {
-    title.textContent = 'Thêm món mới';
+    title.textContent = 'Thêm món mới' + tabLabel;
     document.getElementById('mn-f-name').value = '';
     document.getElementById('mn-f-type').value = '';
     document.getElementById('mn-f-pm').value = '';
@@ -2841,7 +2883,7 @@ function selectMenuColor(c) {
 
 // ---- Type dropdown ----
 function getExistingTypes() {
-  return [...new Set(MENU.map(m => m.type).filter(Boolean))];
+  return [...new Set(getMnMenuSrc().map(m => m.type).filter(Boolean))];
 }
 
 function showTypeDropdown() {
@@ -2899,9 +2941,10 @@ function saveMenuItem() {
     priceL: priceL || 0
   };
 
+  const fbNode = getMnFirebaseRef();
   const ref = _mnEditId
-    ? db.ref('menu_xolifa/' + _mnEditId)
-    : db.ref('menu_xolifa').push();
+    ? db.ref(fbNode + '/' + _mnEditId)
+    : db.ref(fbNode).push();
 
   ref.set(data).then(() => {
     toast(_mnEditId ? '✅ Đã cập nhật món!' : '✅ Đã thêm món mới!');
@@ -2912,8 +2955,9 @@ function saveMenuItem() {
 
 function deleteMenuItem() {
   if (!_mnEditId) return;
-  if (!confirm('Xoá món này khỏi menu?')) return;
-  db.ref('menu_xolifa/' + _mnEditId).remove().then(() => {
+  const tabLabel = _curMenuTab === 'togo' ? 'menu To Go' : 'menu';
+  if (!confirm('Xoá món này khỏi ' + tabLabel + '?')) return;
+  db.ref(getMnFirebaseRef() + '/' + _mnEditId).remove().then(() => {
     toast('🗑 Đã xoá món');
     closeMenuForm();
     initMenu();
