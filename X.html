@@ -977,15 +977,16 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
     <span style="font-size:20px;font-weight:700;color:var(--td);">QUẢN LÝ MENU</span>
-    <button onclick="openMenuForm(null)" style="background:var(--gd);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
+    <button class="btn-add-item" onclick="openMenuForm(null)" style="background:var(--gd);color:#fff;border:none;border-radius:20px;padding:8px 16px;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       Thêm món
     </button>
   </div>
-  <!-- Tabs Tại quán / To Go -->
+  <!-- Tabs Tại quán / To Go / Toppings -->
   <div style="display:flex;background:#e2e2e2;border-radius:28px;margin:12px 16px 0;padding:4px;gap:2px;">
     <button class="tbb active" id="mn-tab-normal" onclick="switchMnTab('normal',this)">☕ Tại quán</button>
     <button class="tbb" id="mn-tab-togo" onclick="switchMnTab('togo',this)">🛍 To Go</button>
+    <button class="tbb" id="mn-tab-topping" onclick="switchMnTab('topping',this)">🧋 Toppings</button>
   </div>
   <div style="overflow-y:auto;flex:1;padding:16px 16px 40px;" id="mn-list">
     <div style="text-align:center;padding:40px;color:#bbb;">Đang tải...</div>
@@ -1076,8 +1077,10 @@ const auth   = firebase.auth();
 // ============================================================
 // STATE — khai báo trước khi gọi bất kỳ hàm nào
 // ============================================================
-let MENU = [], MENU_TOGO = [], orders = [], cart = {}, curPay = null, curOid = null, curFilter = 'all';
-let _curMenuTab = 'normal'; // 'normal' | 'togo' — active tab trong quản lý menu
+let MENU = [], MENU_TOGO = [], TOPPINGS = [], orders = [], cart = {}, curPay = null, curOid = null, curFilter = 'all';
+let _curMenuTab = 'normal'; // 'normal' | 'togo' | 'topping' — active tab trong quản lý menu
+let _tpEditId = null; // null = thêm mới, string = id topping đang sửa
+let _tpPickerKey = null; // cart key đang add topping
 let curCustomer = null;
 let selectedVoucher = null;
 let _rvFrom = null, _rvTo = null;
@@ -1649,10 +1652,13 @@ function initMenu() {
   // Load song song cả menu thường và menu togo
   Promise.all([
     db.ref('menu_xolifa').once('value'),
-    db.ref('menu_togo_xolifa').once('value')
-  ]).then(([snapNormal, snapTogo]) => {
+    db.ref('menu_togo_xolifa').once('value'),
+    db.ref('toppings_xolifa').once('value')
+  ]).then(([snapNormal, snapTogo, snapToppings]) => {
     MENU      = parseMenuSnap(snapNormal.val());
     MENU_TOGO = parseMenuSnap(snapTogo.val());
+    const tData = snapToppings.val();
+    TOPPINGS = tData ? Object.entries(tData).map(([id, v]) => ({ id, name: v.name || '', price: Number(v.price) || 0, priceTogo: Number(v.priceTogo) || 0 })) : [];
     loadMenu();
   }).catch(err => {
     console.error('Lỗi tải menu:', err);
@@ -1803,7 +1809,12 @@ function closeSdb() { document.getElementById('sdb').classList.remove('open'); d
 // ============================================================
 function fmtK(n) { return Math.round(n / 1000) + 'k'; }
 function fmt(n) { return n.toLocaleString('vi-VN') + 'đ'; }
-function getCartTotal() { return Object.values(cart).reduce((a, b) => a + b.price * b.qty, 0); }
+function getCartTotal() {
+  return Object.values(cart).reduce((a, c) => {
+    const toppingSum = (c.toppings || []).reduce((s, t) => s + t.price, 0);
+    return a + (c.price + toppingSum) * c.qty;
+  }, 0);
+}
 function getQty(itemId) { return Object.values(cart).filter(c => c.itemId === itemId).reduce((a, b) => a + b.qty, 0); }
 
 function renderMenu() {
@@ -1881,17 +1892,33 @@ function renderCartDrawer() {
            <span class="cart-price" style="color:var(--gm);display:block;">${fmt(lineTotal)}</span>
          </div>`
       : `<span class="cart-price" style="flex-shrink:0;">${fmt(lineTotal)}</span>`;
+    const toppings = c.toppings || [];
+    const toppingSum = toppings.reduce((s, t) => s + t.price, 0);
+    const lineTotalWithToppings = (dispPrice + toppingSum) * c.qty;
+    const toppingHtml = toppings.map((t, ti) => `
+      <div style="display:flex;align-items:center;gap:4px;margin-top:3px;">
+        <span style="font-size:11px;color:var(--gt);">+ ${t.name}</span>
+        <span style="font-size:11px;font-weight:700;color:var(--gt);">${fmt(t.price)}</span>
+        <button onclick="removeCartTopping('${k}',${ti})" style="background:none;border:none;cursor:pointer;padding:0 2px;color:#ccc;font-size:12px;line-height:1;">✕</button>
+      </div>`).join('');
+    const finalPriceHtml = isDgItem
+      ? `<div style="text-align:right;">
+           <span style="font-size:11px;color:#bbb;text-decoration:line-through;">${fmt(c.price * c.qty)}</span>
+           <span class="cart-price" style="color:var(--gm);display:block;">${fmt(lineTotalWithToppings)}</span>
+         </div>`
+      : `<span class="cart-price" style="flex-shrink:0;">${fmt(lineTotalWithToppings)}</span>`;
     return `
-    <div class="cart-row">
-      <div style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;">
-        <div style="display:flex;align-items:center;gap:6px;min-width:0;">
-          <span class="cart-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</span>
+    <div class="cart-row" style="flex-direction:column;align-items:stretch;gap:6px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
+          <span class="cart-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-decoration:underline dotted var(--gt);" onclick="openToppingPicker('${k}')">${c.name}</span>
           <span class="cart-size">${c.size}</span>
           ${isDgItem ? `<span style="font-size:10px;font-weight:700;background:#e8f5ee;color:var(--gm);border-radius:6px;padding:1px 6px;">ĐG</span>` : ''}
         </div>
-        ${priceHtml}
+        ${finalPriceHtml}
       </div>
-      <div class="cart-qty" style="margin-left:10px;">
+      ${toppingHtml ? `<div style="padding-left:2px;">${toppingHtml}</div>` : ''}
+      <div class="cart-qty" style="margin-left:0;">
         <button class="cqb minus" onclick="cartAdj('${k}',-1)">−</button>
         <span class="cart-qn">${c.qty}</span>
         <button class="cqb plus" onclick="cartAdj('${k}',1)">+</button>
@@ -2769,7 +2796,19 @@ function switchMnTab(tab, btn) {
   _curMenuTab = tab;
   document.querySelectorAll('#mn .tbb').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderMnList();
+  // Nút thêm: đổi label + action theo tab
+  const addBtn = document.querySelector('#mn .btn-add-item');
+  if (addBtn) {
+    if (tab === 'topping') {
+      addBtn.textContent = '+ Thêm topping';
+      addBtn.onclick = () => openToppingForm(null);
+    } else {
+      addBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Thêm món';
+      addBtn.onclick = () => openMenuForm(null);
+    }
+  }
+  if (tab === 'topping') renderMnToppingList();
+  else renderMnList();
 }
 
 function renderMnList() {
@@ -2967,6 +3006,136 @@ function deleteMenuItem() {
 }
 
 // ============================================================
+// TOPPINGS — Quản lý & cart logic
+// ============================================================
+
+function renderMnToppingList() {
+  const el = document.getElementById('mn-list');
+  if (!TOPPINGS.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:#bbb;font-size:14px;">Chưa có topping nào</div>`;
+    return;
+  }
+  el.innerHTML = TOPPINGS.map(t => `
+    <div onclick="openToppingForm('${t.id}')" style="background:#fff;border-radius:18px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;cursor:pointer;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:16px;font-weight:700;color:var(--td);">${t.name}</div>
+        <div style="font-size:12px;color:var(--gt);margin-top:3px;">Tại quán: ${t.price.toLocaleString('vi-VN')}đ · To Go: ${t.priceTogo.toLocaleString('vi-VN')}đ</div>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>`).join('');
+}
+
+function openToppingForm(id) {
+  _tpEditId = id;
+  const title = document.getElementById('tp-form-title');
+  const delBtn = document.getElementById('tp-f-del');
+  if (id) {
+    const t = TOPPINGS.find(x => x.id === id);
+    if (!t) return;
+    title.textContent = 'Chỉnh sửa topping';
+    document.getElementById('tp-f-name').value = t.name;
+    document.getElementById('tp-f-price').value = t.price > 0 ? t.price.toLocaleString('vi-VN') : '';
+    document.getElementById('tp-f-price-togo').value = t.priceTogo > 0 ? t.priceTogo.toLocaleString('vi-VN') : '';
+    delBtn.style.display = 'block';
+  } else {
+    title.textContent = 'Thêm topping';
+    document.getElementById('tp-f-name').value = '';
+    document.getElementById('tp-f-price').value = '';
+    document.getElementById('tp-f-price-togo').value = '';
+    delBtn.style.display = 'none';
+  }
+  document.getElementById('tp-popup').style.display = 'flex';
+}
+
+function closeToppingForm() {
+  document.getElementById('tp-popup').style.display = 'none';
+}
+
+function saveTopping() {
+  const name = document.getElementById('tp-f-name').value.trim();
+  if (!name) { toast('Vui lòng nhập tên topping!'); return; }
+  const price     = parseInt(document.getElementById('tp-f-price').value.replace(/[^0-9]/g,'')) || 0;
+  const priceTogo = parseInt(document.getElementById('tp-f-price-togo').value.replace(/[^0-9]/g,'')) || 0;
+  const data = { name, price, priceTogo };
+  const ref = _tpEditId ? db.ref('toppings_xolifa/' + _tpEditId) : db.ref('toppings_xolifa').push();
+  ref.set(data).then(() => {
+    toast(_tpEditId ? '✅ Đã cập nhật topping!' : '✅ Đã thêm topping!');
+    closeToppingForm();
+    // Reload toppings
+    db.ref('toppings_xolifa').once('value').then(snap => {
+      const d = snap.val();
+      TOPPINGS = d ? Object.entries(d).map(([id, v]) => ({ id, name: v.name||'', price: Number(v.price)||0, priceTogo: Number(v.priceTogo)||0 })) : [];
+      renderMnToppingList();
+    });
+  }).catch(err => toast('❌ ' + err.message));
+}
+
+function deleteTopping() {
+  if (!_tpEditId) return;
+  if (!confirm('Xoá topping này?')) return;
+  db.ref('toppings_xolifa/' + _tpEditId).remove().then(() => {
+    toast('🗑 Đã xoá topping');
+    closeToppingForm();
+    db.ref('toppings_xolifa').once('value').then(snap => {
+      const d = snap.val();
+      TOPPINGS = d ? Object.entries(d).map(([id, v]) => ({ id, name: v.name||'', price: Number(v.price)||0, priceTogo: Number(v.priceTogo)||0 })) : [];
+      renderMnToppingList();
+    });
+  }).catch(err => toast('❌ ' + err.message));
+}
+
+// ── Topping picker trong cart ──
+function openToppingPicker(cartKey) {
+  if (!cart[cartKey]) return;
+  if (!TOPPINGS.length) { toast('Chưa có topping nào. Thêm trong Quản lý Menu!'); return; }
+  _tpPickerKey = cartKey;
+  document.getElementById('tp-picker-sub').textContent = 'Chọn cho: ' + cart[cartKey].name + ' ' + cart[cartKey].size;
+  const existing = (cart[cartKey].toppings || []).map(t => t.name);
+  document.getElementById('tp-picker-list').innerHTML = TOPPINGS.map(t => {
+    const toppingPrice = isToGo ? t.priceTogo : t.price;
+    const already = existing.includes(t.name);
+    return `<div onclick="addCartTopping('${t.id}')" style="background:${already?'var(--gl)':'#fff'};border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border:2px solid ${already?'var(--gm)':'transparent'};">
+      <span style="font-size:14px;font-weight:700;color:var(--td);">${t.name}</span>
+      <span style="font-size:13px;font-weight:700;color:var(--gm);">+${fmt(toppingPrice)}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('tp-picker').style.display = 'flex';
+}
+
+function closeToppingPicker() {
+  document.getElementById('tp-picker').style.display = 'none';
+  _tpPickerKey = null;
+}
+
+function addCartTopping(toppingId) {
+  if (!_tpPickerKey || !cart[_tpPickerKey]) return;
+  const t = TOPPINGS.find(x => x.id === toppingId);
+  if (!t) return;
+  const toppingPrice = isToGo ? t.priceTogo : t.price;
+  if (!cart[_tpPickerKey].toppings) cart[_tpPickerKey].toppings = [];
+  // Nếu đã có thì bỏ ra (toggle)
+  const existIdx = cart[_tpPickerKey].toppings.findIndex(x => x.name === t.name);
+  if (existIdx >= 0) {
+    cart[_tpPickerKey].toppings.splice(existIdx, 1);
+  } else {
+    cart[_tpPickerKey].toppings.push({ name: t.name, price: toppingPrice });
+  }
+  // Refresh picker list
+  openToppingPicker(_tpPickerKey);
+  renderCartDrawer();
+  updFooter();
+  syncDisplay('ordering');
+}
+
+function removeCartTopping(cartKey, toppingIdx) {
+  if (!cart[cartKey] || !cart[cartKey].toppings) return;
+  cart[cartKey].toppings.splice(toppingIdx, 1);
+  renderCartDrawer();
+  updFooter();
+  syncDisplay('ordering');
+}
+
+// ============================================================
 // SPLIT PAY — Tính riêng từng khách
 // ============================================================
 // spItems: mảng các unit món (mỗi qty=1 là 1 phần tử riêng)
@@ -2993,9 +3162,11 @@ function openSplitPay() {
   spItems = [];
   Object.values(cart).forEach(c => {
     const isDgItem  = _applyDg && !c.isFree && _dgItemIds.includes(c.itemId);
-    const unitPrice = isDgItem ? _dgFixedP : c.price;
+    const toppingSum = (c.toppings || []).reduce((s, t) => s + t.price, 0);
+    const unitPrice = (isDgItem ? _dgFixedP : c.price) + toppingSum;
+    const toppingLabel = (c.toppings || []).map(t => t.name).join(', ');
     for (let i = 0; i < c.qty; i++) {
-      spItems.push({ name: c.name, size: c.size, price: unitPrice, paid: false });
+      spItems.push({ name: c.name + (toppingLabel ? ' (+' + toppingLabel + ')' : ''), size: c.size, price: unitPrice, paid: false });
     }
   });
   spPaidAmt = 0;
@@ -3359,6 +3530,48 @@ function kcRenderTogoMenuPages() {
 // ============================================================
 // initMenu() và runArchiveIfNeeded() được gọi trực tiếp sau initializeApp
 </script>
+
+<!-- TOPPING FORM POPUP -->
+<div id="tp-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);padding:24px;" onclick="if(event.target===this)closeToppingForm()">
+  <div style="background:#f2f2f2;border-radius:28px;padding:24px 20px;width:100%;max-width:400px;animation:pi .22s ease;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <span id="tp-form-title" style="font-size:18px;font-weight:700;color:var(--td);">Thêm topping</span>
+      <button onclick="closeToppingForm()" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#fff;border-radius:18px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Tên topping *</div>
+        <input id="tp-f-name" type="text" placeholder="VD: Trân châu đen" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;color:var(--td);background:transparent;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:#fff;border-radius:18px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Giá tại quán (đ)</div>
+          <input id="tp-f-price" type="text" inputmode="numeric" placeholder="VD: 5.000" oninput="fmtPriceInput(this)" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;color:var(--td);background:transparent;">
+        </div>
+        <div style="background:#fff;border-radius:18px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Giá To Go (đ)</div>
+          <input id="tp-f-price-togo" type="text" inputmode="numeric" placeholder="VD: 5.000" oninput="fmtPriceInput(this)" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;color:var(--td);background:transparent;">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button id="tp-f-del" onclick="deleteTopping()" style="display:none;flex:0 0 auto;padding:14px 18px;background:#fee2e2;color:#e74c3c;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Xoá</button>
+        <button onclick="saveTopping()" style="flex:1;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">Lưu</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOPPING PICKER POPUP (trong cart) -->
+<div id="tp-picker" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:400;display:none;align-items:flex-end;justify-content:center;" onclick="if(event.target===this)closeToppingPicker()">
+  <div style="background:#f2f2f2;border-radius:28px 28px 0 0;padding:24px 20px 36px;width:100%;max-width:430px;max-height:70vh;display:flex;flex-direction:column;animation:pi .2s ease;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <span style="font-size:17px;font-weight:700;color:var(--td);">Thêm topping</span>
+      <button onclick="closeToppingPicker()" style="background:#e0e0e0;border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#666;font-size:15px;">✕</button>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:var(--gt);margin-bottom:16px;" id="tp-picker-sub">Chọn cho: ...</div>
+    <div style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;" id="tp-picker-list"></div>
+  </div>
+</div>
 
 <!-- CART DRAWER -->
 <div class="cart-overlay" id="cartOverlay" onclick="closeCartDrawer()"></div>
