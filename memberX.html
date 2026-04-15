@@ -7,726 +7,206 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@300;400;500;600;700&family=Google+Sans+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
-
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-
 <style>
 :root {
-  --cream:      #f1f8f4;
-  --parchment:  #e0f0e8;
-  --ink:        #1e3932;
-  --ink2:       #2d5a4e;
-  --ink3:       #6b9e8c;
-  --gold:       #00704A;
-  --gold2:      #00A862;
-  --gold-light: #d4ede3;
-  --red:        #8b2020;
-  --green:      #00704A;
-  --border:     rgba(0,112,74,0.2);
-  --border2:    rgba(0,112,74,0.35);
-  --shadow:     0 4px 24px rgba(30,57,50,0.12);
-  --radius:     16px;
-  --sbux:       #00704A;
-  --sbux2:      #00A862;
-  --sbux-dark:  #1e3932;
+  --bg:#fff; --surface:#f6f6f6; --ink:#1e3932; --ink2:#3d5a52; --ink3:#8aaba2;
+  --sbux:#00704A; --sbux2:#00A862; --sbux-dk:#1e3932;
+  --border:#ebebeb; --r:14px;
 }
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;min-height:100%;background:#fff;color:var(--ink);font-family:'Google Sans',sans-serif;overflow-x:hidden;}
+.screen{display:none;min-height:100vh;flex-direction:column;animation:fadeUp 0.3s ease;}
+.screen.active{display:flex;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+#toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(8px);background:#1e1e1e;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;white-space:nowrap;opacity:0;transition:all 0.25s ease;z-index:9999;pointer-events:none;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.loader-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse 1.2s infinite;}
+.loader-dot:nth-child(2){animation-delay:.2s;margin:0 4px;}
+.loader-dot:nth-child(3){animation-delay:.4s;}
+@keyframes pulse{0%,80%,100%{transform:scale(0.6);opacity:0.3;}40%{transform:scale(1);opacity:1;}}
+.connecting-overlay{position:fixed;inset:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:999;}
+.connecting-overlay.hidden{display:none;}
+.connecting-brand{font-family:'Google Sans Display',sans-serif;font-size:32px;font-weight:700;letter-spacing:6px;color:var(--sbux);}
 
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+/* LOGIN */
+#screen-login{justify-content:center;padding:40px 24px 60px;}
+.login-logo{text-align:center;margin-bottom:40px;}
+.login-logo-icon{width:60px;height:60px;background:var(--sbux);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;}
+.login-logo-name{font-family:'Google Sans Display',sans-serif;font-size:28px;font-weight:700;letter-spacing:5px;color:var(--ink);}
+.login-logo-sub{font-size:11px;color:var(--ink3);letter-spacing:2px;margin-top:4px;text-transform:uppercase;}
+.field-label{font-size:12px;font-weight:600;color:var(--ink3);letter-spacing:0.5px;margin-bottom:8px;display:block;}
+.phone-input{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:16px 18px;font-size:22px;font-weight:600;font-family:'Google Sans',sans-serif;color:var(--ink);text-align:center;letter-spacing:3px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;margin-bottom:12px;}
+.phone-input:focus{border-color:var(--sbux);box-shadow:0 0 0 3px rgba(0,112,74,0.1);background:#fff;}
+.phone-input::placeholder{color:var(--ink3);font-size:15px;letter-spacing:1px;}
+.btn-primary{width:100%;background:var(--sbux);color:#fff;border:none;border-radius:var(--r);padding:15px;font-size:15px;font-weight:600;font-family:'Google Sans',sans-serif;cursor:pointer;transition:opacity 0.15s,transform 0.1s;}
+.btn-primary:active{transform:scale(0.98);opacity:0.88;}
+.btn-outline{width:100%;background:transparent;color:var(--sbux);border:1.5px solid var(--sbux);border-radius:var(--r);padding:14px;font-size:14px;font-weight:600;font-family:'Google Sans',sans-serif;cursor:pointer;margin-top:10px;transition:background 0.15s;}
+.btn-outline:active{background:rgba(0,112,74,0.06);}
+.divider{display:flex;align-items:center;gap:10px;margin:16px 0;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.divider span{font-size:11px;color:var(--ink3);}
 
-html, body {
-  width:100%; min-height:100%;
-  background: var(--cream);
-  color: var(--ink);
-  font-family: 'Google Sans', sans-serif;
-  overflow-x: hidden;
-}
+/* REGISTER */
+#screen-register{padding-bottom:40px;}
+.screen-header{padding:20px 20px 14px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+.back-btn{width:36px;height:36px;border:none;background:var(--surface);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ink);flex-shrink:0;}
+.screen-title{font-family:'Google Sans Display',sans-serif;font-size:19px;font-weight:600;color:var(--ink);}
+.form-wrap{padding:16px 20px 0;}
+.input-group{margin-bottom:14px;}
+.input-label{font-size:12px;font-weight:600;color:var(--ink3);letter-spacing:0.5px;margin-bottom:7px;display:block;}
+.input-field{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:13px 16px;font-size:15px;font-family:'Google Sans',sans-serif;color:var(--ink);outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+.input-field:focus{border-color:var(--sbux);box-shadow:0 0 0 3px rgba(0,112,74,0.1);background:#fff;}
+.input-field::placeholder{color:var(--ink3);}
+.hint-text{font-size:11px;color:var(--ink3);margin-top:5px;line-height:1.5;}
+.hint-green{color:var(--sbux);}
+.notice{background:rgba(0,112,74,0.06);border-left:3px solid var(--sbux);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--ink2);line-height:1.6;margin:0 20px 14px;}
+.notice strong{color:var(--sbux);}
 
-/* ── SCREENS ── */
-.screen {
-  display: none;
-  min-height: 100vh;
-  flex-direction: column;
-  animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1);
-}
-.screen.active { display: flex; }
+/* DASHBOARD */
+#screen-dashboard{padding-bottom:110px;}
+.dash-topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid var(--border);}
+.dash-greeting{font-size:11px;color:var(--ink3);letter-spacing:1px;text-transform:uppercase;}
+.dash-name{font-family:'Google Sans Display',sans-serif;font-size:22px;font-weight:600;color:var(--ink);margin-top:2px;}
+.dash-avatar{width:40px;height:40px;border-radius:50%;background:var(--sbux);display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;font-weight:700;flex-shrink:0;}
+.tab-content{display:none;}.tab-content.active{display:block;}
+.rt-row{padding:8px 20px 0;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--ink3);}
+@keyframes rtPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,168,98,0.4);}50%{box-shadow:0 0 0 5px rgba(0,168,98,0);}}
+.rt-dot{width:6px;height:6px;border-radius:50%;background:var(--sbux2);animation:rtPulse 2s infinite;}
 
-@keyframes fadeUp {
-  from { opacity:0; transform:translateY(16px); }
-  to   { opacity:1; transform:translateY(0); }
-}
+/* LOYALTY CARD */
+.loyalty-card{margin:16px;background:linear-gradient(135deg,#1e3932 0%,#2a5244 60%,#1e3932 100%);border-radius:20px;padding:22px 22px 18px;position:relative;overflow:hidden;box-shadow:0 6px 24px rgba(30,57,50,0.3);}
+.loyalty-card::before{content:'';position:absolute;top:-50px;right:-50px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,98,0.18),transparent 70%);}
+.lc-brand{font-family:'Google Sans Display',sans-serif;font-size:12px;font-weight:600;letter-spacing:4px;text-transform:uppercase;color:var(--sbux2);margin-bottom:3px;}
+.lc-type{font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.3);text-transform:uppercase;}
+.lc-cups-row{display:flex;align-items:flex-end;gap:4px;margin:14px 0 3px;}
+.lc-cups-num{font-family:'Google Sans Display',sans-serif;font-size:50px;font-weight:700;color:#fff;line-height:1;letter-spacing:-2px;}
+.lc-cups-unit{font-size:13px;color:rgba(255,255,255,0.4);margin-bottom:7px;}
+.lc-cups-label{font-size:10px;color:rgba(255,255,255,0.3);letter-spacing:2px;text-transform:uppercase;}
 
-/* ── HEADER BRAND ── */
-.brand-header {
-  text-align: center;
-  padding: 48px 24px 32px;
-  position: relative;
-}
-.brand-ornament {
-  display: flex; align-items: center; justify-content: center;
-  gap: 10px; margin-bottom: 8px;
-}
-.brand-ornament::before, .brand-ornament::after {
-  content: '';
-  flex: 1; max-width: 60px; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--sbux));
-}
-.brand-ornament::after {
-  background: linear-gradient(90deg, var(--sbux), transparent);
-}
-.brand-icon {
-  width: 36px; height: 36px;
-  background: var(--sbux);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.brand-name {
-  font-family: 'Google Sans Display', sans-serif;
-  font-size: 32px; font-weight: 700;
-  color: var(--ink); letter-spacing: 4px;
-  text-transform: uppercase;
-}
-.brand-sub {
-  font-size: 10px; font-weight: 500;
-  letter-spacing: 3px; text-transform: uppercase;
-  color: var(--ink3); margin-top: 4px;
-}
+/* PROGRESS */
+.progress-section{margin:0 16px 14px;background:var(--surface);border-radius:var(--r);padding:14px 16px;}
+.progress-label{display:flex;justify-content:space-between;margin-bottom:10px;}
+.progress-text{font-size:13px;color:var(--ink2);font-weight:500;}
+.progress-pct{font-size:13px;color:var(--sbux);font-weight:600;}
+.progress-track{height:5px;background:var(--border);border-radius:3px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--sbux),var(--sbux2));transition:width 0.8s ease;}
+.next-reward{font-size:12px;color:var(--ink3);margin-top:8px;text-align:center;}
+.next-reward strong{color:var(--ink);}
 
-/* ── CARD ── */
-.card {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 24px;
-  margin: 0 20px;
-}
+/* STAMPS */
+.stamp-section{margin:0 16px 14px;}
+.stamp-section-title{font-size:11px;font-weight:600;color:var(--ink3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;}
+.stamp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.stamp{aspect-ratio:1;border-radius:10px;border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;background:var(--surface);position:relative;overflow:hidden;}
+.stamp.filled{border:1.5px solid var(--sbux);background:rgba(0,112,74,0.08);}
+.stamp.free{border:1.5px solid var(--sbux-dk);background:var(--sbux-dk);}
+.stamp.filled::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,rgba(255,255,255,0.25),transparent 60%);}
+.stamp-icon{font-size:15px;line-height:1;position:relative;z-index:1;}
+.stamp-num{font-size:7px;font-weight:600;color:var(--ink3);position:relative;z-index:1;}
+.stamp.filled .stamp-num{color:var(--sbux);}
+.stamp.free .stamp-num{color:rgba(255,255,255,0.5);}
+@keyframes stampIn{0%{transform:scale(1.3) rotate(-6deg);opacity:0;}70%{transform:scale(0.94) rotate(1deg);opacity:1;}100%{transform:scale(1) rotate(0);opacity:1;}}
+.stamp.just-filled{animation:stampIn 0.4s ease;}
 
-/* ── INPUTS ── */
-.input-group {
-  margin-bottom: 16px;
-}
-.input-label {
-  font-size: 11px; font-weight: 600;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--ink3); margin-bottom: 8px; display: block;
-}
-.input-field {
-  width: 100%;
-  background: var(--cream);
-  border: 1.5px solid var(--border2);
-  border-radius: 10px;
-  padding: 14px 16px;
-  font-size: 16px; font-family: 'Google Sans', sans-serif;
-  color: var(--ink);
-  outline: none;
-  transition: border-color 0.2s;
-}
-.input-field:focus { border-color: var(--sbux); }
-.input-field::placeholder { color: var(--ink3); }
+/* PROFILE */
+.profile-card{margin:16px;background:var(--surface);border-radius:var(--r);overflow:hidden;}
+.profile-hero{background:linear-gradient(135deg,var(--sbux-dk),var(--sbux));padding:22px 20px;display:flex;align-items:center;gap:14px;}
+.profile-avatar{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;color:#fff;font-size:21px;font-weight:700;flex-shrink:0;}
+.profile-name{font-family:'Google Sans Display',sans-serif;font-size:19px;font-weight:600;color:#fff;}
+.profile-phone{font-size:13px;color:rgba(255,255,255,0.55);margin-top:2px;}
+.profile-badge{display:inline-block;margin-top:5px;background:rgba(255,255,255,0.15);border-radius:20px;padding:2px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#fff;text-transform:uppercase;}
+.profile-rows{padding:0 4px;}
+.profile-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);}
+.profile-row:last-child{border-bottom:none;}
+.profile-row-icon{width:32px;height:32px;border-radius:8px;background:#fff;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.profile-row-label{font-size:11px;color:var(--ink3);margin-bottom:2px;}
+.profile-row-val{font-size:14px;font-weight:500;color:var(--ink);}
+.edit-section{margin:10px 16px 0;background:var(--surface);border-radius:var(--r);padding:16px;display:none;}
+.edit-section.visible{display:block;}
+.edit-section-title{font-size:11px;font-weight:600;color:var(--ink3);margin-bottom:12px;letter-spacing:0.5px;text-transform:uppercase;}
+.edit-row{display:flex;gap:10px;margin-top:10px;}
+.edit-row .btn-primary{padding:13px;font-size:13px;}
+.btn-cancel{flex:1;background:var(--border);color:var(--ink2);border:none;border-radius:var(--r);padding:13px;font-size:13px;font-weight:600;font-family:'Google Sans',sans-serif;cursor:pointer;}
+.logout-row{text-align:center;padding:18px;}
+.btn-logout{background:none;border:1px solid var(--border);border-radius:var(--r);padding:11px 28px;font-size:13px;font-weight:500;color:var(--ink3);font-family:'Google Sans',sans-serif;cursor:pointer;}
 
-/* ── BUTTONS ── */
-.btn-primary {
-  width: 100%;
-  background: var(--sbux);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 16px;
-  font-size: 14px; font-weight: 600;
-  letter-spacing: 1px; text-transform: uppercase;
-  font-family: 'Google Sans', sans-serif;
-  cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
-  position: relative; overflow: hidden;
-}
-.btn-primary:active { transform: scale(0.98); opacity: 0.9; }
-.btn-primary::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
-  opacity: 0; transition: opacity 0.3s;
-}
-.btn-primary:hover::after { opacity: 1; }
-
-.btn-secondary {
-  width: 100%;
-  background: transparent;
-  color: var(--ink2);
-  border: 1.5px solid var(--border2);
-  border-radius: 10px;
-  padding: 14px;
-  font-size: 13px; font-weight: 500;
-  letter-spacing: 0.5px;
-  font-family: 'Google Sans', sans-serif;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  margin-top: 10px;
-}
-.btn-secondary:hover { background: var(--parchment); border-color: var(--gold); }
-
-.btn-ghost {
-  background: none; border: none;
-  color: var(--sbux); font-size: 13px;
-  font-weight: 600; cursor: pointer;
-  font-family: 'Google Sans', sans-serif;
-  padding: 8px 0;
-  letter-spacing: 0.5px;
-}
-
-/* ── TOAST ── */
-#toast {
-  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(12px);
-  background: var(--ink);
-  color: #fff; padding: 10px 20px;
-  border-radius: 20px;
-  font-size: 13px; font-weight: 500;
-  white-space: nowrap;
-  opacity: 0; transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
-  z-index: 9999; pointer-events: none;
-}
-#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-/* ── LOADER ── */
-.loader-dot {
-  display: inline-block; width: 6px; height: 6px;
-  border-radius: 50%; background: currentColor;
-  animation: pulse 1.2s infinite;
-}
-.loader-dot:nth-child(2) { animation-delay: 0.2s; margin: 0 4px; }
-.loader-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes pulse {
-  0%,80%,100% { transform:scale(0.6); opacity:0.3; }
-  40% { transform:scale(1); opacity:1; }
-}
-
-/* ════════════════════════════════
-   SCREEN: LOGIN
-════════════════════════════════ */
-#screen-login {
-  justify-content: center;
-  padding-bottom: 40px;
-}
-
-.phone-display { display: none; }
-.login-hint {
-  text-align: center; font-size: 12px;
-  color: var(--ink3); margin-bottom: 12px; letter-spacing: 0.3px;
-}
-
-/* Native phone input */
-.phone-input-native {
-  width: 100%; margin: 0 0 16px;
-  background: #fff;
-  border: 2px solid var(--border2);
-  border-radius: 14px;
-  padding: 18px 20px;
-  font-size: 24px; font-weight: 600;
-  font-family: 'Google Sans', sans-serif;
-  color: var(--ink); text-align: center;
-  letter-spacing: 4px;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.phone-input-native:focus {
-  border-color: var(--sbux);
-  box-shadow: 0 0 0 4px rgba(0,112,74,0.12);
-}
-.phone-input-native::placeholder { color: var(--ink3); letter-spacing: 2px; font-size: 16px; }
-
-.divider {
-  display: flex; align-items: center; gap: 12px;
-  padding: 0 20px; margin: 16px 0;
-}
-.divider::before, .divider::after {
-  content:''; flex:1; height:1px; background: var(--border);
-}
-.divider span { font-size: 11px; color: var(--ink3); letter-spacing: 1px; }
-
-/* ════════════════════════════════
-   SCREEN: REGISTER
-════════════════════════════════ */
-#screen-register {
-  padding-bottom: 40px;
-}
-.register-hint {
-  font-size: 12px; color: var(--ink3);
-  line-height: 1.7; margin-bottom: 6px;
-}
-.register-hint strong { color: var(--sbux); font-weight: 600; }
-
-/* ════════════════════════════════
-   SCREEN: DASHBOARD
-════════════════════════════════ */
-#screen-dashboard { padding-bottom: 120px; }
-
-/* Top bar */
-.dash-topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 20px 0;
-}
-.dash-greeting {
-  font-size: 11px; font-weight: 500;
-  letter-spacing: 2px; text-transform: uppercase; color: var(--ink3);
-}
-.dash-name {
-  font-family: 'Google Sans Display', sans-serif;
-  font-size: 24px; font-weight: 600; color: var(--ink);
-  margin-top: 2px;
-}
-.dash-avatar {
-  width: 42px; height: 42px; border-radius: 50%;
-  background: var(--sbux);
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-family: 'Google Sans Display', sans-serif;
-  font-size: 18px; font-weight: 700;
-  border: 2px solid var(--gold-light);
-}
-
-.tab-content { display: none; }
-.tab-content.active { display: block; }
-
-/* ── BOTTOM NAV – PILL ── */
-.bottom-nav {
-  position: fixed;
-  bottom: 24px; left: 50%; transform: translateX(-50%);
-  background: var(--sbux-dark);
-  border-radius: 100px;
-  display: flex;
-  padding: 6px 8px;
-  z-index: 100;
-  box-shadow: 0 8px 32px rgba(30,57,50,0.35), 0 2px 8px rgba(0,0,0,0.15);
-  gap: 4px;
-}
-.nav-item {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 3px;
-  cursor: pointer; padding: 8px 24px;
-  border-radius: 100px;
-  transition: background 0.2s, color 0.2s;
-  color: rgba(255,255,255,0.5);
-  border: none; background: none;
-  font-family: 'Google Sans', sans-serif;
-  white-space: nowrap;
-}
-.nav-item.active {
-  background: var(--sbux2);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(0,168,98,0.4);
-}
-.nav-item svg { width: 20px; height: 20px; }
-.nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; }
-
-/* ── LOYALTY CARD ── */
-.loyalty-card {
-  margin: 20px;
-  background: linear-gradient(135deg, #1e3932 0%, #2d5a4e 50%, #1e3932 100%);
-  border-radius: 20px;
-  padding: 28px 24px 24px;
-  position: relative; overflow: hidden;
-  box-shadow: 0 8px 32px rgba(30,57,50,0.4);
-}
-.loyalty-card::before {
-  content: '';
-  position: absolute; top: -40px; right: -40px;
-  width: 180px; height: 180px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,168,98,0.2), transparent 70%);
-}
-.loyalty-card::after {
-  content: '';
-  position: absolute; bottom: -20px; left: -20px;
-  width: 120px; height: 120px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(0,112,74,0.15), transparent 70%);
-}
-.lc-brand {
-  font-family: 'Google Sans Display', sans-serif;
-  font-size: 13px; font-weight: 600;
-  letter-spacing: 4px; text-transform: uppercase;
-  color: var(--sbux2); opacity: 0.9;
-  margin-bottom: 4px;
-}
-.lc-type {
-  font-size: 10px; letter-spacing: 3px;
-  text-transform: uppercase; color: rgba(255,255,255,0.35);
-}
-.lc-cups-row {
-  display: flex; align-items: flex-end; gap: 4px;
-  margin: 20px 0 4px;
-}
-.lc-cups-num {
-  font-family: 'Google Sans Display', sans-serif;
-  font-size: 56px; font-weight: 700;
-  color: #fff; line-height: 1;
-  letter-spacing: -2px;
-}
-.lc-cups-unit {
-  font-size: 14px; color: rgba(255,255,255,0.5);
-  margin-bottom: 10px; font-weight: 300;
-}
-.lc-cups-label {
-  font-size: 10px; color: rgba(255,255,255,0.35);
-  letter-spacing: 2px; text-transform: uppercase;
-}
-
-/* ── STAMP GRID ── */
-.stamp-section {
-  margin: 0 20px 20px;
-}
-.stamp-title {
-  font-size: 11px; font-weight: 600;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: var(--ink3); margin-bottom: 14px;
-  display: flex; align-items: center; gap: 8px;
-}
-.stamp-title::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
-
-.stamp-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-}
-
-.stamp {
-  aspect-ratio: 1;
-  border-radius: 12px;
-  border: 2px dashed var(--border2);
-  display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 3px;
-  position: relative; overflow: hidden;
-  transition: transform 0.2s;
-  background: var(--cream);
-}
-.stamp.filled {
-  border: 2px solid var(--sbux);
-  background: var(--gold-light);
-}
-.stamp.free {
-  border: 2px solid var(--sbux-dark);
-  background: var(--sbux-dark);
-}
-.stamp.filled::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent 60%);
-}
-
-.stamp-icon {
-  font-size: 18px; line-height: 1;
-  position: relative; z-index: 1;
-}
-.stamp-num {
-  font-size: 8px; font-weight: 600;
-  letter-spacing: 0.5px; color: var(--ink3);
-  position: relative; z-index: 1;
-}
-.stamp.filled .stamp-num { color: var(--sbux); }
-.stamp.free .stamp-num { color: rgba(255,255,255,0.6); }
-.stamp.free .stamp-icon { filter: grayscale(0); }
-
-/* NEW stamp animation */
-@keyframes stampIn {
-  0% { transform: scale(1.4) rotate(-8deg); opacity:0; }
-  60% { transform: scale(0.92) rotate(2deg); opacity:1; }
-  100% { transform: scale(1) rotate(0deg); opacity:1; }
-}
-.stamp.just-filled { animation: stampIn 0.5s cubic-bezier(0.16,1,0.3,1); }
-
-/* ── PROGRESS BAR ── */
-.progress-section {
-  margin: 0 20px 20px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 14px; padding: 18px 20px;
-}
-.progress-label {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 12px;
-}
-.progress-text {
-  font-size: 12px; font-weight: 500; color: var(--ink2);
-}
-.progress-pct {
-  font-size: 12px; font-weight: 600; color: var(--sbux);
-}
-.progress-track {
-  height: 6px; background: var(--parchment);
-  border-radius: 3px; overflow: hidden;
-}
-.progress-fill {
-  height: 100%; border-radius: 3px;
-  background: linear-gradient(90deg, var(--sbux), var(--sbux2));
-  transition: width 1s cubic-bezier(0.16,1,0.3,1);
-}
-.next-reward {
-  font-size: 11px; color: var(--ink3); margin-top: 8px; text-align: center;
-}
-.next-reward strong { color: var(--ink); }
-
-/* ── PROFILE TAB ── */
-.profile-section {
-  margin: 20px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 24px;
-}
-.profile-section-title {
-  font-size: 10px; font-weight: 600;
-  letter-spacing: 2px; text-transform: uppercase;
-  color: var(--ink3); margin-bottom: 18px;
-}
-.profile-avatar-row {
-  display: flex; align-items: center; gap: 16px;
-  margin-bottom: 24px; padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-}
-.profile-avatar {
-  width: 60px; height: 60px; border-radius: 50%;
-  background: var(--sbux);
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-family: 'Google Sans Display', sans-serif;
-  font-size: 26px; font-weight: 700;
-  flex-shrink: 0;
-}
-.profile-name {
-  font-family: 'Google Sans Display', sans-serif;
-  font-size: 22px; font-weight: 600; color: var(--ink);
-}
-.profile-phone {
-  font-size: 13px; color: var(--ink3); margin-top: 2px;
-}
-.profile-member-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  background: var(--gold-light); border: 1px solid var(--sbux);
-  border-radius: 20px; padding: 3px 10px;
-  font-size: 10px; font-weight: 600; letter-spacing: 1px;
-  color: var(--sbux); text-transform: uppercase; margin-top: 4px;
-}
-
-/* ── BOTTOM NAV ── */
-.bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  background: #fff;
-  border-top: 1px solid var(--border);
-  display: flex; padding: 12px 0 20px;
-  z-index: 100;
-}
-.nav-item {
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; gap: 4px;
-  cursor: pointer; padding: 4px;
-  transition: color 0.2s;
-  color: var(--ink3);
-  border: none; background: none;
-  font-family: 'Google Sans', sans-serif;
-}
-.nav-item.active { color: var(--ink); }
-.nav-item svg { width: 22px; height: 22px; }
-.nav-label { font-size: 9px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
-
-/* ── INFO CHIPS ── */
-.info-chip {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
-}
-.info-chip:last-child { border-bottom: none; }
-.info-chip-icon {
-  width: 34px; height: 34px; border-radius: 8px;
-  background: var(--parchment);
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-}
-.info-chip-label { font-size: 11px; color: var(--ink3); margin-bottom: 2px; }
-.info-chip-val { font-size: 14px; font-weight: 500; color: var(--ink); }
-
-/* ── EDIT FORM ── */
-.edit-form {
-  margin-top: 16px; padding-top: 16px;
-  border-top: 1px solid var(--border);
-  display: none;
-}
-.edit-form.visible { display: block; }
-.edit-row {
-  display: flex; gap: 10px; margin-top: 10px;
-}
-.edit-row .btn-primary { padding: 13px; font-size: 12px; }
-.edit-row .btn-secondary { padding: 13px; font-size: 12px; margin: 0; }
-
-/* ── NOTICE CARD ── */
-.notice-card {
-  margin: 0 20px 16px;
-  background: var(--gold-light);
-  border: 1px solid var(--sbux);
-  border-radius: 12px; padding: 14px 16px;
-  display: flex; align-items: flex-start; gap: 10px;
-}
-.notice-card svg { width: 18px; height: 18px; color: var(--sbux); flex-shrink: 0; margin-top: 1px; }
-.notice-text { font-size: 12px; color: var(--ink2); line-height: 1.6; }
-.notice-text strong { color: var(--sbux); }
-
-/* ── BIRTHDAY HINT ── */
-.bday-hint {
-  font-size: 11px; color: var(--sbux);
-  display: flex; align-items: center; gap: 5px;
-  margin-top: 6px; font-weight: 500;
-}
-
-/* ── LOGOUT ── */
-.logout-row {
-  text-align: center; padding: 24px 20px;
-}
-
-/* ── CONNECTING STATE ── */
-.connecting-overlay {
-  position: fixed; inset: 0;
-  background: var(--cream);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 16px;
-  z-index: 999;
-}
-.connecting-overlay.hidden { display: none; }
-.connecting-brand {
-  font-family: 'Google Sans Display', sans-serif;
-  font-size: 36px; font-weight: 700;
-  letter-spacing: 6px; color: var(--ink);
-}
-.connecting-text {
-  font-size: 12px; color: var(--ink3);
-  letter-spacing: 2px; text-transform: uppercase;
-}
-
-/* ── REAL-TIME PULSE ── */
-@keyframes rtPulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(46,125,50,0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(46,125,50,0); }
-}
-.rt-dot {
-  display: inline-block; width: 7px; height: 7px;
-  border-radius: 50%; background: var(--green);
-  margin-right: 5px;
-  animation: rtPulse 2s infinite;
-}
+/* PILL NAV */
+.bottom-nav{position:fixed;bottom:20px;left:0;right:0;display:flex;justify-content:center;z-index:100;pointer-events:none;}
+.bottom-nav-inner{display:flex;background:var(--sbux-dk);border-radius:100px;padding:5px 6px;gap:4px;box-shadow:0 8px 28px rgba(30,57,50,0.38);pointer-events:all;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:8px 22px;border-radius:100px;transition:background 0.2s,color 0.2s;color:rgba(255,255,255,0.4);border:none;background:none;font-family:'Google Sans',sans-serif;}
+.nav-item.active{background:var(--sbux2);color:#fff;}
+.nav-item svg{width:20px;height:20px;}
+.nav-label{font-size:10px;font-weight:600;}
 </style>
 </head>
 <body>
 
-<!-- CONNECTING OVERLAY -->
 <div class="connecting-overlay" id="connecting-overlay">
   <div class="connecting-brand">XOLIFA</div>
-  <div style="display:flex;gap:6px;">
-    <span class="loader-dot"></span>
-    <span class="loader-dot"></span>
-    <span class="loader-dot"></span>
+  <div style="display:flex;gap:6px;color:var(--sbux);">
+    <span class="loader-dot"></span><span class="loader-dot"></span><span class="loader-dot"></span>
   </div>
-  <div class="connecting-text">Đang kết nối</div>
 </div>
 
-<!-- TOAST -->
 <div id="toast"></div>
 
-<!-- ═══════════════════════════════════════
-     SCREEN: LOGIN
-══════════════════════════════════════════ -->
+<!-- LOGIN -->
 <div class="screen" id="screen-login">
-  <div class="brand-header">
-    <div class="brand-ornament">
-      <div class="brand-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="18" height="18">
-          <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
-          <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
-          <line x1="6" y1="2" x2="6" y2="4"/>
-          <line x1="10" y1="2" x2="10" y2="4"/>
-          <line x1="14" y1="2" x2="14" y2="4"/>
-        </svg>
-      </div>
+  <div class="login-logo">
+    <div class="login-logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" width="28" height="28">
+        <path d="M17 8h1a4 4 0 0 1 0 8h-1"/>
+        <path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
+        <line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
+      </svg>
     </div>
-    <div class="brand-name">XOLIFA</div>
-    <div class="brand-sub">Loyalty Member</div>
+    <div class="login-logo-name">XOLIFA</div>
+    <div class="login-logo-sub">Loyalty Member</div>
   </div>
-
-  <div style="padding: 0 20px 8px; text-align:center;">
-    <p style="font-size:13px; color:var(--ink3); line-height:1.7;">
-      Nhập số điện thoại để đăng nhập<br>hoặc đăng ký thành viên
-    </p>
-  </div>
-
-  <div class="phone-display" id="phone-display">—</div>
-  <div class="login-hint" id="login-hint">Nhập số điện thoại của bạn</div>
-
-  <!-- Native phone input -->
-  <div style="padding: 0 20px 8px;">
-    <input type="tel" class="phone-input-native" id="native-phone-input"
-      placeholder="0xxxxxxxxx" inputmode="numeric" maxlength="11"
-      oninput="onNativePhoneInput(this.value)"
-      onkeydown="if(event.key==='Enter') doLogin()">
-  </div>
-
-  <div style="padding: 0 20px 8px;">
-    <button class="btn-primary" onclick="doLogin()">Xác nhận</button>
-  </div>
-
+  <label class="field-label">Số điện thoại</label>
+  <input type="tel" class="phone-input" id="native-phone-input"
+    placeholder="0xxxxxxxxx" inputmode="numeric" maxlength="11"
+    oninput="onPhoneInput(this.value)"
+    onkeydown="if(event.key==='Enter') doLogin()">
+  <button class="btn-primary" onclick="doLogin()">Đăng nhập</button>
   <div class="divider"><span>hoặc</span></div>
-  <div style="padding: 0 20px 20px;">
-    <button class="btn-secondary" onclick="showRegister()">
-      ✦ Đăng ký thành viên mới
-    </button>
-  </div>
+  <button class="btn-outline" onclick="showRegister()">Đăng ký thành viên mới</button>
 </div>
 
-<!-- ═══════════════════════════════════════
-     SCREEN: REGISTER
-══════════════════════════════════════════ -->
+<!-- REGISTER -->
 <div class="screen" id="screen-register">
-  <div class="brand-header" style="padding-top: 32px; padding-bottom: 20px;">
-    <div class="brand-name" style="font-size:24px;">Đăng ký thành viên</div>
-    <div class="brand-sub">Bắt đầu tích điểm ngay hôm nay</div>
+  <div class="screen-header">
+    <button class="back-btn" onclick="showScreen('screen-login')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
+    <div class="screen-title">Đăng ký thành viên</div>
   </div>
-
-  <div class="notice-card">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-    </svg>
-    <div class="notice-text">
-      Mỗi <strong>6 ly</strong> = 1 ly miễn phí. Điểm được tích sau mỗi lần mua hàng tại quầy.
-    </div>
-  </div>
-
-  <div class="card">
+  <div class="notice">Mỗi <strong>6 ly</strong> = 1 ly miễn phí. Điểm được tích tại quầy sau mỗi lần mua.</div>
+  <div class="form-wrap">
     <div class="input-group">
       <label class="input-label">Số điện thoại *</label>
       <input type="tel" class="input-field" id="reg-phone" placeholder="0xxxxxxxxx" inputmode="numeric" maxlength="11">
     </div>
     <div class="input-group">
-      <label class="input-label">Nickname *</label>
-      <input type="text" class="input-field" id="reg-nickname" placeholder="Tên hiển thị của bạn" maxlength="30">
+      <label class="input-label">Tên hiển thị *</label>
+      <input type="text" class="input-field" id="reg-nickname" placeholder="Nhập tên của bạn" maxlength="30">
     </div>
     <div class="input-group">
       <label class="input-label">Ngày sinh (không bắt buộc)</label>
       <input type="date" class="input-field" id="reg-dob">
-      <div class="bday-hint">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-        </svg>
-        Nhập để nhận quà sinh nhật đặc biệt!
-      </div>
+      <div class="hint-text hint-green">🎂 Nhập để nhận ưu đãi sinh nhật!</div>
     </div>
-    <button class="btn-primary" onclick="submitRegister()" id="btn-register">
-      Tạo tài khoản
-    </button>
-    <button class="btn-secondary" onclick="showScreen('screen-login')">← Quay lại</button>
+    <button class="btn-primary" onclick="submitRegister()" id="btn-register">Tạo tài khoản</button>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     SCREEN: DASHBOARD
-══════════════════════════════════════════ -->
+<!-- DASHBOARD -->
 <div class="screen" id="screen-dashboard">
-
-  <!-- Top bar -->
   <div class="dash-topbar">
     <div>
       <div class="dash-greeting">Xin chào,</div>
@@ -734,16 +214,10 @@ html, body {
     </div>
     <div class="dash-avatar" id="dash-avatar">?</div>
   </div>
+  <div class="rt-row"><span class="rt-dot"></span> Cập nhật thời gian thực</div>
 
-  <!-- Realtime indicator -->
-  <div style="padding: 6px 20px 0; font-size:10px; color:var(--ink3); display:flex; align-items:center; letter-spacing:0.5px;">
-    <span class="rt-dot"></span> Cập nhật thời gian thực
-  </div>
-
-  <!-- ── TAB: LOYALTY ── -->
+  <!-- TAB LOYALTY -->
   <div class="tab-content active" id="tab-content-loyalty">
-
-    <!-- Loyalty card -->
     <div class="loyalty-card">
       <div class="lc-brand">XOLIFA</div>
       <div class="lc-type">Membership Card</div>
@@ -753,462 +227,290 @@ html, body {
       </div>
       <div class="lc-cups-label">Tổng số ly đã mua</div>
     </div>
-
-    <!-- Progress -->
     <div class="progress-section">
       <div class="progress-label">
         <span class="progress-text" id="prog-text">0 / 6 ly</span>
         <span class="progress-pct" id="prog-pct">0%</span>
       </div>
-      <div class="progress-track">
-        <div class="progress-fill" id="prog-fill" style="width:0%"></div>
-      </div>
-      <div class="next-reward" id="prog-next">Còn <strong>6 ly</strong> nữa để nhận ly miễn phí</div>
+      <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="next-reward" id="prog-next">Còn <strong>6 ly</strong> nữa để nhận ly miễn phí 🎁</div>
     </div>
-
-    <!-- Stamp grid -->
     <div class="stamp-section">
-      <div class="stamp-title">Thẻ tích ly</div>
+      <div class="stamp-section-title">Thẻ tích ly</div>
       <div class="stamp-grid" id="stamp-grid"></div>
     </div>
-
-    <!-- Notice -->
-    <div class="notice-card">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
-      <div class="notice-text">
-        Điểm được tích bởi nhân viên tại quầy sau mỗi lần bạn mua hàng.
-      </div>
-    </div>
+    <div class="notice" style="margin:0 16px 16px;">Điểm được tích bởi nhân viên tại quầy sau mỗi lần bạn mua hàng.</div>
   </div>
 
-  <!-- ── TAB: ME ── -->
+  <!-- TAB ME -->
   <div class="tab-content" id="tab-content-me">
-    <div class="profile-section">
-      <div class="profile-avatar-row">
+    <div class="profile-card">
+      <div class="profile-hero">
         <div class="profile-avatar" id="prof-avatar">?</div>
         <div>
           <div class="profile-name" id="prof-name">—</div>
           <div class="profile-phone" id="prof-phone">—</div>
-          <div class="profile-member-badge">
-            ✦ Thành viên XOLIFA
+          <div class="profile-badge">✦ Thành viên</div>
+        </div>
+      </div>
+      <div class="profile-rows">
+        <div class="profile-row">
+          <div class="profile-row-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sbux)" stroke-width="2">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.39 18.4 19.45 19.45 0 0 1 6.39 13a19.79 19.79 0 0 1-3.46-8.43A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
           </div>
+          <div><div class="profile-row-label">Số điện thoại</div><div class="profile-row-val" id="prof-phone-chip">—</div></div>
         </div>
-      </div>
-
-      <div class="profile-section-title">Thông tin tài khoản</div>
-
-      <div class="info-chip">
-        <div class="info-chip-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sbux)" stroke-width="2">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 11.39 18.4 19.45 19.45 0 0 1 6.39 13a19.79 19.79 0 0 1-3.46-8.43A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-          </svg>
+        <div class="profile-row">
+          <div class="profile-row-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sbux)" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div><div class="profile-row-label">Ngày sinh</div><div class="profile-row-val" id="prof-dob">Chưa cập nhật</div></div>
         </div>
-        <div>
-          <div class="info-chip-label">Số điện thoại</div>
-          <div class="info-chip-val" id="prof-phone-chip">—</div>
+        <div class="profile-row">
+          <div class="profile-row-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sbux)" stroke-width="2">
+              <path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
+            </svg>
+          </div>
+          <div><div class="profile-row-label">Tổng ly đã mua</div><div class="profile-row-val" id="prof-cups">0 ly</div></div>
         </div>
-      </div>
-      <div class="info-chip">
-        <div class="info-chip-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sbux)" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-          </svg>
-        </div>
-        <div>
-          <div class="info-chip-label">Ngày sinh</div>
-          <div class="info-chip-val" id="prof-dob">Chưa cập nhật</div>
-        </div>
-      </div>
-      <div class="info-chip">
-        <div class="info-chip-icon">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--sbux)" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </div>
-        <div>
-          <div class="info-chip-label">Tổng ly đã mua</div>
-          <div class="info-chip-val" id="prof-cups">0 ly</div>
-        </div>
-      </div>
-
-      <!-- Edit form -->
-      <div class="edit-form" id="edit-form">
-        <div class="profile-section-title">Chỉnh sửa thông tin</div>
-        <div class="input-group">
-          <label class="input-label">Nickname mới</label>
-          <input type="text" class="input-field" id="edit-nickname" placeholder="Nhập nickname mới" maxlength="30">
-        </div>
-        <div class="input-group">
-          <label class="input-label">Số điện thoại mới</label>
-          <input type="tel" class="input-field" id="edit-phone" placeholder="Nhập SĐT mới" inputmode="numeric" maxlength="11">
-          <p style="font-size:11px;color:var(--ink3);margin-top:6px;line-height:1.5;">
-            ⚠️ Đổi SĐT sẽ chuyển toàn bộ điểm sang số mới.
-          </p>
-        </div>
-        <div class="edit-row">
-          <button class="btn-primary" onclick="submitEdit()" style="flex:2;">Cập nhật</button>
-          <button class="btn-secondary" onclick="toggleEdit()" style="flex:1; margin:0;">Hủy</button>
-        </div>
-      </div>
-
-      <div style="margin-top:20px;">
-        <button class="btn-secondary" onclick="toggleEdit()" id="btn-edit-toggle">
-          ✏️ Chỉnh sửa thông tin
-        </button>
       </div>
     </div>
 
+    <div style="margin:0 16px;">
+      <button class="btn-outline" onclick="toggleEdit()" id="btn-edit-toggle">✏️ Chỉnh sửa thông tin</button>
+    </div>
+    <div class="edit-section" id="edit-form">
+      <div class="edit-section-title">Chỉnh sửa</div>
+      <div class="input-group">
+        <label class="input-label">Tên hiển thị mới</label>
+        <input type="text" class="input-field" id="edit-nickname" maxlength="30">
+      </div>
+      <div class="input-group">
+        <label class="input-label">Số điện thoại mới</label>
+        <input type="tel" class="input-field" id="edit-phone" inputmode="numeric" maxlength="11">
+        <div class="hint-text">⚠️ Đổi SĐT sẽ chuyển toàn bộ điểm sang số mới.</div>
+      </div>
+      <div class="edit-row">
+        <button class="btn-primary" onclick="submitEdit()" style="flex:2;">Cập nhật</button>
+        <button class="btn-cancel" onclick="toggleEdit()">Hủy</button>
+      </div>
+    </div>
     <div class="logout-row">
-      <button class="btn-ghost" onclick="logout()">← Đăng xuất</button>
+      <button class="btn-logout" onclick="logout()">Đăng xuất</button>
     </div>
   </div>
 
-  <!-- Bottom nav -->
+  <!-- PILL NAV -->
   <div class="bottom-nav">
-    <button class="nav-item active" id="nav-loyalty" onclick="switchTab('loyalty')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
-        <line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
-      </svg>
-      <span class="nav-label">Tích điểm</span>
-    </button>
-    <button class="nav-item" id="nav-me" onclick="switchTab('me')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-      </svg>
-      <span class="nav-label">Tôi</span>
-    </button>
+    <div class="bottom-nav-inner">
+      <button class="nav-item active" id="nav-loyalty" onclick="switchTab('loyalty')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V8z"/>
+          <line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>
+        </svg>
+        <span class="nav-label">Tích điểm</span>
+      </button>
+      <button class="nav-item" id="nav-me" onclick="switchTab('me')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span class="nav-label">Tôi</span>
+      </button>
+    </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════════ -->
 <script>
-/* ── FIREBASE CONFIG (dùng cùng project với kiosk) ── */
-var firebaseConfig = {
-  apiKey:        "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
-  authDomain:    "the-cafe-33.firebaseapp.com",
-  projectId:     "the-cafe-33",
-  storageBucket: "the-cafe-33.firebasestorage.app",
-  messagingSenderId: "...",
-  appId:         "..."
-};
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-var db   = firebase.firestore();
-var auth = firebase.auth();
+var firebaseConfig={apiKey:"AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",authDomain:"the-cafe-33.firebaseapp.com",projectId:"the-cafe-33",storageBucket:"the-cafe-33.firebasestorage.app",messagingSenderId:"...",appId:"..."};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+var db=firebase.firestore(),auth=firebase.auth();
+var currentPhone='',currentData=null,unsubListener=null,phoneInput='';
 
-/* ── STATE ── */
-var currentPhone = '';
-var currentData  = null;
-var unsubListener = null;
-
-/* ── INIT ── */
-window.addEventListener('DOMContentLoaded', function() {
-  auth.signInAnonymously()
-    .then(function() {
-      document.getElementById('connecting-overlay').classList.add('hidden');
-      showScreen('screen-login');
-    })
-    .catch(function(e) {
-      console.warn('Auth warn:', e);
-      document.getElementById('connecting-overlay').classList.add('hidden');
-      showScreen('screen-login');
-    });
+window.addEventListener('DOMContentLoaded',function(){
+  auth.signInAnonymously().then(tryAutoLogin).catch(tryAutoLogin);
 });
 
-/* ── SCREEN NAVIGATION ── */
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
-  var el = document.getElementById(id);
-  if (el) el.classList.add('active');
+function tryAutoLogin(){
+  document.getElementById('connecting-overlay').classList.add('hidden');
+  var saved='';
+  try{saved=localStorage.getItem('xolifa_phone')||'';}catch(e){}
+  if(saved&&saved.length>=9){
+    showToast('Đang đăng nhập...');
+    db.collection('customers_xolifa').doc(saved).get()
+      .then(function(doc){
+        if(doc.exists){
+          currentPhone=saved;currentData=doc.data();
+          startRealtimeListener(saved);renderDashboard(currentData);showScreen('screen-dashboard');
+        }else{
+          try{localStorage.removeItem('xolifa_phone');}catch(e){}
+          showScreen('screen-login');
+        }
+      }).catch(function(){showScreen('screen-login');});
+  }else{showScreen('screen-login');}
 }
 
-function showRegister(prefillPhone) {
-  if (prefillPhone) document.getElementById('reg-phone').value = prefillPhone;
-  showScreen('screen-register');
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  var el=document.getElementById(id);if(el)el.classList.add('active');
+  window.scrollTo(0,0);
 }
+function showRegister(p){if(p)document.getElementById('reg-phone').value=p;showScreen('screen-register');}
+function onPhoneInput(val){phoneInput=val.replace(/\D/g,'').slice(0,11);var el=document.getElementById('native-phone-input');if(el&&el.value!==phoneInput)el.value=phoneInput;}
+function formatPhone(raw){if(!raw)return'—';var r='';for(var i=0;i<raw.length;i++){if(i===4||i===7)r+=' ';r+=raw[i];}return r;}
 
-/* ── NATIVE PHONE INPUT LOGIC ── */
-var phoneInput = '';
-var displayEl = document.getElementById('phone-display');
-var hintEl = document.getElementById('login-hint');
-
-function onNativePhoneInput(val) {
-  // Only digits
-  phoneInput = val.replace(/\D/g, '').slice(0, 11);
-  // Keep input clean
-  var inputEl = document.getElementById('native-phone-input');
-  if (inputEl) inputEl.value = phoneInput;
-  updatePhoneDisplay();
-}
-
-function formatPhoneDisplay(raw) {
-  if (!raw) return '—';
-  // Format: 0xxx xxx xxxx or 0xxx xxxx xxxx
-  var s = raw;
-  var r = '';
-  for (var i = 0; i < s.length; i++) {
-    if (i === 4 || i === 7) r += ' ';
-    r += s[i];
-  }
-  return r;
-}
-
-function updatePhoneDisplay() {
-  if (displayEl) displayEl.textContent = formatPhoneDisplay(phoneInput);
-  var inputEl = document.getElementById('native-phone-input');
-  if (inputEl && inputEl.value !== phoneInput) inputEl.value = phoneInput;
-  if (phoneInput.length === 0) { if(hintEl) hintEl.textContent = 'Nhập số điện thoại của bạn'; }
-  else if (phoneInput.length < 10) { if(hintEl) hintEl.textContent = phoneInput.length + ' / 10 ký tự'; }
-  else hintEl.textContent = 'Nhấn Xác nhận để tiếp tục';
-}
-
-/* ── LOGIN LOGIC ── */
-function doLogin() {
-  var inputEl = document.getElementById('native-phone-input');
-  if (inputEl) phoneInput = inputEl.value.replace(/\D/g, '').slice(0, 11);
-  var phone = phoneInput.trim();
-  if (phone.length < 9) {
-    showToast('Vui lòng nhập số điện thoại đầy đủ');
-    return;
-  }
+function doLogin(){
+  var el=document.getElementById('native-phone-input');
+  if(el)phoneInput=el.value.replace(/\D/g,'').slice(0,11);
+  var phone=phoneInput.trim();
+  if(phone.length<9){showToast('Vui lòng nhập số điện thoại đầy đủ');return;}
   showToast('Đang kiểm tra...');
   db.collection('customers_xolifa').doc(phone).get()
-    .then(function(doc) {
-      if (doc.exists) {
-        currentPhone = phone;
-        currentData  = doc.data();
-        startRealtimeListener(phone);
-        renderDashboard(currentData);
-        showScreen('screen-dashboard');
-      } else {
-        // SĐT chưa đăng ký
-        showToast('SĐT chưa đăng ký. Vui lòng tạo tài khoản.');
-        setTimeout(function() { showRegister(phone); }, 1200);
+    .then(function(doc){
+      if(doc.exists){
+        currentPhone=phone;currentData=doc.data();
+        try{localStorage.setItem('xolifa_phone',phone);}catch(e){}
+        startRealtimeListener(phone);renderDashboard(currentData);showScreen('screen-dashboard');
+      }else{
+        showToast('SĐT chưa đăng ký. Đang chuyển...');
+        setTimeout(function(){showRegister(phone);},1200);
       }
-    })
-    .catch(function(e) {
-      console.error(e);
-      showToast('Lỗi kết nối. Thử lại.');
-    });
+    }).catch(function(){showToast('Lỗi kết nối. Thử lại.');});
 }
 
-/* ── REGISTER ── */
-function submitRegister() {
-  var phone    = document.getElementById('reg-phone').value.trim();
-  var nickname = document.getElementById('reg-nickname').value.trim();
-  var dob      = document.getElementById('reg-dob').value;
-
-  if (!phone || phone.length < 9) { showToast('Nhập số điện thoại hợp lệ'); return; }
-  if (!nickname) { showToast('Nickname không được trống'); return; }
-
-  var btn = document.getElementById('btn-register');
-  btn.textContent = 'Đang tạo...'; btn.disabled = true;
-
-  // Kiểm tra SĐT đã tồn tại chưa (chỉ cho phép client tự tạo lần đầu)
+function submitRegister(){
+  var phone=document.getElementById('reg-phone').value.trim();
+  var nickname=document.getElementById('reg-nickname').value.trim();
+  var dob=document.getElementById('reg-dob').value;
+  if(!phone||phone.length<9){showToast('Nhập số điện thoại hợp lệ');return;}
+  if(!nickname){showToast('Vui lòng nhập tên hiển thị');return;}
+  var btn=document.getElementById('btn-register');btn.textContent='Đang tạo...';btn.disabled=true;
   db.collection('customers_xolifa').doc(phone).get()
-    .then(function(doc) {
-      if (doc.exists) {
-        showToast('SĐT này đã đăng ký rồi!');
-        btn.textContent = 'Tạo tài khoản'; btn.disabled = false;
-        return;
-      }
-      var newData = {
-        nickname: nickname,
-        dob: dob || '',
-        total_cups: 0,
-        current_points: 0,
-        created_at: firebase.firestore.FieldValue.serverTimestamp()
-      };
-      // Write: chỉ sdt, nickname, dob được phép write từ client (theo security rules)
-      return db.collection('customers_xolifa').doc(phone).set(newData);
+    .then(function(doc){
+      if(doc.exists){showToast('SĐT này đã đăng ký rồi!');btn.textContent='Tạo tài khoản';btn.disabled=false;return;}
+      return db.collection('customers_xolifa').doc(phone).set({nickname:nickname,dob:dob||'',total_cups:0,current_points:0,created_at:firebase.firestore.FieldValue.serverTimestamp()});
     })
-    .then(function() {
-      if (!btn.disabled) return; // đã xử lý lỗi ở trên
-      currentPhone = phone;
-      currentData  = { nickname: nickname, dob: dob || '', total_cups: 0, current_points: 0 };
-      startRealtimeListener(phone);
+    .then(function(){
+      if(!btn.disabled)return;
+      currentPhone=phone;currentData={nickname:nickname,dob:dob||'',total_cups:0,current_points:0};
+      try{localStorage.setItem('xolifa_phone',phone);}catch(e){}
+      startRealtimeListener(phone);renderDashboard(currentData);showScreen('screen-dashboard');showToast('🎉 Chào mừng bạn đến XOLIFA!');
+    })
+    .catch(function(){showToast('Lỗi khi tạo tài khoản');})
+    .finally(function(){btn.textContent='Tạo tài khoản';btn.disabled=false;});
+}
+
+function startRealtimeListener(phone){
+  if(unsubListener)unsubListener();
+  unsubListener=db.collection('customers_xolifa').doc(phone).onSnapshot(function(doc){
+    if(doc.exists){
+      var prev=currentData?currentData.current_points:0;
+      currentData=doc.data();
+      if(currentData.current_points!==prev)showToast('✦ Điểm vừa được cập nhật!');
       renderDashboard(currentData);
-      showScreen('screen-dashboard');
-      showToast('🎉 Chào mừng bạn đến XOLIFA!');
-    })
-    .catch(function(e) {
-      console.error(e);
-      showToast('Lỗi khi tạo tài khoản');
-    })
-    .finally(function() {
-      btn.textContent = 'Tạo tài khoản'; btn.disabled = false;
-    });
+    }
+  },function(err){console.warn('Listener:',err);});
 }
 
-/* ── REALTIME LISTENER ── */
-function startRealtimeListener(phone) {
-  if (unsubListener) unsubListener();
-  unsubListener = db.collection('customers_xolifa').doc(phone)
-    .onSnapshot(function(doc) {
-      if (doc.exists) {
-        var prev = currentData ? currentData.current_points : 0;
-        currentData = doc.data();
-        // Animate nếu điểm thay đổi
-        if (currentData.current_points !== prev) {
-          showToast('✦ Điểm vừa được cập nhật!');
-        }
-        renderDashboard(currentData);
-      }
-    }, function(err) {
-      console.warn('Listener error:', err);
-    });
-}
-
-/* ── RENDER DASHBOARD ── */
-function renderDashboard(data) {
-  if (!data) return;
-  var nick   = data.nickname || 'Bạn';
-  var cups   = Number(data.total_cups   || 0);
-  var points = Number(data.current_points || 0);
-  var initial = nick.charAt(0).toUpperCase();
-
-  // Top bar
-  document.getElementById('dash-name').textContent = nick;
-  document.getElementById('dash-avatar').textContent = initial;
-
-  // Loyalty card
-  document.getElementById('lc-total').textContent = cups;
-
-  // Progress (0–6)
-  var p = Math.min(points, 6);
-  var pct = Math.round((p / 6) * 100);
-  document.getElementById('prog-text').textContent = p + ' / 6 ly';
-  document.getElementById('prog-pct').textContent  = pct + '%';
-  document.getElementById('prog-fill').style.width = pct + '%';
-  var rem = 6 - p;
-  document.getElementById('prog-next').innerHTML = rem > 0
-    ? 'Còn <strong>' + rem + ' ly</strong> nữa để nhận ly miễn phí 🎁'
-    : '🎉 Bạn có <strong>1 ly miễn phí</strong> — Cho nhân viên biết để đổi!';
-
-  // Stamps
+function renderDashboard(data){
+  if(!data)return;
+  var nick=data.nickname||'Bạn',cups=Number(data.total_cups||0),points=Number(data.current_points||0);
+  var initial=nick.charAt(0).toUpperCase();
+  document.getElementById('dash-name').textContent=nick;
+  document.getElementById('dash-avatar').textContent=initial;
+  document.getElementById('lc-total').textContent=cups;
+  var p=Math.min(points,6),pct=Math.round((p/6)*100);
+  document.getElementById('prog-text').textContent=p+' / 6 ly';
+  document.getElementById('prog-pct').textContent=pct+'%';
+  document.getElementById('prog-fill').style.width=pct+'%';
+  var rem=6-p;
+  document.getElementById('prog-next').innerHTML=rem>0?'Còn <strong>'+rem+' ly</strong> nữa để nhận ly miễn phí 🎁':'🎉 Bạn có <strong>1 ly miễn phí</strong> — Cho nhân viên biết để đổi!';
   renderStamps(points);
-
-  // Profile tab
-  document.getElementById('prof-avatar').textContent = initial;
-  document.getElementById('prof-name').textContent   = nick;
-  document.getElementById('prof-phone').textContent  = formatPhoneDisplay(currentPhone);
-  document.getElementById('prof-phone-chip').textContent = formatPhoneDisplay(currentPhone);
-  document.getElementById('prof-cups').textContent   = cups + ' ly';
-
-  var dob = data.dob || '';
-  if (dob) {
-    var parts = dob.split('-');
-    document.getElementById('prof-dob').textContent = (parts[2]||'') + '/' + (parts[1]||'') + '/' + (parts[0]||'');
-  } else {
-    document.getElementById('prof-dob').textContent = 'Chưa cập nhật';
-  }
-
-  // Pre-fill edit fields
-  document.getElementById('edit-nickname').value = nick;
-  document.getElementById('edit-phone').value    = currentPhone;
+  document.getElementById('prof-avatar').textContent=initial;
+  document.getElementById('prof-name').textContent=nick;
+  document.getElementById('prof-phone').textContent=formatPhone(currentPhone);
+  document.getElementById('prof-phone-chip').textContent=formatPhone(currentPhone);
+  document.getElementById('prof-cups').textContent=cups+' ly';
+  var dob=data.dob||'';
+  if(dob){var parts=dob.split('-');document.getElementById('prof-dob').textContent=(parts[2]||'')+'/'+(parts[1]||'')+'/'+(parts[0]||'');}
+  else{document.getElementById('prof-dob').textContent='Chưa cập nhật';}
+  document.getElementById('edit-nickname').value=nick;
+  document.getElementById('edit-phone').value=currentPhone;
 }
 
-/* ── STAMP GRID ── */
-function renderStamps(points) {
-  var grid = document.getElementById('stamp-grid');
-  grid.innerHTML = '';
-  for (var i = 1; i <= 7; i++) {
-    var s = document.createElement('div');
-    if (i === 7) {
-      // Free slot
-      s.className = 'stamp free';
-      s.innerHTML = '<div class="stamp-icon">🎁</div><div class="stamp-num">FREE</div>';
-    } else {
-      var filled = i <= points;
-      s.className = 'stamp' + (filled ? ' filled' : '');
-      s.innerHTML = filled
-        ? '<div class="stamp-icon">☕</div><div class="stamp-num">' + i + '</div>'
-        : '<div class="stamp-icon" style="opacity:0.2;font-size:14px;">☕</div><div class="stamp-num">' + i + '</div>';
+function renderStamps(points){
+  var grid=document.getElementById('stamp-grid');grid.innerHTML='';
+  for(var i=1;i<=7;i++){
+    var s=document.createElement('div');
+    if(i===7){s.className='stamp free';s.innerHTML='<div class="stamp-icon">🎁</div><div class="stamp-num">FREE</div>';}
+    else{
+      var filled=i<=points;s.className='stamp'+(filled?' filled':'');
+      s.innerHTML=filled?'<div class="stamp-icon">☕</div><div class="stamp-num">'+i+'</div>':'<div class="stamp-icon" style="opacity:0.18;font-size:13px;">☕</div><div class="stamp-num">'+i+'</div>';
     }
     grid.appendChild(s);
   }
 }
 
-/* ── TAB SWITCH ── */
-function switchTab(name) {
-  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
-
-  document.getElementById('tab-content-' + name).classList.add('active');
-  document.getElementById('nav-' + name).classList.add('active');
+function switchTab(name){
+  document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active');});
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  document.getElementById('tab-content-'+name).classList.add('active');
+  document.getElementById('nav-'+name).classList.add('active');
 }
 
-/* ── EDIT PROFILE ── */
-function toggleEdit() {
-  var form = document.getElementById('edit-form');
-  var btn  = document.getElementById('btn-edit-toggle');
-  var showing = form.classList.contains('visible');
-  form.classList.toggle('visible', !showing);
-  btn.textContent = showing ? '✏️ Chỉnh sửa thông tin' : '✕ Đóng';
+function toggleEdit(){
+  var form=document.getElementById('edit-form'),btn=document.getElementById('btn-edit-toggle');
+  var show=!form.classList.contains('visible');
+  form.classList.toggle('visible',show);
+  btn.textContent=show?'✕ Đóng':'✏️ Chỉnh sửa thông tin';
 }
 
-function submitEdit() {
-  var newNick  = document.getElementById('edit-nickname').value.trim();
-  var newPhone = document.getElementById('edit-phone').value.trim();
-
-  if (!newNick) { showToast('Nickname không được trống'); return; }
-
-  // Nếu chỉ đổi nickname (không đổi SĐT)
-  if (newPhone === currentPhone || !newPhone) {
-    db.collection('customers_xolifa').doc(currentPhone)
-      .update({ nickname: newNick })
-      .then(function() { showToast('✅ Đã cập nhật nickname'); toggleEdit(); })
-      .catch(function() { showToast('Lỗi cập nhật'); });
+function submitEdit(){
+  var newNick=document.getElementById('edit-nickname').value.trim();
+  var newPhone=document.getElementById('edit-phone').value.trim();
+  if(!newNick){showToast('Tên không được trống');return;}
+  if(newPhone===currentPhone||!newPhone){
+    db.collection('customers_xolifa').doc(currentPhone).update({nickname:newNick})
+      .then(function(){showToast('✅ Đã cập nhật tên');toggleEdit();})
+      .catch(function(){showToast('Lỗi cập nhật');});
     return;
   }
-
-  // Đổi SĐT: chuyển dữ liệu
-  if (newPhone.length < 9) { showToast('SĐT mới không hợp lệ'); return; }
-
+  if(newPhone.length<9){showToast('SĐT mới không hợp lệ');return;}
   db.collection('customers_xolifa').doc(newPhone).get()
-    .then(function(doc) {
-      if (doc.exists) { showToast('SĐT mới đã tồn tại'); return; }
-      var transferData = Object.assign({}, currentData, { nickname: newNick });
-      var batch = db.batch();
-      batch.set(db.collection('customers_xolifa').doc(newPhone), transferData);
+    .then(function(doc){
+      if(doc.exists){showToast('SĐT mới đã tồn tại');return;}
+      var transferData=Object.assign({},currentData,{nickname:newNick});
+      var batch=db.batch();
+      batch.set(db.collection('customers_xolifa').doc(newPhone),transferData);
       batch.delete(db.collection('customers_xolifa').doc(currentPhone));
       return batch.commit();
     })
-    .then(function() {
-      if (unsubListener) unsubListener();
-      currentPhone = newPhone;
-      startRealtimeListener(newPhone);
-      showToast('✅ Đã cập nhật số điện thoại');
-      toggleEdit();
+    .then(function(){
+      if(unsubListener)unsubListener();
+      currentPhone=newPhone;
+      try{localStorage.setItem('xolifa_phone',newPhone);}catch(e){}
+      startRealtimeListener(newPhone);showToast('✅ Đã cập nhật SĐT');toggleEdit();
     })
-    .catch(function(e) { console.error(e); showToast('Lỗi khi cập nhật SĐT'); });
+    .catch(function(e){console.error(e);showToast('Lỗi khi cập nhật SĐT');});
 }
 
-/* ── LOGOUT ── */
-function logout() {
-  if (unsubListener) unsubListener();
-  currentPhone = '';
-  currentData  = null;
-  phoneInput   = '';
-  var inputEl = document.getElementById('native-phone-input');
-  if (inputEl) inputEl.value = '';
-  updatePhoneDisplay();
-  showScreen('screen-login');
-  showToast('Đã đăng xuất');
+function logout(){
+  if(unsubListener)unsubListener();
+  try{localStorage.removeItem('xolifa_phone');}catch(e){}
+  currentPhone='';currentData=null;phoneInput='';
+  var el=document.getElementById('native-phone-input');if(el)el.value='';
+  showScreen('screen-login');showToast('Đã đăng xuất');
 }
 
-/* ── TOAST ── */
-var toastTimer = null;
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 2800);
+var toastTimer=null;
+function showToast(msg){
+  var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.classList.remove('show');},2600);
 }
 </script>
 </body>
