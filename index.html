@@ -337,7 +337,7 @@
       </div>
 
       <!-- NHIỆM VỤ THÁNG 3 -->
-      <div id="mission-march-block" class="mb-6">
+      <div id="mission-march-block" class="mb-6" style="display:none;">
         <!-- Card: nền cream/beige sáng để thấy sản phẩm màu đen -->
         <div style="position:relative;overflow:hidden;border-radius:32px;background:linear-gradient(160deg,#fdf6ec 0%,#f5e6cc 50%,#eedbb0 100%);box-shadow:0 8px 32px rgba(180,130,60,0.18),0 2px 8px rgba(0,0,0,0.07);">
           <div style="position:absolute;top:-50px;right:-50px;width:200px;height:200px;background:radial-gradient(circle,rgba(255,255,255,0.7) 0%,transparent 70%);pointer-events:none;"></div>
@@ -1523,9 +1523,9 @@ function loadBedMap() {
     const dateStr = `${p[2]}/${p[1]}/${p[0]}`;
 
     _fetchBedDayBookings(dateStr).then(function(dayBookings) {
-        // activeBeds: bedId đã check-in (POS assign rõ ràng)
-        // preferredBeds: bedId app chọn trước (chưa check-in)
-        // unassignedCount: booking trùng giờ nhưng chưa có bedId (chờ xếp bed)
+        // activeBeds: bedId đã được gãn ô rõ ràng (bedId hợp lệ)
+        // preferredBeds: khách chọn ô trước, chưa check-in
+        // unassignedCount: booking trùng giờ nhưng KHÔNG có ô cụ thể - không chiếm ô nào
         const activeBeds    = new Set();
         const preferredBeds = new Set();
         const endTimes      = {};
@@ -1534,6 +1534,7 @@ function loadBedMap() {
         dayBookings.forEach(function(v) {
             const st = (v.status || '').toLowerCase();
             if (st.includes('hủy') || st.includes('xong')) return;
+            if (v.phone === curPhone) return; // bỏ qua lịch của chính mình
 
             const bs = parseInt(v.start.split(':')[0])*60 + parseInt(v.start.split(':')[1]);
             const be = parseInt(v.end.split(':')[0])  *60 + parseInt(v.end.split(':')[1]);
@@ -1541,39 +1542,32 @@ function loadBedMap() {
 
             const hasBedId = v.bedId && v.bedId !== '' && v.bedId !== 'WAITING' && !isNaN(v.bedId);
 
-            if (st.includes('active') && hasBedId) {
-                // Check-in xong, biết ô cụ thể
+            if (hasBedId) {
+                // Lịch đã được gãn ô cụ thể (active hoặc đã check-in)
                 activeBeds.add(String(v.bedId));
                 endTimes[String(v.bedId)] = v.end;
-            } else if (v.preferredBed && v.phone !== curPhone) {
-                // App chọn trước, biết ô cụ thể
+            } else if (v.preferredBed) {
+                // Khách đã chọn ô, chưa check-in
                 preferredBeds.add(String(v.preferredBed));
                 if (!endTimes[String(v.preferredBed)]) endTimes[String(v.preferredBed)] = v.end;
-            } else if (v.phone !== curPhone) {
-                // Booking trùng giờ nhưng chưa biết ô (chờ xếp bed)
+            } else {
+                // Booking chưa có ô nào → KHÔNG chiếm ô, chỉ đếm tổng slot
                 unassignedCount++;
             }
         });
 
-        // Tổng ô đã bị chiếm (có bedId + chưa có bedId)
-        const takenBeds  = new Set([...activeBeds, ...preferredBeds]);
-        const freeCount  = Math.max(0, 4 - takenBeds.size - unassignedCount);
+        // Ô thực sự bị chiếm = chỉ những ô có bedId rõ ràng
+        const takenBeds = new Set([...activeBeds, ...preferredBeds]);
+        // Tổng slot còn lại = 4 - (ô bị chiếm) - (lịch chưa có ô)
+        const freeCount = Math.max(0, 4 - takenBeds.size - unassignedCount);
 
-        // Gán unassigned vào các ô còn trống (1→4) để render đúng
-        // Dùng "ghost" set: các ô không có bedId xác định nhưng bị chiếm
-        const ghostBeds = new Set();
-        if (unassignedCount > 0) {
-            let filled = 0;
-            [1,2,3,4].forEach(function(n) {
-                if (filled >= unassignedCount) return;
-                if (!takenBeds.has(String(n))) {
-                    ghostBeds.add(String(n));
-                    filled++;
-                }
-            });
-        }
+        // Điều kiện miễn phí 25K:
+        // Chỉ còn đúng 1 slot trống VÀ có ≥1 bed active thặt + ≥1 lịch đã chọn ô (preferredBed)
+        const hasActiveBed    = activeBeds.size > 0;
+        const hasPreferredBed = preferredBeds.size > 0;
+        const isFreeCondition = freeCount === 1 && hasActiveBed && hasPreferredBed;
 
-        _bedMapCache = { activeBeds, preferredBeds, ghostBeds, endTimes, freeCount };
+        _bedMapCache = { activeBeds, preferredBeds, endTimes, freeCount, isFreeCondition };
         renderBedMap();
     }).catch(function() {
         document.getElementById('bed-map-loading').textContent = 'Không thể tải dữ liệu.';
@@ -1582,9 +1576,9 @@ function loadBedMap() {
 
 function renderBedMap() {
     if (!_bedMapCache) return;
-    const { activeBeds, preferredBeds, ghostBeds, endTimes, freeCount } = _bedMapCache;
+    const { activeBeds, preferredBeds, endTimes, freeCount, isFreeCondition } = _bedMapCache;
 
-    _isBedPickFree = freeCount === 1;
+    _isBedPickFree = isFreeCondition;
 
     document.getElementById('bed-map-loading').style.display = 'none';
     document.getElementById('bed-map-grid').style.display = 'block';
@@ -1599,7 +1593,10 @@ function renderBedMap() {
         noteEl.style.border = '1px solid rgba(220,38,38,0.2)';
     } else if (_isBedPickFree) {
         noteTxt.style.color = '#166534';
-        noteTxt.innerHTML   = 'Chỉ còn 1 ô trống · <strong>Miễn phí</strong> lần này, hệ thống sẽ tự chọn ô phù hợp cho bạn.';
+        noteTxt.innerHTML   = 'Chỉ còn 1 ô trống · <strong>Miễn phí</strong> chọn ô lần này, hệ thống sẽ tự gản ô phù hợp cho bạn.';
+    } else if (freeCount === 1) {
+        noteTxt.style.color = '#166534';
+        noteTxt.innerHTML   = 'Chỉ còn 1 ô trống · Tính năng nâng cao · <strong>+25.000đ</strong> khi đến quán.';
     } else {
         noteTxt.style.color = '#166534';
         noteTxt.innerHTML   = 'Tính năng nâng cao · <strong>+25.000đ</strong> thanh toán khi đến quán. Bỏ qua để hệ thống tự xếp bed miễn phí.';
@@ -1610,8 +1607,7 @@ function renderBedMap() {
         const id          = String(n);
         const isActive    = activeBeds.has(id);
         const isPreferred = preferredBeds.has(id);
-        const isGhost     = ghostBeds && ghostBeds.has(id);
-        const isBusy      = isActive || isPreferred || isGhost;
+        const isBusy      = isActive || isPreferred;
         const isSelected  = !isBusy && _selectedBed === n;
 
         let wrapBg, wrapBorder, wrapOpacity;
@@ -1633,14 +1629,6 @@ function renderBedMap() {
             badgeBg     = 'rgba(217,119,6,0.1)';
             badgeColor  = '#d97706';
             badgeText   = 'Đã đặt trước';
-        } else if (isGhost) {
-            wrapBg      = '#f3f4f6';
-            wrapBorder  = '1.5px solid #e5e7eb';
-            wrapOpacity = '0.6';
-            numColor    = '#9ca3af';
-            badgeBg     = 'rgba(107,114,128,0.1)';
-            badgeColor  = '#6b7280';
-            badgeText   = 'Đã có lịch';
         } else if (isSelected) {
             wrapBg      = 'linear-gradient(160deg,#006241,#005235)';
             wrapBorder  = '1.5px solid #004d33';
@@ -1776,8 +1764,30 @@ function handleBooking() {
     if (dateVal === todayInputFormat) {
         const currentTotalMin = now.getHours() * 60 + now.getMinutes();
         const bookingStartMin = parseInt(startVal.split(':')[0]) * 60 + parseInt(startVal.split(':')[1]);
-        
-        // Nếu giờ đặt nhỏ hơn (Hiện tại + 5 phút)
+
+        // --- KIỂM TRA 1: Giờ đặt đã QUÁ KHỨ rõ ràng (chênh lệch > 30 phút) ---
+        // Trường hợp này khả năng cao khách nhầm AM/PM
+        if (bookingStartMin < currentTotalMin - 30) {
+            const chosenH = Math.floor(bookingStartMin / 60).toString().padStart(2, '0');
+            const chosenM = (bookingStartMin % 60).toString().padStart(2, '0');
+            const nowH = Math.floor(currentTotalMin / 60).toString().padStart(2, '0');
+            const nowM = (currentTotalMin % 60).toString().padStart(2, '0');
+            showAppModal(
+                "Giờ đã qua rồi bạn ơi! ⏰",
+                `<p class="text-left text-sm text-[#1e3932] mb-3">
+                    Bạn đang chọn <b>${chosenH}:${chosenM}</b>, nhưng bây giờ đã là <b>${nowH}:${nowM}</b> rồi.
+                 </p>
+                 <p class="text-left text-sm text-gray-500">
+                    Nếu bạn muốn đặt <b>buổi tối</b>, hãy chú ý chọn đúng giờ <b>PM</b> nhé (ví dụ: 18:00 thay vì 06:00).
+                 </p>`,
+                "⚠️",
+                null,
+                false
+            );
+            return; // DỪNG, để khách tự sửa
+        }
+
+        // --- KIỂM TRA 2: Giờ đặt quá gần (trong vòng 5 phút) — cần buffer chuẩn bị ---
         if (bookingStartMin < currentTotalMin + 5) {
             
             // Tính toán giờ gợi ý mới (Hiện tại + 10 phút cho thư thả)
@@ -1797,7 +1807,7 @@ function handleBooking() {
             showAppModal(
                 "Cần thêm xíu thời gian", 
                 `<p class="text-left text-sm text-[#1e3932] mb-2">
-                    Bạn ơi, <b>The cafe 33</b> cần tối thiểu <b>5</b> để dọn dẹp và chuẩn bị bed.
+                    Bạn ơi, <b>The cafe 33</b> cần tối thiểu <b>5 phút</b> để dọn dẹp và chuẩn bị bed.
                  </p>
                  <p class="text-left text-sm text-gray-500 italic">
                     Hệ thống xin phép dời lịch sang <b>${newStartStr}</b> để nhân viên kịp chuẩn bị chu đáo nhé?
@@ -3606,9 +3616,9 @@ function poRenderSizeBtns(){
                +'    <p style="font-size:0.78rem;color:#059669;font-weight:700;margin:0;">'+price.toLocaleString()+'đ</p>'
                +'  </div>'
                +'  <div style="display:flex;align-items:center;gap:10px;">'
-               +   (qty>0?'<button onclick="poSizeQty(&apos;'+name+'&apos;,&apos;'+size+'&apos;,'+price+',-1)" style="width:32px;height:32px;border-radius:50%;border:none;background:#fee2e2;color:#ef4444;font-weight:900;font-size:1.1rem;cursor:pointer;line-height:1;">−</button>':'')
+               +   (qty>0?'<button onclick="poSizeQty(\''+name+'\',\''+size+'\','+price+',-1)" style="width:32px;height:32px;border-radius:50%;border:none;background:#fee2e2;color:#ef4444;font-weight:900;font-size:1.1rem;cursor:pointer;line-height:1;">−</button>':'')
                +   (qty>0?'<span style="font-weight:900;font-size:1rem;color:#006241;min-width:20px;text-align:center;">'+qty+'</span>':'')
-               +'    <button onclick="poSizeQty(&apos;'+name+'&apos;,&apos;'+size+'&apos;,'+price+',1)" style="width:32px;height:32px;border-radius:50%;border:none;background:'+(qty>0?'#006241':'#e6f4ef')+';color:'+(qty>0?'white':'#006241')+';font-weight:900;font-size:1.1rem;cursor:pointer;line-height:1;">+</button>'
+               +'    <button onclick="poSizeQty(\''+name+'\',\''+size+'\','+price+',1)" style="width:32px;height:32px;border-radius:50%;border:none;background:'+(qty>0?'#006241':'#e6f4ef')+';color:'+(qty>0?'white':'#006241')+';font-weight:900;font-size:1.1rem;cursor:pointer;line-height:1;">+</button>'
                +'  </div>'
                +'</div>';
     }
