@@ -7146,6 +7146,19 @@ function saveOrderToFirebase(method) {
             alert("❌ Lỗi lưu đơn: " + error.message);
         } else {
 
+            // ── Cộng điểm vào customers/ ──
+            const earnedPoints = Math.floor(currentTotal / 100);
+            const normalizedSdt = (typeof normalizePhone === 'function') ? normalizePhone(finalSdt) : finalSdt;
+            if (finalSdt && finalSdt !== "Khách vãng lai" && earnedPoints > 0) {
+                db.ref('customers/' + normalizedSdt).once('value', function(snap) {
+                    if (snap.exists()) {
+                        db.ref('customers/' + normalizedSdt + '/points')
+                          .set(firebase.database.ServerValue.increment(earnedPoints));
+                    }
+                });
+            }
+            // ─────────────────────────────
+
             cart = [];
             renderCart();
             document.getElementById('kh-sdt').value = "";
