@@ -11,674 +11,830 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
 
   <style>
-    html, body {
-      overscroll-behavior-y: none;
-      touch-action: pan-x pan-y;
-      margin: 0; padding: 0; height: 100%; width: 100%;
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
       -webkit-tap-highlight-color: transparent;
     }
-    body {
-      background-color: #f1f5f0;
+    html, body {
+      height: 100%;
+      width: 100%;
+      overscroll-behavior: none;
       font-family: 'Inter', sans-serif;
+      background: #eef2ee;
       color: #1e3932;
       -webkit-font-smoothing: antialiased;
-      overflow-y: auto;
     }
-    .brand-font { font-family: 'League Spartan', sans-serif; font-weight: 800; letter-spacing: -0.01em; }
-    .sb-green { background-color: #006241; }
-    .card-gradient { background: linear-gradient(145deg, #003d28 0%, #006241 60%, #007a50 100%); }
-    .tab-content { animation: fadeIn 0.25s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    #custom-modal { transition: all 0.3s ease; }
-    .modal-enter { opacity: 0; transform: scale(0.9); }
-    .modal-show  { opacity: 1; transform: scale(1); }
 
-    /* ── Input island ── */
-    .input-island {
-      background-color: #F3F4F6; border-radius: 99px; padding: 12px 24px;
-      border: 2px solid transparent; transition: all 0.3s ease; display: flex;
-      flex-direction: column; margin-bottom: 16px; text-align: left;
-    }
-    .input-island:focus-within {
-      background-color: #FFFFFF; border-color: #006241;
-      box-shadow: 0 4px 20px -4px rgba(0,98,65,0.2);
-    }
-    .input-island-label {
-      font-size: 11px; font-weight: 800; color: #9CA3AF;
-      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;
-    }
-    .input-island-field {
-      background: transparent; border: none; outline: none;
-      font-size: 17px; font-weight: 700; color: #1F2937; width: 100%;
-    }
-    .input-island-field::placeholder { color: #D1D5DB; font-weight: 500; }
+    /* ────────────────────────────────────────
+       SCREEN SYSTEM
+    ──────────────────────────────────────── */
+    .screen { display: none; }
+    .screen.active { display: flex; }
 
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 10px; }
-
-    /* ── Stamp pop animation ── */
-    @keyframes stamp-pop {
-      0%   { transform: scale(0.5); opacity: 0; }
-      70%  { transform: scale(1.18); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    .stamp-cell { animation: stamp-pop .4s cubic-bezier(.34,1.5,.64,1) both; }
-    .stamp-cell:nth-child(1) { animation-delay: .04s; }
-    .stamp-cell:nth-child(2) { animation-delay: .08s; }
-    .stamp-cell:nth-child(3) { animation-delay: .12s; }
-    .stamp-cell:nth-child(4) { animation-delay: .16s; }
-    .stamp-cell:nth-child(5) { animation-delay: .20s; }
-    .stamp-cell:nth-child(6) { animation-delay: .24s; }
-
-    /* ── Nav bar ── */
-    .nav-item {
-      color: #9CA3AF;
-      border: 1px solid transparent;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .nav-item.active {
-      background-color: #ffffff !important;
-      box-shadow: inset 0 1px 2px rgba(255,255,255,1), 0 4px 15px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05) !important;
-      border: 1px solid rgba(243,244,246,0.8) !important;
-      transform: translateY(-4px);
-    }
-    .nav-item.active svg { stroke: #006241 !important; filter: drop-shadow(0 2px 2px rgba(0,98,65,0.15)); fill: transparent !important; }
-    .nav-item.active span { color: #006241 !important; font-weight: 800; }
-
-    /* ── Two-panel split ── */
-    #tab-points {
-      display: flex;
+    #login-screen, #register-screen {
       flex-direction: column;
-      height: calc(100vh - 108px); /* subtract nav bar */
-      overflow: hidden;
-      gap: 0;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 40px 28px;
+      background: #fff;
+      text-align: center;
     }
-    .half-panel {
-      flex: 1 1 0;
-      min-height: 0;
-      overflow: hidden;
-      display: flex;
+
+    /* Main app fills entire viewport */
+    #main-app {
       flex-direction: column;
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      position: relative;
     }
-    .half-panel > .inner {
+
+    /* Scrollable content sits above nav */
+    #scroll-area {
       flex: 1;
-      padding: 12px 16px;
-      display: flex;
-      flex-direction: column;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 104px;
+    }
+    #scroll-area::-webkit-scrollbar { display: none; }
+    #scroll-area { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* ────────────────────────────────────────
+       TAB PANELS
+    ──────────────────────────────────────── */
+    .tab-panel { display: none; padding: 20px 16px 8px; }
+    .tab-panel.active {
+      display: block;
+      animation: fadeUp .25s ease both;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0);    }
     }
 
-    /* Split divider */
-    .panel-divider {
-      height: 1px;
-      background: rgba(0,0,0,0.06);
-      flex-shrink: 0;
+    /* ────────────────────────────────────────
+       CARDS
+    ──────────────────────────────────────── */
+    .card {
+      border-radius: 28px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      position: relative;
     }
+    .card-green {
+      background: linear-gradient(145deg, #003d28 0%, #006241 55%, #00804f 100%);
+      padding: 28px 24px 28px;
+      color: #fff;
+    }
+    .card-white {
+      background: #fff;
+      border: 1px solid #e4ede5;
+      padding: 22px 20px 20px;
+    }
+
+    /* blobs */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255,255,255,.05);
+      pointer-events: none;
+    }
+
+    /* ────────────────────────────────────────
+       STAMP GRID
+    ──────────────────────────────────────── */
+    .stamp-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .stamp-cell {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #e5e7eb;
+      background: #f3f4f6;
+      animation: stampPop .4s cubic-bezier(.34,1.5,.64,1) both;
+    }
+    .stamp-cell.on {
+      background: linear-gradient(135deg, #006241, #00a36c);
+      border-color: #00a36c;
+      box-shadow: 0 3px 10px rgba(0,98,65,.3);
+    }
+    .stamp-cell:nth-child(1){animation-delay:.04s}
+    .stamp-cell:nth-child(2){animation-delay:.08s}
+    .stamp-cell:nth-child(3){animation-delay:.12s}
+    .stamp-cell:nth-child(4){animation-delay:.16s}
+    .stamp-cell:nth-child(5){animation-delay:.20s}
+    .stamp-cell:nth-child(6){animation-delay:.24s}
+    @keyframes stampPop {
+      0%  { transform: scale(.5); opacity: 0; }
+      70% { transform: scale(1.18); }
+      100%{ transform: scale(1);  opacity: 1; }
+    }
+
+    /* ────────────────────────────────────────
+       BOTTOM NAV — centered, floating pill
+    ──────────────────────────────────────── */
+    #nav-bar {
+      position: fixed;
+      bottom: 16px;
+      /* center trick that never overflows */
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100vw - 32px);
+      max-width: 420px;
+      height: 68px;
+
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 34px;
+      border: 1px solid rgba(255,255,255,.7);
+      box-shadow: 0 10px 40px rgba(0,0,0,.13), 0 2px 8px rgba(0,0,0,.06);
+
+      display: none;       /* hidden until logged in */
+      align-items: center;
+      justify-content: space-around;
+      padding: 6px 10px;
+      z-index: 200;
+    }
+    #nav-bar.show { display: flex; }
+
+    .nav-btn {
+      flex: 1;
+      height: 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 26px;
+      cursor: pointer;
+      color: #9ca3af;
+      font-family: 'Inter', sans-serif;
+      transition: all .28s cubic-bezier(.4,0,.2,1);
+    }
+    .nav-btn svg {
+      stroke: currentColor;
+      fill: none;
+      transition: stroke .28s;
+    }
+    .nav-btn span {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .nav-btn.active {
+      background: #fff;
+      color: #006241;
+      transform: translateY(-4px);
+      border-color: rgba(240,242,240,.9);
+      box-shadow: 0 4px 16px rgba(0,0,0,.1), inset 0 1px 2px rgba(255,255,255,1);
+    }
+    .nav-btn.active svg  { stroke: #006241; filter: drop-shadow(0 2px 2px rgba(0,98,65,.2)); }
+    .nav-btn.active span { color: #006241; font-weight: 800; }
+
+    /* ────────────────────────────────────────
+       FORM / INPUTS
+    ──────────────────────────────────────── */
+    .isl {
+      background: #f3f4f6;
+      border-radius: 99px;
+      padding: 12px 22px;
+      border: 2px solid transparent;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 14px;
+      text-align: left;
+      transition: all .25s;
+    }
+    .isl:focus-within {
+      background: #fff;
+      border-color: #006241;
+      box-shadow: 0 4px 20px -4px rgba(0,98,65,.2);
+    }
+    .isl-lbl {
+      font-size: 11px; font-weight: 800; color: #9ca3af;
+      text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px;
+    }
+    .isl-inp {
+      background: transparent; border: none; outline: none;
+      font-size: 16px; font-weight: 700; color: #1f2937;
+      width: 100%; font-family: 'Inter', sans-serif;
+    }
+    .isl-inp::placeholder { color: #d1d5db; font-weight: 500; }
+
+    /* ────────────────────────────────────────
+       BUTTONS
+    ──────────────────────────────────────── */
+    .btn-g {
+      width: 100%; padding: 16px; border-radius: 22px;
+      background: #006241; color: #fff; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      box-shadow: 0 4px 20px rgba(0,98,65,.25);
+      transition: transform .15s, opacity .15s;
+    }
+    .btn-g:active { transform: scale(.97); opacity: .9; }
+
+    .btn-og {
+      width: 100%; padding: 15px; border-radius: 20px;
+      background: transparent; color: #006241;
+      border: 2px solid #006241; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .08em;
+      transition: background .15s;
+    }
+    .btn-og:active { background: #f0fdf4; }
+
+    .btn-r {
+      width: 100%; padding: 15px; border-radius: 20px;
+      background: #fff1f2; color: #ef4444;
+      border: 1px solid #fecdd3; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      transition: background .15s;
+    }
+    .btn-r:active { background: #fee2e2; }
+
+    /* ────────────────────────────────────────
+       MISC
+    ──────────────────────────────────────── */
+    .brand  { font-family: 'League Spartan', sans-serif; font-weight: 800; letter-spacing: -.01em; }
+    .lbl-xs { font-size: 10px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: .08em; }
+
+    .prog-track { width: 100%; height: 5px; background: #f0f0f0; border-radius: 99px; overflow: hidden; }
+    .prog-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #006241, #00a36c); transition: width .7s ease; }
+
+    /* loading */
+    #loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,.94);
+      z-index: 9999; display: none;
+      flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    #loading-overlay.show { display: flex; }
+    .spin {
+      width: 48px; height: 48px;
+      border: 4px solid #e8f5ee;
+      border-top-color: #006241;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-bottom: 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* modal */
+    #modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.42);
+      z-index: 500; display: none;
+      align-items: center; justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(4px);
+    }
+    #modal-bg.show { display: flex; }
+    #modal-box {
+      background: #fff; border-radius: 32px;
+      padding: 36px 28px; width: 100%; max-width: 340px;
+      text-align: center;
+      animation: popIn .22s ease;
+    }
+    @keyframes popIn { from { transform: scale(.88); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════════
-     LOADING OVERLAY
-══════════════════════════════════════════════════════ -->
-<div id="loading-overlay" class="fixed inset-0 bg-white/95 z-[9999] hidden flex flex-col items-center justify-center">
-  <div class="w-14 h-14 border-4 border-[#006241] border-t-transparent rounded-full animate-spin mb-4"></div>
-  <p class="brand-font text-[#006241] text-xl animate-pulse">Đang kết nối...</p>
+<!-- LOADING -->
+<div id="loading-overlay">
+  <div class="spin"></div>
+  <p class="brand" style="color:#006241;font-size:16px;">Đang tải...</p>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
-     APP MODAL
-══════════════════════════════════════════════════════ -->
-<div id="modal-overlay" class="fixed inset-0 bg-black/40 z-[100] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-  <div id="custom-modal" class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center modal-enter">
-    <div id="modal-icon" class="text-5xl mb-4">☕</div>
-    <h3 id="modal-title" class="brand-font text-2xl text-[#006241] mb-3">Thông báo</h3>
-    <div id="modal-message" class="text-lg text-[#1e3932] font-bold mb-8 leading-relaxed brand-font"></div>
-    <div class="flex flex-col gap-3">
-      <button id="modal-btn-main" class="w-full py-4 sb-green text-white font-bold rounded-2xl uppercase tracking-widest text-xs shadow-lg">Đồng ý</button>
-      <button id="modal-btn-sub" class="w-full py-4 text-gray-400 font-bold rounded-2xl uppercase tracking-widest text-[10px] hidden">Hủy bỏ</button>
-    </div>
+<!-- MODAL -->
+<div id="modal-bg">
+  <div id="modal-box">
+    <div id="m-icon" style="font-size:44px;margin-bottom:12px;">☕</div>
+    <h3 id="m-title" class="brand" style="font-size:22px;color:#006241;margin-bottom:10px;"></h3>
+    <p  id="m-msg"  style="font-size:14px;font-weight:600;color:#374151;margin-bottom:24px;line-height:1.5;"></p>
+    <button id="m-btn" class="btn-g" style="font-size:13px;">Đồng ý</button>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
-     LOGIN SCREEN
-══════════════════════════════════════════════════════ -->
-<div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-8 bg-white text-center">
-  <div class="w-16 h-16 rounded-2xl sb-green flex items-center justify-center mb-6 shadow-lg">
-    <span style="font-size:32px;">☕</span>
+<!-- ══════════════════════════════════════════
+     LOGIN
+══════════════════════════════════════════ -->
+<div id="login-screen" class="screen active">
+  <div style="width:60px;height:60px;background:#006241;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;margin-bottom:20px;
+    box-shadow:0 8px 24px rgba(0,98,65,.3);">
+    <span style="font-size:28px;">☕</span>
   </div>
-  <h1 class="text-4xl text-[#006241] mb-2 brand-font">Xin chào!</h1>
-  <p class="text-[11px] font-bold text-gray-400 mb-10 uppercase tracking-widest">Tích điểm · Nhận đặc quyền</p>
+
+  <h1 class="brand" style="font-size:36px;color:#006241;margin-bottom:6px;">Xin chào!</h1>
+  <p class="lbl-xs" style="margin-bottom:36px;">Tích điểm · Nhận đặc quyền</p>
+
   <input type="tel" id="login-sdt" inputmode="numeric"
-    placeholder="Nhập số điện thoại..."
-    class="w-full p-5 rounded-3xl bg-gray-50 border border-gray-100 mb-4 text-center outline-none text-lg font-bold">
-  <button onclick="login()"
-    class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-base tracking-wider">
-    Đăng nhập
-  </button>
-  <p class="mt-6 text-sm text-gray-400 font-medium">Chưa có tài khoản?</p>
-  <button onclick="showRegister()" class="text-[#006241] font-bold text-sm uppercase tracking-widest hover:underline py-2">
+    placeholder="Số điện thoại của bạn..."
+    style="width:100%;padding:18px 20px;border-radius:24px;background:#f3f4f6;
+    border:2px solid transparent;outline:none;font-size:16px;font-weight:700;
+    text-align:center;color:#1f2937;font-family:'Inter',sans-serif;margin-bottom:12px;
+    transition:border-color .2s;"
+    onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
+
+  <button onclick="doLogin()" class="btn-g" style="margin-bottom:20px;">Đăng nhập</button>
+
+  <p style="font-size:13px;color:#9ca3af;margin-bottom:6px;">Chưa có tài khoản?</p>
+  <button onclick="goRegister()"
+    style="background:none;border:none;color:#006241;font-weight:800;font-size:13px;
+    text-transform:uppercase;letter-spacing:.08em;cursor:pointer;padding:8px;">
     Đăng ký thành viên mới
   </button>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
-     REGISTER SCREEN
-══════════════════════════════════════════════════════ -->
-<div id="register-screen" class="hidden flex-col min-h-screen p-8 bg-white text-center">
-  <div class="pt-2 mb-6 text-left">
-    <button onclick="hideRegister()" class="w-10 h-10 -ml-2 flex items-center justify-center rounded-full active:bg-gray-100 text-gray-500 text-2xl font-bold">‹</button>
-  </div>
-  <h2 class="text-3xl font-bold text-gray-900 mb-2 text-left brand-font text-[#006241]">Tạo tài khoản</h2>
-  <p class="text-gray-500 mb-8 text-left text-sm">Nhập thông tin để tích điểm ngay.</p>
-  <div class="flex-1">
-    <div class="input-island">
-      <label class="input-island-label">Nickname</label>
-      <input type="text" id="reg-nickname" class="input-island-field" placeholder="Ví dụ: Tuấn dễ cọc">
+<!-- ══════════════════════════════════════════
+     REGISTER
+══════════════════════════════════════════ -->
+<div id="register-screen" class="screen" style="justify-content:flex-start;padding-top:56px;">
+  <div style="width:100%;max-width:400px;">
+    <button onclick="goLogin()"
+      style="background:none;border:none;color:#9ca3af;font-size:26px;cursor:pointer;
+      margin-bottom:20px;display:block;line-height:1;font-family:'Inter',sans-serif;">
+      ‹ Quay lại
+    </button>
+
+    <h2 class="brand" style="font-size:30px;color:#006241;margin-bottom:6px;text-align:left;">Tạo tài khoản</h2>
+    <p style="font-size:13px;color:#9ca3af;font-weight:500;margin-bottom:28px;text-align:left;">
+      Nhập thông tin để tích điểm ngay.
+    </p>
+
+    <div class="isl">
+      <label class="isl-lbl">Nickname</label>
+      <input type="text" id="reg-nickname" class="isl-inp" placeholder="Ví dụ: Tuấn dễ cọc">
     </div>
-    <div class="input-island">
-      <label class="input-island-label">Số điện thoại</label>
-      <input type="tel" id="reg-phone" class="input-island-field" placeholder="090..." inputmode="numeric">
+    <div class="isl">
+      <label class="isl-lbl">Số điện thoại</label>
+      <input type="tel" id="reg-phone" class="isl-inp" placeholder="090..." inputmode="numeric">
     </div>
-  </div>
-  <div class="mt-auto w-full pb-8">
-    <button id="btn-reg-submit" onclick="submitRegister()"
-      class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-xl active:scale-95 transition-all uppercase text-lg">
+
+    <button id="btn-reg" onclick="doRegister()" class="btn-g" style="margin-top:8px;">
       Xác nhận đăng ký
     </button>
-    <p class="text-center text-[10px] text-gray-400 mt-5 font-medium uppercase tracking-wider">Tặng ngay 333 điểm khi tham gia</p>
+    <p class="lbl-xs" style="text-align:center;margin-top:16px;">Tặng ngay 333 điểm khi tham gia</p>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════
+<!-- ══════════════════════════════════════════
      MAIN APP
-══════════════════════════════════════════════════════ -->
-<div id="main-app" class="hidden">
+══════════════════════════════════════════ -->
+<div id="main-app" class="screen">
 
-  <!-- ────────────────────────────────────────
-       TAB 1: TÍCH ĐIỂM (split layout)
-  ──────────────────────────────────────── -->
-  <div id="tab-points" class="tab-content">
+  <!-- Scrollable content -->
+  <div id="scroll-area">
 
-    <!-- TOP HALF — Tại quán (Points) -->
-    <div class="half-panel" style="background: linear-gradient(145deg,#003d28,#006241,#007a50);">
-      <div class="inner" style="padding:20px 20px 16px;">
-        <!-- Label -->
-        <div class="flex items-center justify-between mb-3">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-white/60">Tại quán · Tích điểm</p>
-          <div class="w-6 h-6 bg-white/10 rounded-full flex items-center justify-center">
-            <span style="font-size:13px;">★</span>
-          </div>
+    <!-- ─── TAB: TÍCH ĐIỂM ─── -->
+    <div id="tab-points" class="tab-panel active">
+
+      <!-- Card 1: Tại quán -->
+      <div class="card card-green">
+        <div class="blob" style="width:180px;height:180px;bottom:-60px;right:-40px;"></div>
+        <div class="blob" style="width:100px;height:100px;top:-20px;right:60px;opacity:.03;"></div>
+
+        <p class="lbl-xs" style="color:rgba(255,255,255,.55);margin-bottom:2px;">Tại quán · Tích điểm</p>
+        <p id="user-rank" style="font-size:10px;font-weight:700;color:#fbbf24;
+          text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;min-height:14px;"></p>
+
+        <p id="user-name-display" style="font-size:22px;font-weight:900;color:#fff;
+          text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;
+          word-break:break-word;min-height:28px;"></p>
+
+        <p class="lbl-xs" style="color:rgba(255,255,255,.5);margin-bottom:4px;">Điểm tích lũy</p>
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <span id="user-points" style="font-size:50px;font-weight:900;color:#fff;line-height:1;">0</span>
+          <span style="font-size:13px;color:rgba(255,255,255,.5);font-weight:600;">Point</span>
         </div>
-
-        <!-- Nickname -->
-        <p id="user-name-display" class="text-2xl font-black text-white uppercase tracking-wide truncate mb-1"></p>
-        <p id="user-rank" class="text-[10px] text-amber-300 font-bold uppercase tracking-widest mb-4"></p>
-
-        <!-- Points big display -->
-        <div class="flex-1 flex flex-col justify-center">
-          <p class="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1">Điểm tích lũy</p>
-          <div class="flex items-baseline gap-2">
-            <span id="user-points" class="text-5xl font-black text-white">0</span>
-            <span class="text-sm text-white/50 font-bold">Point</span>
-          </div>
-        </div>
-
-        <!-- Decorative blobs -->
-        <div class="absolute -bottom-8 -right-8 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
-        <div class="absolute top-6 right-12 w-24 h-24 bg-white/3 rounded-full blur-2xl pointer-events-none"></div>
       </div>
-    </div>
 
-    <div class="panel-divider"></div>
-
-    <!-- BOTTOM HALF — Mang về (Stamps) -->
-    <div class="half-panel" style="background:#fff;">
-      <div class="inner" style="padding:16px 20px 12px; position:relative;">
-        <!-- Header row -->
-        <div class="flex items-center justify-between mb-3">
+      <!-- Card 2: Mang về (Stamps) -->
+      <div class="card card-white">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Mang về · Stamp</p>
-            <p class="text-sm font-black text-[#1e3932]">Thẻ To-Go ☕</p>
+            <p class="lbl-xs" style="margin-bottom:3px;">Mang về · Stamp</p>
+            <p style="font-size:15px;font-weight:900;color:#1e3932;">Thẻ To-Go ☕</p>
           </div>
-          <div id="stamp-count-badge" class="flex items-center gap-1 bg-[#f0fdf4] border border-[#bbf7d0] rounded-2xl px-3 py-1.5">
-            <span id="stamp-count-num" class="text-xl font-black text-[#006241]">0</span>
-            <span class="text-[10px] font-bold text-[#15803d]">&thinsp;/ 6</span>
+          <div style="display:flex;align-items:baseline;gap:3px;background:#f0fdf4;
+            border:1.5px solid #bbf7d0;border-radius:16px;padding:6px 12px;">
+            <span id="stamp-count-num" style="font-size:20px;font-weight:900;color:#006241;">0</span>
+            <span style="font-size:11px;font-weight:700;color:#15803d;">&thinsp;/ 6</span>
           </div>
         </div>
 
-        <!-- 6-cell stamp grid -->
-        <div id="stamp-grid" class="grid gap-2 mb-3" style="grid-template-columns:repeat(6,1fr);">
-          <!-- rendered by JS -->
+        <div class="stamp-grid" id="stamp-grid"></div>
+
+        <div class="prog-track" style="margin-bottom:8px;">
+          <div class="prog-fill" id="stamp-bar" style="width:0%;"></div>
         </div>
 
-        <!-- Progress bar -->
-        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
-          <div id="stamp-progress-bar" class="h-full rounded-full transition-all duration-700"
-            style="width:0%;background:linear-gradient(90deg,#006241,#00a36c);"></div>
-        </div>
+        <p class="lbl-xs" style="text-align:center;line-height:1.6;">
+          1 ly = 1 Stamp · Tối đa 2 Stamp/ngày · Đủ 6 = 1 ly miễn phí 🎁
+        </p>
 
-        <!-- Hint -->
-        <p id="stamp-hint" class="text-[10px] font-bold text-gray-400 text-center">1 ly = 1 Stamp · Tối đa 2/ngày · Đủ 6 = 1 ly miễn phí 🎁</p>
-
-        <!-- Completed banner -->
-        <div id="stamp-done-banner" class="hidden mt-3 rounded-2xl p-3 text-center"
-          style="background:linear-gradient(135deg,#006241,#005235);">
-          <p class="text-white font-black text-sm brand-font">🎉 Đủ 6 Stamp rồi!</p>
-          <p class="text-white/80 text-[11px] font-semibold mt-0.5">Xuất trình app để nhận 1 ly miễn phí nhé</p>
+        <div id="stamp-done" style="display:none;margin-top:12px;border-radius:18px;padding:14px;
+          text-align:center;background:linear-gradient(135deg,#006241,#005235);">
+          <p class="brand" style="color:#fff;font-size:15px;">🎉 Đủ 6 Stamp rồi!</p>
+          <p style="color:rgba(255,255,255,.8);font-size:12px;font-weight:600;margin-top:4px;">
+            Xuất trình app để nhận 1 ly miễn phí nhé
+          </p>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ────────────────────────────────────────
-       TAB 2: ĐỔI QUÀ
-  ──────────────────────────────────────── -->
-  <div id="tab-rewards" class="tab-content hidden pb-40" style="padding-top:24px;">
-    <div class="flex flex-col items-center justify-center text-center" style="min-height:calc(100vh - 140px); gap:16px;">
-      <div style="width:72px;height:72px;border-radius:24px;background:linear-gradient(135deg,#006241,#00a36c);
-          display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,98,65,0.3);">
-        <span style="font-size:32px;">🛠️</span>
+    <!-- ─── TAB: ĐỔI QUÀ ─── -->
+    <div id="tab-rewards" class="tab-panel">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+        min-height:65vh;text-align:center;gap:16px;padding:20px;">
+        <div style="width:72px;height:72px;border-radius:24px;
+          background:linear-gradient(135deg,#006241,#00a36c);
+          display:flex;align-items:center;justify-content:center;
+          box-shadow:0 8px 24px rgba(0,98,65,.28);">
+          <span style="font-size:32px;">🛠️</span>
+        </div>
+        <p class="brand" style="font-size:22px;color:#1e3932;">Tính năng đang phát triển</p>
+        <p style="font-size:13px;color:#9ca3af;font-weight:600;line-height:1.6;max-width:220px;">
+          Tính năng đổi quà sẽ sớm ra mắt.<br>Cảm ơn bạn đã kiên nhẫn!
+        </p>
       </div>
-      <p class="brand-font" style="font-size:22px;color:#1e3932;margin:0;">Tính năng đang phát triển</p>
     </div>
-  </div>
 
-  <!-- ────────────────────────────────────────
-       TAB 3: TÔI (Profile)
-  ──────────────────────────────────────── -->
-  <div id="tab-profile" class="tab-content hidden pb-40 p-5" style="padding-top:24px;">
-    <!-- Profile card -->
-    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-4 text-left mb-4">
-      <h4 class="font-bold text-[10px] uppercase text-gray-400 ml-2 tracking-widest">Hồ sơ của bạn</h4>
+    <!-- ─── TAB: TÔI ─── -->
+    <div id="tab-profile" class="tab-panel">
 
-      <!-- Nickname -->
-      <div>
-        <label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Nickname</label>
+      <!-- Hồ sơ -->
+      <div class="card card-white" style="padding:24px 20px;">
+        <p class="lbl-xs" style="margin-bottom:18px;">Hồ sơ của bạn</p>
+
+        <p class="lbl-xs" style="margin-bottom:6px;">Nickname</p>
         <input type="text" id="edit-nickname"
-          class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner text-sm font-bold">
-      </div>
+          style="width:100%;padding:14px 16px;background:#f3f4f6;border-radius:16px;
+          border:2px solid transparent;outline:none;font-size:15px;font-weight:700;
+          color:#1f2937;font-family:'Inter',sans-serif;margin-bottom:16px;
+          transition:border-color .2s;"
+          onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
 
-      <!-- Phone (readonly) -->
-      <div>
-        <label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Số điện thoại</label>
-        <input type="tel" id="edit-sdt"
-          class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner text-sm font-bold" readonly>
-      </div>
+        <p class="lbl-xs" style="margin-bottom:6px;">Số điện thoại</p>
+        <input type="tel" id="edit-sdt" readonly
+          style="width:100%;padding:14px 16px;background:#f3f4f6;border-radius:16px;
+          border:none;outline:none;font-size:15px;font-weight:700;color:#9ca3af;
+          font-family:'Inter',sans-serif;margin-bottom:20px;">
 
-      <button onclick="handleUpdate()"
-        class="w-full py-4 rounded-2xl border-2 border-[#006241] text-[#006241] font-bold text-sm mt-4 uppercase tracking-widest active:scale-95 transition-all">
-        Lưu thay đổi
-      </button>
+        <button onclick="handleUpdate()" class="btn-og">Lưu thay đổi</button>
+      </div>
 
       <!-- Logout -->
-      <div class="mt-8 pt-6 border-t border-gray-50 text-center">
-        <button onclick="handleLogout()"
-          class="w-full py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-xs uppercase tracking-widest border border-red-100 active:scale-95 transition-all">
-          Đăng xuất tài khoản
-        </button>
-        <p class="text-[9px] text-gray-300 mt-4 font-bold tracking-widest">THÀNH VIÊN APP · V2026</p>
+      <div class="card card-white" style="padding:20px;text-align:center;">
+        <button onclick="handleLogout()" class="btn-r">Đăng xuất tài khoản</button>
+        <p class="lbl-xs" style="margin-top:16px;color:#d1d5db;">Thành viên App · V2026</p>
       </div>
     </div>
-  </div>
 
-  <!-- ────────────────────────────────────────
-       BOTTOM NAV BAR (3 tabs)
-  ──────────────────────────────────────── -->
-  <nav id="nav-bar"
-    class="fixed bottom-5 left-5 right-5 h-[68px] bg-white/90 backdrop-blur-xl rounded-[2.5rem]
-           shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-white/60 flex justify-between items-center p-2 z-50 hidden">
+  </div><!-- end #scroll-area -->
 
-    <!-- Tab 1: Tích điểm -->
-    <button onclick="showTab('points')" id="nav-points"
-      class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 active:scale-95">
-      <div class="w-5 h-5">
-        <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-        </svg>
-      </div>
-      <span class="text-[9px] font-bold tracking-widest uppercase">Tích điểm</span>
+  <!-- BOTTOM NAV -->
+  <nav id="nav-bar">
+
+    <button class="nav-btn active" id="nav-points" onclick="showTab('points')">
+      <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      <span>Tích điểm</span>
     </button>
 
-    <!-- Tab 2: Đổi quà -->
-    <button onclick="showTab('rewards')" id="nav-rewards"
-      class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 active:scale-95">
-      <div class="w-5 h-5">
-        <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 7V20M12 7H7.5C5.83333 7 5 8.5 6 9.5C6.63223 10.1322 8.5 12 12 12M12 7H16.5C18.1667 7 19 8.5 18 9.5C17.3678 10.1322 15.5 12 12 12M12 12V20M12 12H4.5M12 12H19.5M4 20H20"/>
-          <path d="M12 7V4"/>
-        </svg>
-      </div>
-      <span class="text-[9px] font-bold tracking-widest uppercase">Đổi quà</span>
+    <button class="nav-btn" id="nav-rewards" onclick="showTab('rewards')">
+      <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/>
+        <path d="M12 22V7"/>
+        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+      </svg>
+      <span>Đổi quà</span>
     </button>
 
-    <!-- Tab 3: Tôi -->
-    <button onclick="showTab('profile')" id="nav-profile"
-      class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 active:scale-95">
-      <div class="w-5 h-5">
-        <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21C20 19.6044 20 18.9067 19.8278 18.3389C19.44 17.0605 18.4395 16.06 17.1611 15.6722C16.5933 15.5 15.8956 15.5 14.5 15.5H9.5C8.10444 15.5 7.40665 15.5 6.83886 15.6722C5.56045 16.06 4.56045 17.0605 4.17224 18.3389C4 18.9067 4 19.6044 4 21"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-      </div>
-      <span class="text-[9px] font-bold tracking-widest uppercase">Tôi</span>
+    <button class="nav-btn" id="nav-profile" onclick="showTab('profile')">
+      <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span>Tôi</span>
     </button>
+
   </nav>
-
 </div><!-- end #main-app -->
 
 
-<!-- ══════════════════════════════════════════════════════
-     JAVASCRIPT
-══════════════════════════════════════════════════════ -->
 <script>
-// ─────────────────────────────────────────────
-// 1. FIREBASE CONFIG (copy from PosX)
-// ─────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
-  authDomain: "the-cafe-33.firebaseapp.com",
-  projectId: "the-cafe-33",
-  storageBucket: "the-cafe-33.appspot.com",
+/* ════════════════════════════════════════════════
+   FIREBASE
+════════════════════════════════════════════════ */
+var firebaseConfig = {
+  apiKey:            "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain:        "the-cafe-33.firebaseapp.com",
+  projectId:         "the-cafe-33",
+  storageBucket:     "the-cafe-33.appspot.com",
   messagingSenderId: "...",
-  appId: "..."
+  appId:             "..."
 };
-
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const fstore = firebase.firestore();
+var db = firebase.firestore();
 
-// ─────────────────────────────────────────────
-// 2. STATE
-// ─────────────────────────────────────────────
-let curPhone = null;
-let userData = {};
+/* ════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════ */
+var curPhone = null;
+var userData = {};
 
-// ─────────────────────────────────────────────
-// 3. HELPERS
-// ─────────────────────────────────────────────
-function normalizePhone(p) { return String(p || '').replace(/[^0-9]/g, ''); }
+/* ════════════════════════════════════════════════
+   UTILS
+════════════════════════════════════════════════ */
+function $id(id) { return document.getElementById(id); }
+function normalizePhone(p) { return String(p || '').replace(/\D/g, ''); }
 
-function showLoadingOverlay(show) {
-  document.getElementById('loading-overlay').classList.toggle('hidden', !show);
+function showLoading(v) {
+  $id('loading-overlay').classList.toggle('show', !!v);
 }
 
-function showAppModal(title, msg, icon = '☕', cb = null) {
-  document.getElementById('modal-title').innerText = title;
-  document.getElementById('modal-message').innerHTML = msg;
-  document.getElementById('modal-icon').innerText = icon;
-
-  const overlay = document.getElementById('modal-overlay');
-  const mc = document.getElementById('custom-modal');
-  mc.classList.remove('modal-show');
-  mc.classList.add('modal-enter');
-  overlay.classList.remove('hidden');
-  setTimeout(() => { mc.classList.remove('modal-enter'); mc.classList.add('modal-show'); }, 10);
-
-  document.getElementById('modal-btn-main').onclick = () => {
-    overlay.classList.add('hidden');
-    if (cb) cb();
+function showModal(title, msg, icon, cb) {
+  $id('m-icon').textContent  = icon  || '☕';
+  $id('m-title').textContent = title || '';
+  $id('m-msg').textContent   = msg   || '';
+  $id('modal-bg').classList.add('show');
+  $id('m-btn').onclick = function() {
+    $id('modal-bg').classList.remove('show');
+    if (typeof cb === 'function') cb();
   };
-  document.getElementById('modal-btn-sub').classList.add('hidden');
 }
 
-function _calcRank(p) {
-  if (p >= 55000) return "Thành viên 'Siêu thân'";
-  if (p >= 33000) return "Thành viên 'Thân iu'";
-  if (p >= 10000) return "Thành viên Bạc";
+function calcRank(pts) {
+  if (pts >= 55000) return "Thành viên 'Siêu thân'";
+  if (pts >= 33000) return "Thành viên 'Thân iu'";
+  if (pts >= 10000) return "Thành viên Bạc";
   return "Thành viên";
 }
 
-// ─────────────────────────────────────────────
-// 4. STAMP RENDERER
-// ─────────────────────────────────────────────
-function _renderStampGrid(count) {
-  const grid = document.getElementById('stamp-grid');
-  if (!grid) return;
-  const filled = Math.min(count, 6);
-
-  grid.innerHTML = Array.from({ length: 6 }, (_, i) => {
-    const on = i < filled;
-    return `<div class="stamp-cell" style="
-        aspect-ratio:1; border-radius:50%;
-        background:${on ? 'linear-gradient(135deg,#006241,#00a36c)' : '#f3f4f6'};
-        border:2px solid ${on ? '#00a36c' : '#e5e7eb'};
-        display:flex; align-items:center; justify-content:center;
-        ${on ? 'box-shadow:0 3px 10px rgba(0,98,65,0.3);' : ''}">
-      ${on
-        ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none">
-             <path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-           </svg>`
-        : `<div style="width:7px;height:7px;border-radius:50%;background:#d1d5db;"></div>`}
-    </div>`;
-  }).join('');
-
-  const pct = Math.round((filled / 6) * 100);
-  const bar    = document.getElementById('stamp-progress-bar');
-  const num    = document.getElementById('stamp-count-num');
-  const banner = document.getElementById('stamp-done-banner');
-  if (bar)    bar.style.width = pct + '%';
-  if (num)    num.textContent = filled;
-  if (banner) banner.classList.toggle('hidden', filled < 6);
+/* ════════════════════════════════════════════════
+   SCREEN ROUTING
+════════════════════════════════════════════════ */
+function goScreen(id) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
+  $id(id).classList.add('active');
 }
+function goLogin()    { goScreen('login-screen'); }
+function goRegister() { goScreen('register-screen'); }
 
-// ─────────────────────────────────────────────
-// 5. LOAD LOYALTY DATA FROM FIRESTORE
-//    Fields: nickname, total_points, stamp_count
-// ─────────────────────────────────────────────
-function _loadLoyaltyData(phone) {
-  fstore.collection('customers_xolifa').doc(phone).get()
-    .then(snap => {
-      if (!snap.exists) { _renderStampGrid(0); return; }
-      const d = snap.data();
-      userData = d;
-
-      // Points: prefer total_points, fallback to points
-      const pts = d.total_points ?? d.points ?? 0;
-
-      // Name: prefer nickname, fallback to name
-      const nick = d.nickname || d.name || 'Khách hàng';
-
-      // Update UI
-      const el = (id) => document.getElementById(id);
-      if (el('user-name-display')) el('user-name-display').innerText = nick;
-      if (el('user-points'))       el('user-points').innerText = pts.toLocaleString('vi-VN');
-      if (el('user-rank'))         el('user-rank').innerText = _calcRank(pts);
-      if (el('edit-nickname'))     el('edit-nickname').value = nick;
-      if (el('edit-sdt'))          el('edit-sdt').value = phone;
-
-      // Stamps
-      _renderStampGrid(d.stamp_count || 0);
-    })
-    .catch(err => { console.error('Loyalty load error:', err); _renderStampGrid(0); });
-}
-
-// ─────────────────────────────────────────────
-// 6. TAB NAVIGATION
-// ─────────────────────────────────────────────
+/* ════════════════════════════════════════════════
+   TAB NAVIGATION
+════════════════════════════════════════════════ */
 function showTab(t) {
-  // Hide all tab contents
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  // Hide all panels
+  var panels = document.querySelectorAll('.tab-panel');
+  for (var i = 0; i < panels.length; i++) panels[i].classList.remove('active');
 
-  // Show selected tab
-  const tab = document.getElementById('tab-' + t);
-  if (tab) tab.classList.remove('hidden');
+  // Show selected panel
+  var target = $id('tab-' + t);
+  if (target) target.classList.add('active');
 
-  // Update nav active state
-  document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-  const activeBtn = document.getElementById('nav-' + t);
+  // Update nav buttons
+  var btns = document.querySelectorAll('.nav-btn');
+  for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
+  var activeBtn = $id('nav-' + t);
   if (activeBtn) activeBtn.classList.add('active');
 
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Scroll to top
+  var sa = $id('scroll-area');
+  if (sa) sa.scrollTop = 0;
 }
 
-// ─────────────────────────────────────────────
-// 7. SHOW DASHBOARD
-// ─────────────────────────────────────────────
+/* ════════════════════════════════════════════════
+   STAMP RENDERER
+════════════════════════════════════════════════ */
+function renderStamps(count) {
+  var n    = Math.min(Math.max(0, parseInt(count) || 0), 6);
+  var grid = $id('stamp-grid');
+  if (!grid) return;
+
+  var html = '';
+  for (var i = 0; i < 6; i++) {
+    if (i < n) {
+      html += '<div class="stamp-cell on">'
+        + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none">'
+        + '<path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.8"'
+        + ' stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+    } else {
+      html += '<div class="stamp-cell">'
+        + '<div style="width:7px;height:7px;border-radius:50%;background:#d1d5db;"></div></div>';
+    }
+  }
+  grid.innerHTML = html;
+
+  var bar  = $id('stamp-bar');
+  var num  = $id('stamp-count-num');
+  var done = $id('stamp-done');
+  if (bar)  bar.style.width     = Math.round(n / 6 * 100) + '%';
+  if (num)  num.textContent     = n;
+  if (done) done.style.display  = n >= 6 ? 'block' : 'none';
+}
+
+/* ════════════════════════════════════════════════
+   LOAD LOYALTY DATA
+════════════════════════════════════════════════ */
+function loadLoyalty(phone) {
+  db.collection('customers_xolifa').doc(phone).get()
+    .then(function(snap) {
+      if (!snap.exists) { renderStamps(0); return; }
+      var d = snap.data();
+      userData = d;
+
+      var pts  = (d.total_points !== undefined ? d.total_points : (d.points || 0));
+      var nick = d.nickname || d.name || 'Khách hàng';
+
+      var nameEl = $id('user-name-display');
+      var ptsEl  = $id('user-points');
+      var rankEl = $id('user-rank');
+      var editN  = $id('edit-nickname');
+      var editS  = $id('edit-sdt');
+
+      if (nameEl) nameEl.textContent = nick;
+      if (ptsEl)  ptsEl.textContent  = Number(pts).toLocaleString('vi-VN');
+      if (rankEl) rankEl.textContent = calcRank(pts);
+      if (editN)  editN.value        = nick;
+      if (editS)  editS.value        = phone;
+
+      renderStamps(d.stamp_count || 0);
+    })
+    .catch(function(err) {
+      console.error('[loadLoyalty]', err);
+      renderStamps(0);
+    });
+}
+
+/* ════════════════════════════════════════════════
+   SHOW DASHBOARD
+════════════════════════════════════════════════ */
 function showDashboard(phone) {
   curPhone = phone;
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('register-screen').style.display = 'none';
-  document.getElementById('main-app').classList.remove('hidden');
-  document.getElementById('nav-bar').classList.remove('hidden');
-  _loadLoyaltyData(phone);
+  goScreen('main-app');
+  $id('nav-bar').classList.add('show');
+  loadLoyalty(phone);
   showTab('points');
 }
 
-// ─────────────────────────────────────────────
-// 8. AUTO-LOGIN (localStorage persistence)
-// ─────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', function () {
-  const saved = localStorage.getItem('member_phone');
-  if (saved) {
-    // Verify the phone still exists in Firestore before auto-logging in
-    showLoadingOverlay(true);
-    fstore.collection('customers_xolifa').doc(saved).get()
-      .then(snap => {
-        showLoadingOverlay(false);
-        if (snap.exists) {
-          showDashboard(saved);
-        } else {
-          // Saved phone no longer valid — clear it
-          localStorage.removeItem('member_phone');
-        }
-      })
-      .catch(() => {
-        showLoadingOverlay(false);
-        // Network error — still try to show dashboard with cached phone
+/* ════════════════════════════════════════════════
+   AUTO-LOGIN
+════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function() {
+  var saved = localStorage.getItem('member_phone');
+  if (!saved) return;
+
+  showLoading(true);
+  db.collection('customers_xolifa').doc(saved).get()
+    .then(function(snap) {
+      showLoading(false);
+      if (snap.exists) {
         showDashboard(saved);
-      });
-  }
+      } else {
+        localStorage.removeItem('member_phone');
+      }
+    })
+    .catch(function() {
+      showLoading(false);
+      showDashboard(saved); // offline fallback
+    });
 });
 
-// ─────────────────────────────────────────────
-// 9. LOGIN
-// ─────────────────────────────────────────────
-function login() {
-  const phone = normalizePhone(document.getElementById('login-sdt').value);
-  if (phone.length < 9) return alert('SĐT không hợp lệ!');
+/* ════════════════════════════════════════════════
+   LOGIN
+════════════════════════════════════════════════ */
+function doLogin() {
+  var phone = normalizePhone($id('login-sdt').value);
+  if (phone.length < 9) { alert('Số điện thoại không hợp lệ!'); return; }
 
-  showLoadingOverlay(true);
-  fstore.collection('customers_xolifa').doc(phone).get()
-    .then(snap => {
-      showLoadingOverlay(false);
+  showLoading(true);
+  db.collection('customers_xolifa').doc(phone).get()
+    .then(function(snap) {
+      showLoading(false);
       if (snap.exists) {
         localStorage.setItem('member_phone', phone);
         showDashboard(phone);
       } else {
-        alert("SĐT này chưa đăng ký thành viên!\nVui lòng nhấn 'Đăng ký thành viên mới' bên dưới.");
+        alert("SĐT chưa đăng ký!\nVui lòng nhấn 'Đăng ký thành viên mới'.");
       }
     })
-    .catch(err => {
-      showLoadingOverlay(false);
+    .catch(function(err) {
+      showLoading(false);
       alert('Lỗi kết nối: ' + err.message);
     });
 }
 
-// ─────────────────────────────────────────────
-// 10. REGISTER
-// ─────────────────────────────────────────────
-function showRegister() {
-  document.getElementById('login-screen').style.display = 'none';
-  const s = document.getElementById('register-screen');
-  s.classList.remove('hidden');
-  s.style.display = 'flex';
-}
+/* ════════════════════════════════════════════════
+   REGISTER
+════════════════════════════════════════════════ */
+function doRegister() {
+  var nickname = ($id('reg-nickname').value || '').trim();
+  var phone    = normalizePhone($id('reg-phone').value);
+  var btn      = $id('btn-reg');
 
-function hideRegister() {
-  document.getElementById('register-screen').style.display = 'none';
-  document.getElementById('register-screen').classList.add('hidden');
-  document.getElementById('login-screen').style.display = '';
-}
-
-function submitRegister() {
-  const nickname = document.getElementById('reg-nickname').value.trim();
-  const phone    = normalizePhone(document.getElementById('reg-phone').value);
-  const btn      = document.getElementById('btn-reg-submit');
-
-  if (nickname.length < 2) return alert('Vui lòng nhập Nickname (ít nhất 2 ký tự)!');
-  if (phone.length < 9)    return alert('Số điện thoại không hợp lệ!');
+  if (nickname.length < 2) { alert('Vui lòng nhập Nickname (ít nhất 2 ký tự)!'); return; }
+  if (phone.length < 9)    { alert('Số điện thoại không hợp lệ!'); return; }
 
   btn.textContent = 'Đang xử lý...';
-  btn.disabled = true;
+  btn.disabled    = true;
 
-  const docRef = fstore.collection('customers_xolifa').doc(phone);
-  docRef.get().then(snap => {
+  var docRef = db.collection('customers_xolifa').doc(phone);
+  docRef.get().then(function(snap) {
     if (snap.exists) {
       alert('SĐT này đã tồn tại! Vui lòng đăng nhập.');
       btn.textContent = 'Xác nhận đăng ký';
-      btn.disabled = false;
-      hideRegister();
-    } else {
-      return docRef.set({
-        nickname:     nickname,
-        name:         nickname,          // giữ cả name để backward compat
-        phone:        phone,
-        total_points: 333,               // field chuẩn mới
-        points:       333,               // backward compat với POS cũ
-        stamp_count:  0,
-        joinDate:     new Date().toISOString(),
-        source:       'app_register',
-        lastVisit:    new Date().toISOString(),
-      }).then(() => {
-        localStorage.setItem('member_phone', phone);
-        document.getElementById('register-screen').style.display = 'none';
-        showDashboard(phone);
-      });
+      btn.disabled    = false;
+      goLogin();
+      return;
     }
-  }).catch(err => {
+    return docRef.set({
+      nickname:     nickname,
+      name:         nickname,
+      phone:        phone,
+      total_points: 333,
+      points:       333,
+      stamp_count:  0,
+      joinDate:     new Date().toISOString(),
+      source:       'app_register',
+      lastVisit:    new Date().toISOString()
+    }).then(function() {
+      localStorage.setItem('member_phone', phone);
+      showDashboard(phone);
+    });
+  }).catch(function(err) {
     alert('Lỗi: ' + err.message);
     btn.textContent = 'Xác nhận đăng ký';
-    btn.disabled = false;
+    btn.disabled    = false;
   });
 }
 
-// ─────────────────────────────────────────────
-// 11. UPDATE PROFILE — lưu nickname vào Firestore
-// ─────────────────────────────────────────────
-window.handleUpdate = function () {
-  const newNick = (document.getElementById('edit-nickname').value || '').trim();
-  if (!newNick) return alert('Vui lòng nhập Nickname!');
+/* ════════════════════════════════════════════════
+   UPDATE NICKNAME
+════════════════════════════════════════════════ */
+function handleUpdate() {
+  var newNick = ($id('edit-nickname').value || '').trim();
+  if (!newNick) { alert('Vui lòng nhập Nickname!'); return; }
 
-  showLoadingOverlay(true);
-  const t = setTimeout(() => showLoadingOverlay(false), 5000); // safety timeout
+  showLoading(true);
+  var guard = setTimeout(function() { showLoading(false); }, 8000);
 
-  fstore.collection('customers_xolifa').doc(curPhone).update({
-    nickname: newNick,
-    name:     newNick, // keep name in sync for POS compatibility
-  }).then(() => {
-    clearTimeout(t);
-    showLoadingOverlay(false);
-    userData.nickname = newNick;
-    userData.name     = newNick;
-    const nameEl = document.getElementById('user-name-display');
-    if (nameEl) nameEl.innerText = newNick;
-    showAppModal('Thành công!', 'Đã cập nhật Nickname 🎉', '✅');
-  }).catch(err => {
-    clearTimeout(t);
-    showLoadingOverlay(false);
-    alert('Lỗi: ' + err.message);
-  });
-};
+  db.collection('customers_xolifa').doc(curPhone)
+    .update({ nickname: newNick, name: newNick })
+    .then(function() {
+      clearTimeout(guard);
+      showLoading(false);
+      userData.nickname = newNick;
+      userData.name     = newNick;
+      var el = $id('user-name-display');
+      if (el) el.textContent = newNick;
+      showModal('Thành công!', 'Đã cập nhật Nickname 🎉', '✅');
+    })
+    .catch(function(err) {
+      clearTimeout(guard);
+      showLoading(false);
+      alert('Lỗi: ' + err.message);
+    });
+}
 
-// ─────────────────────────────────────────────
-// 12. LOGOUT
-// ─────────────────────────────────────────────
-window.handleLogout = function () {
+/* ════════════════════════════════════════════════
+   LOGOUT
+════════════════════════════════════════════════ */
+function handleLogout() {
   if (confirm('Đăng xuất tài khoản?')) {
     localStorage.removeItem('member_phone');
     location.reload();
   }
-};
+}
 </script>
-
 </body>
 </html>
