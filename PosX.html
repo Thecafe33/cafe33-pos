@@ -3870,18 +3870,20 @@ function onPhoneInput(val) {
       // Tìm các số ĐT bắt đầu bằng cụm này (hoặc có chứa cụm)
       const matches = allCustomersCache.filter(c => c.id.startsWith(cleanVal) || c.id.includes(cleanVal));
       if (matches.length > 0) {
-         ac.innerHTML = matches.slice(0, 8).map(c => `
+         ac.innerHTML = matches.slice(0, 8).map(c => {
+           let highlightedPhone = c.id.replace(cleanVal, '<span style="color:var(--primary);">' + cleanVal + '</span>');
+           return `
            <div onclick="selectPhone('${c.id}')" style="padding:16px 18px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:background 0.15s;"
                 onmousedown="this.style.background='#f5f5f5'" onmouseup="this.style.background='#fff'" ontouchstart="this.style.background='#f5f5f5'" ontouchend="this.style.background='#fff'">
              <div>
-               <div style="font-size:17px;font-weight:700;color:var(--td);">${c.id.replace(cleanVal, \`<span style="color:var(--primary);">${cleanVal}</span>\`)}</div>
+               <div style="font-size:17px;font-weight:700;color:var(--td);">${highlightedPhone}</div>
                <div style="font-size:13px;color:var(--gt);">${c.nickname || 'Khách hàng'}</div>
              </div>
              <div style="text-align:right;">
                <div style="font-size:14px;color:var(--gm);font-weight:700;">⭐ ${Number(c.total_points || 0).toLocaleString('vi-VN')}</div>
              </div>
            </div>
-         `).join('');
+         `;}).join('');
          ac.style.display = 'block';
          return;
       }
