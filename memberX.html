@@ -1,26 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <title>The cafe 33</title>
+  <title>Thành viên</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#006241">
-  
-  <link rel="icon" href="https://i.ibb.co/nqdTWnvt/N-u-v-N-u-v-ng-Ngh-thu-t-s-p-ch-In-m-Ti-m-c-ph-Bi-u-tr-ng-C-ph-20260121-210413-0000.png">
-  <link rel="apple-touch-icon" href="https://i.ibb.co/nqdTWnvt/N-u-v-N-u-v-ng-Ngh-thu-t-s-p-ch-In-m-Ti-m-c-ph-Bi-u-tr-ng-C-ph-20260121-210413-0000.png">
-  
+
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
-  
+
   <style>
-    /* GIỮ NGUYÊN CSS CŨ [cite: 6034-6062] */
     html, body {
       overscroll-behavior-y: none;
       touch-action: pan-x pan-y;
@@ -28,602 +22,371 @@
       -webkit-tap-highlight-color: transparent;
     }
     body {
-      background-color: #f8f9fa;
+      background-color: #f1f5f0;
       font-family: 'Inter', sans-serif;
       color: #1e3932;
-      text-align: left;
       -webkit-font-smoothing: antialiased;
       overflow-y: auto;
     }
     .brand-font { font-family: 'League Spartan', sans-serif; font-weight: 800; letter-spacing: -0.01em; }
     .sb-green { background-color: #006241; }
-    .card-gradient { background: linear-gradient(135deg, #004d33 0%, #006241 100%); }
-    .nav-active { color: #006241; font-weight: 800; background-color: rgba(0, 98, 65, 0.05); border-radius: 1.5rem; }
-    .tab-content { animation: fadeIn 0.3s ease-in-out; }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    #custom-modal, #image-overlay { transition: all 0.3s ease; }
+    .card-gradient { background: linear-gradient(145deg, #003d28 0%, #006241 60%, #007a50 100%); }
+    .tab-content { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    #custom-modal { transition: all 0.3s ease; }
     .modal-enter { opacity: 0; transform: scale(0.9); }
-    .modal-show { opacity: 1; transform: scale(1); }
+    .modal-show  { opacity: 1; transform: scale(1); }
 
-    /* --- CSS VOUCHER & KHO QUÀ --- */
-  .voucher-enter { opacity: 0; transform: scale(0.88) translateY(24px); }
-  .voucher-show  { opacity: 1; transform: scale(1) translateY(0); }
-  .voucher-card  { transition: all 0.4s cubic-bezier(0.34, 1.5, 0.64, 1); }
+    /* ── Input island ── */
+    .input-island {
+      background-color: #F3F4F6; border-radius: 99px; padding: 12px 24px;
+      border: 2px solid transparent; transition: all 0.3s ease; display: flex;
+      flex-direction: column; margin-bottom: 16px; text-align: left;
+    }
+    .input-island:focus-within {
+      background-color: #FFFFFF; border-color: #006241;
+      box-shadow: 0 4px 20px -4px rgba(0,98,65,0.2);
+    }
+    .input-island-label {
+      font-size: 11px; font-weight: 800; color: #9CA3AF;
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;
+    }
+    .input-island-field {
+      background: transparent; border: none; outline: none;
+      font-size: 17px; font-weight: 700; color: #1F2937; width: 100%;
+    }
+    .input-island-field::placeholder { color: #D1D5DB; font-weight: 500; }
 
-  @keyframes shimmer {
-    0%   { background-position: -200% center; }
-    100% { background-position: 200% center; }
-  }
-  .voucher-shine {
-    background: linear-gradient(90deg, #006241 0%, #00a36c 40%, #006241 60%, #004d33 100%);
-    background-size: 200% auto;
-    animation: shimmer 3s linear infinite;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .dashed-border { border: 2px dashed #d1fae5; }
-
-  .bs-enter { opacity: 0; transform: scale(0.88) translateY(20px); }
-  .bs-show  { opacity: 1; transform: scale(1) translateY(0); }
-  .bs-card  { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(40px) scale(0.95); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .welcome-animate { animation: slideUp 0.45s cubic-bezier(0.34, 1.2, 0.64, 1) forwards; }
-
-  @keyframes pulse-ring {
-    0%   { transform: scale(1); opacity: 0.4; }
-    100% { transform: scale(1.6); opacity: 0; }
-  }
-  .pulse-ring::after {
-    content: ''; position: absolute; inset: 0; border-radius: 9999px;
-    background: rgba(0,98,65,0.3);
-    animation: pulse-ring 1.5s ease-out infinite;
-  }
-
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 10px; }
-  </style>
-  <style>
-    /* CSS RIÊNG CHO THANH MENU APPLE (STYLE TINH TẾ - GIỐNG ẢNH MẪU) */
+
+    /* ── Stamp pop animation ── */
+    @keyframes stamp-pop {
+      0%   { transform: scale(0.5); opacity: 0; }
+      70%  { transform: scale(1.18); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .stamp-cell { animation: stamp-pop .4s cubic-bezier(.34,1.5,.64,1) both; }
+    .stamp-cell:nth-child(1) { animation-delay: .04s; }
+    .stamp-cell:nth-child(2) { animation-delay: .08s; }
+    .stamp-cell:nth-child(3) { animation-delay: .12s; }
+    .stamp-cell:nth-child(4) { animation-delay: .16s; }
+    .stamp-cell:nth-child(5) { animation-delay: .20s; }
+    .stamp-cell:nth-child(6) { animation-delay: .24s; }
+
+    /* ── Nav bar ── */
     .nav-item {
-        color: #9CA3AF; /* Màu xám khi chưa chọn */
-        border: 1px solid transparent; 
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Hiệu ứng chuyển động mượt */
+      color: #9CA3AF;
+      border: 1px solid transparent;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-
-    /* Khi đang chọn (Active): NỀN TRẮNG + BÓNG ĐỔ + ÁNH SÁNG */
     .nav-item.active {
-        background-color: #ffffff !important; /* Nền trắng tệp với bar */
-        
-        /* Kỹ thuật đổ bóng cao cấp: 
-           1. Inset trắng: Tạo ánh sáng viền trên
-           2. Shadow ngoài: Tạo độ nổi nhẹ nhàng 
-        */
-        box-shadow: 
-            inset 0 1px 2px rgba(255, 255, 255, 1), 
-            0 4px 15px rgba(0, 0, 0, 0.08),
-            0 1px 3px rgba(0, 0, 0, 0.05) !important;
-            
-        border: 1px solid rgba(243, 244, 246, 0.8) !important; /* Viền xám siêu mờ để tách biệt */
-        transform: translateY(-4px); /* Nổi lên cao hơn chút nữa */
+      background-color: #ffffff !important;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,1), 0 4px 15px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05) !important;
+      border: 1px solid rgba(243,244,246,0.8) !important;
+      transform: translateY(-4px);
+    }
+    .nav-item.active svg { stroke: #006241 !important; filter: drop-shadow(0 2px 2px rgba(0,98,65,0.15)); fill: transparent !important; }
+    .nav-item.active span { color: #006241 !important; font-weight: 800; }
+
+    /* ── Two-panel split ── */
+    #tab-points {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 108px); /* subtract nav bar */
+      overflow: hidden;
+      gap: 0;
+    }
+    .half-panel {
+      flex: 1 1 0;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .half-panel > .inner {
+      flex: 1;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
     }
 
-    /* Đổi màu Icon thành Xanh khi chọn */
-    .nav-item.active svg {
-        stroke: #006241 !important;
-        /* Thêm tí bóng cho Icon nó sâu hơn */
-        filter: drop-shadow(0 2px 2px rgba(0, 98, 65, 0.15));
-        fill: transparent !important; /* Không tô màu nền icon nữa cho tinh tế */
+    /* Split divider */
+    .panel-divider {
+      height: 1px;
+      background: rgba(0,0,0,0.06);
+      flex-shrink: 0;
     }
-    
-    .nav-item.active span {
-        color: #006241 !important;
-        font-weight: 800;
-    }
-    /* CSS GỢI Ý THÔNG MINH - THE CAFE 33 */
-/* CSS GỢI Ý THÔNG MINH - THE CAFE 33 (PREMIUM) */
-.suggestion-box {
-    background: #ffffff; 
-    border: 1px solid #f3f4f6; 
-    border-radius: 16px; 
-    margin-bottom: 12px; 
-    padding: 14px;
-    position: relative;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.suggestion-box:active {
-    border-color: #006241; 
-    background-color: #f0fdf9;
-    transform: scale(0.98);
-}
-.suggestion-left { display: flex; flex-direction: column; gap: 4px; }
-.suggestion-time { 
-    font-weight: 800; 
-    color: #1e3932; 
-    font-size: 16px; 
-    font-family: 'Inter', sans-serif;
-    line-height: 1.2;
-}
-.suggestion-note {
-    font-size: 11px;
-    color: #6b7280;
-    font-weight: 500;
-}
-.suggestion-bonus-badge {
-    font-size: 10px;
-    color: #b45309; /* Màu hổ phách đậm */
-    background: #fffbeb;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-weight: 700;
-    margin-top: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px dashed #fcd34d;
-    width: fit-content;
-}
-.btn-pick-now { 
-    font-size: 10px; 
-    font-weight: 800; 
-    text-transform: uppercase;
-    color: white; 
-    background: linear-gradient(135deg, #006241 0%, #004d33 100%);
-    padding: 10px 16px; 
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,98,65,0.2);
-    white-space: nowrap;
-}
-    /* --- CSS FORM ĐĂNG KÝ (DYNAMIC ISLAND) --- */
-.input-island {
-    background-color: #F3F4F6; border-radius: 99px; padding: 12px 24px;
-    border: 2px solid transparent; transition: all 0.3s ease; display: flex; 
-    flex-direction: column; margin-bottom: 16px; text-align: left;
-}
-.input-island:focus-within {
-    background-color: #FFFFFF; border-color: #006241; box-shadow: 0 4px 20px -4px rgba(0,98,65,0.2);
-}
-.input-island-label {
-    font-size: 11px; font-weight: 800; color: #9CA3AF;
-    text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;
-}
-.input-island-field {
-    background: transparent; border: none; outline: none;
-    font-size: 17px; font-weight: 700; color: #1F2937; width: 100%;
-}
-.input-island-field::placeholder { color: #D1D5DB; font-weight: 500; }
-
-   /* --- CSS CHO TRANG CHỦ (SLIDER & BANNER) --- */
-.hide-scroll::-webkit-scrollbar { display: none; }
-.hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-.mask-gradient-left {
-    -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
-    mask-image: linear-gradient(to left, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
-}
-.snap-x-mandatory { scroll-snap-type: x mandatory; }
-.snap-center { scroll-snap-align: center; } 
-
-    /* Hiệu ứng nhún nhảy chậm */
-@keyframes bounce-slow {
-  0%, 100% { transform: translateY(-3%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
-  50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
-}
-.animate-bounce-slow {
-  animation: bounce-slow 3s infinite ease-in-out;
-}
-
-/* ── Stamp cell pop animation ── */
-@keyframes stamp-pop {
-  0%   { transform: scale(0.6); opacity: 0; }
-  70%  { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
-}
-#stamp-grid > div { animation: stamp-pop .4s cubic-bezier(.34,1.5,.64,1) both; }
-#stamp-grid > div:nth-child(1) { animation-delay: .04s; }
-#stamp-grid > div:nth-child(2) { animation-delay: .08s; }
-#stamp-grid > div:nth-child(3) { animation-delay: .12s; }
-#stamp-grid > div:nth-child(4) { animation-delay: .16s; }
-#stamp-grid > div:nth-child(5) { animation-delay: .20s; }
-#stamp-grid > div:nth-child(6) { animation-delay: .24s; }
-
-</style>
+  </style>
 </head>
-<body class="min-h-screen pb-32">
+<body>
 
-<div id="loading-overlay" class="fixed inset-0 bg-white/95 z-[9999] hidden flex flex-col items-center justify-center backdrop-blur-sm">
-    <div class="w-14 h-14 border-4 border-[#006241] border-t-transparent rounded-full animate-spin mb-4"></div>
-    <p class="brand-font text-[#006241] text-xl font-black animate-pulse">The cafe 33</p>
-    <p class="text-xs text-gray-400 font-bold mt-2" id="loading-text">Đang kết nối...</p>
-  </div>
-
-<div id="image-overlay" class="fixed inset-0 bg-black/95 z-[200] hidden flex flex-col items-center justify-center p-4 backdrop-blur-md">
-    <button onclick="document.getElementById('image-overlay').classList.add('hidden')" class="absolute top-8 right-8 text-white text-5xl font-light">&times;</button>
-    <div class="w-full h-full flex items-center justify-center overflow-auto"><img id="zoomed-img" src="" class="max-w-full max-h-full object-contain shadow-2xl transition-transform" onclick="event.stopPropagation()"></div>
-  </div>
-
-<div id="modal-overlay" class="fixed inset-0 bg-black/40 z-[100] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-    <div id="custom-modal" class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center modal-enter">
-      <div id="modal-icon" class="text-5xl mb-4">☕</div>
-      <h3 id="modal-title" class="brand-font text-2xl text-[#006241] mb-3">Thông báo</h3>
-      <div id="modal-message" class="text-lg text-[#1e3932] font-bold mb-8 leading-relaxed brand-font"></div>
-      <div id="modal-actions" class="flex flex-col gap-3">
-        <button id="modal-btn-main" class="w-full py-4 sb-green text-white font-bold rounded-2xl uppercase tracking-widest text-xs shadow-lg">Đồng ý</button>
-        <button id="modal-btn-sub" class="w-full py-4 text-gray-400 font-bold rounded-2xl uppercase tracking-widest text-[10px] hidden">Hủy bỏ</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="login-screen"
-
-<div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-8 bg-white text-center">
-    <h1 class="text-5xl text-[#006241] mb-4 brand-font">The cafe 33</h1>
-    <p class="text-[11px] font-bold text-gray-400 mb-12 uppercase tracking-widest">Tích điểm nhận đặc quyền</p>
-    <input type="tel" id="login-sdt" placeholder="Số điện thoại của bạn..." class="w-full p-5 rounded-3xl bg-gray-50 border border-gray-100 mb-4 text-center outline-none text-lg">
-    <button id="btn-login" onclick="login()" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-lg">Đăng nhập</button>
-    <p class="mt-6 text-sm text-gray-400 font-medium">Chưa có tài khoản?</p>
-<button onclick="showRegister()" class="text-[#006241] font-bold text-sm uppercase tracking-widest hover:underline py-2">
-    Đăng ký thành viên mới
-</button>
-  </div>
-<div id="register-screen"
-
-<div id="register-screen" class="hidden flex-col min-h-screen p-8 bg-white text-center">
-    <div class="pt-2 mb-6 text-left">
-        <button onclick="hideRegister()" class="w-10 h-10 -ml-2 flex items-center justify-center rounded-full active:bg-gray-100 text-gray-500 hover:text-[#006241] transition-colors">
-            <span class="material-symbols-rounded text-3xl text-2xl font-bold"><</span> 
-        </button>
-    </div>
-
-    <h2 class="text-3xl font-bold text-gray-900 mb-2 text-left brand-font text-[#006241]">Tạo tài khoản</h2>
-    <p class="text-gray-500 mb-8 text-left text-sm">Nhập thông tin để tích điểm ngay.</p>
-
-    <div class="flex-1">
-        <div class="input-island group">
-            <label class="input-island-label">Nickname</label>
-            <input type="text" id="reg-nickname" class="input-island-field" placeholder="Ví dụ: Tuấn dễ cọc">
-        </div>
-
-        <div class="input-island group">
-            <label class="input-island-label">Số điện thoại</label>
-            <input type="tel" id="reg-phone" class="input-island-field" placeholder="090..." inputmode="numeric">
-        </div>
-    </div>
-
-    <div class="mt-auto w-full pb-8">
-        <button id="btn-reg-submit" onclick="submitRegister()" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-xl active:scale-95 transition-all uppercase text-lg">
-            Xác nhận đăng ký
-        </button>
-        <p class="text-center text-[10px] text-gray-400 mt-5 font-medium uppercase tracking-wider">Tặng ngay 333 điểm khi tham gia</p>
-    </div>
+<!-- ══════════════════════════════════════════════════════
+     LOADING OVERLAY
+══════════════════════════════════════════════════════ -->
+<div id="loading-overlay" class="fixed inset-0 bg-white/95 z-[9999] hidden flex flex-col items-center justify-center">
+  <div class="w-14 h-14 border-4 border-[#006241] border-t-transparent rounded-full animate-spin mb-4"></div>
+  <p class="brand-font text-[#006241] text-xl animate-pulse">Đang kết nối...</p>
 </div>
-  <div id="main-app"
 
+<!-- ══════════════════════════════════════════════════════
+     APP MODAL
+══════════════════════════════════════════════════════ -->
+<div id="modal-overlay" class="fixed inset-0 bg-black/40 z-[100] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+  <div id="custom-modal" class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center modal-enter">
+    <div id="modal-icon" class="text-5xl mb-4">☕</div>
+    <h3 id="modal-title" class="brand-font text-2xl text-[#006241] mb-3">Thông báo</h3>
+    <div id="modal-message" class="text-lg text-[#1e3932] font-bold mb-8 leading-relaxed brand-font"></div>
+    <div class="flex flex-col gap-3">
+      <button id="modal-btn-main" class="w-full py-4 sb-green text-white font-bold rounded-2xl uppercase tracking-widest text-xs shadow-lg">Đồng ý</button>
+      <button id="modal-btn-sub" class="w-full py-4 text-gray-400 font-bold rounded-2xl uppercase tracking-widest text-[10px] hidden">Hủy bỏ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     LOGIN SCREEN
+══════════════════════════════════════════════════════ -->
+<div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-8 bg-white text-center">
+  <div class="w-16 h-16 rounded-2xl sb-green flex items-center justify-center mb-6 shadow-lg">
+    <span style="font-size:32px;">☕</span>
+  </div>
+  <h1 class="text-4xl text-[#006241] mb-2 brand-font">Xin chào!</h1>
+  <p class="text-[11px] font-bold text-gray-400 mb-10 uppercase tracking-widest">Tích điểm · Nhận đặc quyền</p>
+  <input type="tel" id="login-sdt" inputmode="numeric"
+    placeholder="Nhập số điện thoại..."
+    class="w-full p-5 rounded-3xl bg-gray-50 border border-gray-100 mb-4 text-center outline-none text-lg font-bold">
+  <button onclick="login()"
+    class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-base tracking-wider">
+    Đăng nhập
+  </button>
+  <p class="mt-6 text-sm text-gray-400 font-medium">Chưa có tài khoản?</p>
+  <button onclick="showRegister()" class="text-[#006241] font-bold text-sm uppercase tracking-widest hover:underline py-2">
+    Đăng ký thành viên mới
+  </button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     REGISTER SCREEN
+══════════════════════════════════════════════════════ -->
+<div id="register-screen" class="hidden flex-col min-h-screen p-8 bg-white text-center">
+  <div class="pt-2 mb-6 text-left">
+    <button onclick="hideRegister()" class="w-10 h-10 -ml-2 flex items-center justify-center rounded-full active:bg-gray-100 text-gray-500 text-2xl font-bold">‹</button>
+  </div>
+  <h2 class="text-3xl font-bold text-gray-900 mb-2 text-left brand-font text-[#006241]">Tạo tài khoản</h2>
+  <p class="text-gray-500 mb-8 text-left text-sm">Nhập thông tin để tích điểm ngay.</p>
+  <div class="flex-1">
+    <div class="input-island">
+      <label class="input-island-label">Nickname</label>
+      <input type="text" id="reg-nickname" class="input-island-field" placeholder="Ví dụ: Tuấn dễ cọc">
+    </div>
+    <div class="input-island">
+      <label class="input-island-label">Số điện thoại</label>
+      <input type="tel" id="reg-phone" class="input-island-field" placeholder="090..." inputmode="numeric">
+    </div>
+  </div>
+  <div class="mt-auto w-full pb-8">
+    <button id="btn-reg-submit" onclick="submitRegister()"
+      class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-xl active:scale-95 transition-all uppercase text-lg">
+      Xác nhận đăng ký
+    </button>
+    <p class="text-center text-[10px] text-gray-400 mt-5 font-medium uppercase tracking-wider">Tặng ngay 333 điểm khi tham gia</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════════════ -->
 <div id="main-app" class="hidden">
 
+  <!-- ────────────────────────────────────────
+       TAB 1: TÍCH ĐIỂM (split layout)
+  ──────────────────────────────────────── -->
+  <div id="tab-points" class="tab-content">
 
-    
-        <div id="tab-user" class="p-5 tab-content hidden pb-40" style="padding-top:24px;">
-
-      <!-- ── CARD 1: TẠI QUÁN (Member Card) ── -->
-      <div class="card-gradient p-8 rounded-[2.5rem] text-white shadow-2xl flex flex-col justify-between relative overflow-hidden mb-4 text-left" style="min-height:200px;">
-        <div class="flex justify-between items-start z-10">
-          <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Tích điểm · Tại quán</p>
-          <p class="text-[13px] opacity-50 brand-font">The cafe 33</p>
-        </div>
-        <div class="z-10 mt-6">
-          <p id="user-name-display" class="text-2xl font-bold uppercase tracking-wider mb-3 truncate"></p>
-          <div class="flex justify-between items-end">
-            <div>
-              <p class="text-[9px] font-bold uppercase tracking-widest opacity-60 mb-1">Điểm tích lũy</p>
-              <div class="flex items-baseline gap-1">
-                <span id="user-points" class="text-4xl font-black">0</span>
-                <span class="text-xs opacity-60 font-bold">Point</span>
-              </div>
-            </div>
-            <div class="text-right">
-              <p id="user-rank" class="text-[10px] text-amber-400 font-bold uppercase tracking-widest"></p>
-              <p class="text-[9px] opacity-50 mt-1">100k = +1.000 Point</p>
-            </div>
+    <!-- TOP HALF — Tại quán (Points) -->
+    <div class="half-panel" style="background: linear-gradient(145deg,#003d28,#006241,#007a50);">
+      <div class="inner" style="padding:20px 20px 16px;">
+        <!-- Label -->
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-white/60">Tại quán · Tích điểm</p>
+          <div class="w-6 h-6 bg-white/10 rounded-full flex items-center justify-center">
+            <span style="font-size:13px;">★</span>
           </div>
         </div>
-        <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-        <div class="absolute top-4 right-4 w-20 h-20 bg-white/3 rounded-full blur-2xl"></div>
-      </div>
 
-      <!-- ── CARD 2: TO GO (Stamp) ── -->
-      <div id="stamp-card" class="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 mb-4">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-5">
+        <!-- Nickname -->
+        <p id="user-name-display" class="text-2xl font-black text-white uppercase tracking-wide truncate mb-1"></p>
+        <p id="user-rank" class="text-[10px] text-amber-300 font-bold uppercase tracking-widest mb-4"></p>
+
+        <!-- Points big display -->
+        <div class="flex-1 flex flex-col justify-center">
+          <p class="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-1">Điểm tích lũy</p>
+          <div class="flex items-baseline gap-2">
+            <span id="user-points" class="text-5xl font-black text-white">0</span>
+            <span class="text-sm text-white/50 font-bold">Point</span>
+          </div>
+        </div>
+
+        <!-- Decorative blobs -->
+        <div class="absolute -bottom-8 -right-8 w-40 h-40 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="absolute top-6 right-12 w-24 h-24 bg-white/3 rounded-full blur-2xl pointer-events-none"></div>
+      </div>
+    </div>
+
+    <div class="panel-divider"></div>
+
+    <!-- BOTTOM HALF — Mang về (Stamps) -->
+    <div class="half-panel" style="background:#fff;">
+      <div class="inner" style="padding:16px 20px 12px; position:relative;">
+        <!-- Header row -->
+        <div class="flex items-center justify-between mb-3">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Tích điểm · Mang về</p>
-            <p class="text-base font-black text-[#1e3932]">Thẻ Stamp To-Go ☕</p>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Mang về · Stamp</p>
+            <p class="text-sm font-black text-[#1e3932]">Thẻ To-Go ☕</p>
           </div>
           <div id="stamp-count-badge" class="flex items-center gap-1 bg-[#f0fdf4] border border-[#bbf7d0] rounded-2xl px-3 py-1.5">
-            <span id="stamp-count-num" class="text-lg font-black text-[#006241]">0</span>
-            <span class="text-[10px] font-bold text-[#15803d]">/ 6</span>
+            <span id="stamp-count-num" class="text-xl font-black text-[#006241]">0</span>
+            <span class="text-[10px] font-bold text-[#15803d]">&thinsp;/ 6</span>
           </div>
         </div>
 
-        <!-- Lưới 6 ô Stamp -->
-        <div id="stamp-grid" class="grid gap-3 mb-4" style="grid-template-columns:repeat(6,1fr);">
-          <!-- Render bằng JS -->
+        <!-- 6-cell stamp grid -->
+        <div id="stamp-grid" class="grid gap-2 mb-3" style="grid-template-columns:repeat(6,1fr);">
+          <!-- rendered by JS -->
         </div>
 
-        <!-- Thanh tiến trình -->
-        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-          <div id="stamp-progress-bar" class="h-full rounded-full transition-all duration-700" style="width:0%;background:linear-gradient(90deg,#006241,#00a36c);"></div>
+        <!-- Progress bar -->
+        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-2">
+          <div id="stamp-progress-bar" class="h-full rounded-full transition-all duration-700"
+            style="width:0%;background:linear-gradient(90deg,#006241,#00a36c);"></div>
         </div>
 
-        <!-- Ghi chú -->
-        <p id="stamp-hint" class="text-[10px] font-bold text-gray-400 text-center">1 ly = 1 Stamp · Tối đa 2 Stamp/ngày · Đủ 6 = 1 Ly miễn phí 🎁</p>
+        <!-- Hint -->
+        <p id="stamp-hint" class="text-[10px] font-bold text-gray-400 text-center">1 ly = 1 Stamp · Tối đa 2/ngày · Đủ 6 = 1 ly miễn phí 🎁</p>
 
-        <!-- Banner hoàn thành -->
-        <div id="stamp-done-banner" class="hidden mt-4 rounded-2xl p-4 text-center" style="background:linear-gradient(135deg,#006241,#005235);">
+        <!-- Completed banner -->
+        <div id="stamp-done-banner" class="hidden mt-3 rounded-2xl p-3 text-center"
+          style="background:linear-gradient(135deg,#006241,#005235);">
           <p class="text-white font-black text-sm brand-font">🎉 Đủ 6 Stamp rồi!</p>
-          <p class="text-white/80 text-[11px] font-semibold mt-1">Xuất trình app để nhận 1 ly miễn phí nhé</p>
+          <p class="text-white/80 text-[11px] font-semibold mt-0.5">Xuất trình app để nhận 1 ly miễn phí nhé</p>
         </div>
-      </div>
-
-      <!-- ── HỒ SƠ ── -->
-      <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-4 text-left">
-        <h4 class="font-bold text-[10px] uppercase text-gray-400 ml-2 tracking-widest">Hồ sơ của bạn</h4>
-        <div><label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Tên của bạn</label><input type="text" id="edit-name" class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner"></div>
-        <div><label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Số điện thoại</label><input type="tel" id="edit-sdt" class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner" readonly></div>
-        <button id="btn-update-profile" onclick="handleUpdate()" class="w-full py-4 rounded-2xl border-2 border-[#006241] text-[#006241] font-bold text-sm mt-4 uppercase tracking-widest">Lưu thay đổi</button>
-        <div class="mt-8 pt-6 border-t border-gray-50 text-center">
-            <button onclick="handleLogout()" class="w-full py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-xs uppercase tracking-widest border border-red-100 active:scale-95 transition-all shadow-sm hover:bg-red-100">
-                Đăng xuất tài khoản
-            </button>
-            <p class="text-[9px] text-gray-300 mt-4 font-bold tracking-widest">THE CAFE 33 APP • V2026</p>
-        </div>
-      </div>
-    </div>
-
-<div id="tab-rewards" class="p-6 tab-content hidden pb-40" style="padding-top:24px;">
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;gap:16px;">
-    <div style="width:80px;height:80px;border-radius:28px;background:linear-gradient(135deg,#006241,#00a36c);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,98,65,0.3);">
-      <span style="font-size:36px;">🛠️</span>
-    </div>
-    <p class="brand-font" style="font-size:22px;color:#1e3932;margin:0;">Đang phát triển</p>
-    <p style="font-size:13px;color:#9ca3af;font-weight:600;max-width:240px;line-height:1.6;margin:0;">Tính năng đổi quà sẽ sớm ra mắt.<br>Cảm ơn bạn đã kiên nhẫn chờ đợi!</p>
-    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;padding:12px 20px;margin-top:8px;">
-      <p style="font-size:11px;font-weight:800;color:#15803d;margin:0;text-transform:uppercase;letter-spacing:0.06em;">☕ The cafe 33</p>
-    </div>
-  </div>
-</div>
-  </div>
-
-  <nav id="nav-bar" class="fixed bottom-6 left-6 right-6 h-20 bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-white/60 flex justify-between items-center p-2 z-50 hidden">
-    <button onclick="showTab('user')" id="nav-user" class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1.5 active:scale-95">
-        <div class="relative w-6 h-6">
-            <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21C20 19.6044 20 18.9067 19.8278 18.3389C19.44 17.0605 18.4395 16.06 17.1611 15.6722C16.5933 15.5 15.8956 15.5 14.5 15.5H9.5C8.10444 15.5 7.40665 15.5 6.83886 15.6722C5.56045 16.06 4.56045 17.0605 4.17224 18.3389C4 18.9067 4 19.6044 4 21"/>
-                <circle cx="12" cy="7" r="4"/>
-            </svg>
-        </div>
-        <span class="text-[10px] font-bold tracking-widest uppercase">Bạn</span>
-    </button>
-
-    <button onclick="showTab('bed')"
-
-    <button onclick="showTab('rewards')" id="nav-rewards" class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1.5 active:scale-95">
-        <div class="relative w-6 h-6">
-            <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 7V20M12 7H7.5C5.83333 7 5 8.5 6 9.5C6.63223 10.1322 8.5 12 12 12M12 7H16.5C18.1667 7 19 8.5 18 9.5C17.3678 10.1322 15.5 12 12 12M12 12V20M12 12H4.5M12 12H19.5M4 20H20"/>
-                <path d="M12 7V4"/>
-            </svg>
-        </div>
-        <span class="text-[10px] font-bold tracking-widest uppercase">Đổi quà</span>
-    </button>
-</nav>
-</nav>
-
-<div id="gift-detail-modal" class="fixed inset-0 bg-black/60 z-[80] hidden flex items-center justify-center p-6 backdrop-blur-sm transition-opacity duration-300">
-    <div class="bg-white w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl relative animate-bounce-in">
-      <button onclick="document.getElementById('gift-detail-modal').classList.add('hidden')" class="absolute top-4 right-4 z-10 w-10 h-10 bg-black/20 text-white rounded-full flex items-center justify-center backdrop-blur-md hover:bg-black/40 transition">✕</button>
-      <div class="h-64 w-full bg-gray-100 relative">
-        <img id="detail-gift-img" src="" class="w-full h-full object-cover">
-        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-        <div class="absolute bottom-5 left-6 right-6"><h3 id="detail-gift-name" class="text-2xl font-black text-white leading-tight mb-1 shadow-black drop-shadow-md">Tên quà</h3></div>
-      </div>
-      <div class="p-6">
-        <p id="detail-gift-desc" class="text-gray-500 text-sm mb-6 leading-relaxed">Mô tả quà tặng...</p>
-        <div class="bg-gray-50 rounded-2xl p-4 border border-gray-100 mb-6">
-          <div class="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-wider mb-2"><span>Điểm của bạn</span><span>Cần có</span></div>
-          <div class="flex justify-between items-end"><span id="detail-user-point" class="text-xl font-black text-[#1e3932]">0</span><span class="text-gray-300 mb-1">/</span><span id="detail-gift-cost" class="text-xl font-black text-[#006241]">0</span></div>
-          <div class="w-full h-2 bg-gray-200 rounded-full mt-3 overflow-hidden"><div id="detail-progress" class="h-full bg-[#006241] rounded-full transition-all duration-500" style="width: 0%"></div></div>
-          <p id="detail-message" class="text-[10px] font-bold text-amber-500 mt-2 text-right hidden">Bạn còn thiếu điểm nha!</p>
-        </div>
-        <button id="btn-confirm-redeem" class="w-full py-4 rounded-2xl bg-[#006241] text-white font-bold text-sm uppercase tracking-widest shadow-lg shadow-green-900/20 active:scale-[0.98] transition-transform">Xác nhận đổi quà</button>
       </div>
     </div>
   </div>
 
-
-<!-- ===== PHIẾU QUÀ (GIFT VOUCHER MODAL) ===== -->
-<div id="gift-voucher-overlay" class="fixed inset-0 z-[200] hidden items-center justify-center p-5" style="background: rgba(0,0,0,0.65); backdrop-filter: blur(16px);">
-  <div class="voucher-card voucher-enter w-full max-w-sm">
-
-    <!-- Phiếu quà chính (dùng để screenshot) -->
-    <div id="voucher-card-inner" class="bg-white rounded-[2.5rem] overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.4)]">
-
-      <!-- Header gradient -->
-      <div class="bg-gradient-to-br from-[#006241] to-[#003d28] px-7 pt-7 pb-8 relative overflow-hidden">
-        <div class="absolute -top-8 -right-8 w-40 h-40 bg-white/5 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-6 -left-6 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
-        <div class="flex justify-between items-start relative z-10">
-          <div>
-            <p class="text-white/50 text-[9px] font-bold uppercase tracking-[0.2em]">The cafe 33</p>
-            <p class="text-white font-black text-xl brand-font mt-0.5">Phiếu đổi quà</p>
-          </div>
-          <div class="bg-white/15 rounded-2xl px-3 py-1.5 border border-white/20 backdrop-blur-sm">
-            <p class="text-white/60 text-[8px] font-bold uppercase tracking-wider">Điểm dùng</p>
-            <p id="voucher-gift-cost" class="text-amber-300 font-black text-sm text-right">0 ★</p>
-          </div>
-        </div>
-
-        <!-- Tên quà nổi bật -->
-        <div class="mt-5 relative z-10">
-          <p class="text-white/60 text-[9px] font-bold uppercase tracking-widest mb-1">Phần quà</p>
-          <p id="voucher-gift-name" class="text-white font-black text-2xl brand-font leading-tight">--</p>
-        </div>
+  <!-- ────────────────────────────────────────
+       TAB 2: ĐỔI QUÀ
+  ──────────────────────────────────────── -->
+  <div id="tab-rewards" class="tab-content hidden pb-40" style="padding-top:24px;">
+    <div class="flex flex-col items-center justify-center text-center" style="min-height:calc(100vh - 140px); gap:16px;">
+      <div style="width:72px;height:72px;border-radius:24px;background:linear-gradient(135deg,#006241,#00a36c);
+          display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,98,65,0.3);">
+        <span style="font-size:32px;">🛠️</span>
       </div>
-
-      <!-- Đường kẻ zigzag trang trí -->
-      <div class="relative h-0 flex items-center">
-        <div class="absolute inset-x-0 flex items-center" style="top:-1px">
-          <svg width="100%" height="16" viewBox="0 0 360 16" preserveAspectRatio="none">
-            <path d="M0,0 Q9,16 18,0 Q27,16 36,0 Q45,16 54,0 Q63,16 72,0 Q81,16 90,0 Q99,16 108,0 Q117,16 126,0 Q135,16 144,0 Q153,16 162,0 Q171,16 180,0 Q189,16 198,0 Q207,16 216,0 Q225,16 234,0 Q243,16 252,0 Q261,16 270,0 Q279,16 288,0 Q297,16 306,0 Q315,16 324,0 Q333,16 342,0 Q351,16 360,0" fill="white"/>
-          </svg>
-        </div>
-      </div>
-
-      <!-- Body -->
-      <div class="px-7 pt-5 pb-6">
-
-        <!-- Mã voucher -->
-        <div class="dashed-border rounded-2xl p-4 text-center mb-5 bg-green-50/50">
-          <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Mã phiếu quà</p>
-          <p id="voucher-gift-code" class="font-mono font-black text-2xl text-[#006241] tracking-[0.15em]">TC33-XXXXXX</p>
-          <p class="text-[9px] text-gray-400 mt-1">Xuất trình mã này khi order tại quán</p>
-        </div>
-
-        <!-- Thông tin khách + ngày -->
-        <div class="flex justify-between items-center">
-          <div>
-            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Khách hàng</p>
-            <p id="voucher-customer" class="font-black text-[#1e3932] text-sm mt-0.5">--</p>
-          </div>
-          <div class="text-right">
-            <p class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Ngày đổi</p>
-            <p id="voucher-gift-date" class="font-bold text-[#1e3932] text-xs mt-0.5">--</p>
-          </div>
-        </div>
-
-        <!-- Lưu ý -->
-        <div class="mt-4 bg-amber-50 rounded-2xl px-4 py-3 border border-amber-100 flex items-start gap-2">
-          <span class="text-sm mt-0.5">⚠️</span>
-          <p class="text-amber-700 text-[10px] font-bold leading-relaxed">Vui lòng <b>lưu phiếu</b> hoặc <b>chụp màn hình</b> và đưa cho nhân viên khi order để được áp dụng.</p>
-        </div>
-      </div>
+      <p class="brand-font" style="font-size:22px;color:#1e3932;margin:0;">Tính năng đang phát triển</p>
     </div>
-
-    <!-- Nút hành động bên ngoài phiếu (không bị screenshot) -->
-    <div class="flex gap-3 mt-4">
-      <button id="btn-save-voucher" onclick="saveVoucherImage()" class="flex-1 py-4 bg-white text-[#006241] font-black text-sm rounded-2xl shadow-lg border border-white/40 active:scale-95 transition-all flex items-center justify-center gap-2">
-        <span>⬇</span> Lưu phiếu quà
-      </button>
-      <button onclick="closeGiftVoucher(); openMyGifts();" class="flex-1 py-4 bg-[#006241] text-white font-black text-sm rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
-        <span>🎁</span> Kho quà của tôi
-      </button>
-    </div>
-    <button onclick="closeGiftVoucher()" class="w-full mt-3 py-3 text-white/60 font-bold text-xs uppercase tracking-widest">Đóng</button>
   </div>
-</div>
 
+  <!-- ────────────────────────────────────────
+       TAB 3: TÔI (Profile)
+  ──────────────────────────────────────── -->
+  <div id="tab-profile" class="tab-content hidden pb-40 p-5" style="padding-top:24px;">
+    <!-- Profile card -->
+    <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-4 text-left mb-4">
+      <h4 class="font-bold text-[10px] uppercase text-gray-400 ml-2 tracking-widest">Hồ sơ của bạn</h4>
 
-<!-- ===== KHO QUÀ (MY GIFTS MODAL) ===== -->
-<div id="my-gifts-modal" style="display:none;position:fixed;inset:0;background:white;z-index:160;flex-direction:column;overflow:hidden;">
-  <div style="flex-shrink:0;padding:48px 20px 16px;background:white;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;">
-    <div>
-      <h2 style="font-size:22px;font-weight:900;color:#1e3932;margin:0;">Kho quà của tôi</h2>
-      <p style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:4px 0 0;">Các phiếu quà đã đổi</p>
-    </div>
-    <button onclick="closeMyGifts()" style="width:40px;height:40px;border-radius:50%;background:#f3f4f6;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;">✕</button>
-  </div>
-  <div id="my-gifts-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 20px 100px;background:#f8f9fa;">
-    <p style="text-align:center;color:#9ca3af;padding:32px 0;">Đang tải...</p>
-  </div>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-
-<!-- ===== WELCOME POPUP (ẢNH ĐẬU XE KHI MỞ APP) ===== -->
-<div id="welcome-popup" class="fixed inset-0 z-[180] hidden items-center justify-center p-4" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(14px);">
-  <div class="welcome-animate w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-[0_30px_80px_rgba(0,0,0,0.4)] bg-white">
-    <!-- Header -->
-    <div class="bg-gradient-to-br from-[#1e3932] to-[#006241] px-8 py-5 flex items-center justify-between">
+      <!-- Nickname -->
       <div>
-        <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">The cafe 33</p>
-        <h3 class="brand-font text-white text-lg font-black leading-tight mt-0.5">Hướng dẫn vị trí<br>đậu xe · Cafe in Bed</h3>
+        <label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Nickname</label>
+        <input type="text" id="edit-nickname"
+          class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner text-sm font-bold">
       </div>
-      <button 
-        onclick="document.getElementById('welcome-popup').classList.add('hidden'); document.getElementById('welcome-popup').style.display='none';"
-        class="w-9 h-9 bg-white/15 text-white rounded-full flex items-center justify-center text-lg font-bold border border-white/20 active:scale-90 transition-all backdrop-blur-sm hover:bg-white/25"
-        style="font-size:18px; line-height:1;"
-      >&times;</button>
-    </div>
 
-    <!-- Ảnh -->
-    <div class="relative">
-      <img 
-        src="https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/%C4%90%E1%BB%81%20m%E1%BB%A5c_20260225_161744_0000.png?alt=media&token=c7ecb95d-6449-4724-b9dd-345683c71bad" 
-        alt="Hướng dẫn đậu xe"
-        class="w-full object-cover"
-        onclick="document.getElementById('zoomed-img').src=this.src; document.getElementById('image-overlay').classList.remove('hidden');"
-        style="cursor:zoom-in;"
-      >
-      <div class="absolute bottom-0 left-0 right-0 py-2 text-center" style="background: linear-gradient(to top, rgba(0,0,0,0.4), transparent)">
-        <p class="text-white text-[10px] font-bold">Nhấn ảnh để phóng to 🔍</p>
+      <!-- Phone (readonly) -->
+      <div>
+        <label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Số điện thoại</label>
+        <input type="tel" id="edit-sdt"
+          class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner text-sm font-bold" readonly>
       </div>
-    </div>
 
-    <!-- Footer -->
-    <div class="px-6 py-5 flex items-center gap-3">
-      <div class="flex-1 bg-green-50 rounded-2xl px-4 py-3 border border-green-100">
-        <p class="text-[#006241] text-xs font-bold">🅿️ Vui lòng đậu xe đúng vị trí để tránh ùn tắc khu vực quán nhé!</p>
+      <button onclick="handleUpdate()"
+        class="w-full py-4 rounded-2xl border-2 border-[#006241] text-[#006241] font-bold text-sm mt-4 uppercase tracking-widest active:scale-95 transition-all">
+        Lưu thay đổi
+      </button>
+
+      <!-- Logout -->
+      <div class="mt-8 pt-6 border-t border-gray-50 text-center">
+        <button onclick="handleLogout()"
+          class="w-full py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-xs uppercase tracking-widest border border-red-100 active:scale-95 transition-all">
+          Đăng xuất tài khoản
+        </button>
+        <p class="text-[9px] text-gray-300 mt-4 font-bold tracking-widest">THÀNH VIÊN APP · V2026</p>
       </div>
-      <button 
-        onclick="document.getElementById('welcome-popup').classList.add('hidden'); document.getElementById('welcome-popup').style.display='none';"
-        class="flex-shrink-0 w-12 h-12 bg-[#006241] rounded-2xl flex items-center justify-center text-white text-lg shadow-lg active:scale-90 transition-all"
-      >✓</button>
     </div>
   </div>
-</div>
+
+  <!-- ────────────────────────────────────────
+       BOTTOM NAV BAR (3 tabs)
+  ──────────────────────────────────────── -->
+  <nav id="nav-bar"
+    class="fixed bottom-5 left-5 right-5 h-[68px] bg-white/90 backdrop-blur-xl rounded-[2.5rem]
+           shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-white/60 flex justify-between items-center p-2 z-50 hidden">
+
+    <!-- Tab 1: Tích điểm -->
+    <button onclick="showTab('points')" id="nav-points"
+      class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 active:scale-95">
+      <div class="w-5 h-5">
+        <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </div>
+      <span class="text-[9px] font-bold tracking-widest uppercase">Tích điểm</span>
+    </button>
+
+    <!-- Tab 2: Đổi quà -->
+    <button onclick="showTab('rewards')" id="nav-rewards"
+      class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 active:scale-95">
+      <div class="w-5 h-5">
+        <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 7V20M12 7H7.5C5.83333 7 5 8.5 6 9.5C6.63223 10.1322 8.5 12 12 12M12 7H16.5C18.1667 7 19 8.5 18 9.5C17.3678 10.1322 15.5 12 12 12M12 12V20M12 12H4.5M12 12H19.5M4 20H20"/>
+          <path d="M12 7V4"/>
+        </svg>
+      </div>
+      <span class="text-[9px] font-bold tracking-widest uppercase">Đổi quà</span>
+    </button>
+
+    <!-- Tab 3: Tôi -->
+    <button onclick="showTab('profile')" id="nav-profile"
+      class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1 active:scale-95">
+      <div class="w-5 h-5">
+        <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21C20 19.6044 20 18.9067 19.8278 18.3389C19.44 17.0605 18.4395 16.06 17.1611 15.6722C16.5933 15.5 15.8956 15.5 14.5 15.5H9.5C8.10444 15.5 7.40665 15.5 6.83886 15.6722C5.56045 16.06 4.56045 17.0605 4.17224 18.3389C4 18.9067 4 19.6044 4 21"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+      </div>
+      <span class="text-[9px] font-bold tracking-widest uppercase">Tôi</span>
+    </button>
+  </nav>
+
+</div><!-- end #main-app -->
 
 
+<!-- ══════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════ -->
 <script>
-// Hiện welcome popup khi vào app (chỉ 1 lần mỗi session)
-(function() {
-    function showWelcomePopup() {
-        const popup = document.getElementById('welcome-popup');
-        if (popup) {
-            popup.classList.remove('hidden');
-            popup.style.display = 'flex';
-        }
-    }
-    // Override showDashboard để hook welcome popup
-    const waitForDashboard = setInterval(function() {
-        if (typeof window.showDashboard === 'function') {
-            clearInterval(waitForDashboard);
-            const _orig = window.showDashboard;
-            window.showDashboard = function() {
-                _orig.apply(this, arguments);
-                setTimeout(showWelcomePopup, 700);
-            };
-        }
-    }, 50);
-})();
-</script>
-
-
-<script>
-// =============================================================
-// 1. CẤU HÌNH (DÁN TỪ FILE POS VÀO ĐÂY)
-// =============================================================
+// ─────────────────────────────────────────────
+// 1. FIREBASE CONFIG (copy from PosX)
+// ─────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
   authDomain: "the-cafe-33.firebaseapp.com",
-  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "the-cafe-33",
   storageBucket: "the-cafe-33.appspot.com",
   messagingSenderId: "...",
@@ -631,743 +394,290 @@ const firebaseConfig = {
 };
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
 const fstore = firebase.firestore();
-const auth = firebase.auth();
 
-// Firestore ready — gọi callback ngay (rules phải cho phép public read)
-var _firestoreReady = true;
-var _firestoreReadyCallbacks = [];
-function _onFirestoreReady(cb) { cb(); }
-
-// ── Giờ đóng cửa Bed — dùng giá trị tĩnh (không sync RTDB nữa) ─
-var _bedClosingTime = '20:50';
-var _bedClosingMin  = 1250;
-(function() {
-    var el = document.getElementById('bed-hours-info');
-    if (el) el.textContent = '08:00 – ' + _bedClosingTime;
-})();
-// ───────────────────────────────────────────────────────────────
-
-let curPhone = localStorage.getItem('member_phone');
-var _pendingRescheduleKey     = null;
-var _pendingBonus             = null; // bonus từ slot gợi ý, lưu tạm cho đến khi booking thành công
-var _pendingRescheduleDateYMD = null;
-var _editingBookingPath       = null; // RT path đầy đủ của booking đang reschedule
+// ─────────────────────────────────────────────
+// 2. STATE
+// ─────────────────────────────────────────────
+let curPhone = null;
 let userData = {};
-let _cachedGiftList = []; // Thêm biến cache danh sách quà
 
-// ══════════════════════════════════════════════════════════════
-// BED BOOKING HELPERS — đọc từ nested RT + Firestore archive
-// ══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────
+// 3. HELPERS
+// ─────────────────────────────────────────────
+function normalizePhone(p) { return String(p || '').replace(/[^0-9]/g, ''); }
 
-// Parse DD/MM/YYYY hoặc YYYY-MM-DD → { year, month, day } dạng string 2 chữ số
-function _parseBedDateKey(dateStr) {
-    if (!dateStr) return null;
-    var s = dateStr.trim();
-    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-        var p = s.split('-');
-        return { year: p[0], month: p[1], day: p[2] };
-    }
-    var sep = s.includes('/') ? '/' : '-';
-    var p = s.split(sep);
-    if (p.length >= 3 && p[2].length === 4)
-        return { year: p[2], month: p[1].padStart(2,'0'), day: p[0].padStart(2,'0') };
-    return null;
+function showLoadingOverlay(show) {
+  document.getElementById('loading-overlay').classList.toggle('hidden', !show);
 }
 
-// Đọc bookings của 1 ngày: RT trước, fallback Firestore archive
-function _fetchBedDayBookings(dateStr) {
-    var d = _parseBedDateKey(dateStr);
-    if (!d) return Promise.resolve([]);
-    var rtPath = 'bedBookings/' + d.year + '/' + d.month + '/' + d.day;
+function showAppModal(title, msg, icon = '☕', cb = null) {
+  document.getElementById('modal-title').innerText = title;
+  document.getElementById('modal-message').innerHTML = msg;
+  document.getElementById('modal-icon').innerText = icon;
 
-    return db.ref(rtPath).once('value').then(function(snap) {
-        if (snap.exists() && snap.val()) {
-            return _snapToBookingList(snap.val());
-        }
-        // Fallback Firestore nested: bedBookings_archive/{year}/{month}/{day}
-        // Cùng cấu trúc với RT → đọc đồng nhất, không cần xử lý riêng
-        return new Promise(function(resolve) {
-            _onFirestoreReady(function() {
-                fstore.collection('bedBookings_archive').doc(d.year)
-                    .collection(d.month).doc(d.day).get()
-                    .then(function(doc) {
-                        if (doc.exists && doc.data() && doc.data().bookings)
-                            return _snapToBookingList(doc.data().bookings);
-                        return [];
-                    })
-                    .catch(function() { return []; })
-                    .then(resolve);
-            });
-        });
-    });
-}
+  const overlay = document.getElementById('modal-overlay');
+  const mc = document.getElementById('custom-modal');
+  mc.classList.remove('modal-show');
+  mc.classList.add('modal-enter');
+  overlay.classList.remove('hidden');
+  setTimeout(() => { mc.classList.remove('modal-enter'); mc.classList.add('modal-show'); }, 10);
 
-// Chuyển object {key: bookingData} → array [{key, ...bookingData}]
-function _snapToBookingList(data) {
-    return Object.keys(data).map(function(k) {
-        return Object.assign({ key: k }, data[k]);
-    });
-}
-
-// Lấy RT path đúng cho 1 booking (dùng để update/read by key)
-function _getBedBookingRTPath(booking) {
-    var d = _parseBedDateKey(booking.date || booking.bookingDate);
-    if (d) return 'bedBookings/' + d.year + '/' + d.month + '/' + d.day + '/' + booking.key;
-    return null;
-}
-
-// Fetch tất cả bookings của 1 phone — RT live tree + RT phone index (archive)
-// Phone index được POS ghi tự động mỗi khi archive → luôn đầy đủ, không cần đọc Firestore
-function _fetchBookingsByPhone(phone, callback) {
-    var cleanPhone = (phone || '').replace(/[^0-9]/g, '');
-    var results = [];
-    var rtKeys = new Set();
-
-    // Build danh sách ngày: từ 180 ngày trước đến hôm nay
-    var days = [];
-    var now = new Date(); now.setHours(0,0,0,0);
-    for (var i = 0; i <= 180; i++) {
-        var d = new Date(now);
-        d.setDate(now.getDate() - i);
-        var y = d.getFullYear();
-        var m = String(d.getMonth() + 1).padStart(2, '0');
-        var dd = String(d.getDate()).padStart(2, '0');
-        days.push(y + '-' + m + '-' + dd);
-    }
-
-    // Duyệt từng ngày — RT trước, fallback Firestore nested (cùng logic vs pos2)
-    var pending = days.length;
-    function checkDone() { if (--pending === 0) callback(results); }
-
-    days.forEach(function(dayStr) {
-        var p = dayStr.split('-');
-        var year = p[0], month = p[1], day = p[2];
-
-        db.ref('bedBookings/' + year + '/' + month + '/' + day).once('value', function(snap) {
-            var data = snap.val();
-            if (data && Object.keys(data).length > 0) {
-                // RT có data → lọc theo phone
-                Object.keys(data).forEach(function(k) {
-                    var b = data[k];
-                    if (b && b.phone && b.phone.replace(/[^0-9]/g,'') === cleanPhone && !rtKeys.has(k)) {
-                        results.push(Object.assign({ key: k }, b));
-                        rtKeys.add(k);
-                    }
-                });
-                checkDone();
-            } else {
-                // Fallback Firestore nested: bedBookings_archive/{year}/{month}/{day}
-                fstore.collection('bedBookings_archive').doc(year)
-                    .collection(month).doc(day).get()
-                    .then(function(doc) {
-                        if (doc.exists) {
-                            var bookings = doc.data().bookings || {};
-                            Object.keys(bookings).forEach(function(k) {
-                                var b = bookings[k];
-                                if (b && b.phone && b.phone.replace(/[^0-9]/g,'') === cleanPhone && !rtKeys.has(k)) {
-                                    results.push(Object.assign({ key: k }, b));
-                                    rtKeys.add(k);
-                                }
-                            });
-                        }
-                        checkDone();
-                    }).catch(function() { checkDone(); });
-            }
-        });
-    });
-}
-
-
-// Ghi booking mới vào nested path RT
-function _pushNewBedBooking(bookingData, callback, presetKey) {
-    var d = _parseBedDateKey(bookingData.date);
-    if (!d) { callback(new Error('Ngày không hợp lệ: ' + bookingData.date)); return null; }
-    var rtPath = 'bedBookings/' + d.year + '/' + d.month + '/' + d.day;
-    var newRef = presetKey ? db.ref(rtPath + '/' + presetKey) : db.ref(rtPath).push();
-    newRef.set(bookingData, function(err) {
-        callback(err, newRef.key, rtPath + '/' + newRef.key);
-    });
-    return newRef;
-}
-
-// --- LOGIC ĐĂNG KÝ (NO GSA) ---
-
-function showRegister() {
-    document.getElementById('login-screen').classList.add('hidden');
-    const regScreen = document.getElementById('register-screen');
-    regScreen.classList.remove('hidden');
-    regScreen.style.display = 'flex';
-}
-
-function hideRegister() {
-    const regScreen = document.getElementById('register-screen');
-    regScreen.classList.add('hidden');
-    regScreen.style.display = 'none';
-    document.getElementById('login-screen').classList.remove('hidden');
-}
-
-function submitRegister() {
-    const nicknameEl = document.getElementById('reg-nickname');
-    const phoneEl = document.getElementById('reg-phone');
-    const btn = document.getElementById('btn-reg-submit');
-
-    const nickname = nicknameEl.value.trim();
-    const phone = normalizePhone(phoneEl.value);
-
-    if (nickname.length < 2) return alert("Vui lòng nhập Nickname!");
-    if (phone.length < 9) return alert("Số điện thoại không hợp lệ!");
-
-    const oldText = btn.innerHTML;
-    btn.innerHTML = "Đang xử lý...";
-    btn.disabled = true;
-
-    const docRef = fstore.collection('customers_xolifa').doc(phone);
-
-    docRef.get().then(docSnap => {
-        if (docSnap.exists) {
-            alert("SĐT này đã tồn tại! Vui lòng đăng nhập.");
-            btn.innerHTML = oldText;
-            btn.disabled = false;
-            hideRegister();
-        } else {
-            return docRef.set({
-                name: nickname,
-                phone: phone,
-                points: 333,
-                joinDate: new Date().toISOString(),
-                source: 'app_register',
-                compName: '',
-                compPhone: '',
-                lastVisit: new Date().toISOString(),
-                pendingFee: 0,
-                pendingFeeReason: ''
-            }).then(() => {
-                localStorage.setItem('member_phone', phone);
-                document.getElementById('register-screen').classList.add('hidden');
-                document.getElementById('register-screen').style.display = 'none';
-                showDashboard(phone);
-            });
-        }
-    }).catch(error => {
-        alert("Lỗi: " + error.message);
-        btn.innerHTML = oldText;
-        btn.disabled = false;
-    });
-}
-// --- 2. LOGIC CHUNG ---
-window.onload = function() {
-    const today = new Date().toISOString().split('T')[0];
-    const bd = document.getElementById('book-date');
-    if (bd) bd.setAttribute('min', today);
-    if(curPhone) showDashboard(curPhone);
-};
-
-// --- HÀM CHUYỂN TAB (CHO MENU APPLE STYLE) ---
-function showTab(t) { 
-    // 1. Ẩn tất cả các Tab nội dung
-    var contents = document.getElementsByClassName('tab-content');
-    for (var i = 0; i < contents.length; i++) {
-        contents[i].classList.add('hidden');
-    }
-    
-    // 2. Hiện Tab được chọn
-    var selectedTab = document.getElementById('tab-' + t);
-    if (selectedTab) {
-        selectedTab.classList.remove('hidden');
-    }
-    
-    // 3. Xử lý hiệu ứng trên thanh Menu (Đổi màu icon)
-    // Lấy tất cả các nút trong menu
-    var navItems = document.getElementsByClassName('nav-item');
-    for (var i = 0; i < navItems.length; i++) {
-        // Tắt trạng thái active (xám đi)
-        navItems[i].classList.remove('active'); 
-    }
-    
-    // Bật trạng thái active cho nút được chọn (xanh lên)
-    var activeBtn = document.getElementById('nav-' + t);
-    if (activeBtn) {
-        activeBtn.classList.add('active');
-    }
-    
-    // (Tùy chọn) Cuộn lên đầu trang cho mượt
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function showAppModal(title, msg, icon='☕', cb=null, showCancel=false) {
-    document.getElementById('modal-title').innerText = title;
-    document.getElementById('modal-message').innerHTML = msg;
-    document.getElementById('modal-icon').innerText = icon;
-    
-    const overlay = document.getElementById('modal-overlay');
-    const modalContent = document.getElementById('custom-modal');
-    
-    // Reset trạng thái
-    modalContent.classList.remove('modal-show');
-    modalContent.classList.add('modal-enter');
-    
-    // Bật overlay
-    overlay.classList.remove('hidden');
-    
-    // Trigger animation sau 10ms (để browser render lại)
-    setTimeout(() => {
-        modalContent.classList.remove('modal-enter');
-        modalContent.classList.add('modal-show');
-    }, 10);
-    
-    const btnMain = document.getElementById('modal-btn-main');
-    const btnSub = document.getElementById('modal-btn-sub');
-    
-    btnMain.onclick = () => { 
-        overlay.classList.add('hidden'); 
-        if(cb) cb(); 
-    };
-    
-    if(showCancel) {
-        btnSub.classList.remove('hidden');
-        btnSub.onclick = () => { overlay.classList.add('hidden'); };
-    } else {
-        btnSub.classList.add('hidden');
-    }
-}
-
-function normalizePhone(p) { return String(p || "").replace(/[^0-9]/g, ""); }
-
-// --- 3. ĐĂNG NHẬP (Firestore customers_xolifa) ---
-function login() {
-    const phone = normalizePhone(document.getElementById('login-sdt').value);
-    if (phone.length < 9) return alert("SĐT không hợp lệ!");
-
-    document.getElementById('loading-overlay').classList.remove('hidden');
-
-    fstore.collection('customers_xolifa').doc(phone).get().then(docSnap => {
-        document.getElementById('loading-overlay').classList.add('hidden');
-        if (docSnap.exists) {
-            localStorage.setItem('member_phone', phone);
-            showDashboard(phone);
-        } else {
-            alert("SĐT này chưa đăng ký thành viên!\nVui lòng nhấn 'Đăng ký thành viên mới' bên dưới.");
-        }
-    }).catch(err => {
-        document.getElementById('loading-overlay').classList.add('hidden');
-        alert("Lỗi kết nối: " + err.message);
-    });
-}
-
-// ── STAMP RENDER ───────────────────────────────────────────────
-function _renderStampGrid(count) {
-    const grid = document.getElementById('stamp-grid');
-    if (!grid) return;
-    const filled = Math.min(count, 6);
-    grid.innerHTML = Array.from({ length: 6 }, (_, i) => {
-        const on = i < filled;
-        return `<div style="
-            aspect-ratio:1;border-radius:50%;
-            background:${on ? 'linear-gradient(135deg,#006241,#00a36c)' : '#f3f4f6'};
-            border:2px solid ${on ? '#00a36c' : '#e5e7eb'};
-            display:flex;align-items:center;justify-content:center;
-            ${on ? 'box-shadow:0 3px 10px rgba(0,98,65,0.3);' : ''}
-            transition:all .35s cubic-bezier(.34,1.5,.64,1);">
-            ${on
-                ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-                : `<div style="width:8px;height:8px;border-radius:50%;background:#d1d5db;"></div>`}
-        </div>`;
-    }).join('');
-    // progress bar + counter badge
-    const pct = Math.round((filled / 6) * 100);
-    const bar = document.getElementById('stamp-progress-bar');
-    const num = document.getElementById('stamp-count-num');
-    const banner = document.getElementById('stamp-done-banner');
-    if (bar) bar.style.width = pct + '%';
-    if (num) num.textContent = filled;
-    if (banner) banner.classList.toggle('hidden', filled < 6);
-}
-
-// ── LOAD LOYALTY DATA (getDoc, 1 lần) ──────────────────────────
-function _loadLoyaltyData(phone) {
-    fstore.collection('customers_xolifa').doc(phone).get().then(snap => {
-        if (!snap.exists) { _renderStampGrid(0); return; }
-        const d = snap.data();
-        // Member card — dùng total_points; fallback về points (field cũ)
-        const pts = d.total_points ?? d.points ?? 0;
-        userData = d;
-        const nameEl = document.getElementById('user-name-display');
-        const ptsEl  = document.getElementById('user-points');
-        const rankEl = document.getElementById('user-rank');
-        const editN  = document.getElementById('edit-name');
-        const editS  = document.getElementById('edit-sdt');
-        if (nameEl) nameEl.innerText = d.name || 'Khách hàng';
-        if (ptsEl)  ptsEl.innerText  = pts.toLocaleString('vi-VN');
-        if (rankEl) rankEl.innerText = _calcRank(pts);
-        if (editN)  editN.value      = d.name || '';
-        if (editS)  editS.value      = phone;
-        // Stamp card
-        _renderStampGrid(d.stamp_count || 0);
-    }).catch(err => { console.error('Loyalty load:', err); _renderStampGrid(0); });
+  document.getElementById('modal-btn-main').onclick = () => {
+    overlay.classList.add('hidden');
+    if (cb) cb();
+  };
+  document.getElementById('modal-btn-sub').classList.add('hidden');
 }
 
 function _calcRank(p) {
-    if (p >= 55000) return "Thành viên 'Siêu thân'";
-    if (p >= 33000) return "Thành viên 'Thân iu'";
-    if (p >= 10000) return "Thành viên Bạc";
-    return "Thành viên";
+  if (p >= 55000) return "Thành viên 'Siêu thân'";
+  if (p >= 33000) return "Thành viên 'Thân iu'";
+  if (p >= 10000) return "Thành viên Bạc";
+  return "Thành viên";
 }
 
-// ── SHOW DASHBOARD ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// 4. STAMP RENDERER
+// ─────────────────────────────────────────────
+function _renderStampGrid(count) {
+  const grid = document.getElementById('stamp-grid');
+  if (!grid) return;
+  const filled = Math.min(count, 6);
+
+  grid.innerHTML = Array.from({ length: 6 }, (_, i) => {
+    const on = i < filled;
+    return `<div class="stamp-cell" style="
+        aspect-ratio:1; border-radius:50%;
+        background:${on ? 'linear-gradient(135deg,#006241,#00a36c)' : '#f3f4f6'};
+        border:2px solid ${on ? '#00a36c' : '#e5e7eb'};
+        display:flex; align-items:center; justify-content:center;
+        ${on ? 'box-shadow:0 3px 10px rgba(0,98,65,0.3);' : ''}">
+      ${on
+        ? `<svg viewBox="0 0 24 24" width="16" height="16" fill="none">
+             <path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+           </svg>`
+        : `<div style="width:7px;height:7px;border-radius:50%;background:#d1d5db;"></div>`}
+    </div>`;
+  }).join('');
+
+  const pct = Math.round((filled / 6) * 100);
+  const bar    = document.getElementById('stamp-progress-bar');
+  const num    = document.getElementById('stamp-count-num');
+  const banner = document.getElementById('stamp-done-banner');
+  if (bar)    bar.style.width = pct + '%';
+  if (num)    num.textContent = filled;
+  if (banner) banner.classList.toggle('hidden', filled < 6);
+}
+
+// ─────────────────────────────────────────────
+// 5. LOAD LOYALTY DATA FROM FIRESTORE
+//    Fields: nickname, total_points, stamp_count
+// ─────────────────────────────────────────────
+function _loadLoyaltyData(phone) {
+  fstore.collection('customers_xolifa').doc(phone).get()
+    .then(snap => {
+      if (!snap.exists) { _renderStampGrid(0); return; }
+      const d = snap.data();
+      userData = d;
+
+      // Points: prefer total_points, fallback to points
+      const pts = d.total_points ?? d.points ?? 0;
+
+      // Name: prefer nickname, fallback to name
+      const nick = d.nickname || d.name || 'Khách hàng';
+
+      // Update UI
+      const el = (id) => document.getElementById(id);
+      if (el('user-name-display')) el('user-name-display').innerText = nick;
+      if (el('user-points'))       el('user-points').innerText = pts.toLocaleString('vi-VN');
+      if (el('user-rank'))         el('user-rank').innerText = _calcRank(pts);
+      if (el('edit-nickname'))     el('edit-nickname').value = nick;
+      if (el('edit-sdt'))          el('edit-sdt').value = phone;
+
+      // Stamps
+      _renderStampGrid(d.stamp_count || 0);
+    })
+    .catch(err => { console.error('Loyalty load error:', err); _renderStampGrid(0); });
+}
+
+// ─────────────────────────────────────────────
+// 6. TAB NAVIGATION
+// ─────────────────────────────────────────────
+function showTab(t) {
+  // Hide all tab contents
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+
+  // Show selected tab
+  const tab = document.getElementById('tab-' + t);
+  if (tab) tab.classList.remove('hidden');
+
+  // Update nav active state
+  document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+  const activeBtn = document.getElementById('nav-' + t);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─────────────────────────────────────────────
+// 7. SHOW DASHBOARD
+// ─────────────────────────────────────────────
 function showDashboard(phone) {
-    curPhone = phone;
-    document.getElementById('login-screen').classList.add('hidden');
-    document.getElementById('main-app').classList.remove('hidden');
-    document.getElementById('nav-bar').classList.remove('hidden');
-    _loadLoyaltyData(phone);   // getDoc — không realtime
-    showTab('user');
+  curPhone = phone;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('register-screen').style.display = 'none';
+  document.getElementById('main-app').classList.remove('hidden');
+  document.getElementById('nav-bar').classList.remove('hidden');
+  _loadLoyaltyData(phone);
+  showTab('points');
 }
 
-// ── CARD NỢ PHÍ — HIỂN THỊ TRONG TAB ĐẶT BED ─────────────────
-function _renderDebtCard(data) {
-    var card = document.getElementById('debt-card');
-    if (!card) return;
-    var fees = [];
-    var pending = parseInt(data.pendingFee) || 0;
-    var reason  = (data.pendingFeeReason || '').trim();
-    if (pending > 0) {
-        var iconSVG, feeLabel, feeColor;
-        var r = reason.toLowerCase();
-        if (r.indexOf('vệ sinh') >= 0 || r.indexOf('ve sinh') >= 0) {
-            iconSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
-            feeLabel = 'Phí vệ sinh'; feeColor = '#047857';
-        } else if (r.indexOf('hủy') >= 0 || r.indexOf('muộn') >= 0 || r.indexOf('cancel') >= 0) {
-            iconSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
-            feeLabel = 'Phí hủy muộn'; feeColor = '#065f46';
-        } else if (r.indexOf('bed') >= 0) {
-            iconSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M3 11V8a2 2 0 012-2h5v5"/><path d="M21 11V8a2 2 0 00-2-2h-5v5"/><path d="M3 15h18"/></svg>';
-            feeLabel = 'Phí đặt ô Bed'; feeColor = '#065f46';
+// ─────────────────────────────────────────────
+// 8. AUTO-LOGIN (localStorage persistence)
+// ─────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function () {
+  const saved = localStorage.getItem('member_phone');
+  if (saved) {
+    // Verify the phone still exists in Firestore before auto-logging in
+    showLoadingOverlay(true);
+    fstore.collection('customers_xolifa').doc(saved).get()
+      .then(snap => {
+        showLoadingOverlay(false);
+        if (snap.exists) {
+          showDashboard(saved);
         } else {
-            iconSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>';
-            feeLabel = reason || 'Phí khác'; feeColor = '#047857';
+          // Saved phone no longer valid — clear it
+          localStorage.removeItem('member_phone');
         }
-        fees.push({ icon: iconSVG, label: feeLabel, note: (reason && reason !== feeLabel) ? reason : '', amount: pending, color: feeColor });
-    }
-    if (parseInt(data.pendingCleanFee) > 0) {
-        fees.push({ icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>', label: 'Phí vệ sinh', note: '', amount: parseInt(data.pendingCleanFee), color: '#047857' });
-    }
-    if (parseInt(data.pendingCancelFee) > 0) {
-        fees.push({ icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', label: 'Phí hủy muộn', note: 'Từ lần đặt trước', amount: parseInt(data.pendingCancelFee), color: '#065f46' });
-    }
-    if (fees.length === 0) { card.style.display = 'none'; return; }
-    var total = fees.reduce(function(s, f) { return s + f.amount; }, 0);
-    var badge = document.getElementById('debt-total-badge');
-    if (badge) badge.textContent = total.toLocaleString() + 'đ';
-    var rows = document.getElementById('debt-fee-rows');
-    if (rows) {
-        rows.innerHTML = fees.map(function(f) {
-            return '<div style="background:rgba(255,255,255,0.7);border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;border:1px solid rgba(167,243,208,0.6);">'
-                + '<div style="width:28px;height:28px;border-radius:9px;background:rgba(0,98,65,0.1);display:flex;align-items:center;justify-content:center;color:' + f.color + ';flex-shrink:0;">' + f.icon + '</div>'
-                + '<div style="flex:1;min-width:0;"><p style="font-size:12px;font-weight:800;color:#064e3b;margin:0;">' + f.label + '</p>' + (f.note ? '<p style="font-size:10px;color:#6b7280;font-weight:600;margin:1px 0 0;">' + f.note + '</p>' : '') + '</div>'
-                + '<div style="display:flex;align-items:center;gap:5px;flex-shrink:0;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span style="font-size:13px;font-weight:900;color:#dc2626;font-family:League Spartan,sans-serif;">' + f.amount.toLocaleString() + 'đ</span></div>'
-                + '</div>';
-        }).join('');
-    }
-    card.style.display = 'block';
-    card.style.opacity = '0';
-    card.style.transform = 'translateY(-8px) scale(0.98)';
-    card.style.transition = 'opacity 0.35s ease, transform 0.35s cubic-bezier(0.34,1.3,0.64,1)';
-    requestAnimationFrame(function() { card.style.opacity = '1'; card.style.transform = 'translateY(0) scale(1)'; });
-}
-// ── END CARD NỢ PHÍ ────────────────────────────────────────────
+      })
+      .catch(() => {
+        showLoadingOverlay(false);
+        // Network error — still try to show dashboard with cached phone
+        showDashboard(saved);
+      });
+  }
+});
 
-// ── NHIỆM VỤ THÁNG 3/2026 ──────────────────────────────────────
-function _loadMissionBedCount(phone) {
-    var S = new Date('2026-03-03T00:00:00+07:00');
-    var E = new Date('2026-03-31T23:59:59+07:00');
-    function parseD(d) {
-        if (!d) return null;
-        if (d.includes('/')) { var p = d.split('/'); return new Date(+p[2], +p[1]-1, +p[0]); }
-        return new Date(d);
-    }
-    _fetchBookingsByPhone(phone, function(bookings) {
-        var count = 0;
-        bookings.forEach(function(v) {
-            if (!v) return;
-            // Chỉ tính lịch đã checkout thành công
-            if ((v.status||'').toLowerCase() !== 'đã xong') return;
-            var dt = parseD(v.date);
-            if (dt && dt >= S && dt <= E) count++;
-        });
-        var el  = document.getElementById('m3-bed-txt-num');
-        var bar = document.getElementById('m3-bed-bar');
-        if (el)  el.textContent  = String(count);
-        if (bar) bar.style.width = Math.min(Math.round(count / 9 * 100), 100) + '%';
-        _updateMissionChip();
+// ─────────────────────────────────────────────
+// 9. LOGIN
+// ─────────────────────────────────────────────
+function login() {
+  const phone = normalizePhone(document.getElementById('login-sdt').value);
+  if (phone.length < 9) return alert('SĐT không hợp lệ!');
+
+  showLoadingOverlay(true);
+  fstore.collection('customers_xolifa').doc(phone).get()
+    .then(snap => {
+      showLoadingOverlay(false);
+      if (snap.exists) {
+        localStorage.setItem('member_phone', phone);
+        showDashboard(phone);
+      } else {
+        alert("SĐT này chưa đăng ký thành viên!\nVui lòng nhấn 'Đăng ký thành viên mới' bên dưới.");
+      }
+    })
+    .catch(err => {
+      showLoadingOverlay(false);
+      alert('Lỗi kết nối: ' + err.message);
     });
 }
 
-function _updateMissionChip() {
-    var chip   = document.getElementById('m3-chip');
-    var bedEl  = document.getElementById('m3-bed-txt-num');
-    var banner = document.getElementById('m3-complete-banner');
-    if (!chip || !bedEl) return;
-    var count   = parseInt(bedEl.textContent || '0');
-    var bedDone = count >= 9;
-    if (bedDone) {
-        chip.textContent = 'Hoàn thành ✦';
-        chip.style.background = 'rgba(0,98,65,0.15)';
-        chip.style.borderColor = 'rgba(0,98,65,0.3)';
-        chip.style.color = '#006241';
-        if (banner) banner.style.display = 'block';
-    } else {
-        chip.textContent = count > 0 ? 'Đang thực hiện' : 'Chưa bắt đầu';
-        chip.style.background = 'rgba(120,80,20,0.1)';
-        chip.style.borderColor = 'rgba(120,80,20,0.2)';
-        chip.style.color = 'rgba(120,80,20,0.8)';
-        if (banner) banner.style.display = 'none';
-    }
+// ─────────────────────────────────────────────
+// 10. REGISTER
+// ─────────────────────────────────────────────
+function showRegister() {
+  document.getElementById('login-screen').style.display = 'none';
+  const s = document.getElementById('register-screen');
+  s.classList.remove('hidden');
+  s.style.display = 'flex';
 }
-// ── END NHIỆM VỤ ───────────────────────────────────────────────
 
-// --- 4. CẬP NHẬT HỒ SƠ ---
-window.handleUpdate = function() {
-    const nameInput = document.getElementById('edit-name');
-    if (!nameInput) return;
-    const newName = nameInput.value.trim();
-    if (!newName) return alert("Vui lòng nhập tên của bạn!");
+function hideRegister() {
+  document.getElementById('register-screen').style.display = 'none';
+  document.getElementById('register-screen').classList.add('hidden');
+  document.getElementById('login-screen').style.display = '';
+}
 
-    const overlay = document.getElementById('loading-overlay');
-    overlay.classList.remove('hidden');
-    const t = setTimeout(() => overlay.classList.add('hidden'), 3000);
+function submitRegister() {
+  const nickname = document.getElementById('reg-nickname').value.trim();
+  const phone    = normalizePhone(document.getElementById('reg-phone').value);
+  const btn      = document.getElementById('btn-reg-submit');
 
-    fstore.collection('customers_xolifa').doc(curPhone).update({ name: newName })
-        .then(() => {
-            clearTimeout(t);
-            overlay.classList.add('hidden');
-            userData.name = newName;
-            const el = document.getElementById('user-name-display');
-            if (el) el.innerText = newName;
-            showAppModal("Thành công", "Đã cập nhật tên!", '✅');
-        })
-        .catch(err => {
-            clearTimeout(t);
-            overlay.classList.add('hidden');
-            alert("Lỗi: " + err.message);
-        });
+  if (nickname.length < 2) return alert('Vui lòng nhập Nickname (ít nhất 2 ký tự)!');
+  if (phone.length < 9)    return alert('Số điện thoại không hợp lệ!');
+
+  btn.textContent = 'Đang xử lý...';
+  btn.disabled = true;
+
+  const docRef = fstore.collection('customers_xolifa').doc(phone);
+  docRef.get().then(snap => {
+    if (snap.exists) {
+      alert('SĐT này đã tồn tại! Vui lòng đăng nhập.');
+      btn.textContent = 'Xác nhận đăng ký';
+      btn.disabled = false;
+      hideRegister();
+    } else {
+      return docRef.set({
+        nickname:     nickname,
+        name:         nickname,          // giữ cả name để backward compat
+        phone:        phone,
+        total_points: 333,               // field chuẩn mới
+        points:       333,               // backward compat với POS cũ
+        stamp_count:  0,
+        joinDate:     new Date().toISOString(),
+        source:       'app_register',
+        lastVisit:    new Date().toISOString(),
+      }).then(() => {
+        localStorage.setItem('member_phone', phone);
+        document.getElementById('register-screen').style.display = 'none';
+        showDashboard(phone);
+      });
+    }
+  }).catch(err => {
+    alert('Lỗi: ' + err.message);
+    btn.textContent = 'Xác nhận đăng ký';
+    btn.disabled = false;
+  });
+}
+
+// ─────────────────────────────────────────────
+// 11. UPDATE PROFILE — lưu nickname vào Firestore
+// ─────────────────────────────────────────────
+window.handleUpdate = function () {
+  const newNick = (document.getElementById('edit-nickname').value || '').trim();
+  if (!newNick) return alert('Vui lòng nhập Nickname!');
+
+  showLoadingOverlay(true);
+  const t = setTimeout(() => showLoadingOverlay(false), 5000); // safety timeout
+
+  fstore.collection('customers_xolifa').doc(curPhone).update({
+    nickname: newNick,
+    name:     newNick, // keep name in sync for POS compatibility
+  }).then(() => {
+    clearTimeout(t);
+    showLoadingOverlay(false);
+    userData.nickname = newNick;
+    userData.name     = newNick;
+    const nameEl = document.getElementById('user-name-display');
+    if (nameEl) nameEl.innerText = newNick;
+    showAppModal('Thành công!', 'Đã cập nhật Nickname 🎉', '✅');
+  }).catch(err => {
+    clearTimeout(t);
+    showLoadingOverlay(false);
+    alert('Lỗi: ' + err.message);
+  });
 };
 
-// --- 6. QUÀ ---
-
-// --- 6. QUÀ & LỊCH SỬ ---
-function loadRewards() {
-    const list = document.getElementById('rewards-list');
-    list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Đang tải...</div>';
-
-    // Đọc từ RT rewards_mirror (POS tự sync, không cần Firestore auth)
-    db.ref('rewards_mirror').once('value', function(snap) {
-        list.innerHTML = '';
-        var data = snap.val();
-        if (!data) {
-            list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Chưa có quà.</div>';
-            return;
-        }
-        _cachedGiftList = [];
-        Object.keys(data).forEach(function(k) {
-            var item = data[k];
-            item._docId = item._docId || k;
-            if (item.active !== false) _cachedGiftList.push(item);
-        });
-        if (_cachedGiftList.length === 0) {
-            list.innerHTML = '<div class="text-center text-gray-400 py-10 italic text-xs">Chưa có quà.</div>';
-            return;
-        }
-        _cachedGiftList.forEach((item, index) => {
-            list.innerHTML += `
-            <div onclick="openGiftDetail(${index})" class="bg-white p-4 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4 mb-3 relative overflow-hidden group active:scale-[0.98] transition-transform cursor-pointer hover:shadow-md">
-                <div class="shrink-0 w-24 h-24 rounded-3xl overflow-hidden border border-gray-100 bg-gray-50"><img src="${item.img || ''}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/150'"></div>
-                <div class="flex-1 min-w-0"><p class="font-bold text-sm text-[#1e3932] mb-1 uppercase truncate">${item.name}</p><p class="text-[10px] text-gray-400 mb-2 line-clamp-2">${item.desc || '...'}</p><p class="text-md text-[#006241] font-black brand-font">${item.cost.toLocaleString()} <span class="text-amber-500 text-xs">★</span></p></div>
-                <div class="shrink-0 w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-[#006241] group-hover:text-white transition-colors">➜</div>
-            </div>`;
-        });
-    });
-}
-
-function openGiftDetail(index) {
-    const item = _cachedGiftList[index];
-    if (!item) return;
-    document.getElementById('detail-gift-name').innerText = item.name;
-    document.getElementById('detail-gift-desc').innerText = item.desc || '...';
-    document.getElementById('detail-gift-cost').innerText = item.cost.toLocaleString() + ' ★';
-    document.getElementById('detail-gift-img').src = item.img || '';
-    document.getElementById('detail-user-point').innerText = userData.points.toLocaleString() + ' ★';
-    let percent = (userData.points / item.cost) * 100; if (percent > 100) percent = 100;
-    document.getElementById('detail-progress').style.width = percent + '%';
-
-    const btn = document.getElementById('btn-confirm-redeem');
-    const msg = document.getElementById('detail-message');
-    const prog = document.getElementById('detail-progress');
-
-    if (userData.points >= item.cost) {
-        btn.disabled = false; btn.innerHTML = 'XÁC NHẬN ĐỔI NGAY';
-        btn.className = "w-full py-4 rounded-2xl bg-[#006241] text-white font-bold text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-transform";
-        btn.onclick = () => { document.getElementById('gift-detail-modal').classList.add('hidden'); redeemGift(item.name, item.cost); };
-        prog.className = "h-full bg-[#006241] rounded-full transition-all duration-500";
-        msg.classList.add('hidden');
-    } else {
-        btn.disabled = true; btn.innerHTML = 'CHƯA ĐỦ ĐIỂM';
-        btn.className = "w-full py-4 rounded-2xl bg-gray-300 text-gray-500 font-bold text-sm uppercase tracking-widest cursor-not-allowed";
-        prog.className = "h-full bg-red-500 rounded-full transition-all duration-500";
-        msg.classList.remove('hidden'); msg.innerText = `Thiếu ${(item.cost - userData.points).toLocaleString()} ★ nữa.`;
-    }
-    document.getElementById('gift-detail-modal').classList.remove('hidden');
-}
-
-function redeemGift(name, cost) {
-    if(!confirm(`Đổi "${name}" với ${cost} điểm?`)) return;
-    const np = (userData.points || 0) - cost;
-    if(np < 0) return alert("Lỗi điểm");
-
-    document.getElementById('loading-overlay').classList.remove('hidden');
-
-    const now = new Date();
-    const dd = String(now.getDate()).padStart(2,'0');
-    const mm = String(now.getMonth()+1).padStart(2,'0');
-    const yyyy = now.getFullYear();
-    const hh = String(now.getHours()).padStart(2,'0');
-    const min = String(now.getMinutes()).padStart(2,'0');
-    const dateStr = `${dd}/${mm}/${yyyy}`;
-    const timeStr = `${hh}:${min}`;
-    const voucherCode = 'TC33-' + Math.random().toString(36).substr(2,6).toUpperCase();
-
-    const giftRecord = {
-        name: name,
-        cost: cost,
-        date: dateStr,
-        time: timeStr,
-        code: voucherCode,
-        used: false,
-        redeemedAt: now.toISOString()
-    };
-
-    const custRef = fstore.collection('customers_xolifa').doc(curPhone);
-
-    // Lưu gift vào subcollection myGifts, rồi update điểm
-    custRef.collection('myGifts').add(giftRecord).then(() => {
-        return custRef.update({ points: np });
-    }).then(() => {
-        userData.points = np;
-        document.getElementById('loading-overlay').classList.add('hidden');
-        document.getElementById('gift-detail-modal').classList.add('hidden');
-
-        const pointEl = document.getElementById('user-points');
-        if(pointEl) pointEl.innerText = np.toLocaleString();
-
-        showGiftVoucher({ name, cost, date: dateStr, time: timeStr, code: voucherCode });
-    }).catch(err => {
-        document.getElementById('loading-overlay').classList.add('hidden');
-        alert("Lỗi đổi quà: " + err.message);
-    });
-}
-
-// --- PHIẾU QUÀ (VOUCHER MODAL) ---
-function showGiftVoucher(gift) {
-    document.getElementById('voucher-gift-name').innerText = gift.name;
-    document.getElementById('voucher-gift-code').innerText = gift.code;
-    document.getElementById('voucher-gift-date').innerText = gift.date + ' lúc ' + gift.time;
-    document.getElementById('voucher-gift-cost').innerText = gift.cost.toLocaleString() + ' ★';
-    document.getElementById('voucher-customer').innerText = userData.name || curPhone;
-
-    const overlay = document.getElementById('gift-voucher-overlay');
-    const card = overlay.querySelector('.voucher-card');
-    overlay.classList.remove('hidden');
-    overlay.style.display = 'flex';
-    card.classList.remove('voucher-show');
-    card.classList.add('voucher-enter');
-    setTimeout(() => { card.classList.remove('voucher-enter'); card.classList.add('voucher-show'); }, 10);
-}
-
-function closeGiftVoucher() {
-    document.getElementById('gift-voucher-overlay').classList.add('hidden');
-    document.getElementById('gift-voucher-overlay').style.display = 'none';
-}
-
-// --- LƯU PHIẾU QUÀ (SCREENSHOT CANVAS) ---
-async function saveVoucherImage() {
-    const btn = document.getElementById('btn-save-voucher');
-    btn.innerText = 'Đang lưu...';
-    btn.disabled = true;
-    try {
-        // Dùng html2canvas nếu có, nếu không hướng dẫn chụp màn hình
-        if (typeof html2canvas !== 'undefined') {
-            const el = document.getElementById('voucher-card-inner');
-            const canvas = await html2canvas(el, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
-            const link = document.createElement('a');
-            link.download = 'phieu-qua-' + document.getElementById('voucher-gift-code').innerText + '.png';
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            btn.innerText = '✓ Đã lưu!';
-        } else {
-            // Fallback: nhắc chụp màn hình
-            btn.innerText = '📸 Chụp màn hình nhé!';
-            setTimeout(() => { btn.innerText = '⬇ Lưu phiếu quà'; btn.disabled = false; }, 2500);
-            return;
-        }
-    } catch(e) {
-        btn.innerText = '📸 Chụp màn hình nhé!';
-    }
-    setTimeout(() => { btn.innerText = '⬇ Lưu phiếu quà'; btn.disabled = false; }, 2500);
-}
-
-
-// ── KHO QUÀ — đọc từ Firestore subcollection ───────────────────
-function openMyGifts() {
-    var modal = document.getElementById('my-gifts-modal');
-    modal.style.display = 'flex';
-    modal.style.flexDirection = 'column';
-    var list = document.getElementById('my-gifts-list');
-    list.innerHTML = '<p style="text-align:center;color:#9ca3af;padding:32px 0;">Đang tải...</p>';
-
-    fstore.collection('customers_xolifa').doc(curPhone).collection('myGifts')
-        .orderBy('redeemedAt', 'desc').get()
-        .then(function(snap) {
-            var gifts = [];
-            snap.forEach(function(doc) {
-                gifts.push(Object.assign({ key: doc.id }, doc.data()));
-            });
-            if (!gifts.length) {
-                list.innerHTML = '<div style="text-align:center;padding:48px 0;"><p style="color:#9ca3af;font-weight:700;font-size:14px;">Bạn chưa đổi quà nào</p><p style="color:#d1d5db;font-size:12px;margin-top:4px;">Tích điểm rồi đổi quà ngay nhé!</p></div>';
-                return;
-            }
-            list.innerHTML = gifts.map(function(g) {
-                var usedBadge = g.used
-                    ? '<div style="position:absolute;top:12px;right:12px;background:#e5e7eb;color:#6b7280;font-size:9px;font-weight:800;padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:0.05em;">Đã dùng</div>'
-                    : '<div style="position:absolute;top:12px;right:12px;background:#f0fdf4;color:#15803d;font-size:9px;font-weight:800;padding:4px 10px;border-radius:99px;text-transform:uppercase;letter-spacing:0.05em;border:1px solid #bbf7d0;">Chưa dùng</div>';
-                return '<div style="background:white;border-radius:28px;padding:20px;border:1px solid ' + (g.used ? '#f3f4f6' : '#dcfce7') + ';' + (g.used ? 'opacity:0.6;' : 'box-shadow:0 2px 8px rgba(0,0,0,0.06);') + 'margin-bottom:12px;position:relative;">'
-                    + usedBadge
-                    + '<p style="font-weight:900;color:#1e3932;font-size:15px;margin:0 0 6px;padding-right:80px;">' + (g.name || '') + '</p>'
-                    + '<p style="font-size:11px;font-family:monospace;font-weight:700;color:#006241;background:#f0fdf4;padding:3px 10px;border-radius:8px;display:inline-block;margin-bottom:10px;">' + (g.code || '') + '</p>'
-                    + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-                    + '<p style="font-size:11px;color:#9ca3af;font-weight:600;margin:0;">' + (g.date || '') + ' · ' + (g.time || '') + '</p>'
-                    + '<p style="font-size:12px;font-weight:900;color:#f59e0b;margin:0;">-' + (g.cost || 0).toLocaleString() + ' ★</p>'
-                    + '</div></div>';
-            }).join('');
-        }).catch(function(err) {
-            list.innerHTML = '<p style="text-align:center;color:#ef4444;padding:32px 0;font-size:13px;">Lỗi tải dữ liệu: ' + err.message + '</p>';
-        });
-}
-function closeMyGifts() {
-    document.getElementById('my-gifts-modal').style.display = 'none';
-}
-// ───────────────────────────────────────────────────────────────
-window.handleLogout = function() {
-    // 1. Hỏi xác nhận cho chắc
-    if(confirm("Nếu anh đi, trái tim này buồn biết mấy, out thiệt hả")) {
-        
-        // 2. Xóa số điện thoại đã lưu trong máy
-        localStorage.removeItem('member_phone');
-        
-        // 3. Tải lại trang -> Tự động quay về màn hình đăng nhập
-        location.reload();
-    }
-}
+// ─────────────────────────────────────────────
+// 12. LOGOUT
+// ─────────────────────────────────────────────
+window.handleLogout = function () {
+  if (confirm('Đăng xuất tài khoản?')) {
+    localStorage.removeItem('member_phone');
+    location.reload();
+  }
+};
 </script>
 
 </body>
