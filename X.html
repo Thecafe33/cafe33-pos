@@ -1111,6 +1111,11 @@ let dgSelectedItems = []; // temp selection in picker
 const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
 // ============================================================
+// 🏆 LOYALTY — Tích điểm & Stamp (customers_xolifa)
+// ============================================================
+let loyaltyCustomer = null; // dữ liệu Firestore của khách hiện tại
+
+// ============================================================
 // 🚀 KHỞI ĐỘNG — đọc menu ngay, auth chạy nền (không block)
 // ============================================================
 initMenu();                  // đọc menu ngay lập tức (không cần auth)
@@ -2130,29 +2135,48 @@ function lookupCustomer() {
   const phone = document.getElementById('cuph').value.trim();
   if (!phone) return;
 
-  db.ref('customers/' + phone).once('value').then(snap => {
+  // Tra cứu song song: RTDB (voucher/points cũ) + Firestore (loyalty mới)
+  const rtPromise = db.ref('customers/' + phone).once('value');
+  const fsPromise = loyaltyFetchCustomer(phone);
+
+  Promise.all([rtPromise, fsPromise]).then(([snap, fsData]) => {
     const data = snap.val();
-    if (!data) {
+    loyaltyCustomer = fsData;
+
+    if (!data && !fsData) {
       toast('Không tìm thấy khách: ' + phone);
       clearCustomer();
       return;
     }
 
-    // Lọc CHỈ lấy field cần thiết — bỏ qua trường comp... của app khác
-    const { name, points, note, myGifts } = data;
-    curCustomer = { phone, name: name || 'Khách hàng', points: points || 0, note: note || '', myGifts: myGifts || {} };
-    renderCustomerInfo();
+    // Gộp thông tin từ cả hai nguồn
+    const name   = (data && data.name) || (fsData && fsData.name) || 'Khách hàng';
+    const points = (data && data.points) || 0;
+    const note   = (data && data.note) || '';
+    const myGifts = (data && data.myGifts) || {};
+
+    // Thông tin loyalty mới từ customers_xolifa
+    const totalPoints = fsData ? (fsData.total_points || 0) : 0;
+    const stampCount  = fsData ? (fsData.stamp_count  || 0) : 0;
+
+    curCustomer = { phone, name, points, note, myGifts };
+    renderCustomerInfo(totalPoints, stampCount);
   }).catch(err => {
     console.error('Lỗi tra cứu:', err);
     toast('Lỗi tra cứu: ' + err.message);
   });
 }
 
-function renderCustomerInfo() {
+function renderCustomerInfo(totalPoints, stampCount) {
   if (!curCustomer) return;
   const panel = document.getElementById('custInfo');
   document.getElementById('custName').textContent = curCustomer.name;
-  document.getElementById('custPts').textContent = `⭐ ${curCustomer.points} điểm`;
+
+  // Hiển thị cả points cũ + loyalty mới
+  let ptsHtml = `⭐ ${curCustomer.points} điểm`;
+  if (totalPoints > 0) ptsHtml += `  |  🏆 ${totalPoints.toLocaleString('vi-VN')} Point`;
+  if (stampCount  > 0) ptsHtml += `  |  ☕ ${stampCount}/6 Stamp`;
+  document.getElementById('custPts').textContent = ptsHtml;
   document.getElementById('custNote').textContent = curCustomer.note;
 
   // Lọc Voucher chưa dùng (used !== true)
@@ -2198,8 +2222,111 @@ function applyVoucher(key, giftName) {
 function clearCustomer() {
   curCustomer = null;
   selectedVoucher = null;
+  loyaltyCustomer = null;
   document.getElementById('custInfo').classList.remove('show');
   document.getElementById('voucherList').innerHTML = '';
+}
+
+// ============================================================
+// 🏆 LOYALTY — Tra cứu & Cập nhật điểm / stamp
+// ============================================================
+
+/** Lấy ngày hôm nay dạng 'YYYY-MM-DD' (giờ VN) */
+function loyaltyTodayStr() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth()+1).padStart(2,'0');
+  const d = String(now.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
+
+/** Đọc document customers_xolifa theo SĐT */
+async function loyaltyFetchCustomer(phone) {
+  try {
+    const snap = await fstore.collection('customers_xolifa').doc(phone).get();
+    return snap.exists ? { id: phone, ...snap.data() } : null;
+  } catch(e) {
+    console.warn('Loyalty fetch error:', e);
+    return null;
+  }
+}
+
+/** Tích điểm Tại quán: +1.000 Point mỗi 100.000đ, bill ≥ 100.000đ */
+async function loyaltyAddPoints(phone, billAmount) {
+  if (!phone || billAmount < 100000) return 0;
+  const earned = Math.floor(billAmount / 100000) * 1000;
+  if (earned <= 0) return 0;
+  try {
+    const doc = fstore.collection('customers_xolifa').doc(phone);
+    const snap = await doc.get();
+    const cur = snap.exists ? (snap.data().total_points || 0) : 0;
+    await doc.update({ total_points: cur + earned, lastVisit: new Date().toISOString() });
+    return earned;
+  } catch(e) {
+    console.warn('Loyalty points error:', e);
+    return 0;
+  }
+}
+
+/** Kiểm tra và tích Stamp To Go
+ *  - 1 ly = 1 Stamp, max 2 Stamp/ngày/khách
+ *  - 6 Stamp = 1 ly miễn phí
+ *  Trả về { added, newCount, freeDrink }
+ */
+async function loyaltyAddStamps(phone, drinkCount) {
+  if (!phone || drinkCount <= 0) return { added: 0, newCount: 0, freeDrink: false };
+  try {
+    const doc = fstore.collection('customers_xolifa').doc(phone);
+    const snap = await doc.get();
+    const data = snap.exists ? snap.data() : {};
+
+    const today = loyaltyTodayStr();
+    const lastDate = data.last_stamp_date || '';
+    const lastQty  = (lastDate === today) ? (data.last_stamp_qty || 0) : 0;
+
+    // Tối đa 2 stamp hôm nay
+    const canAdd = Math.min(drinkCount, Math.max(0, 2 - lastQty));
+    if (canAdd <= 0) return { added: 0, newCount: data.stamp_count || 0, freeDrink: false };
+
+    const oldStamp  = data.stamp_count || 0;
+    const newStamp  = oldStamp + canAdd;
+    const freeDrink = newStamp >= 6;
+    const finalStamp = freeDrink ? newStamp - 6 : newStamp;
+
+    await doc.update({
+      stamp_count:     finalStamp,
+      last_stamp_date: today,
+      last_stamp_qty:  lastQty + canAdd,
+      lastVisit:       new Date().toISOString()
+    });
+
+    return { added: canAdd, newCount: finalStamp, freeDrink };
+  } catch(e) {
+    console.warn('Loyalty stamp error:', e);
+    return { added: 0, newCount: 0, freeDrink: false };
+  }
+}
+
+/** Gọi sau khi thanh toán thành công để tích điểm/stamp */
+async function loyaltyProcessAfterPay(phone, billAmount, itemCount) {
+  if (!phone) return;
+  let msg = '';
+  if (!isToGo) {
+    // Chế độ Tại quán — tích Point
+    const earned = await loyaltyAddPoints(phone, billAmount);
+    if (earned > 0) msg = `🌟 +${earned.toLocaleString('vi-VN')} Point tích vào tài khoản!`;
+    else if (billAmount < 100000) msg = `ℹ️ Bill dưới 100.000đ — chưa đủ điều kiện tích điểm`;
+  } else {
+    // Chế độ To Go — tích Stamp
+    const result = await loyaltyAddStamps(phone, itemCount);
+    if (result.added > 0) {
+      msg = `☕ +${result.added} Stamp! Đã có ${result.newCount}/6`;
+      if (result.freeDrink) msg += ` 🎉 Chúc mừng! Đã đủ 6 Stamp — 1 Ly MIỄN PHÍ!`;
+    } else if (itemCount > 0) {
+      msg = `⚠️ Đã đạt 2 Stamp hôm nay — không thể thêm`;
+    }
+  }
+  if (msg) { setTimeout(() => toast(msg), 800); }
 }
 
 // ============================================================
@@ -2363,6 +2490,13 @@ function confirmPay(cashGiven, cashChange) {
       ...order,
       items: itemsArray
     });
+
+    // 🏆 Tích điểm / stamp sau khi thanh toán thành công
+    const loyPhone = document.getElementById('cuph').value.trim();
+    if (loyPhone) {
+      const drinkCount = items.reduce((s, c) => s + c.qty, 0);
+      loyaltyProcessAfterPay(loyPhone, total, drinkCount);
+    }
 
     // Reset
     cart = {};
