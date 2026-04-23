@@ -2190,14 +2190,29 @@ function renderCustomerInfo(totalPoints, stampCount) {
   const available = Object.entries(gifts).filter(([, g]) => !g.used);
 
   const vList = document.getElementById('voucherList');
-  if (available.length === 0) {
-    vList.innerHTML = `<div style="font-size:12px;color:#bbb;text-align:center;padding:4px">Không có voucher khả dụng</div>`;
-  } else {
-    vList.innerHTML = available.map(([key, g]) => `
+  let vHtml = '';
+  
+  const freeDrinkData = loyaltyCustomer ? (loyaltyCustomer.free_drink_available || 0) : 0;
+  if (freeDrinkData > 0) {
+    vHtml += `
+      <div class="voucher-item" style="border-color:#34d399; background:#ecfdf5; margin-bottom: 8px;">
+        <span class="voucher-name" style="color:#065f46; font-weight: 700;">🎁 Còn ${freeDrinkData} ly To-Go Miễn Phí</span>
+        <button class="voucher-btn" style="background:#10b981; border:none; color:#fff;" onclick="consumeFreeToGoDrink('${curCustomer.phone}')">Đổi quà ngay</button>
+      </div>`;
+  }
+
+  if (available.length > 0) {
+    vHtml += available.map(([key, g]) => `
       <div class="voucher-item" id="vi_${key}">
         <span class="voucher-name">🎁 ${g.giftName || key}</span>
-        <button class="voucher-btn" onclick="applyVoucher('${key}','${(g.giftName||key).replace(/'/g,"\\'")}')">Áp dụng</button>
+        <button class="voucher-btn" onclick="applyVoucher('${key}','${(g.giftName||key).replace(/'/g,"\\\\'")}')">Áp dụng</button>
       </div>`).join('');
+  }
+
+  if (!vHtml) {
+    vList.innerHTML = `<div style="font-size:12px;color:#bbb;text-align:center;padding:4px">Không có voucher khả dụng</div>`;
+  } else {
+    vList.innerHTML = vHtml;
   }
   panel.classList.add('show');
 }
@@ -2231,6 +2246,58 @@ function clearCustomer() {
   loyaltyCustomer = null;
   document.getElementById('custInfo').classList.remove('show');
   document.getElementById('voucherList').innerHTML = '';
+}
+
+function consumeFreeToGoDrink(phone) {
+  if (!confirm('Xác nhận đổi 1 ly miễn phí To-Go cho khách hàng này?')) return;
+  
+  fstore.collection('customers_xolifa').doc(phone).get().then(snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
+    const curFree = data.free_drink_available || 0;
+    
+    if (curFree <= 0) {
+      toast('Lỗi: Thuê bao không còn ly miễn phí.');
+      return;
+    }
+    
+    return snap.ref.update({
+      free_drink_available: curFree - 1
+    }).then(() => {
+      toast('✅ Đã xác nhận đổi 1 ly miễn phí thành công!');
+      // Refresh dữ liệu khách hàng luôn
+      lookupCustomer();
+    });
+  }).catch(err => {
+    console.error('Lỗi đổi quà:', err);
+    toast('❌ Có lỗi xảy ra, không thể đổi quà!');
+  });
+}
+
+function consumeFreeToGoDrink(phone) {
+  if (!confirm('Xác nhận đổi 1 ly miễn phí To-Go cho khách hàng này?')) return;
+  
+  fstore.collection('customers_xolifa').doc(phone).get().then(snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
+    const curFree = data.free_drink_available || 0;
+    
+    if (curFree <= 0) {
+      toast('Lỗi: Thuê bao không còn ly miễn phí.');
+      return;
+    }
+    
+    return snap.ref.update({
+      free_drink_available: curFree - 1
+    }).then(() => {
+      toast('✅ Đã xác nhận đổi 1 ly miễn phí thành công!');
+      // Refresh dữ liệu khách hàng luôn
+      lookupCustomer();
+    });
+  }).catch(err => {
+    console.error('Lỗi đổi quà:', err);
+    toast('❌ Có lỗi xảy ra, không thể đổi quà!');
+  });
 }
 
 // ============================================================
