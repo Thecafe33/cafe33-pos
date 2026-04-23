@@ -329,12 +329,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   <button class="sdc" onclick="closeSdb()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
   </button>
-  <div class="sda">
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" fill="#1e6b3c"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" fill="#1e6b3c" opacity=".4"/></svg>
-  </div>
-  <div class="sdlb">Hệ thống POS</div>
-  <div class="sdn">Xin chào,<br>Admin</div>
-  <div class="sdm">
+  <div class="sdm" style="padding-top: 24px;">
     <div class="sdi" onclick="closeSdb();showScreen('rv')">
       <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" fill="#1e6b3c"/><rect x="10" y="7" width="4" height="14" rx="1" fill="#1e6b3c"/><rect x="17" y="3" width="4" height="18" rx="1" fill="#1e6b3c" opacity=".5"/></svg></div>
       <div style="flex:1"><div class="sdit">Doanh thu</div><div class="sdid">Báo cáo tổng quan</div></div>
@@ -343,6 +338,11 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
     <div class="sdi" onclick="closeSdb();showScreen('hi')">
       <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>
       <div style="flex:1"><div class="sdit">Lịch sử</div><div class="sdid">Giao dịch gần đây</div></div>
+      <span class="sdar">›</span>
+    </div>
+    <div class="sdi" onclick="closeSdb();showScreen('customers');loadCustomerList()">
+      <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div style="flex:1"><div class="sdit">Khách hàng</div><div class="sdid">Thẻ điểm & Thành viên</div></div>
       <span class="sdar">›</span>
     </div>
     <div class="sdi" onclick="closeSdb();showScreen('mn')">
@@ -495,6 +495,19 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   <div class="cs">
     <div class="ch"><span class="cht">Biểu đồ doanh thu</span></div>
     <div class="cw"><canvas id="rvc2"></canvas></div>
+  </div>
+</div>
+
+<!-- CUSTOMER LIST SCREEN -->
+<div id="customers" class="screen">
+  <div class="rvh">
+    <span class="rvt">KHÁCH HÀNG</span>
+    <button class="btn-close-screen" onclick="showScreen('sm')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div style="padding: 20px 16px; overflow-y: auto; flex:1;" id="customer-list-container">
+    <div style="text-align: center; color: #999; margin-top: 50px;">Đang tải danh sách...</div>
   </div>
 </div>
 
@@ -3818,6 +3831,48 @@ function kcRenderTogoMenuPages() {
       </div>
       <button onclick="kcTogoMenuPages.splice(${i},1);kcRenderTogoMenuPages()" style="background:#fee2e2;border:none;border-radius:8px;padding:6px 10px;font-size:12px;color:#e74c3c;font-weight:700;cursor:pointer;flex-shrink:0;">Xoá</button>
     </div>`).join('');
+}
+
+// ============================================================
+// CUSTOMER LIST TAB
+// ============================================================
+function loadCustomerList() {
+  const container = document.getElementById('customer-list-container');
+  if (!container) return;
+  container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Đang cập nhật danh sách...</div>';
+  
+  fstore.collection('customers_xolifa').orderBy('total_points', 'desc').limit(50).get().then(snap => {
+    if (snap.empty) {
+      container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Chưa có khách hàng nào</div>';
+      return;
+    }
+    let html = '<div style="display:flex;flex-direction:column;gap:12px;padding-bottom:120px;">';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const phone = doc.id;
+      const nick = d.nickname || 'Khách hàng';
+      const pts = Number(d.total_points || 0).toLocaleString('vi-VN');
+      const stamps = Number(d.stamp_count || 0);
+      const free = Number(d.free_drink_available || 0);
+      
+      html += `
+        <div style="background:#fff;border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:var(--td);margin-bottom:4px;">${nick}</div>
+            <div style="font-size:13px;color:var(--gt);font-weight:600;">${phone}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:14px;font-weight:700;color:var(--gm);margin-bottom:4px;">⭐ ${pts} Point</div>
+            <div style="font-size:12px;font-weight:700;color:#c8820a;">☕ ${stamps}/6 Stamp ${free > 0 ? `| 🎁 ${free}` : ''}</div>
+          </div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  }).catch(err => {
+    container.innerHTML = `<div style="text-align:center;color:#e74c3c;margin-top:50px;">Lỗi tải dữ liệu: ${err.message}</div>`;
+  });
 }
 
 // ============================================================
