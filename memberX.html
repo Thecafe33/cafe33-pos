@@ -220,6 +220,20 @@
   animation: bounce-slow 3s infinite ease-in-out;
 }
 
+/* ── Stamp cell pop animation ── */
+@keyframes stamp-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1); opacity: 1; }
+}
+#stamp-grid > div { animation: stamp-pop .4s cubic-bezier(.34,1.5,.64,1) both; }
+#stamp-grid > div:nth-child(1) { animation-delay: .04s; }
+#stamp-grid > div:nth-child(2) { animation-delay: .08s; }
+#stamp-grid > div:nth-child(3) { animation-delay: .12s; }
+#stamp-grid > div:nth-child(4) { animation-delay: .16s; }
+#stamp-grid > div:nth-child(5) { animation-delay: .20s; }
+#stamp-grid > div:nth-child(6) { animation-delay: .24s; }
+
 </style>
 </head>
 <body class="min-h-screen pb-32">
@@ -293,79 +307,76 @@
   <div id="main-app"
 
 <div id="main-app" class="hidden">
-    <div style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;pointer-events:none;">
-      <div style="pointer-events:auto;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.88);border:1px solid rgba(0,98,65,0.13);border-radius:99px;padding:7px 16px 7px 10px;box-shadow:0 2px 12px rgba(0,0,0,0.09),inset 0 1px 0 rgba(255,255,255,1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
-        <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#006241,#00a36c);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,98,65,0.35);flex-shrink:0;">
-          <span style="font-size:11px;font-weight:900;color:white;font-family:'League Spartan',sans-serif;line-height:1;">33</span>
-        </div>
-        <span style="font-size:14px;font-weight:800;color:#006241;font-family:'League Spartan',sans-serif;">The cafe 33</span>
-      </div>
-      <div style="pointer-events:auto;display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.88);border:1px solid rgba(0,0,0,0.07);border-radius:99px;padding:7px 14px;box-shadow:0 2px 12px rgba(0,0,0,0.09),inset 0 1px 0 rgba(255,255,255,1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
-        <div style="width:6px;height:6px;border-radius:50%;background:#34a853;box-shadow:0 0 0 2px rgba(52,168,83,0.22);flex-shrink:0;"></div>
-        <span id="live-clock" style="font-size:12px;font-weight:700;color:#3c4043;">--:--</span>
-      </div>
-    </div>
+
 
     
-        <div id="tab-user" class="p-5 tab-content hidden pb-40" style="padding-top:72px;">
-      <div class="card-gradient p-8 rounded-[2.5rem] text-white shadow-2xl h-60 flex flex-col justify-between relative overflow-hidden mb-8 text-left">
-        <div class="flex justify-between items-start z-10"><p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Member Card</p><p class="text-[14px] opacity-60 brand-font">The cafe 33</p></div>
-        <div class="z-10"><p id="user-name-display" class="text-3xl font-bold uppercase tracking-wider mb-2"></p>
-          <div class="flex justify-between items-end"><p id="user-rank" class="text-[12px] text-amber-400 font-bold uppercase tracking-widest"></p><div class="text-right"><span id="user-points" class="text-5xl font-black">0</span><span class="text-xs ml-1 opacity-70 font-bold">★</span></div></div>
+        <div id="tab-user" class="p-5 tab-content hidden pb-40" style="padding-top:24px;">
+
+      <!-- ── CARD 1: TẠI QUÁN (Member Card) ── -->
+      <div class="card-gradient p-8 rounded-[2.5rem] text-white shadow-2xl flex flex-col justify-between relative overflow-hidden mb-4 text-left" style="min-height:200px;">
+        <div class="flex justify-between items-start z-10">
+          <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Tích điểm · Tại quán</p>
+          <p class="text-[13px] opacity-50 brand-font">The cafe 33</p>
+        </div>
+        <div class="z-10 mt-6">
+          <p id="user-name-display" class="text-2xl font-bold uppercase tracking-wider mb-3 truncate"></p>
+          <div class="flex justify-between items-end">
+            <div>
+              <p class="text-[9px] font-bold uppercase tracking-widest opacity-60 mb-1">Điểm tích lũy</p>
+              <div class="flex items-baseline gap-1">
+                <span id="user-points" class="text-4xl font-black">0</span>
+                <span class="text-xs opacity-60 font-bold">Point</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <p id="user-rank" class="text-[10px] text-amber-400 font-bold uppercase tracking-widest"></p>
+              <p class="text-[9px] opacity-50 mt-1">100k = +1.000 Point</p>
+            </div>
+          </div>
         </div>
         <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+        <div class="absolute top-4 right-4 w-20 h-20 bg-white/3 rounded-full blur-2xl"></div>
       </div>
 
-      <!-- ===== THẺ TÍCH ĐIỂM & STAMP ===== -->
-      <div id="loyalty-card" style="margin-bottom:20px;">
-
-        <!-- Điểm tại quán -->
-        <div style="background:#fff;border-radius:24px;padding:20px 22px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #f0f0f0;margin-bottom:12px;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <div>
-              <p style="font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Điểm tích luỹ · Tại quán</p>
-              <p style="font-size:11px;color:#6b7280;font-weight:500;margin:0;">100.000đ = +1.000 Point · Đổi quà</p>
-            </div>
-            <div style="background:linear-gradient(135deg,#006241,#00a36c);border-radius:14px;padding:10px 14px;text-align:center;">
-              <span id="loyalty-total-points" style="font-size:22px;font-weight:900;color:#fff;font-family:'League Spartan',sans-serif;line-height:1;display:block;">0</span>
-              <span style="font-size:9px;color:rgba(255,255,255,0.8);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Point</span>
-            </div>
+      <!-- ── CARD 2: TO GO (Stamp) ── -->
+      <div id="stamp-card" class="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 mb-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Tích điểm · Mang về</p>
+            <p class="text-base font-black text-[#1e3932]">Thẻ Stamp To-Go ☕</p>
+          </div>
+          <div id="stamp-count-badge" class="flex items-center gap-1 bg-[#f0fdf4] border border-[#bbf7d0] rounded-2xl px-3 py-1.5">
+            <span id="stamp-count-num" class="text-lg font-black text-[#006241]">0</span>
+            <span class="text-[10px] font-bold text-[#15803d]">/ 6</span>
           </div>
         </div>
 
-        <!-- Stamp To Go -->
-        <div style="background:#fff;border-radius:24px;padding:20px 22px;box-shadow:0 2px 12px rgba(0,0,0,0.06);border:1px solid #f0f0f0;">
-          <div style="margin-bottom:16px;">
-            <p style="font-size:10px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 3px;">Stamp To Go · Mang về</p>
-            <p style="font-size:11px;color:#6b7280;font-weight:500;margin:0;">1 Ly = 1 Stamp · Tối đa 2 Stamp/ngày · Đủ 6 = 1 Ly miễn phí 🎁</p>
-          </div>
-          <!-- Lưới 6 ô stamp -->
-          <div id="stamp-grid" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">
-            <!-- Render bằng JS -->
-          </div>
-          <div id="stamp-free-banner" style="display:none;margin-top:14px;background:linear-gradient(135deg,#006241,#005235);border-radius:16px;padding:14px 18px;text-align:center;">
-            <p style="font-size:14px;font-weight:900;color:#fff;margin:0;font-family:'League Spartan',sans-serif;">🎉 Bạn đã tích đủ 6 Stamp!</p>
-            <p style="font-size:11px;color:rgba(255,255,255,0.85);font-weight:600;margin:4px 0 0;">Xuất trình app tại quán để nhận 1 Ly miễn phí</p>
-          </div>
-          <div id="stamp-date-note" style="margin-top:10px;font-size:10px;color:#bbb;font-weight:600;text-align:center;"></div>
+        <!-- Lưới 6 ô Stamp -->
+        <div id="stamp-grid" class="grid gap-3 mb-4" style="grid-template-columns:repeat(6,1fr);">
+          <!-- Render bằng JS -->
         </div>
 
-      </div>
-      <!-- ===== END THẺ TÍCH ĐIỂM ===== -->
-        <!-- Banner hoàn thành — ẩn mặc định -->
-        <div id="m3-complete-banner" style="display:none;margin-top:10px;background:linear-gradient(135deg,#006241,#005235);border-radius:24px;padding:18px 22px;box-shadow:0 6px 24px rgba(0,98,65,0.35);">
-          <p style="font-size:19px;font-weight:900;color:#fff;margin:0 0 5px;font-family:'League Spartan',sans-serif;line-height:1.2;letter-spacing:-0.01em;">Bạn đã hoàn thành nhiệm vụ! 🎉</p>
-          <p style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.85);margin:0;line-height:1.5;">Hãy đến <strong style="color:#fff;font-weight:900;">The cafe 33</strong> để nhận quà nhé.</p>
+        <!-- Thanh tiến trình -->
+        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+          <div id="stamp-progress-bar" class="h-full rounded-full transition-all duration-700" style="width:0%;background:linear-gradient(90deg,#006241,#00a36c);"></div>
+        </div>
+
+        <!-- Ghi chú -->
+        <p id="stamp-hint" class="text-[10px] font-bold text-gray-400 text-center">1 ly = 1 Stamp · Tối đa 2 Stamp/ngày · Đủ 6 = 1 Ly miễn phí 🎁</p>
+
+        <!-- Banner hoàn thành -->
+        <div id="stamp-done-banner" class="hidden mt-4 rounded-2xl p-4 text-center" style="background:linear-gradient(135deg,#006241,#005235);">
+          <p class="text-white font-black text-sm brand-font">🎉 Đủ 6 Stamp rồi!</p>
+          <p class="text-white/80 text-[11px] font-semibold mt-1">Xuất trình app để nhận 1 ly miễn phí nhé</p>
         </div>
       </div>
-      <!-- END NHIỆM VỤ -->
 
+      <!-- ── HỒ SƠ ── -->
       <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-4 text-left">
         <h4 class="font-bold text-[10px] uppercase text-gray-400 ml-2 tracking-widest">Hồ sơ của bạn</h4>
         <div><label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Tên của bạn</label><input type="text" id="edit-name" class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner"></div>
         <div><label class="text-[10px] font-bold text-gray-400 ml-2 uppercase">Số điện thoại</label><input type="tel" id="edit-sdt" class="w-full p-4 bg-gray-50 rounded-2xl outline-none mt-1 shadow-inner" readonly></div>
-        <p class="text-[10px] font-bold text-gray-400 ml-2 uppercase pt-2 tracking-widest">Người đi cùng mặc định</p>
-        <div class="space-y-3"><input type="text" id="edit-cname" class="w-full p-4 bg-gray-50 rounded-2xl outline-none shadow-inner" placeholder="Tên người đi cùng"><input type="tel" id="edit-cphone" class="w-full p-4 bg-gray-50 rounded-2xl outline-none shadow-inner" placeholder="SĐT người đi cùng"></div>
         <button id="btn-update-profile" onclick="handleUpdate()" class="w-full py-4 rounded-2xl border-2 border-[#006241] text-[#006241] font-bold text-sm mt-4 uppercase tracking-widest">Lưu thay đổi</button>
         <div class="mt-8 pt-6 border-t border-gray-50 text-center">
             <button onclick="handleLogout()" class="w-full py-4 rounded-2xl bg-red-50 text-red-500 font-bold text-xs uppercase tracking-widest border border-red-100 active:scale-95 transition-all shadow-sm hover:bg-red-100">
@@ -376,7 +387,18 @@
       </div>
     </div>
 
-<div id="tab-rewards" class="p-6 tab-content hidden pb-40" style="padding-top:72px;"><h3 class="text-2xl text-[#006241] mb-6 brand-font text-left">Đổi quà tặng</h3><div id="rewards-list" class="grid grid-cols-1 gap-4"></div></div>
+<div id="tab-rewards" class="p-6 tab-content hidden pb-40" style="padding-top:24px;">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;gap:16px;">
+    <div style="width:80px;height:80px;border-radius:28px;background:linear-gradient(135deg,#006241,#00a36c);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,98,65,0.3);">
+      <span style="font-size:36px;">🛠️</span>
+    </div>
+    <p class="brand-font" style="font-size:22px;color:#1e3932;margin:0;">Đang phát triển</p>
+    <p style="font-size:13px;color:#9ca3af;font-weight:600;max-width:240px;line-height:1.6;margin:0;">Tính năng đổi quà sẽ sớm ra mắt.<br>Cảm ơn bạn đã kiên nhẫn chờ đợi!</p>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:16px;padding:12px 20px;margin-top:8px;">
+      <p style="font-size:11px;font-weight:800;color:#15803d;margin:0;text-transform:uppercase;letter-spacing:0.06em;">☕ The cafe 33</p>
+    </div>
+  </div>
+</div>
   </div>
 
   <nav id="nav-bar" class="fixed bottom-6 left-6 right-6 h-20 bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-white/60 flex justify-between items-center p-2 z-50 hidden">
@@ -814,10 +836,6 @@ function submitRegister() {
                 name: nickname,
                 phone: phone,
                 points: 333,
-                total_points: 0,
-                stamp_count: 0,
-                last_stamp_date: '',
-                last_stamp_qty: 0,
                 joinDate: new Date().toISOString(),
                 source: 'app_register',
                 compName: '',
@@ -841,18 +859,10 @@ function submitRegister() {
 // --- 2. LOGIC CHUNG ---
 window.onload = function() {
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('book-date').setAttribute('min', today);
+    const bd = document.getElementById('book-date');
+    if (bd) bd.setAttribute('min', today);
     if(curPhone) showDashboard(curPhone);
-    updateClock();
 };
-
-function updateClock() { 
-    const now = new Date(); 
-    const h = String(now.getHours()).padStart(2,'0'), m = String(now.getMinutes()).padStart(2,'0'); 
-    const d = String(now.getDate()).padStart(2,'0'), mo = String(now.getMonth()+1).padStart(2,'0'); 
-    document.getElementById('live-clock').innerText = `${h}:${m} - ${d}/${mo}`;
-}
-setInterval(updateClock, 10000);
 
 // --- HÀM CHUYỂN TAB (CHO MENU APPLE STYLE) ---
 function showTab(t) { 
@@ -946,116 +956,72 @@ function login() {
     });
 }
 
-// ── LOYALTY — Tích điểm & Stamp ────────────────────────────────
-
-/** Render lưới 6 ô stamp */
-function _renderStampGrid(stampCount) {
+// ── STAMP RENDER ───────────────────────────────────────────────
+function _renderStampGrid(count) {
     const grid = document.getElementById('stamp-grid');
     if (!grid) return;
-    let html = '';
-    for (let i = 0; i < 6; i++) {
-        const filled = i < stampCount;
-        html += `<div style="
+    const filled = Math.min(count, 6);
+    grid.innerHTML = Array.from({ length: 6 }, (_, i) => {
+        const on = i < filled;
+        return `<div style="
             aspect-ratio:1;border-radius:50%;
-            background:${filled ? 'linear-gradient(135deg,#006241,#00a36c)' : '#f3f4f6'};
-            border:2px solid ${filled ? '#006241' : '#e5e7eb'};
+            background:${on ? 'linear-gradient(135deg,#006241,#00a36c)' : '#f3f4f6'};
+            border:2px solid ${on ? '#00a36c' : '#e5e7eb'};
             display:flex;align-items:center;justify-content:center;
-            transition:all 0.3s cubic-bezier(0.34,1.5,0.64,1);
-            ${filled ? 'box-shadow:0 3px 10px rgba(0,98,65,0.35);' : ''}
-        ">
-            ${filled
-                ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
-                : `<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><circle cx="12" cy="12" r="4" fill="#d1d5db"/></svg>`
-            }
+            ${on ? 'box-shadow:0 3px 10px rgba(0,98,65,0.3);' : ''}
+            transition:all .35s cubic-bezier(.34,1.5,.64,1);">
+            ${on
+                ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+                : `<div style="width:8px;height:8px;border-radius:50%;background:#d1d5db;"></div>`}
         </div>`;
-    }
-    grid.innerHTML = html;
-
-    const banner = document.getElementById('stamp-free-banner');
-    if (banner) banner.style.display = stampCount >= 6 ? 'block' : 'none';
+    }).join('');
+    // progress bar + counter badge
+    const pct = Math.round((filled / 6) * 100);
+    const bar = document.getElementById('stamp-progress-bar');
+    const num = document.getElementById('stamp-count-num');
+    const banner = document.getElementById('stamp-done-banner');
+    if (bar) bar.style.width = pct + '%';
+    if (num) num.textContent = filled;
+    if (banner) banner.classList.toggle('hidden', filled < 6);
 }
 
-/** Load loyalty data từ Firestore customers_xolifa (Get 1 lần, không realtime) */
+// ── LOAD LOYALTY DATA (getDoc, 1 lần) ──────────────────────────
 function _loadLoyaltyData(phone) {
     fstore.collection('customers_xolifa').doc(phone).get().then(snap => {
         if (!snap.exists) { _renderStampGrid(0); return; }
-        const data = snap.data();
-
-        // Cập nhật total_points
-        const totalPoints = data.total_points || 0;
-        const el = document.getElementById('loyalty-total-points');
-        if (el) el.textContent = totalPoints.toLocaleString('vi-VN');
-
-        // Cập nhật stamp
-        const stampCount = data.stamp_count || 0;
-        _renderStampGrid(stampCount);
-
-        // Ghi chú ngày stamp cuối
-        const note = document.getElementById('stamp-date-note');
-        if (note && data.last_stamp_date) {
-            const [y, m, d] = data.last_stamp_date.split('-');
-            const qty = data.last_stamp_qty || 0;
-            note.textContent = `Stamp gần nhất: ${d}/${m}/${y} (${qty}/2 hôm đó)`;
-        }
-    }).catch(err => { console.warn('Loyalty load error:', err); _renderStampGrid(0); });
+        const d = snap.data();
+        // Member card — dùng total_points; fallback về points (field cũ)
+        const pts = d.total_points ?? d.points ?? 0;
+        userData = d;
+        const nameEl = document.getElementById('user-name-display');
+        const ptsEl  = document.getElementById('user-points');
+        const rankEl = document.getElementById('user-rank');
+        const editN  = document.getElementById('edit-name');
+        const editS  = document.getElementById('edit-sdt');
+        if (nameEl) nameEl.innerText = d.name || 'Khách hàng';
+        if (ptsEl)  ptsEl.innerText  = pts.toLocaleString('vi-VN');
+        if (rankEl) rankEl.innerText = _calcRank(pts);
+        if (editN)  editN.value      = d.name || '';
+        if (editS)  editS.value      = phone;
+        // Stamp card
+        _renderStampGrid(d.stamp_count || 0);
+    }).catch(err => { console.error('Loyalty load:', err); _renderStampGrid(0); });
 }
 
-// ── END LOYALTY ────────────────────────────────────────────────
+function _calcRank(p) {
+    if (p >= 55000) return "Thành viên 'Siêu thân'";
+    if (p >= 33000) return "Thành viên 'Thân iu'";
+    if (p >= 10000) return "Thành viên Bạc";
+    return "Thành viên";
+}
 
+// ── SHOW DASHBOARD ─────────────────────────────────────────────
 function showDashboard(phone) {
     curPhone = phone;
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
     document.getElementById('nav-bar').classList.remove('hidden');
-
-    // Lắng nghe realtime từ Firestore customers_xolifa
-    fstore.collection('customers_xolifa').doc(phone).onSnapshot(docSnap => {
-        userData = docSnap.exists ? docSnap.data() : {};
-        
-        if(userData) {
-          // === CẬP NHẬT TRANG CHỦ (MỚI) ===
-            const displayName = userData.name || "Bạn mới";
-            const homeNameEl = document.getElementById('home-cust-name');
-            if(homeNameEl) homeNameEl.innerText = displayName;
-            
-            const homePointEl = document.getElementById('home-mini-point');
-            if(homePointEl) homePointEl.innerText = (userData.points || 0).toLocaleString();
-            // =================================
-            document.getElementById('user-name-display').innerText = userData.name || "Khách hàng";
-            document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
-            var phoneEl = document.getElementById('card-phone-display');
-            if (phoneEl) { var ph = userData.phone || phone || ''; phoneEl.innerText = ph ? ph.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3') : '••••••••••'; }
-            
-            // Xếp hạng
-            let p = userData.points || 0;
-            let r = "Thành viên";
-            if (p >= 55000) r = "Thành viên 'siu thân'";
-            else if (p >= 33000) r = "Thành viên 'thân iu'";
-            else if (p >= 10000) r = "Thành viên Bạc";
-            document.getElementById('user-rank').innerText = r;
-
-            var cName = userData.compName || "";
-            var cPhone = userData.compPhone || "";
-            var uName = userData.name || "";
-
-            if(document.getElementById('edit-name')) document.getElementById('edit-name').value = uName;
-            if(document.getElementById('edit-sdt')) document.getElementById('edit-sdt').value = phone;
-            if(document.getElementById('edit-cname')) document.getElementById('edit-cname').value = cName;
-            if(document.getElementById('edit-cphone')) document.getElementById('edit-cphone').value = cPhone;
-
-            var bookCName = document.getElementById('book-cname');
-            var bookCPhone = document.getElementById('book-cphone');
-            if (bookCName) bookCName.value = cName;
-            if (bookCPhone) bookCPhone.value = cPhone;
-
-            _renderDebtCard(userData);
-        }
-    }, err => {
-        console.error("Firestore onSnapshot error:", err);
-    });
-    loadRewards();
-    _loadMissionBedCount(phone);
-    _loadLoyaltyData(phone);   // 🏆 Nạp dữ liệu tích điểm từ customers_xolifa
+    _loadLoyaltyData(phone);   // getDoc — không realtime
     showTab('user');
 }
 
@@ -1161,45 +1127,32 @@ function _updateMissionChip() {
 }
 // ── END NHIỆM VỤ ───────────────────────────────────────────────
 
-// --- 4. CẬP NHẬT HỒ SƠ (Firestore customers_xolifa) ---
+// --- 4. CẬP NHẬT HỒ SƠ ---
 window.handleUpdate = function() {
     const nameInput = document.getElementById('edit-name');
-    const cNameInput = document.getElementById('edit-cname');
-    const cPhoneInput = document.getElementById('edit-cphone');
-
-    if (!nameInput || !cNameInput) return alert("Lỗi: Không tìm thấy ô nhập liệu.");
-
+    if (!nameInput) return;
     const newName = nameInput.value.trim();
-    const newComp = cNameInput.value.trim();
-    const newCompPhone = cPhoneInput ? cPhoneInput.value.trim() : "";
-    
-    if (newName === "") return alert("Vui lòng nhập tên của bạn!");
-    
-    const allLoadings = document.querySelectorAll('#loading-overlay');
-    allLoadings.forEach(el => el.classList.remove('hidden'));
+    if (!newName) return alert("Vui lòng nhập tên của bạn!");
 
-    const safetyTimer = setTimeout(() => {
-        allLoadings.forEach(el => el.classList.add('hidden'));
-    }, 3000); 
+    const overlay = document.getElementById('loading-overlay');
+    overlay.classList.remove('hidden');
+    const t = setTimeout(() => overlay.classList.add('hidden'), 3000);
 
-    fstore.collection('customers_xolifa').doc(curPhone).update({
-        name: newName,
-        compName: newComp,
-        compPhone: newCompPhone
-    }).then(() => {
-        clearTimeout(safetyTimer);
-        allLoadings.forEach(el => el.classList.add('hidden'));
-        if(typeof showAppModal === 'function') {
-            showAppModal("Thành công", "Đã cập nhật hồ sơ!", '✅');
-        } else {
-            alert("Đã cập nhật thành công!");
-        }
-    }).catch((error) => {
-        clearTimeout(safetyTimer);
-        allLoadings.forEach(el => el.classList.add('hidden'));
-        alert("Lỗi: " + error.message);
-    });
-}
+    fstore.collection('customers_xolifa').doc(curPhone).update({ name: newName })
+        .then(() => {
+            clearTimeout(t);
+            overlay.classList.add('hidden');
+            userData.name = newName;
+            const el = document.getElementById('user-name-display');
+            if (el) el.innerText = newName;
+            showAppModal("Thành công", "Đã cập nhật tên!", '✅');
+        })
+        .catch(err => {
+            clearTimeout(t);
+            overlay.classList.add('hidden');
+            alert("Lỗi: " + err.message);
+        });
+};
 
 // --- 6. QUÀ ---
 
