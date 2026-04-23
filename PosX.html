@@ -381,13 +381,15 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 
     <!-- Customer Lookup Card -->
     <div class="cuc">
-      <div class="cuc-row">
+      <div class="cuc-row" style="position:relative;">
         <div class="cuic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" fill="#3b6ec4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" fill="#3b6ec4" opacity=".4"/></svg></div>
         <div style="flex:1">
           <div class="cull">KHÁCH HÀNG / TÍCH ĐIỂM</div>
-          <input class="cui" type="tel" placeholder="Nhập SĐT..." id="cuph" oninput="onPhoneInput(this.value)">
+          <input class="cui" type="tel" placeholder="Nhập SĐT..." id="cuph" oninput="onPhoneInput(this.value)" autocomplete="off">
         </div>
         <button id="btnLookup" onclick="lookupCustomer()" style="background:var(--gd);color:#fff;border:none;border-radius:12px;padding:8px 14px;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;">Tìm</button>
+        <!-- AUTOCOMPLETE DROPDOWN -->
+        <div id="phone-autocomplete" style="display:none; position:absolute; top:calc(100% + 4px); left:0; right:0; background:#fff; border-radius:16px; box-shadow:0 12px 40px rgba(0,0,0,0.18); z-index:100; max-height:260px; overflow-y:auto; border:1px solid #e0e0e0;"></div>
       </div>
       <!-- Customer info panel -->
       <div class="cust-info" id="custInfo">
@@ -3832,6 +3834,77 @@ function kcRenderTogoMenuPages() {
       <button onclick="kcTogoMenuPages.splice(${i},1);kcRenderTogoMenuPages()" style="background:#fee2e2;border:none;border-radius:8px;padding:6px 10px;font-size:12px;color:#e74c3c;font-weight:700;cursor:pointer;flex-shrink:0;">Xoá</button>
     </div>`).join('');
 }
+
+// ============================================================
+// AUTOCOMPLETE PHONE NUMBER
+// ============================================================
+let allCustomersCache = [];
+
+// Khi load danh sách khách hàng cho tab Khách Hàng, chúng ta lấy ra toàn bộ danh sách,
+// có thể tái sử dụng mảng này làm cache cho auto-complete
+function fetchAllCustomersCache() {
+  if (allCustomersCache.length > 0) return;
+  fstore.collection('customers_xolifa').get().then(snap => {
+    let arr = [];
+    snap.forEach(doc => arr.push({ id: doc.id, ...doc.data() }));
+    // Lưu mảng cache (sắp xếp giảm dần theo điểm luôn)
+    allCustomersCache = arr.sort((a,b) => (b.total_points || 0) - (a.total_points || 0));
+  }).catch(err => console.error("Cache error", err));
+}
+
+// Gọi luôn khi khởi tạo
+setTimeout(fetchAllCustomersCache, 5000); 
+
+function onPhoneInput(val) {
+   const ac = document.getElementById('phone-autocomplete');
+   if (!ac) return;
+   
+   // Loại bỏ ký tự không phải số
+   const cleanVal = val.replace(/[^0-9]/g, '');
+   document.getElementById('cuph').value = cleanVal;
+   
+   // Load nếu chưa từng load
+   if (allCustomersCache.length === 0) fetchAllCustomersCache();
+   
+   if (cleanVal.length >= 3) {
+      // Tìm các số ĐT bắt đầu bằng cụm này (hoặc có chứa cụm)
+      const matches = allCustomersCache.filter(c => c.id.startsWith(cleanVal) || c.id.includes(cleanVal));
+      if (matches.length > 0) {
+         ac.innerHTML = matches.slice(0, 8).map(c => `
+           <div onclick="selectPhone('${c.id}')" style="padding:16px 18px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:background 0.15s;"
+                onmousedown="this.style.background='#f5f5f5'" onmouseup="this.style.background='#fff'" ontouchstart="this.style.background='#f5f5f5'" ontouchend="this.style.background='#fff'">
+             <div>
+               <div style="font-size:17px;font-weight:700;color:var(--td);">${c.id.replace(cleanVal, \`<span style="color:var(--primary);">${cleanVal}</span>\`)}</div>
+               <div style="font-size:13px;color:var(--gt);">${c.nickname || 'Khách hàng'}</div>
+             </div>
+             <div style="text-align:right;">
+               <div style="font-size:14px;color:var(--gm);font-weight:700;">⭐ ${Number(c.total_points || 0).toLocaleString('vi-VN')}</div>
+             </div>
+           </div>
+         `).join('');
+         ac.style.display = 'block';
+         return;
+      }
+   }
+   ac.style.display = 'none';
+   ac.innerHTML = '';
+}
+
+function selectPhone(phone) {
+  document.getElementById('cuph').value = phone;
+  document.getElementById('phone-autocomplete').style.display = 'none';
+  // Tự động nhấn nút Tìm
+  lookupCustomer();
+}
+
+// Click ra ngoài thì đóng dropdown
+document.addEventListener('click', (e) => {
+  const input = document.getElementById('cuph');
+  const ac = document.getElementById('phone-autocomplete');
+  if (input && ac && !input.contains(e.target) && !ac.contains(e.target)) {
+    ac.style.display = 'none';
+  }
+});
 
 // ============================================================
 // CUSTOMER LIST TAB
