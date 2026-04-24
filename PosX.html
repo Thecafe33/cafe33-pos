@@ -11,6 +11,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
 :root{--gd:#1a4a2e;--gm:#1e6b3c;--gl:#e8f5ee;--bg:#f2f2f2;--gt:#999;--td:#111;--bb:#e8eef8;--bi:#3b6ec4;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;scrollbar-width:none;}
@@ -285,6 +287,33 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 .cp-change-amt{font-size:30px;font-weight:700;color:#d4820a;}
 .cp-change-warn{color:#e74c3c;}
 .cp-confirm-btn{background:var(--gd);color:#fff;border:none;border-radius:30px;width:100%;padding:18px;font-family:'Google Sans',sans-serif;font-size:17px;font-weight:700;cursor:pointer;margin-top:4px;}
+/* Wallet Management */
+.wal-section{background:#fff;border-radius:20px;margin:0 16px 16px;padding:20px;}
+.wal-section-title{font-size:13px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.wal-input-group{background:#f5f5f5;border-radius:14px;padding:12px 14px;margin-bottom:12px;}
+.wal-input-label{font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.wal-input-group input,.wal-input-group textarea{width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;color:var(--td);background:transparent;resize:none;}
+.wal-action-card{background:#fff;border-radius:20px;margin:0 16px 16px;padding:20px;display:flex;flex-direction:column;gap:14px;}
+.wal-action-btn{display:flex;align-items:center;gap:14px;background:#f5f5f5;border-radius:16px;padding:16px 18px;cursor:pointer;border:none;font-family:'Google Sans',sans-serif;transition:all .15s;width:100%;text-align:left;}
+.wal-action-btn:active{transform:scale(.97);background:#eee;}
+.wal-action-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.wal-action-title{font-size:16px;font-weight:700;color:var(--td);}
+.wal-action-desc{font-size:12px;color:var(--gt);margin-top:2px;}
+.wal-popup{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px);}
+.wal-popup.show{display:flex;}
+.wal-popup-box{background:#f2f2f2;border-radius:28px;padding:28px 24px;width:100%;max-width:400px;animation:pi .22s ease;}
+.wal-popup-title{font-size:20px;font-weight:700;color:var(--td);margin-bottom:4px;}
+.wal-popup-sub{font-size:13px;color:var(--gt);margin-bottom:20px;}
+.wal-pin-display{display:flex;justify-content:center;gap:12px;margin:24px 0;}
+.wal-pin-digit{width:56px;height:64px;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:var(--gd);box-shadow:0 4px 12px rgba(0,0,0,.06);}
+.wal-qr-wrap{display:flex;flex-direction:column;align-items:center;gap:16px;padding:16px 0;}
+.wal-qr-wrap canvas,.wal-qr-wrap img,.wal-qr-wrap table{border-radius:16px;}
+.wal-qr-timer{font-size:28px;font-weight:700;color:var(--td);}
+.wal-qr-label{font-size:13px;color:var(--gt);font-weight:600;}
+.wal-qr-status{font-size:15px;font-weight:700;padding:10px 20px;border-radius:30px;}
+.wal-pmc{background:#fff;border-radius:22px;padding:24px 16px;display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;border:2.5px solid transparent;transition:all .15s;}
+.wal-pmc:active{transform:scale(.97);}
+.wal-pmc.sel{border-color:#8b5cf6;background:#f5f0ff;}
 </style>
 </head>
 <body>
@@ -368,6 +397,11 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <div style="flex:1"><div class="sdit">Màn hình phụ</div><div class="sdid">Slideshow & Menu ảnh kiosk</div></div>
       <span class="sdar">›</span>
     </div>
+    <div class="sdi" onclick="closeSdb();showScreen('walletScreen');loadWalletAdminUI()">
+      <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="#1e6b3c"/></svg></div>
+      <div style="flex:1"><div class="sdit">Quản lý Ví</div><div class="sdid">Nạp tiền, mở ví, thanh toán</div></div>
+      <span class="sdar">›</span>
+    </div>
   </div>
 </div>
 
@@ -417,7 +451,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <div id="sc-cart-lines" style="display:flex;flex-direction:column;gap:4px;"></div>
     </div>
 
-    <div class="pmr">
+    <div class="pmr" style="grid-template-columns:1fr 1fr 1fr;">
       <div class="pmc" id="pmca" onclick="selM('cash')">
         <div class="pmw cash"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="1" y="5" width="22" height="14" rx="2" fill="#2d8a50"/><circle cx="12" cy="12" r="3.5" fill="white" opacity=".9"/><rect x="3" y="7" width="3.5" height="2.5" rx=".5" fill="rgba(255,255,255,.4)"/><rect x="17.5" y="14.5" width="3.5" height="2.5" rx=".5" fill="rgba(255,255,255,.4)"/></svg></div>
         <span class="pmn">Tiền mặt</span>
@@ -425,6 +459,10 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <div class="pmc" id="pmba" onclick="selM('bank')">
         <div class="pmw bank"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M12 3L2 9h20L12 3z" fill="#3b6ec4" opacity=".7"/><rect x="4" y="10" width="2.5" height="8" rx=".5" fill="#3b6ec4"/><rect x="10.75" y="10" width="2.5" height="8" rx=".5" fill="#3b6ec4"/><rect x="17.5" y="10" width="2.5" height="8" rx=".5" fill="#3b6ec4"/><rect x="2" y="18" width="20" height="2.5" rx="1" fill="#3b6ec4"/></svg></div>
         <span class="pmn">Chuyển khoản</span>
+      </div>
+      <div class="pmc" id="pmwa" onclick="selM('wallet')">
+        <div class="pmw" style="background:#f0e6ff;"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="15" rx="3" fill="#8b5cf6" opacity=".85"/><path d="M2 10h20" stroke="#fff" stroke-width="1.5"/><circle cx="17" cy="15" r="2" fill="#fff"/></svg></div>
+        <span class="pmn">Ví khách</span>
       </div>
     </div>
     <!-- Tính riêng button - full width -->
@@ -975,6 +1013,128 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- WALLET MANAGEMENT SCREEN -->
+<div id="walletScreen" class="screen" style="background:var(--bg);">
+  <div style="background:var(--bg);padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;">
+    <button class="btn-close-screen" onclick="showScreen('sm')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <span style="font-size:20px;font-weight:700;color:var(--td);">QUẢN LÝ VÍ</span>
+    <div style="width:44px;"></div>
+  </div>
+  <div style="overflow-y:auto;flex:1;padding:16px 0 40px;">
+
+    <!-- Cấu hình Ví -->
+    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Cấu hình Ví</div></div>
+    <div class="wal-section">
+      <div class="wal-input-group">
+        <div class="wal-input-label">Mô tả ví (hiển thị cho khách chưa mở ví)</div>
+        <textarea id="wal-cfg-desc" rows="3" placeholder="VD: Ví Xolifa giúp bạn thanh toán nhanh chóng và nhận nhiều ưu đãi..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <div class="wal-input-group" style="flex:1;">
+          <div class="wal-input-label">Nạp X (đ)</div>
+          <input id="wal-cfg-topup-x" type="text" inputmode="numeric" placeholder="VD: 100.000" oninput="fmtPriceInput(this)">
+        </div>
+        <div class="wal-input-group" style="flex:1;">
+          <div class="wal-input-label">Tặng Y (đ)</div>
+          <input id="wal-cfg-topup-y" type="text" inputmode="numeric" placeholder="VD: 10.000" oninput="fmtPriceInput(this)">
+        </div>
+      </div>
+      <div style="background:#fffbe8;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600;color:#b45309;">
+        📌 Công thức: Mỗi <span id="wal-cfg-preview-x">X</span>đ nạp → Tặng <span id="wal-cfg-preview-y">Y</span>đ vào số dư thưởng
+      </div>
+      <button class="tg-save-btn" onclick="saveWalletConfig()">💾 Lưu cấu hình ví</button>
+    </div>
+
+    <!-- Nghiệp vụ -->
+    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Nghiệp vụ</div></div>
+    <div class="wal-action-card">
+      <button class="wal-action-btn" onclick="openWalletOpenPopup()">
+        <div class="wal-action-icon" style="background:#e8f5ee;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+        <div><div class="wal-action-title">Mở ví mới</div><div class="wal-action-desc">Nhập SĐT khách hàng → Tạo mã PIN</div></div>
+      </button>
+      <button class="wal-action-btn" onclick="openWalletTopupPopup()">
+        <div class="wal-action-icon" style="background:#fff3e0;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e67e22" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        </div>
+        <div><div class="wal-action-title">Nạp tiền</div><div class="wal-action-desc">Nạp tiền vào ví khách hàng</div></div>
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- WALLET OPEN POPUP -->
+<div class="wal-popup" id="walOpenPopup" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="wal-popup-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span class="wal-popup-title">Mở ví mới</span>
+      <button onclick="document.getElementById('walOpenPopup').classList.remove('show')" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div id="walOpenStep1">
+      <div class="wal-popup-sub">Nhập số điện thoại khách hàng đã đăng ký</div>
+      <div class="wal-input-group" style="margin-bottom:16px;">
+        <div class="wal-input-label">Số điện thoại</div>
+        <input id="wal-open-phone" type="tel" inputmode="numeric" placeholder="VD: 0901234567" autocomplete="off">
+      </div>
+      <button onclick="walletOpenAccount()" style="width:100%;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">Mở ví</button>
+    </div>
+    <div id="walOpenStep2" style="display:none;text-align:center;">
+      <div style="font-size:15px;font-weight:600;color:var(--gm);margin-bottom:8px;">✅ Đã tạo ví thành công!</div>
+      <div style="font-size:13px;color:var(--gt);margin-bottom:16px;">Đọc mã PIN sau cho khách hàng:</div>
+      <div class="wal-pin-display" id="walPinDisplay"></div>
+      <div style="font-size:12px;color:#e74c3c;font-weight:600;margin-top:8px;">⚠ Mã PIN chỉ hiển thị 1 lần duy nhất</div>
+      <button onclick="document.getElementById('walOpenPopup').classList.remove('show');document.getElementById('walOpenStep1').style.display='block';document.getElementById('walOpenStep2').style.display='none';" style="width:100%;padding:14px;background:var(--gd);color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;">Xong</button>
+    </div>
+  </div>
+</div>
+
+<!-- WALLET TOPUP POPUP -->
+<div class="wal-popup" id="walTopupPopup" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="wal-popup-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span class="wal-popup-title">Nạp tiền</span>
+      <button onclick="document.getElementById('walTopupPopup').classList.remove('show')" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div class="wal-input-group" style="margin-bottom:12px;">
+      <div class="wal-input-label">Số điện thoại</div>
+      <input id="wal-topup-phone" type="tel" inputmode="numeric" placeholder="Nhập SĐT khách hàng" autocomplete="off">
+    </div>
+    <div id="wal-topup-info" style="display:none;background:var(--gl);border-radius:14px;padding:12px 16px;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:700;color:var(--gd);" id="wal-topup-name"></div>
+      <div style="font-size:12px;color:var(--gm);margin-top:2px;">Số dư: <span id="wal-topup-bal">0</span>đ | Thưởng: <span id="wal-topup-bonus">0</span>đ</div>
+    </div>
+    <div class="wal-input-group" style="margin-bottom:12px;">
+      <div class="wal-input-label">Số tiền nạp (đ)</div>
+      <input id="wal-topup-amount" type="text" inputmode="numeric" placeholder="VD: 200.000" oninput="fmtPriceInput(this);walCalcBonus()">
+    </div>
+    <div id="wal-topup-bonus-preview" style="display:none;background:#fffbe8;border-radius:12px;padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:600;color:#b45309;"></div>
+    <button onclick="walletSearchForTopup()" id="wal-topup-search-btn" style="width:100%;padding:14px;background:#f0f0f0;color:var(--td);border:none;border-radius:14px;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px;">🔍 Tìm khách hàng</button>
+    <button onclick="walletTopUp()" id="wal-topup-confirm-btn" style="display:none;width:100%;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">Xác nhận nạp tiền</button>
+  </div>
+</div>
+
+<!-- WALLET QR PAYMENT POPUP -->
+<div class="wal-popup" id="walQrPopup">
+  <div class="wal-popup-box" style="text-align:center;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span class="wal-popup-title">Thanh toán Ví</span>
+      <button onclick="walletCancelPayment()" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--gt);margin-bottom:12px;">Khách hàng dùng app quét mã này</div>
+    <div style="font-size:32px;font-weight:700;color:var(--td);margin-bottom:4px;" id="walQrAmount">0đ</div>
+    <div class="wal-qr-wrap" id="walQrContainer"></div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;">
+      <span class="wal-qr-label">Hết hạn sau</span>
+      <span class="wal-qr-timer" id="walQrTimer">3:00</span>
+    </div>
+    <div id="walQrStatus" style="font-size:14px;font-weight:700;color:#e67e22;">⏳ Đang chờ khách quét...</div>
   </div>
 </div>
 
@@ -1810,6 +1970,7 @@ function showScreen(id) {
   if (id === 'tg') { loadTogoSettings(); loadTgAdminUI(); }
   if (id === 'dgscreen') { loadDgSettings(); loadDgAdminUI(); }
   if (id === 'kc') { kcLoadFromFirebase(); }
+  if (id === 'walletScreen') { loadWalletAdminUI(); }
   if (id === 'hi') {
     const now = new Date();
     const from = new Date(now); from.setDate(from.getDate() - 6); from.setHours(0,0,0,0);
@@ -2127,12 +2288,20 @@ function selM(m) {
   curPay = m;
   document.getElementById('pmca').classList.toggle('sel', m === 'cash');
   document.getElementById('pmba').classList.toggle('sel', m === 'bank');
+  const pmwa = document.getElementById('pmwa');
+  if (pmwa) pmwa.classList.toggle('sel', m === 'wallet');
   document.getElementById('bank-confirm-area').style.display = m === 'bank' ? 'block' : 'none';
   // Bấm tiền mặt → vào màn hình nhập tiền ngay
   if (m === 'cash') {
     const items = Object.values(cart);
     if (!items.length) { toast('Giỏ hàng trống!'); return; }
     openCashScreen();
+  }
+  // Bấm ví → tạo QR thanh toán
+  if (m === 'wallet') {
+    const items = Object.values(cart);
+    if (!items.length) { toast('Giỏ hàng trống!'); return; }
+    walletCreatePaymentQR();
   }
 }
 function calcChange() {
@@ -2436,12 +2605,7 @@ function proceedPay() {
   confirmPay(null, null);
 }
 
-function resetPayMethod() {
-  curPay = null;
-  document.getElementById('pmca').classList.remove('sel');
-  document.getElementById('pmba').classList.remove('sel');
-  document.getElementById('bank-confirm-area').style.display = 'none';
-}
+// resetPayMethod() moved to Wallet section below
 
 function openCashScreen() {
   const allDisc = computeAllDiscounts();
@@ -3954,6 +4118,382 @@ function loadCustomerList() {
 
 // ============================================================
 // initMenu() và runArchiveIfNeeded() được gọi trực tiếp sau initializeApp
+
+// ============================================================
+// 💰 WALLET — Quản lý Ví Nội bộ
+// ============================================================
+let walletConfig = { description: '', topupX: 0, topupY: 0 };
+let _walQrTimerInterval = null;
+let _walPaymentListener = null;
+let _walCurrentTxId = null;
+
+// ── Load / Save config ──
+function loadWalletConfig() {
+  return fstore.collection('wallet_config').doc('main').get().then(snap => {
+    if (snap.exists) walletConfig = { ...walletConfig, ...snap.data() };
+  }).catch(() => {});
+}
+
+function loadWalletAdminUI() {
+  loadWalletConfig().then(() => {
+    const desc = document.getElementById('wal-cfg-desc');
+    const tx = document.getElementById('wal-cfg-topup-x');
+    const ty = document.getElementById('wal-cfg-topup-y');
+    if (desc) desc.value = walletConfig.description || '';
+    if (tx) tx.value = walletConfig.topupX ? walletConfig.topupX.toLocaleString('vi-VN') : '';
+    if (ty) ty.value = walletConfig.topupY ? walletConfig.topupY.toLocaleString('vi-VN') : '';
+    const px = document.getElementById('wal-cfg-preview-x');
+    const py = document.getElementById('wal-cfg-preview-y');
+    if (px) px.textContent = walletConfig.topupX ? walletConfig.topupX.toLocaleString('vi-VN') : 'X';
+    if (py) py.textContent = walletConfig.topupY ? walletConfig.topupY.toLocaleString('vi-VN') : 'Y';
+  });
+}
+
+function saveWalletConfig() {
+  const desc = (document.getElementById('wal-cfg-desc').value || '').trim();
+  const topupX = parseInt((document.getElementById('wal-cfg-topup-x').value || '').replace(/[^0-9]/g, '')) || 0;
+  const topupY = parseInt((document.getElementById('wal-cfg-topup-y').value || '').replace(/[^0-9]/g, '')) || 0;
+  walletConfig = { description: desc, topupX, topupY };
+  fstore.collection('wallet_config').doc('main').set(walletConfig)
+    .then(() => {
+      toast('✅ Đã lưu cấu hình ví');
+      const px = document.getElementById('wal-cfg-preview-x');
+      const py = document.getElementById('wal-cfg-preview-y');
+      if (px) px.textContent = topupX ? topupX.toLocaleString('vi-VN') : 'X';
+      if (py) py.textContent = topupY ? topupY.toLocaleString('vi-VN') : 'Y';
+    })
+    .catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
+// ── Mở ví mới ──
+function openWalletOpenPopup() {
+  document.getElementById('wal-open-phone').value = '';
+  document.getElementById('walOpenStep1').style.display = 'block';
+  document.getElementById('walOpenStep2').style.display = 'none';
+  document.getElementById('walOpenPopup').classList.add('show');
+}
+
+function walletOpenAccount() {
+  const phone = (document.getElementById('wal-open-phone').value || '').replace(/[^0-9]/g, '');
+  if (phone.length < 9) { toast('Số điện thoại không hợp lệ!'); return; }
+
+  // Kiểm tra khách hàng tồn tại
+  fstore.collection('customers_xolifa').doc(phone).get().then(snap => {
+    if (!snap.exists) { toast('⚠ Không tìm thấy khách hàng với SĐT: ' + phone); return; }
+
+    // Kiểm tra ví đã tồn tại chưa
+    return fstore.collection('wallets_xolifa').doc(phone).get().then(walSnap => {
+      if (walSnap.exists && walSnap.data().status === 'active') {
+        toast('⚠ Khách hàng đã có ví kích hoạt!'); return;
+      }
+
+      // Generate random 4-digit PIN
+      const pin = String(Math.floor(1000 + Math.random() * 9000));
+
+      // Hash PIN with bcrypt
+      const salt = dcodeIO.bcrypt.genSaltSync(10);
+      const pinHash = dcodeIO.bcrypt.hashSync(pin, salt);
+
+      // Save to Firestore
+      return fstore.collection('wallets_xolifa').doc(phone).set({
+        user_id: phone,
+        balance_main: 0,
+        balance_bonus: 0,
+        pin_hash: '',
+        is_active: false,
+        temp_pin: pinHash,
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }).then(() => {
+        // Show PIN to employee
+        const display = document.getElementById('walPinDisplay');
+        display.innerHTML = pin.split('').map(d => `<div class="wal-pin-digit">${d}</div>`).join('');
+        document.getElementById('walOpenStep1').style.display = 'none';
+        document.getElementById('walOpenStep2').style.display = 'block';
+        toast('✅ Đã tạo ví cho ' + phone);
+      });
+    });
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
+// ── Nạp tiền ──
+let _walTopupPhone = null;
+
+function openWalletTopupPopup() {
+  _walTopupPhone = null;
+  document.getElementById('wal-topup-phone').value = '';
+  document.getElementById('wal-topup-amount').value = '';
+  document.getElementById('wal-topup-info').style.display = 'none';
+  document.getElementById('wal-topup-bonus-preview').style.display = 'none';
+  document.getElementById('wal-topup-search-btn').style.display = 'block';
+  document.getElementById('wal-topup-confirm-btn').style.display = 'none';
+  document.getElementById('walTopupPopup').classList.add('show');
+}
+
+function walletSearchForTopup() {
+  const phone = (document.getElementById('wal-topup-phone').value || '').replace(/[^0-9]/g, '');
+  if (phone.length < 9) { toast('SĐT không hợp lệ!'); return; }
+
+  fstore.collection('wallets_xolifa').doc(phone).get().then(snap => {
+    if (!snap.exists) { toast('⚠ Khách chưa có ví. Hãy mở ví trước!'); return; }
+    const wal = snap.data();
+    if (wal.status !== 'active') { toast('⚠ Ví chưa kích hoạt!'); return; }
+
+    _walTopupPhone = phone;
+
+    // Get customer name from customers_xolifa
+    fstore.collection('customers_xolifa').doc(phone).get().then(custSnap => {
+      const name = custSnap.exists ? (custSnap.data().nickname || 'Khách hàng') : 'Khách hàng';
+      document.getElementById('wal-topup-name').textContent = name + ' (' + phone + ')';
+      document.getElementById('wal-topup-bal').textContent = (wal.balance_main || 0).toLocaleString('vi-VN');
+      document.getElementById('wal-topup-bonus').textContent = (wal.balance_bonus || 0).toLocaleString('vi-VN');
+      document.getElementById('wal-topup-info').style.display = 'block';
+      document.getElementById('wal-topup-search-btn').style.display = 'none';
+      document.getElementById('wal-topup-confirm-btn').style.display = 'block';
+    });
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
+function walCalcBonus() {
+  const amtRaw = (document.getElementById('wal-topup-amount').value || '').replace(/[^0-9]/g, '');
+  const amt = parseInt(amtRaw) || 0;
+  const el = document.getElementById('wal-topup-bonus-preview');
+  if (!amt || !walletConfig.topupX || !walletConfig.topupY) { el.style.display = 'none'; return; }
+  const bonus = Math.floor(amt / walletConfig.topupX) * walletConfig.topupY;
+  if (bonus > 0) {
+    el.textContent = `🎁 Thưởng thêm: ${bonus.toLocaleString('vi-VN')}đ vào số dư thưởng`;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function walletTopUp() {
+  if (!_walTopupPhone) { toast('Tìm khách hàng trước!'); return; }
+  const amtRaw = (document.getElementById('wal-topup-amount').value || '').replace(/[^0-9]/g, '');
+  const amount = parseInt(amtRaw) || 0;
+  if (amount <= 0) { toast('Nhập số tiền nạp!'); return; }
+
+  const bonus = (walletConfig.topupX && walletConfig.topupY)
+    ? Math.floor(amount / walletConfig.topupX) * walletConfig.topupY
+    : 0;
+
+  fstore.collection('wallets_xolifa').doc(_walTopupPhone).get().then(snap => {
+    if (!snap.exists) { toast('❌ Ví không tồn tại!'); return; }
+    const wal = snap.data();
+    const newMain = (wal.balance_main || 0) + amount;
+    const newBonus = (wal.balance_bonus || 0) + bonus;
+
+    return fstore.collection('wallets_xolifa').doc(_walTopupPhone).update({
+      balance_main: newMain,
+      balance_bonus: newBonus,
+      updated_at: new Date().toISOString()
+    }).then(() => {
+      // Ghi transaction
+      const txId = 'topup_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+      return fstore.collection('wallet_transactions_xolifa').add({
+        transaction_id: txId,
+        wallet_id: _walTopupPhone,
+        type: 'topup',
+        amount_main: amount,
+        amount_bonus: bonus,
+        status: 'completed',
+        description: 'Nạp tiền tại quầy',
+        created_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      });
+    }).then(() => {
+      document.getElementById('walTopupPopup').classList.remove('show');
+      toast(`✅ Đã nạp ${fmt(amount)}${bonus > 0 ? ' + thưởng ' + fmt(bonus) : ''}`);
+    });
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
+// ── Thanh toán QR ──
+function walletCreatePaymentQR() {
+  const allDisc = computeAllDiscounts();
+  const total = getFinalTotal();
+  if (total <= 0) { toast('Tổng tiền bằng 0!'); return; }
+
+  const txId = 'pay_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+  const orderToken = Math.random().toString(36).substr(2, 16);
+  const itemsSummary = Object.values(cart).map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
+  const expireTime = Date.now() + 180000; // 3 phút
+
+  // Ghi vào Realtime DB
+  const paymentRef = db.ref('wallet_payment_xolifa/' + txId);
+  paymentRef.set({
+    order_token: orderToken,
+    amount: total,
+    status: 'pending',
+    wallet_id: '',
+    items_summary: itemsSummary,
+    expire_time: expireTime,
+    created_at: Date.now()
+  }).then(() => {
+    _walCurrentTxId = txId;
+
+    // Generate QR
+    const qrData = JSON.stringify({ txId, token: orderToken, amount: total, exp: expireTime });
+    const qr = qrcode(0, 'M');
+    qr.addData(qrData);
+    qr.make();
+
+    document.getElementById('walQrAmount').textContent = fmt(total);
+    document.getElementById('walQrContainer').innerHTML = qr.createSvgTag({ scalable: true });
+    // Style the SVG
+    const svg = document.querySelector('#walQrContainer svg');
+    if (svg) {
+      svg.style.width = '220px';
+      svg.style.height = '220px';
+      svg.style.borderRadius = '16px';
+      svg.style.border = '3px solid #e8e8e8';
+    }
+
+    document.getElementById('walQrStatus').innerHTML = '⏳ Đang chờ khách quét...';
+    document.getElementById('walQrStatus').style.color = '#e67e22';
+    document.getElementById('walQrPopup').classList.add('show');
+
+    // Start countdown timer
+    walletStartTimer(expireTime);
+
+    // Listen for payment completion
+    walletListenPayment(txId);
+  }).catch(err => toast('❌ Lỗi tạo QR: ' + err.message));
+}
+
+function walletStartTimer(expireTime) {
+  if (_walQrTimerInterval) clearInterval(_walQrTimerInterval);
+  const timerEl = document.getElementById('walQrTimer');
+
+  _walQrTimerInterval = setInterval(() => {
+    const remaining = Math.max(0, expireTime - Date.now());
+    const sec = Math.ceil(remaining / 1000);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    timerEl.textContent = `${m}:${String(s).padStart(2, '0')}`;
+
+    if (remaining <= 0) {
+      clearInterval(_walQrTimerInterval);
+      _walQrTimerInterval = null;
+      timerEl.textContent = '0:00';
+      document.getElementById('walQrStatus').innerHTML = '❌ Đã hết hạn';
+      document.getElementById('walQrStatus').style.color = '#e74c3c';
+      // Update status in DB
+      if (_walCurrentTxId) {
+        db.ref('wallet_payment_xolifa/' + _walCurrentTxId + '/status').set('expired').catch(() => {});
+      }
+    }
+  }, 500);
+}
+
+function walletListenPayment(txId) {
+  if (_walPaymentListener) _walPaymentListener();
+  const ref = db.ref('wallet_payment_xolifa/' + txId + '/status');
+  _walPaymentListener = ref.on('value', snap => {
+    const status = snap.val();
+    if (status === 'completed') {
+      // Thanh toán thành công!
+      if (_walQrTimerInterval) { clearInterval(_walQrTimerInterval); _walQrTimerInterval = null; }
+      ref.off();
+      _walPaymentListener = null;
+
+      document.getElementById('walQrStatus').innerHTML = '✅ Thanh toán thành công!';
+      document.getElementById('walQrStatus').style.color = '#1e6b3c';
+      document.getElementById('walQrTimer').textContent = '✓';
+
+      // Auto close after 2s and proceed
+      setTimeout(() => {
+        document.getElementById('walQrPopup').classList.remove('show');
+        curPay = 'wallet';
+        confirmPayWallet();
+      }, 1500);
+    }
+  });
+}
+
+function walletCancelPayment() {
+  if (_walQrTimerInterval) { clearInterval(_walQrTimerInterval); _walQrTimerInterval = null; }
+  if (_walPaymentListener && _walCurrentTxId) {
+    db.ref('wallet_payment_xolifa/' + _walCurrentTxId + '/status').off();
+    db.ref('wallet_payment_xolifa/' + _walCurrentTxId + '/status').set('expired').catch(() => {});
+    _walPaymentListener = null;
+  }
+  _walCurrentTxId = null;
+  document.getElementById('walQrPopup').classList.remove('show');
+  resetPayMethod();
+}
+
+function confirmPayWallet() {
+  // Ghi đơn hàng giống confirmPay nhưng method = VÍ KHÁCH HÀNG
+  const items = Object.values(cart);
+  if (!items.length) return;
+
+  const baseTotal = getCartTotal();
+  const allDisc = computeAllDiscounts();
+  const total = getFinalTotal();
+  const now = new Date();
+  const p = n => String(n).padStart(2, '0');
+  const month = MONTH_KEYS[now.getMonth()];
+  const day = p(now.getDate());
+  const itemsArray = items.map(c => ({ ...c }));
+  const itemsSummary = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
+
+  const order = {
+    time: `${p(now.getHours())}:${p(now.getMinutes())}`,
+    date: `${day}/${p(now.getMonth() + 1)}/${now.getFullYear()}`,
+    items: itemsSummary,
+    itemsArray,
+    total,
+    method: 'VÍ KHÁCH HÀNG',
+    phone: document.getElementById('cuph').value || '',
+    voucherUsed: selectedVoucher ? selectedVoucher.giftName : null,
+    cashGiven: total,
+    cashChange: 0,
+    createdAt: now.toISOString(),
+    isToGo: isToGo,
+    discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0) ? (togoDiscountAmt + dgDiscountAmt) : null,
+    dgDiscount: dgDiscountAmt > 0 ? dgDiscountAmt : null,
+    walletTxId: _walCurrentTxId
+  };
+
+  db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
+    orders.unshift({ id: ref.key, ...order, items: itemsArray });
+
+    // Loyalty
+    const loyPhone = document.getElementById('cuph').value.trim();
+    if (loyPhone) {
+      const drinkCount = items.reduce((s, c) => s + c.qty, 0);
+      loyaltyProcessAfterPay(loyPhone, total, drinkCount);
+    }
+
+    // Reset
+    cart = {};
+    togoDiscountAmt = 0;
+    dgDiscountAmt = 0;
+    _walCurrentTxId = null;
+    resetPayMethod();
+    resetTogoToggle();
+    document.getElementById('cuph').value = '';
+    clearCustomer();
+    selectedVoucher = null;
+    syncDisplay('done');
+    setTimeout(() => resetDisplay(), 5000);
+    renderMenu();
+    toast('✅ Thanh toán ví thành công!');
+    showScreen('sm');
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
+function resetPayMethod() {
+  curPay = null;
+  document.getElementById('pmca').classList.remove('sel');
+  document.getElementById('pmba').classList.remove('sel');
+  const pmwa = document.getElementById('pmwa');
+  if (pmwa) pmwa.classList.remove('sel');
+  document.getElementById('bank-confirm-area').style.display = 'none';
+}
 </script>
 
 <!-- TOPPING FORM POPUP -->

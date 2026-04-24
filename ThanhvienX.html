@@ -13,6 +13,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
   <style>
     :root {
@@ -618,7 +621,6 @@
       font-weight: 400;
       color: var(--text-main);
       line-height: 1.3;
-    }
     .modal-btn {
       width: 100%;
       padding: 12px;
@@ -630,6 +632,47 @@
       font-weight: 600;
       cursor: pointer;
     }
+    
+    /* ────────────────────────────────────────
+       WALLET STYLES
+    ──────────────────────────────────────── */
+    .wallet-card {
+      background: linear-gradient(135deg, #0ba360 0%, #3cba92 100%);
+      border-radius: 32px;
+      padding: 24px;
+      margin-bottom: 24px;
+      color: #ffffff;
+      box-shadow: 0 10px 30px rgba(11, 163, 96, 0.25);
+      position: relative;
+      overflow: hidden;
+    }
+    .wallet-card::before {
+      content: ""; position: absolute; top: -50%; right: -20%; width: 250px; height: 250px;
+      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%); border-radius: 50%;
+    }
+    .wallet-inactive {
+      background: var(--card-bg); border-radius: 32px; padding: 24px; text-align: center;
+      border: 1px solid rgba(0,0,0,0.05); margin-bottom: 24px; box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+    }
+    .wallet-btn {
+      width: 100%; padding: 18px; border-radius: 20px; font-weight: 700; font-size: 16px;
+      border: none; cursor: pointer; transition: transform 0.15s; margin-top: 16px;
+    }
+    .wallet-btn:active { transform: scale(0.97); }
+    .wallet-btn-primary { background: #00704A; color: #fff; box-shadow: 0 4px 12px rgba(0,112,74,0.3); }
+    .wallet-btn-secondary { background: #f2f2f7; color: var(--primary); }
+    .wallet-balance-row { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 24px; }
+    .wallet-balance-label { font-size: 13px; opacity: 0.9; margin-bottom: 4px; }
+    .wallet-balance-val { font-size: 36px; font-weight: 800; line-height: 1; }
+    .wallet-bonus-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.2); }
+    .wallet-history-item { background: #fff; border-radius: 20px; padding: 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .wallet-hist-icon { width: 44px; height: 44px; border-radius: 14px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .wallet-hist-icon.minus { background: #fff0f0; color: #ff3b30; }
+    .pin-input-group { display: flex; justify-content: center; gap: 12px; margin: 24px 0; }
+    .pin-input-digit { width: 56px; height: 64px; background: #f2f2f7; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; color: #000; border: 2px solid transparent; }
+    .pin-input-digit.active { border-color: var(--primary); background: #fff; box-shadow: 0 4px 12px rgba(0,112,74,0.1); }
+    .qr-scanner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; display: none; flex-direction: column; }
+    #qr-reader { width: 100%; max-width: 400px; margin: auto; border: 4px solid #fff; border-radius: 20px; overflow: hidden; }
   </style>
 </head>
 <body>
@@ -785,7 +828,73 @@
       </div>
     </div>
 
-    <!-- ─── TAB 3: TÔI ─── -->
+    <!-- ─── TAB VÍ ─── -->
+    <div id="tab-wallet" class="tab-panel">
+      <!-- STATE 1: Inactive -->
+      <div id="wallet-inactive-view">
+        <div class="wallet-inactive">
+          <div style="width:72px;height:72px;background:#e8f5ee;border-radius:24px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#00704A" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5"/></svg>
+          </div>
+          <h2 style="font-size:22px;font-weight:800;margin-bottom:8px;">Ví Xolifa</h2>
+          <p style="font-size:14px;color:var(--text-sec);line-height:1.5;margin-bottom:24px;" id="wallet-desc-text">Thanh toán nhanh chóng, nhận ngay ưu đãi nạp tiền hấp dẫn từ Xolifa.</p>
+          <button class="wallet-btn wallet-btn-primary" onclick="showWalletActivation()">Kích hoạt ví ngay</button>
+        </div>
+      </div>
+
+      <!-- STATE 1.5: Activation Flow -->
+      <div id="wallet-activation-view" style="display:none;">
+        <div class="wallet-inactive">
+          <h2 style="font-size:20px;font-weight:800;margin-bottom:8px;" id="wal-act-title">Nhập mã kích hoạt</h2>
+          <p style="font-size:14px;color:var(--text-sec);" id="wal-act-sub">Mã này được cung cấp bởi nhân viên tại quầy</p>
+          
+          <div class="pin-input-group" id="wal-act-pin-group">
+            <div class="pin-input-digit active"></div><div class="pin-input-digit"></div><div class="pin-input-digit"></div><div class="pin-input-digit"></div>
+          </div>
+          
+          <div style="position:fixed;bottom:-200px;left:0;opacity:0;">
+            <input type="tel" id="wal-act-input" maxlength="4" oninput="handlePinInput(this)" onblur="this.focus()" autofocus>
+          </div>
+          
+          <button class="wallet-btn wallet-btn-secondary" onclick="cancelWalletActivation()">Hủy</button>
+        </div>
+      </div>
+
+      <!-- STATE 2: Active -->
+      <div id="wallet-active-view" style="display:none;">
+        <div class="wallet-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div style="font-size:14px;font-weight:600;letter-spacing:1px;opacity:0.9;">XOLIFA PAY</div>
+            <div style="background:rgba(255,255,255,0.2);padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;backdrop-filter:blur(10px);">Đang hoạt động</div>
+          </div>
+          <div class="wallet-balance-row">
+            <div>
+              <div class="wallet-balance-label">Số dư chính</div>
+              <div class="wallet-balance-val"><span id="wal-bal-main">0</span><span style="font-size:20px;margin-left:4px;">đ</span></div>
+            </div>
+            <div style="width:48px;height:48px;background:#fff;border-radius:16px;display:flex;align-items:center;justify-content:center;color:#00704A;cursor:pointer;" onclick="openQRScanner()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10" rx="1"/></svg>
+            </div>
+          </div>
+          <div class="wallet-bonus-row">
+            <span style="font-size:13px;opacity:0.9;">Tài khoản thưởng</span>
+            <span style="font-weight:700;font-size:15px;"><span id="wal-bal-bonus">0</span>đ</span>
+          </div>
+        </div>
+        
+        <div style="display:flex;gap:12px;margin-bottom:24px;">
+          <button class="wallet-btn wallet-btn-primary" style="margin:0;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="openQRScanner()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+            Quét mã thanh toán
+          </button>
+        </div>
+
+        <h2 class="section-title" style="margin-bottom:16px;">Lịch sử giao dịch</h2>
+        <div id="wallet-history-list"></div>
+      </div>
+    </div>
+
+    <!-- ─── TAB TÔI ─── -->
     <div id="tab-profile" class="tab-panel">
       
       <h2 class="section-title">Hồ sơ cá nhân</h2>
@@ -827,6 +936,12 @@
       </svg>
       <span>Đổi quà</span>
     </button>
+    <button class="nav-btn" id="nav-wallet" onclick="showTab('wallet')">
+      <svg viewBox="0 0 24 24">
+        <rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5"/>
+      </svg>
+      <span>Ví</span>
+    </button>
     <button class="nav-btn" id="nav-profile" onclick="showTab('profile')">
       <svg viewBox="0 0 24 24">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -836,6 +951,17 @@
     </button>
   </nav>
 </div><!-- end #main-app -->
+
+<!-- QR SCANNER OVERLAY -->
+<div class="qr-scanner-overlay" id="qr-scanner-overlay">
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;">
+    <div id="qr-reader"></div>
+  </div>
+  <div style="padding:32px;text-align:center;">
+    <div style="color:#fff;font-size:16px;font-weight:600;margin-bottom:24px;">Đưa mã QR vào khung hình để thanh toán</div>
+    <button class="wallet-btn wallet-btn-secondary" style="max-width:200px;" onclick="closeQRScanner()">Hủy</button>
+  </div>
+</div>
 
 <script>
 /* ════════════════════════════════════════════════
@@ -853,6 +979,7 @@ var firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 var db = firebase.firestore();
 var auth = firebase.auth();
+var rtdb = firebase.database();
 
 /* ════════════════════════════════════════════════
    STATE
@@ -915,6 +1042,10 @@ function showTab(t) {
 
   var sa = $id('scroll-area');
   if (sa) sa.scrollTop = 0;
+
+  if (t === 'wallet') {
+    loadWalletData();
+  }
 }
 
 /* ════════════════════════════════════════════════
@@ -1145,6 +1276,373 @@ function handleLogout() {
   localStorage.removeItem('xolifa_phone');
   location.reload();
 }
+
+/* ════════════════════════════════════════════════
+   WALLET LOGIC
+════════════════════════════════════════════════ */
+var walletData = null;
+var qrScanner = null;
+
+function loadWalletData() {
+  if (!curPhone) return;
+
+  // Load config for intro text
+  db.collection('wallet_config').doc('main').get().then(function(snap) {
+    if (snap.exists && snap.data().description) {
+      var descEl = $id('wallet-desc-text');
+      if (descEl) descEl.textContent = snap.data().description;
+    }
+  });
+
+  db.collection('wallets_xolifa').doc(curPhone).onSnapshot(function(snap) {
+    if (!snap.exists) {
+      showWalletState('inactive');
+      return;
+    }
+    
+    walletData = snap.data();
+    if (walletData.status === 'active' && walletData.is_active) {
+      showWalletState('active');
+      $id('wal-bal-main').textContent = Number(walletData.balance_main || 0).toLocaleString('vi-VN');
+      $id('wal-bal-bonus').textContent = Number(walletData.balance_bonus || 0).toLocaleString('vi-VN');
+      loadWalletHistory();
+    } else {
+      showWalletState('inactive'); // could be pending
+    }
+  });
+}
+
+function showWalletState(state) {
+  $id('wallet-inactive-view').style.display = state === 'inactive' ? 'block' : 'none';
+  $id('wallet-activation-view').style.display = state === 'activation' ? 'block' : 'none';
+  $id('wallet-active-view').style.display = state === 'active' ? 'block' : 'none';
+}
+
+// ── Activation Handshake ──
+var actStep = 1; // 1: enter temp, 2: enter new, 3: confirm new
+var tempPinValue = '';
+var newPinValue = '';
+
+function showWalletActivation() {
+  if (walletData && walletData.status === 'pending') {
+    actStep = 1;
+    tempPinValue = '';
+    newPinValue = '';
+    updatePinUI();
+    $id('wal-act-title').textContent = 'Nhập mã kích hoạt';
+    $id('wal-act-sub').textContent = 'Mã này được nhân viên thu ngân cung cấp';
+    showWalletState('activation');
+    setTimeout(() => { $id('wal-act-input').focus(); }, 100);
+  } else {
+    showModal('Thông báo', 'Bạn cần liên hệ thu ngân để mở ví trước khi kích hoạt.');
+  }
+}
+
+function cancelWalletActivation() {
+  showWalletState('inactive');
+}
+
+function updatePinUI() {
+  var input = $id('wal-act-input');
+  var val = input.value;
+  var digits = $id('wal-act-pin-group').querySelectorAll('.pin-input-digit');
+  
+  for (var i = 0; i < 4; i++) {
+    if (i < val.length) {
+      digits[i].textContent = '•';
+      digits[i].classList.remove('active');
+    } else if (i === val.length) {
+      digits[i].textContent = '';
+      digits[i].classList.add('active');
+    } else {
+      digits[i].textContent = '';
+      digits[i].classList.remove('active');
+    }
+  }
+
+  if (val.length === 4) {
+    input.blur();
+    setTimeout(function() { processPinStep(val); }, 200);
+  }
+}
+
+function handlePinInput(el) {
+  el.value = el.value.replace(/[^0-9]/g, '');
+  updatePinUI();
+}
+
+function processPinStep(pin) {
+  var input = $id('wal-act-input');
+  
+  if (actStep === 1) {
+    // Chờ so sánh bcrypt
+    showLoading(true);
+    // Because bcrypt is sync, we wrap in setTimeout to not block UI thread during load overlay render
+    setTimeout(function() {
+      try {
+        var isValid = dcodeIO.bcrypt.compareSync(pin, walletData.temp_pin);
+        showLoading(false);
+        if (isValid) {
+          actStep = 2;
+          tempPinValue = pin;
+          input.value = '';
+          updatePinUI();
+          $id('wal-act-title').textContent = 'Tạo mã PIN mới';
+          $id('wal-act-sub').textContent = 'Mã PIN gồm 4 số để thanh toán';
+          setTimeout(() => { input.focus(); }, 100);
+        } else {
+          showModal('Lỗi', 'Mã kích hoạt không đúng!');
+          input.value = '';
+          updatePinUI();
+          setTimeout(() => { input.focus(); }, 100);
+        }
+      } catch (e) {
+        showLoading(false);
+        showModal('Lỗi', 'Có lỗi xảy ra khi kiểm tra mã. Vui lòng thử lại.');
+        input.value = ''; updatePinUI();
+      }
+    }, 50);
+  } else if (actStep === 2) {
+    actStep = 3;
+    newPinValue = pin;
+    input.value = '';
+    updatePinUI();
+    $id('wal-act-title').textContent = 'Nhập lại mã PIN mới';
+    $id('wal-act-sub').textContent = 'Xác nhận mã PIN của bạn';
+    setTimeout(() => { input.focus(); }, 100);
+  } else if (actStep === 3) {
+    if (pin === newPinValue) {
+      finalizeActivation(newPinValue);
+    } else {
+      showModal('Lỗi', 'Mã PIN không khớp. Vui lòng thử lại!');
+      actStep = 2;
+      newPinValue = '';
+      input.value = '';
+      updatePinUI();
+      $id('wal-act-title').textContent = 'Tạo mã PIN mới';
+      $id('wal-act-sub').textContent = 'Mã PIN gồm 4 số để thanh toán';
+      setTimeout(() => { input.focus(); }, 100);
+    }
+  }
+}
+
+function finalizeActivation(pin) {
+  showLoading(true);
+  setTimeout(function() {
+    try {
+      var salt = dcodeIO.bcrypt.genSaltSync(10);
+      var hash = dcodeIO.bcrypt.hashSync(pin, salt);
+      
+      db.collection('wallets_xolifa').doc(curPhone).update({
+        is_active: true,
+        status: 'active',
+        pin_hash: hash,
+        temp_pin: firebase.firestore.FieldValue.delete(),
+        updated_at: new Date().toISOString()
+      }).then(function() {
+        showLoading(false);
+        showModal('Thành công', 'Ví đã được kích hoạt thành công!');
+        showWalletState('active'); // Will sync with onSnapshot anyway
+      }).catch(function(err) {
+        showLoading(false);
+        showModal('Lỗi', 'Kích hoạt thất bại: ' + err.message);
+      });
+    } catch(e) {
+      showLoading(false);
+      showModal('Lỗi', 'Lỗi bảo mật khi tạo PIN.');
+    }
+  }, 50);
+}
+
+// ── Wallet History ──
+function loadWalletHistory() {
+  db.collection('wallet_transactions_xolifa')
+    .where('wallet_id', '==', curPhone)
+    .where('status', '==', 'completed')
+    .orderBy('created_at', 'desc')
+    .limit(10)
+    .get()
+    .then(function(snap) {
+      var html = '';
+      if (snap.empty) {
+        html = '<div style="text-align:center;padding:20px;color:var(--text-sec);font-size:14px;">Chưa có giao dịch nào</div>';
+      } else {
+        snap.forEach(function(doc) {
+          var tx = doc.data();
+          var dt = new Date(tx.created_at);
+          var dateStr = dt.toLocaleDateString('vi-VN') + ' ' + dt.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+          var isTopup = tx.type === 'topup';
+          var sign = isTopup ? '+' : '-';
+          var icon = isTopup 
+            ? '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
+            : '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+          
+          var iconClass = isTopup ? 'wallet-hist-icon' : 'wallet-hist-icon minus';
+          var color = isTopup ? 'color:var(--primary)' : 'color:#ff3b30';
+          
+          var amt = tx.amount_main || 0;
+          if (tx.amount_bonus && isTopup) amt += tx.amount_bonus; // For deposit display total main+bonus
+          
+          var desc = tx.description || (isTopup ? 'Nạp tiền' : 'Thanh toán');
+          
+          html += '<div class="wallet-history-item">'
+            + '<div class="'+iconClass+'">' + icon + '</div>'
+            + '<div style="flex:1;">'
+            +   '<div style="font-weight:600;font-size:15px;">'+desc+'</div>'
+            +   '<div style="font-size:12px;color:var(--text-sec);margin-top:2px;">'+dateStr+'</div>'
+            + '</div>'
+            + '<div style="font-weight:700;font-size:15px;'+color+'">'+sign+Number(amt).toLocaleString('vi-VN')+'đ</div>'
+            + '</div>';
+        });
+      }
+      $id('wallet-history-list').innerHTML = html;
+    }).catch(function(err) {});
+}
+
+// ── QR Scanner & Payment ──
+var _walScannedTxId = null;
+var _walScannedAmount = 0;
+
+function openQRScanner() {
+  $id('qr-scanner-overlay').style.display = 'flex';
+  qrScanner = new Html5Qrcode("qr-reader");
+  var config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+  
+  qrScanner.start({ facingMode: "environment" }, config, function(decodedText) {
+    qrScanner.stop().then(function() {
+      $id('qr-scanner-overlay').style.display = 'none';
+      processScannedQR(decodedText);
+    });
+  }, function(errorMessage) {
+    // Ignore scan errors
+  }).catch(function(err) {
+    $id('qr-scanner-overlay').style.display = 'none';
+    showModal('Lỗi', 'Không thể mở Camera: ' + err);
+  });
+}
+
+function closeQRScanner() {
+  if (qrScanner) {
+    qrScanner.stop().then(function() {
+      $id('qr-scanner-overlay').style.display = 'none';
+    }).catch(function() {
+      $id('qr-scanner-overlay').style.display = 'none';
+    });
+  } else {
+    $id('qr-scanner-overlay').style.display = 'none';
+  }
+}
+
+function processScannedQR(text) {
+  try {
+    var data = JSON.parse(text);
+    if (!data.txId || !data.amount || !data.exp) {
+      showModal('Lỗi', 'Mã QR không hợp lệ!'); return;
+    }
+    if (Date.now() > data.exp) {
+      showModal('Lỗi', 'Phiên thanh toán đã hết hạn!'); return;
+    }
+
+    _walScannedTxId = data.txId;
+    _walScannedAmount = data.amount;
+
+    // Kích hoạt popup nhập PIN thanh toán
+    enterPaymentPin();
+
+  } catch(e) {
+    showModal('Lỗi', 'Định dạng mã QR không đúng!');
+  }
+}
+
+function enterPaymentPin() {
+  var pin = prompt("Thanh toán " + _walScannedAmount.toLocaleString('vi-VN') + "đ\nVui lòng nhập mã PIN (4 số):");
+  if (pin === null) return; // Cancel
+  if (!pin || pin.length !== 4) {
+    showModal('Lỗi', 'Mã PIN phải là 4 số!', function() { enterPaymentPin(); });
+    return;
+  }
+
+  showLoading(true);
+  setTimeout(function() {
+    try {
+      var isValid = dcodeIO.bcrypt.compareSync(pin, walletData.pin_hash);
+      if (isValid) {
+        executePayment();
+      } else {
+        showLoading(false);
+        showModal('Lỗi', 'Mã PIN không đúng!', function() { enterPaymentPin(); });
+      }
+    } catch(e) {
+      showLoading(false);
+      showModal('Lỗi', 'Lỗi xác thực mã PIN.');
+    }
+  }, 100);
+}
+
+function executePayment() {
+  var amt = _walScannedAmount;
+  
+  if ((walletData.balance_main + walletData.balance_bonus) < amt) {
+    showLoading(false);
+    showModal('Lỗi', 'Số dư không đủ để thanh toán!');
+    return;
+  }
+
+  // Tiền thưởng trước, tiền chính sau
+  var deductBonus = 0;
+  var deductMain = 0;
+  var bBonus = walletData.balance_bonus || 0;
+  var bMain = walletData.balance_main || 0;
+
+  if (bBonus >= amt) {
+    deductBonus = amt;
+  } else {
+    deductBonus = bBonus;
+    deductMain = amt - bBonus;
+  }
+
+  var newMain = bMain - deductMain;
+  var newBonus = bBonus - deductBonus;
+
+  // Transaction ID mới
+  var receiptId = 'pay_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+  // Update Firestore
+  db.collection('wallets_xolifa').doc(curPhone).update({
+    balance_main: newMain,
+    balance_bonus: newBonus,
+    updated_at: new Date().toISOString()
+  }).then(function() {
+    return db.collection('wallet_transactions_xolifa').add({
+      transaction_id: receiptId,
+      pos_tx_id: _walScannedTxId,
+      wallet_id: curPhone,
+      type: 'payment',
+      amount_main: -deductMain,
+      amount_bonus: -deductBonus,
+      status: 'completed',
+      description: 'Thanh toán hoá đơn',
+      created_at: new Date().toISOString(),
+      completed_at: new Date().toISOString()
+    });
+  }).then(function() {
+    // Notify POS via Realtime DB
+    return rtdb.ref('wallet_payment_xolifa/' + _walScannedTxId).update({
+      status: 'completed',
+      wallet_id: curPhone,
+      completed_at: Date.now()
+    });
+  }).then(function() {
+    showLoading(false);
+    showModal('Thành công', 'Đã thanh toán ' + amt.toLocaleString('vi-VN') + 'đ thành công!');
+    _walScannedTxId = null;
+    _walScannedAmount = 0;
+  }).catch(function(err) {
+    showLoading(false);
+    showModal('Lỗi', 'Giao dịch thất bại: ' + err.message);
+  });
+}
+
 </script>
 </body>
 </html>
