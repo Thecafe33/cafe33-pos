@@ -4,7 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>The Cafe 33 - POS</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+
+<!-- PWA: manifest riêng cho PosX (dùng hậu tố _xolifa để không đụng PWA khác) -->
+<link rel="manifest" href="manifest_xolifa.json">
+<meta name="theme-color" content="#1a4a2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="XOLIFA POS">
+
+<!-- Icons -->
+<link rel="icon" sizes="192x192" href="icon_xolifa_192.png">
+<link rel="apple-touch-icon" href="icon_xolifa_180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icon_xolifa_152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icon_xolifa_167.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon_xolifa_180.png">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@700&display=swap" rel="stylesheet">
 <!-- Firebase SDK compat — cùng version với index.html -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
@@ -13,6 +27,16 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+
+<!-- PWA Service Worker (chỉ đăng ký sw_xolifa.js — không đụng SW của file khác) -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw_xolifa.js', { scope: './' })
+      .catch(err => console.warn('SW register failed:', err));
+  });
+}
+</script>
 <style>
 :root{--gd:#1a4a2e;--gm:#1e6b3c;--gl:#e8f5ee;--bg:#f2f2f2;--gt:#999;--td:#111;--bb:#e8eef8;--bi:#3b6ec4;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;scrollbar-width:none;}
@@ -1296,11 +1320,30 @@ let loyaltyCustomer = null; // dữ liệu Firestore của khách hiện tại
 // ============================================================
 // 🚀 KHỞI ĐỘNG — đọc menu ngay, auth chạy nền (không block)
 // ============================================================
-initMenu();                  // đọc menu ngay lập tức (không cần auth)
 runArchiveIfNeeded();        // archive chạy nền
-auth.signInAnonymously().catch(() => {});  // auth nền cho phép ghi đơn
-loadTogoSettings();          // tải cài đặt To Go
-loadDgSettings();            // tải cài đặt Đồng giá
+
+// ⚠️ FIX iOS: Đợi auth hoàn tất rồi mới đọc menu
+// Android nhanh hơn nên không bị, iOS Safari chậm hơn → request
+// đến Firebase trước khi có auth token → bị denied theo rule auth!=null
+let _menuInited = false;
+auth.onAuthStateChanged(user => {
+  if (user && !_menuInited) {
+    _menuInited = true;
+    initMenu();              // đọc menu sau khi auth sẵn sàng
+    loadTogoSettings();      // tải cài đặt To Go
+    loadDgSettings();        // tải cài đặt Đồng giá
+  }
+});
+auth.signInAnonymously().catch(err => {
+  // Nếu signIn fail hoàn toàn vẫn thử load (tránh màn hình trắng)
+  console.warn('signInAnonymously failed:', err);
+  if (!_menuInited) {
+    _menuInited = true;
+    initMenu();
+    loadTogoSettings();
+    loadDgSettings();
+  }
+});
 
 // ============================================================
 // TO GO — Toggle, Settings, Logic
@@ -1883,8 +1926,13 @@ function loadRecentOrders() {
       }).catch(() => {})
     );
   }
-  Promise.all(jobs).then(() => {
+  return Promise.all(jobs).then(() => {
     orders.sort((a, b) => b.createdAt > a.createdAt ? 1 : -1);
+    // Re-render UI sau khi load xong — để B/C/D thấy doanh thu ngay khi mở
+    const todayFiltered = orders.filter(o => o.date === todayKey());
+    if (typeof updRv === 'function') updRv(todayFiltered);
+    if (typeof drawChart === 'function') drawChart('today', todayFiltered);
+    if (typeof renderH === 'function') renderH();
   });
 }
 
@@ -1980,9 +2028,17 @@ function showScreen(id) {
   if (id === 'rv') {
     _rvFrom = null; _rvTo = null;
     document.getElementById('rv-date-label').textContent = '';
-    const todayFiltered = orders.filter(o => o.date === todayKey());
     document.querySelectorAll('.tbb').forEach((b,i) => b.classList.toggle('active', i===0));
-    updRv(todayFiltered); drawChart('today', todayFiltered);
+    // Luôn reload từ Firebase khi mở tab doanh thu — đảm bảo B/C/D thấy đúng
+    loadRecentOrders().then ? 
+      loadRecentOrders().then(() => {
+        const todayFiltered = orders.filter(o => o.date === todayKey());
+        updRv(todayFiltered); drawChart('today', todayFiltered);
+      }) :
+      (() => {
+        const todayFiltered = orders.filter(o => o.date === todayKey());
+        updRv(todayFiltered); drawChart('today', todayFiltered);
+      })();
   }
 }
 function openSdb() { document.getElementById('sdb').classList.add('open'); document.getElementById('ov').classList.add('show'); }
@@ -2290,12 +2346,18 @@ function selM(m) {
   document.getElementById('pmba').classList.toggle('sel', m === 'bank');
   const pmwa = document.getElementById('pmwa');
   if (pmwa) pmwa.classList.toggle('sel', m === 'wallet');
-  document.getElementById('bank-confirm-area').style.display = m === 'bank' ? 'block' : 'none';
+  document.getElementById('bank-confirm-area').style.display = 'none';
   // Bấm tiền mặt → vào màn hình nhập tiền ngay
   if (m === 'cash') {
     const items = Object.values(cart);
     if (!items.length) { toast('Giỏ hàng trống!'); return; }
     openCashScreen();
+  }
+  // Bấm chuyển khoản → hiện QR VietQR
+  if (m === 'bank') {
+    const items = Object.values(cart);
+    if (!items.length) { toast('Giỏ hàng trống!'); return; }
+    openVietQRPopup();
   }
   // Bấm ví → tạo QR thanh toán
   if (m === 'wallet') {
@@ -2303,6 +2365,114 @@ function selM(m) {
     if (!items.length) { toast('Giỏ hàng trống!'); return; }
     walletCreatePaymentQR();
   }
+}
+
+// ============================================================
+// VIETQR — Tạo QR chuyển khoản Cake
+// ============================================================
+const CAKE_ACCOUNT_NO = '0964674795';
+const CAKE_ACCOUNT_NAME = 'THE CAFE 33';
+
+function genBankOrderId() {
+  const now = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return 'DH' + p(now.getDate()) + p(now.getMonth()+1) + p(now.getHours()) + p(now.getMinutes());
+}
+
+let _vietqrOrderId = null;
+
+function openVietQRPopup() {
+  const total = getFinalTotal();
+  if (total <= 0) { toast('Tổng tiền bằng 0!'); return; }
+
+  _vietqrOrderId = genBankOrderId();
+  const addInfo = encodeURIComponent('TTHD ' + _vietqrOrderId);
+  const accountName = encodeURIComponent(CAKE_ACCOUNT_NAME);
+
+  // Build VietQR URL
+  const qrUrl = `https://img.vietqr.io/image/cake-${CAKE_ACCOUNT_NO}-compact2.png`
+    + `?amount=${total}`
+    + `&addInfo=${addInfo}`
+    + `&accountName=${accountName}`;
+
+  // Set QR image
+  const img = document.getElementById('vietqr-img');
+  const fallback = document.getElementById('vietqr-fallback');
+  img.style.display = 'block';
+  fallback.style.display = 'none';
+  img.src = qrUrl;
+
+  // Set display info
+  document.getElementById('vietqr-amount').textContent = total.toLocaleString('vi-VN') + 'đ';
+  document.getElementById('vietqr-addinfo').textContent = 'TTHD ' + _vietqrOrderId;
+
+  document.getElementById('vietqr-popup').style.display = 'flex';
+
+  // Đẩy trạng thái bank_qr lên màn hình phụ
+  syncDisplay('bank_qr', {
+    qrUrl: qrUrl,
+    bankAmount: total,
+    bankOrderId: _vietqrOrderId,
+    bankAddInfo: 'TTHD ' + _vietqrOrderId
+  });
+
+  // Bắt đầu lắng nghe xác nhận từ Firebase
+  startBankListener(_vietqrOrderId);
+}
+
+function closeVietQRPopup() {
+  document.getElementById('vietqr-popup').style.display = 'none';
+  stopBankListener(_bankListenerOrderId);
+  curPay = null;
+  document.getElementById('pmba').classList.remove('sel');
+  // Reset màn hình phụ về ordering
+  syncDisplay('ordering');
+}
+
+function confirmBankTransfer() {
+  document.getElementById('vietqr-popup').style.display = 'none';
+  stopBankListener(_bankListenerOrderId);
+  document.getElementById('bank-confirm-area').style.display = 'block';
+  toast('✅ Xác nhận đã nhận chuyển khoản — bấm nút xanh để hoàn tất!');
+}
+
+// ============================================================
+// BANK LISTENER — Lắng nghe xác nhận CK từ Firebase
+// ============================================================
+let _bankListener = null;
+let _bankListenerOrderId = null;
+
+function startBankListener(orderId) {
+  stopBankListener(_bankListenerOrderId);
+  _bankListenerOrderId = orderId;
+  const ref = db.ref('bank_confirmations/' + orderId);
+
+  _bankListener = ref.on('value', snap => {
+    if (!snap.exists()) return;
+    const data = snap.val();
+    console.log('✅ Nhận xác nhận CK từ Firebase:', data);
+
+    stopBankListener(orderId);
+
+    // Đóng QR popup
+    document.getElementById('vietqr-popup').style.display = 'none';
+
+    // Hiện nút xác nhận + toast
+    document.getElementById('bank-confirm-area').style.display = 'block';
+    curPay = 'bank';
+    document.getElementById('pmba').classList.add('sel');
+
+    const amt = data.amount ? data.amount.toLocaleString('vi-VN') + 'đ' : '';
+    toast('💸 Đã nhận chuyển khoản' + (amt ? ' ' + amt : '') + ' — bấm xác nhận để hoàn tất!');
+  });
+}
+
+function stopBankListener(orderId) {
+  if (orderId && _bankListener) {
+    db.ref('bank_confirmations/' + orderId).off('value', _bankListener);
+  }
+  _bankListener = null;
+  _bankListenerOrderId = null;
 }
 function calcChange() {
   const total = getCartTotal(), given = parseInt(document.getElementById('cai').value) || 0, cr = document.getElementById('cr');
@@ -4536,6 +4706,63 @@ function resetPayMethod() {
     <div style="font-size:13px;font-weight:600;color:var(--gt);margin-bottom:18px;" id="tp-picker-sub">Chọn cho: ...</div>
     <div style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:12px;margin-bottom:20px;" id="tp-picker-list"></div>
     <button onclick="closeToppingPicker()" style="width:100%;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:18px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;flex-shrink:0;">Hoàn tất chọn</button>
+  </div>
+</div>
+
+<!-- VIETQR BANK POPUP -->
+<div id="vietqr-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px);" onclick="if(event.target===this)closeVietQRPopup()">
+  <div style="background:#f2f2f2;border-radius:28px;padding:28px 20px 24px;width:100%;max-width:380px;animation:pi .22s ease;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--td);">Chuyển khoản</div>
+        <div style="font-size:12px;color:var(--gt);margin-top:2px;">Quét QR bằng app ngân hàng bất kỳ</div>
+      </div>
+      <button onclick="closeVietQRPopup()" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+
+    <!-- QR Image -->
+    <div style="background:#fff;border-radius:20px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:16px;">
+      <!-- Cake logo tag -->
+      <div style="display:flex;align-items:center;gap:8px;background:#e8f5ee;border-radius:12px;padding:6px 14px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="3" fill="#1a4a2e"/><path d="M2 10h20" stroke="#fff" stroke-width="1.5"/><rect x="5" y="13" width="4" height="2.5" rx="1" fill="#fff" opacity=".7"/></svg>
+        <span style="font-size:13px;font-weight:700;color:var(--gd);">Cake by VPBank</span>
+      </div>
+
+      <!-- QR image from VietQR -->
+      <img id="vietqr-img" src="" alt="QR thanh toán" style="width:220px;height:220px;border-radius:12px;border:2px solid #e8e8e8;" onerror="this.style.display='none';document.getElementById('vietqr-fallback').style.display='flex'">
+      <!-- Fallback nếu QR load lỗi -->
+      <div id="vietqr-fallback" style="display:none;width:220px;height:220px;border-radius:12px;border:2px dashed #ddd;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/></svg>
+        <span style="font-size:12px;color:#bbb;font-weight:600;">QR không tải được</span>
+      </div>
+
+      <!-- Amount -->
+      <div style="text-align:center;">
+        <div style="font-size:11px;font-weight:600;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">Số tiền</div>
+        <div id="vietqr-amount" style="font-size:28px;font-weight:700;color:var(--gd);letter-spacing:-.5px;"></div>
+      </div>
+    </div>
+
+    <!-- Bank info row -->
+    <div style="background:#fff;border-radius:16px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">STK</div>
+        <div style="font-size:16px;font-weight:700;color:var(--td);">0964674795</div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Nội dung CK</div>
+        <div id="vietqr-addinfo" style="font-size:13px;font-weight:700;color:var(--gm);word-break:break-all;"></div>
+      </div>
+    </div>
+
+    <!-- Note -->
+    <div style="font-size:12px;color:var(--gt);text-align:center;margin-bottom:16px;">
+      ⚠ Giữ đúng <b>nội dung chuyển khoản</b> để hệ thống xác nhận tự động
+    </div>
+
+    <!-- Confirm button -->
+    <button class="bconf" onclick="confirmBankTransfer()" style="background:var(--gd);">ĐÃ CHUYỂN KHOẢN XONG</button>
   </div>
 </div>
 
