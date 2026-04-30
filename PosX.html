@@ -1145,20 +1145,29 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 </div>
 
 <!-- WALLET QR PAYMENT POPUP -->
+<!-- WALLET PIN PAYMENT POPUP (POS side — hiển thị mã 4 số cho khách nhập) -->
 <div class="wal-popup" id="walQrPopup">
   <div class="wal-popup-box" style="text-align:center;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
       <span class="wal-popup-title">Thanh toán Ví</span>
       <button onclick="walletCancelPayment()" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
     </div>
-    <div style="font-size:13px;color:var(--gt);margin-bottom:12px;">Khách hàng dùng app quét mã này</div>
-    <div style="font-size:32px;font-weight:700;color:var(--td);margin-bottom:4px;" id="walQrAmount">0đ</div>
-    <div class="wal-qr-wrap" id="walQrContainer"></div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;">
-      <span class="wal-qr-label">Hết hạn sau</span>
-      <span class="wal-qr-timer" id="walQrTimer">3:00</span>
+    <div style="font-size:13px;color:var(--gt);margin-bottom:6px;">Đọc mã này cho khách nhập vào app</div>
+    <div style="font-size:28px;font-weight:700;color:var(--td);margin-bottom:16px;" id="walQrAmount">0đ</div>
+
+    <!-- Mã PIN lớn -->
+    <div style="background:#fff;border-radius:20px;padding:20px 16px 16px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;">Mã giao dịch</div>
+      <div style="display:flex;justify-content:center;gap:10px;" id="walQrContainer">
+        <!-- digits rendered by JS -->
+      </div>
+      <div style="margin-top:16px;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        <span style="font-size:13px;color:var(--gt);font-weight:600;">Hiệu lực: <span id="walQrTimer" style="font-size:15px;font-weight:700;color:var(--td);">3:00</span></span>
+      </div>
     </div>
-    <div id="walQrStatus" style="font-size:14px;font-weight:700;color:#e67e22;">⏳ Đang chờ khách quét...</div>
+
+    <div id="walQrStatus" style="font-size:14px;font-weight:700;color:#e67e22;padding:10px 0;">⏳ Đang chờ khách nhập mã...</div>
   </div>
 </div>
 
@@ -4481,21 +4490,22 @@ function walletTopUp() {
   }).catch(err => toast('❌ Lỗi: ' + err.message));
 }
 
-// ── Thanh toán QR ──
+// ── Thanh toán PIN (thay thế QR) ──
 function walletCreatePaymentQR() {
   const allDisc = computeAllDiscounts();
   const total = getFinalTotal();
   if (total <= 0) { toast('Tổng tiền bằng 0!'); return; }
 
+  // Tạo mã PIN 4 số ngẫu nhiên
+  const pin4 = String(Math.floor(1000 + Math.random() * 9000));
   const txId = 'pay_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
-  const orderToken = Math.random().toString(36).substr(2, 16);
   const itemsSummary = Object.values(cart).map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
   const expireTime = Date.now() + 180000; // 3 phút
 
-  // Ghi vào Realtime DB
+  // Ghi vào Realtime DB — lưu mã PIN để ThanhvienX so khớp
   const paymentRef = db.ref('wallet_payment_xolifa/' + txId);
   paymentRef.set({
-    order_token: orderToken,
+    pin_code: pin4,
     amount: total,
     status: 'pending',
     wallet_id: '',
@@ -4505,24 +4515,13 @@ function walletCreatePaymentQR() {
   }).then(() => {
     _walCurrentTxId = txId;
 
-    // Generate QR
-    const qrData = JSON.stringify({ txId, token: orderToken, amount: total, exp: expireTime });
-    const qr = qrcode(0, 'M');
-    qr.addData(qrData);
-    qr.make();
-
+    // Hiển thị 4 chữ số lớn
     document.getElementById('walQrAmount').textContent = fmt(total);
-    document.getElementById('walQrContainer').innerHTML = qr.createSvgTag({ scalable: true });
-    // Style the SVG
-    const svg = document.querySelector('#walQrContainer svg');
-    if (svg) {
-      svg.style.width = '220px';
-      svg.style.height = '220px';
-      svg.style.borderRadius = '16px';
-      svg.style.border = '3px solid #e8e8e8';
-    }
+    document.getElementById('walQrContainer').innerHTML = pin4.split('').map(d =>
+      '<div style="width:58px;height:70px;background:var(--gl);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:900;color:var(--gd);box-shadow:0 3px 10px rgba(0,0,0,0.07);">' + d + '</div>'
+    ).join('');
 
-    document.getElementById('walQrStatus').innerHTML = '⏳ Đang chờ khách quét...';
+    document.getElementById('walQrStatus').innerHTML = '⏳ Đang chờ khách nhập mã...';
     document.getElementById('walQrStatus').style.color = '#e67e22';
     document.getElementById('walQrPopup').classList.add('show');
 
@@ -4531,7 +4530,7 @@ function walletCreatePaymentQR() {
 
     // Listen for payment completion
     walletListenPayment(txId);
-  }).catch(err => toast('❌ Lỗi tạo QR: ' + err.message));
+  }).catch(err => toast('❌ Lỗi tạo mã PIN: ' + err.message));
 }
 
 function walletStartTimer(expireTime) {
@@ -4549,7 +4548,7 @@ function walletStartTimer(expireTime) {
       clearInterval(_walQrTimerInterval);
       _walQrTimerInterval = null;
       timerEl.textContent = '0:00';
-      document.getElementById('walQrStatus').innerHTML = '❌ Đã hết hạn';
+      document.getElementById('walQrStatus').innerHTML = '❌ Mã đã hết hạn';
       document.getElementById('walQrStatus').style.color = '#e74c3c';
       // Update status in DB
       if (_walCurrentTxId) {
