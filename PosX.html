@@ -4503,21 +4503,30 @@ function walletCreatePaymentQR() {
   const expireTime = Date.now() + 180000; // 3 phút
 
   // Ghi vào Realtime DB — lưu mã PIN để ThanhvienX so khớp
-  const paymentRef = db.ref('wallet_payment_xolifa/' + txId);
-  // Ghi song song: node chính + index tra cứu theo PIN
-  const updates = {};
-  updates['wallet_payment_xolifa/' + txId] = {
-    pin_code: pin4,
-    amount: total,
-    status: 'pending',
-    wallet_id: '',
-    items_summary: itemsSummary,
-    expire_time: expireTime,
-    created_at: Date.now()
-  };
-  updates['wallet_pin_index/' + pin4] = { txId: txId, expireTime: expireTime };
-
-  db.ref().update(updates).then(() => {
+  // Trước khi tạo mã mới: xóa giao dịch cũ nếu còn tồn tại
+  db.ref('wallet_pin_index/current').once('value').then(oldSnap => {
+    const old = oldSnap.val();
+    const cleanupJobs = [];
+    if (old && old.txId) {
+      // Expire giao dịch cũ + xóa index
+      cleanupJobs.push(db.ref('wallet_payment_xolifa/' + old.txId + '/status').set('expired').catch(() => {}));
+    }
+    return Promise.all(cleanupJobs);
+  }).then(() => {
+    // Ghi song song: node chính + index cố định 'current'
+    const updates = {};
+    updates['wallet_payment_xolifa/' + txId] = {
+      pin_code: pin4,
+      amount: total,
+      status: 'pending',
+      wallet_id: '',
+      items_summary: itemsSummary,
+      expire_time: expireTime,
+      created_at: Date.now()
+    };
+    updates['wallet_pin_index/current'] = { txId: txId, expireTime: expireTime, pin: pin4 };
+    return db.ref().update(updates);
+  }).then(() => {
     _walCurrentTxId = txId;
 
     // Hiển thị 4 chữ số lớn
@@ -4593,10 +4602,8 @@ function walletCancelPayment() {
   if (_walPaymentListener && _walCurrentTxId) {
     db.ref('wallet_payment_xolifa/' + _walCurrentTxId + '/status').off();
     db.ref('wallet_payment_xolifa/' + _walCurrentTxId + '/status').set('expired').catch(() => {});
-    // Xoá pin index
-    db.ref('wallet_payment_xolifa/' + _walCurrentTxId).once('value').then(s => {
-      const d = s.val(); if (d && d.pin_code) db.ref('wallet_pin_index/' + d.pin_code).remove().catch(()=>{});
-    }).catch(()=>{});
+    // Xoá pin index current
+    db.ref('wallet_pin_index/current').remove().catch(()=>{});
     _walPaymentListener = null;
   }
   _walCurrentTxId = null;
