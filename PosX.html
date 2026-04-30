@@ -4504,7 +4504,9 @@ function walletCreatePaymentQR() {
 
   // Ghi vào Realtime DB — lưu mã PIN để ThanhvienX so khớp
   const paymentRef = db.ref('wallet_payment_xolifa/' + txId);
-  paymentRef.set({
+  // Ghi song song: node chính + index tra cứu theo PIN
+  const updates = {};
+  updates['wallet_payment_xolifa/' + txId] = {
     pin_code: pin4,
     amount: total,
     status: 'pending',
@@ -4512,7 +4514,10 @@ function walletCreatePaymentQR() {
     items_summary: itemsSummary,
     expire_time: expireTime,
     created_at: Date.now()
-  }).then(() => {
+  };
+  updates['wallet_pin_index/' + pin4] = { txId: txId, expireTime: expireTime };
+
+  db.ref().update(updates).then(() => {
     _walCurrentTxId = txId;
 
     // Hiển thị 4 chữ số lớn
@@ -4588,6 +4593,10 @@ function walletCancelPayment() {
   if (_walPaymentListener && _walCurrentTxId) {
     db.ref('wallet_payment_xolifa/' + _walCurrentTxId + '/status').off();
     db.ref('wallet_payment_xolifa/' + _walCurrentTxId + '/status').set('expired').catch(() => {});
+    // Xoá pin index
+    db.ref('wallet_payment_xolifa/' + _walCurrentTxId).once('value').then(s => {
+      const d = s.val(); if (d && d.pin_code) db.ref('wallet_pin_index/' + d.pin_code).remove().catch(()=>{});
+    }).catch(()=>{});
     _walPaymentListener = null;
   }
   _walCurrentTxId = null;
