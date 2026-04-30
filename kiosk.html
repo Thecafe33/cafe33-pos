@@ -414,6 +414,48 @@
     opacity: 0.5;
   }
 
+  /* ── DONE PANEL — cảm ơn sau khi thanh toán ── */
+  #done-panel {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px 16px;
+    flex: 1;
+    background: #fff;
+  }
+  #done-panel.visible { display: flex; }
+
+  .done-icon {
+    width: 64px; height: 64px;
+    background: #e8f5ee;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    animation: popIn .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .done-title {
+    font-size: 16px; font-weight: 700;
+    color: #1a4a2e; text-align: center;
+  }
+  .done-amount {
+    font-size: 28px; font-weight: 700;
+    color: #1e6b3c; letter-spacing: -0.5px;
+  }
+  .done-method {
+    font-size: 11px; font-weight: 600;
+    color: #999; text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .done-thanks {
+    font-size: 13px; color: #aaa;
+    text-align: center; line-height: 1.6;
+  }
+
   /* ── QR PANEL trong panel-right ── */
   #qr-panel {
     display: none;
@@ -549,6 +591,20 @@
         </svg>
         <p>Chưa có<br>giỏ hàng</p>
       </div>
+    </div>
+
+    <!-- DONE PANEL — hiện sau khi thanh toán thành công -->
+    <div id="done-panel">
+      <div class="done-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" fill="#1a4a2e"/>
+          <path d="M7 12.5l3.5 3.5 6.5-7" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="done-title">Thanh toán thành công!</div>
+      <div class="done-amount" id="done-amount"></div>
+      <div class="done-method" id="done-method"></div>
+      <div class="done-thanks">Cảm ơn bạn!</div>
     </div>
 
     <!-- QR PANEL — hiện trong vùng cart khi CK -->
@@ -963,6 +1019,37 @@ function checkDgState() {
 }
 
 /* ── QR OVERLAY FUNCTIONS ── */
+function showDonePanel(data) {
+  var panel      = document.getElementById('done-panel');
+  var ordersList = document.getElementById('orders-list');
+  var qrPanel    = document.getElementById('qr-panel');
+
+  // Ẩn giỏ hàng và QR nếu đang hiện
+  if (ordersList) ordersList.style.display = 'none';
+  qrPanel.classList.remove('visible');
+
+  // Điền thông tin
+  var amount = document.getElementById('done-amount');
+  var method = document.getElementById('done-method');
+  if (data && data.total)
+    amount.textContent = new Intl.NumberFormat('vi-VN').format(data.total) + 'đ';
+  else
+    amount.textContent = '';
+  if (data && data.method)
+    method.textContent = data.method === 'CHUYỂN KHOẢN' ? '💳 Chuyển khoản' : '💵 Tiền mặt';
+  else
+    method.textContent = '';
+
+  panel.classList.add('visible');
+}
+
+function hideDonePanel() {
+  var panel      = document.getElementById('done-panel');
+  var ordersList = document.getElementById('orders-list');
+  panel.classList.remove('visible');
+  if (ordersList) ordersList.style.display = '';
+}
+
 function showQROverlay(data) {
   var panel   = document.getElementById('qr-panel');
   var img     = document.getElementById('qr-img');
@@ -995,13 +1082,21 @@ function startListeners() {
   db.ref('session_display_xolifa').on('value', function(snap) {
     var data = snap.val();
     if (data && typeof data === 'object') {
-      // Xử lý state bank_qr — hiện QR overlay
+      // Xử lý state bank_qr — hiện QR trong vùng cart
       if (data.state === 'bank_qr') {
+        hideDonePanel();
         showQROverlay(data);
         return;
       }
-      // Các state khác — ẩn QR overlay
+      // Xử lý state done — hiện màn hình cảm ơn
+      if (data.state === 'done') {
+        hideQROverlay();
+        showDonePanel(data);
+        return;
+      }
+      // Các state khác — ẩn tất cả panel phụ
       hideQROverlay();
+      hideDonePanel();
       // Xử lý isToGo — chuyển menu khi flag thay đổi
       var isToGo = data.isToGo === true;
       applyMenuMode(isToGo);
