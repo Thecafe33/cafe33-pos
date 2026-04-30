@@ -1046,17 +1046,17 @@
       <!-- STATE 2: Active -->
       <div id="wallet-active-view" style="display:none;">
         <div class="wallet-card">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-            <div style="font-size:14px;font-weight:600;letter-spacing:1px;opacity:0.9;">XOLIFA WALLET</div>
-            <div style="font-size:12px;opacity:0.7;">Acct: <span id="wal-card-no"></span></div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;z-index:1;position:relative;">
+            <div style="font-size:11px;font-weight:600;letter-spacing:2.5px;opacity:0.5;text-transform:uppercase;font-family:Georgia,serif;">XOLIFA WALLET</div>
+            <div style="font-size:11px;opacity:0.4;letter-spacing:0.5px;">Acct: <span id="wal-card-no"></span></div>
           </div>
-          <div class="wallet-balance-row">
-            <div>
-              <div class="wallet-balance-val"><span id="wal-bal-main">0</span><span style="font-size:24px;margin-left:2px;">đ</span></div>
-            </div>
-            <div class="wallet-bonus-row">
-              <span style="font-size:13px;opacity:0.7;margin-right:6px;">Thưởng:</span>
-              <span style="font-weight:600;font-size:14px;"><span id="wal-bal-bonus">0</span>đ</span>
+          <div style="z-index:1;position:relative;">
+            <div style="font-size:11px;font-weight:500;opacity:0.5;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Số dư</div>
+            <div class="wallet-balance-val"><span id="wal-bal-total">0</span><span style="font-size:22px;margin-left:3px;opacity:0.8;">đ</span></div>
+            <div style="margin-top:8px;font-size:12px;opacity:0.45;display:flex;gap:14px;">
+              <span>Chính: <span id="wal-bal-main">0</span>đ</span>
+              <span style="opacity:0.6;">·</span>
+              <span>Thưởng: <span id="wal-bal-bonus">0</span>đ</span>
             </div>
           </div>
         </div>
@@ -1493,8 +1493,11 @@ function loadWalletData() {
     walletData = snap.data();
     if (walletData.status === 'active' && walletData.is_active) {
       showWalletState('active');
-      $id('wal-bal-main').textContent = Number(walletData.balance_main || 0).toLocaleString('vi-VN');
-      $id('wal-bal-bonus').textContent = Number(walletData.balance_bonus || 0).toLocaleString('vi-VN');
+      var bMain  = walletData.balance_main  || 0;
+      var bBonus = walletData.balance_bonus || 0;
+      $id('wal-bal-total').textContent = Number(bMain + bBonus).toLocaleString('vi-VN');
+      $id('wal-bal-main').textContent  = Number(bMain).toLocaleString('vi-VN');
+      $id('wal-bal-bonus').textContent = Number(bBonus).toLocaleString('vi-VN');
       
       // Masked card number styling
       var maskedPhone = curPhone ? '****' + curPhone.slice(-4) : '********';
