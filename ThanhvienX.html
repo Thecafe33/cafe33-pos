@@ -1151,8 +1151,8 @@
 </div><!-- end #main-app -->
 
 <!-- PAYMENT CODE POPUP -->
-<div id="payment-code-popup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);">
-  <div style="background:#fff;border-radius:28px 28px 0 0;padding:28px 24px 40px;width:100%;max-width:430px;animation:fadeUp .3s ease;">
+<div id="payment-code-popup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(4px);">
+  <div style="background:#fff;border-radius:28px;padding:28px 24px 32px;width:100%;max-width:400px;animation:fadeUp .3s ease;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
       <div style="font-size:19px;font-weight:800;color:var(--primary);">Nhập mã thanh toán</div>
       <button onclick="closePaymentCodePopup()" style="background:#f2f2f7;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;">✕</button>
@@ -1818,29 +1818,40 @@ function submitTxCode() {
     showModal('Lỗi', 'Vui lòng nhập đủ 4 số!'); return;
   }
   showLoading(true);
-  // Tìm trong RTDB tất cả giao dịch pending, so khớp pin_code
-  rtdb.ref('wallet_payment_xolifa').orderByChild('status').equalTo('pending').once('value')
+  // Tra cứu nhanh qua pin index (không cần scan toàn bộ)
+  rtdb.ref('wallet_pin_index/' + _txCodeEntered).once('value')
     .then(function(snap) {
-      showLoading(false);
-      var found = null;
-      var now = Date.now();
-      snap.forEach(function(child) {
-        var d = child.val();
-        if (d.pin_code === _txCodeEntered && d.expire_time > now) {
-          found = { key: child.key, data: d };
-        }
-      });
-      if (!found) {
+      if (!snap.exists()) {
+        showLoading(false);
         showModal('Không tìm thấy', 'Mã giao dịch không đúng hoặc đã hết hạn. Yêu cầu thu ngân tạo lại mã mới!');
         return;
       }
-      _payTxId = found.key;
-      _payAmount = found.data.amount;
-      // Chuyển sang nhập PIN ví
-      $id('pay-amount-display').textContent = Number(_payAmount).toLocaleString('vi-VN') + 'đ';
-      $id('pay-step-txcode').style.display = 'none';
-      $id('pay-step-pin').style.display = 'block';
-      setTimeout(function() { var inp = $id('walpin-input'); inp.value = ''; inp.focus(); }, 100);
+      var idx = snap.val();
+      var now = Date.now();
+      if (!idx.txId || idx.expireTime < now) {
+        showLoading(false);
+        showModal('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo lại!');
+        return;
+      }
+      // Đọc node giao dịch chính để lấy amount và kiểm tra status còn pending
+      return rtdb.ref('wallet_payment_xolifa/' + idx.txId).once('value')
+        .then(function(txSnap) {
+          showLoading(false);
+          if (!txSnap.exists()) {
+            showModal('Lỗi', 'Không tìm thấy giao dịch!'); return;
+          }
+          var tx = txSnap.val();
+          if (tx.status !== 'pending') {
+            showModal('Lỗi', 'Giao dịch này đã được thanh toán rồi!'); return;
+          }
+          _payTxId = idx.txId;
+          _payAmount = tx.amount;
+          // Chuyển sang nhập PIN ví
+          $id('pay-amount-display').textContent = Number(_payAmount).toLocaleString('vi-VN') + 'đ';
+          $id('pay-step-txcode').style.display = 'none';
+          $id('pay-step-pin').style.display = 'block';
+          setTimeout(function() { var inp = $id('walpin-input'); inp.value = ''; inp.focus(); }, 100);
+        });
     })
     .catch(function(err) {
       showLoading(false);
@@ -1924,6 +1935,8 @@ function executePayment() {
     });
   }).then(function() {
     // Notify POS via Realtime DB → POS lắng nghe sẽ tự hoàn tất
+    // Xoá pin index (dùng 1 lần là hết)
+    rtdb.ref('wallet_pin_index/' + _txCodeEntered).remove().catch(function(){});
     return rtdb.ref('wallet_payment_xolifa/' + _payTxId).update({
       status: 'completed',
       wallet_id: curPhone,
