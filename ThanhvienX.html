@@ -843,6 +843,25 @@
       from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
     }
+  
+    /* Payment PIN digit boxes */
+    .pay-pin-digit {
+      width: 56px;
+      height: 64px;
+      background: #f2f2f7;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+      border: 2px solid transparent;
+      transition: all .15s;
+    }
+    .pay-pin-digit.filled { background: var(--primary-light); border-color: var(--primary); }
+    .pay-pin-digit.active-cursor { border-color: var(--primary); background: #fff; }
+
   </style>
 </head>
 <body>
@@ -1062,8 +1081,8 @@
         </div>
         
         <div style="display:flex;gap:12px;margin-bottom:24px;">
-          <button class="wallet-btn wallet-btn-primary" style="margin:0;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="openQRScanner()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <button class="wallet-btn wallet-btn-primary" style="margin:0;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="openPaymentCodePopup()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5"/></svg>
             Thanh toán
           </button>
         </div>
@@ -1131,14 +1150,48 @@
   </nav>
 </div><!-- end #main-app -->
 
-<!-- QR SCANNER OVERLAY -->
-<div class="qr-scanner-overlay" id="qr-scanner-overlay">
-  <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;">
-    <div id="qr-reader"></div>
-  </div>
-  <div style="padding:32px;text-align:center;">
-    <div style="color:#fff;font-size:16px;font-weight:600;margin-bottom:24px;">Đưa mã QR vào khung hình để thanh toán</div>
-    <button class="wallet-btn wallet-btn-secondary" style="max-width:200px;" onclick="closeQRScanner()">Hủy</button>
+<!-- PAYMENT CODE POPUP -->
+<div id="payment-code-popup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);">
+  <div style="background:#fff;border-radius:28px 28px 0 0;padding:28px 24px 40px;width:100%;max-width:430px;animation:fadeUp .3s ease;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <div style="font-size:19px;font-weight:800;color:var(--primary);">Nhập mã thanh toán</div>
+      <button onclick="closePaymentCodePopup()" style="background:#f2f2f7;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--text-sec);margin-bottom:24px;">Nhân viên thu ngân đọc mã 4 số cho bạn</div>
+
+    <!-- Step 1: nhập mã giao dịch -->
+    <div id="pay-step-txcode">
+      <div style="font-size:12px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Mã giao dịch (4 số)</div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px;" id="txcode-digits">
+        <div class="pay-pin-digit" id="txd-0"></div>
+        <div class="pay-pin-digit" id="txd-1"></div>
+        <div class="pay-pin-digit" id="txd-2"></div>
+        <div class="pay-pin-digit" id="txd-3"></div>
+      </div>
+      <input type="tel" id="txcode-input" maxlength="4" inputmode="numeric"
+        style="position:absolute;left:-9999px;opacity:0;"
+        oninput="onTxCodeInput(this)" onblur="this.focus()">
+      <button class="wallet-btn wallet-btn-primary" style="margin-bottom:0;" onclick="submitTxCode()">Tiếp tục →</button>
+    </div>
+
+    <!-- Step 2: nhập PIN cá nhân -->
+    <div id="pay-step-pin" style="display:none;">
+      <div style="font-size:13px;color:var(--text-sec);margin-bottom:16px;">
+        Số tiền: <strong id="pay-amount-display" style="color:var(--primary);font-size:16px;"></strong>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Mã PIN ví của bạn</div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px;" id="walpin-digits">
+        <div class="pay-pin-digit" id="wpd-0"></div>
+        <div class="pay-pin-digit" id="wpd-1"></div>
+        <div class="pay-pin-digit" id="wpd-2"></div>
+        <div class="pay-pin-digit" id="wpd-3"></div>
+      </div>
+      <input type="tel" id="walpin-input" maxlength="4" inputmode="numeric"
+        style="position:absolute;left:-9999px;opacity:0;"
+        oninput="onWalPinInput(this)" onblur="this.focus()">
+      <button class="wallet-btn wallet-btn-primary" style="margin-bottom:8px;" onclick="submitWalletPin()">Xác nhận thanh toán</button>
+      <button onclick="backToTxCode()" style="width:100%;padding:14px;background:transparent;border:none;color:var(--text-sec);font-size:14px;font-weight:600;cursor:pointer;">← Nhập lại mã giao dịch</button>
+    </div>
   </div>
 </div>
 
@@ -1697,88 +1750,126 @@ function loadWalletHistory() {
     }).catch(function(err) {});
 }
 
-// ── QR Scanner & Payment ──
-var _walScannedTxId = null;
-var _walScannedAmount = 0;
+// ── PIN Payment Flow ──
+var _payTxId = null;
+var _payAmount = 0;
+var _txCodeEntered = '';
+var _walPinEntered = '';
 
-function openQRScanner() {
-  var overlay = $id('qr-scanner-overlay');
-  overlay.style.display = 'flex';
-  
-  // Delay initialization to ensure the DOM is fully painted and dimensions > 0
-  setTimeout(function() {
-    qrScanner = new Html5Qrcode("qr-reader");
-    var config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
-    
-    qrScanner.start({ facingMode: "environment" }, config, function(decodedText) {
-      if (navigator.vibrate) navigator.vibrate(200); // Haptic feedback on success
-      qrScanner.stop().then(function() {
-        overlay.style.display = 'none';
-        processScannedQR(decodedText);
-      }).catch(function() {
-        overlay.style.display = 'none';
-        processScannedQR(decodedText);
+/* ── Mở popup nhập mã giao dịch ── */
+function openPaymentCodePopup() {
+  if (!walletData || !walletData.is_active) {
+    showModal('Thông báo', 'Ví chưa kích hoạt!'); return;
+  }
+  _payTxId = null;
+  _payAmount = 0;
+  _txCodeEntered = '';
+  _walPinEntered = '';
+  renderPinBoxes('txd', '');
+  renderPinBoxes('wpd', '');
+  $id('pay-step-txcode').style.display = 'block';
+  $id('pay-step-pin').style.display = 'none';
+  $id('payment-code-popup').style.display = 'flex';
+  setTimeout(function() { var inp = $id('txcode-input'); inp.value = ''; inp.focus(); }, 200);
+}
+
+function closePaymentCodePopup() {
+  $id('payment-code-popup').style.display = 'none';
+  _payTxId = null;
+}
+
+function backToTxCode() {
+  _txCodeEntered = '';
+  _walPinEntered = '';
+  renderPinBoxes('txd', '');
+  $id('pay-step-pin').style.display = 'none';
+  $id('pay-step-txcode').style.display = 'block';
+  setTimeout(function() { var inp = $id('txcode-input'); inp.value = ''; inp.focus(); }, 100);
+}
+
+/* ── Render digit boxes ── */
+function renderPinBoxes(prefix, val) {
+  for (var i = 0; i < 4; i++) {
+    var el = $id(prefix + '-' + i);
+    if (!el) continue;
+    el.textContent = val.length > i ? '●' : '';
+    el.className = 'pay-pin-digit' + (val.length > i ? ' filled' : '') + (val.length === i ? ' active-cursor' : '');
+  }
+}
+
+/* ── Input handlers ── */
+function onTxCodeInput(el) {
+  var val = el.value.replace(/\D/g, '').slice(0, 4);
+  el.value = val;
+  _txCodeEntered = val;
+  renderPinBoxes('txd', val);
+}
+
+function onWalPinInput(el) {
+  var val = el.value.replace(/\D/g, '').slice(0, 4);
+  el.value = val;
+  _walPinEntered = val;
+  renderPinBoxes('wpd', val);
+}
+
+/* ── Step 1: Tìm giao dịch theo mã PIN ── */
+function submitTxCode() {
+  if (_txCodeEntered.length !== 4) {
+    showModal('Lỗi', 'Vui lòng nhập đủ 4 số!'); return;
+  }
+  showLoading(true);
+  // Tìm trong RTDB tất cả giao dịch pending, so khớp pin_code
+  rtdb.ref('wallet_payment_xolifa').orderByChild('status').equalTo('pending').once('value')
+    .then(function(snap) {
+      showLoading(false);
+      var found = null;
+      var now = Date.now();
+      snap.forEach(function(child) {
+        var d = child.val();
+        if (d.pin_code === _txCodeEntered && d.expire_time > now) {
+          found = { key: child.key, data: d };
+        }
       });
-    }, function(errorMessage) {
-      // Ignore scan loop errors
-    }).catch(function(err) {
-      overlay.style.display = 'none';
-      showModal('Lỗi', 'Không khởi tạo trích xuất Camera: ' + err);
+      if (!found) {
+        showModal('Không tìm thấy', 'Mã giao dịch không đúng hoặc đã hết hạn. Yêu cầu thu ngân tạo lại mã mới!');
+        return;
+      }
+      _payTxId = found.key;
+      _payAmount = found.data.amount;
+      // Chuyển sang nhập PIN ví
+      $id('pay-amount-display').textContent = Number(_payAmount).toLocaleString('vi-VN') + 'đ';
+      $id('pay-step-txcode').style.display = 'none';
+      $id('pay-step-pin').style.display = 'block';
+      setTimeout(function() { var inp = $id('walpin-input'); inp.value = ''; inp.focus(); }, 100);
+    })
+    .catch(function(err) {
+      showLoading(false);
+      showModal('Lỗi', 'Không thể tìm giao dịch: ' + err.message);
     });
-  }, 300);
 }
 
-function closeQRScanner() {
-  if (qrScanner) {
-    qrScanner.stop().then(function() {
-      $id('qr-scanner-overlay').style.display = 'none';
-    }).catch(function() {
-      $id('qr-scanner-overlay').style.display = 'none';
-    });
-  } else {
-    $id('qr-scanner-overlay').style.display = 'none';
+/* ── Step 2: Xác nhận PIN ví & thực hiện thanh toán ── */
+function submitWalletPin() {
+  if (_walPinEntered.length !== 4) {
+    showModal('Lỗi', 'Vui lòng nhập đủ 4 số PIN!'); return;
   }
-}
-
-function processScannedQR(text) {
-  try {
-    var data = JSON.parse(text);
-    if (!data.txId || !data.amount || !data.exp) {
-      showModal('Lỗi', 'Mã QR không hợp lệ!'); return;
-    }
-    if (Date.now() > data.exp) {
-      showModal('Lỗi', 'Phiên thanh toán đã hết hạn!'); return;
-    }
-
-    _walScannedTxId = data.txId;
-    _walScannedAmount = data.amount;
-
-    // Kích hoạt popup nhập PIN thanh toán
-    enterPaymentPin();
-
-  } catch(e) {
-    showModal('Lỗi', 'Định dạng mã QR không đúng!');
+  if (!_payTxId) {
+    showModal('Lỗi', 'Phiên thanh toán đã hết hạn!'); return;
   }
-}
-
-function enterPaymentPin() {
-  var pin = prompt("Thanh toán " + _walScannedAmount.toLocaleString('vi-VN') + "đ\nVui lòng nhập mã PIN (4 số):");
-  if (pin === null) return; // Cancel
-  if (!pin || pin.length !== 4) {
-    showModal('Lỗi', 'Mã PIN phải là 4 số!', function() { enterPaymentPin(); });
-    return;
-  }
-
   showLoading(true);
   setTimeout(function() {
     try {
-      var isValid = dcodeIO.bcrypt.compareSync(pin, walletData.pin_hash);
-      if (isValid) {
-        executePayment();
-      } else {
+      var isValid = dcodeIO.bcrypt.compareSync(_walPinEntered, walletData.pin_hash);
+      if (!isValid) {
         showLoading(false);
-        showModal('Lỗi', 'Mã PIN không đúng!', function() { enterPaymentPin(); });
+        showModal('Lỗi', 'Mã PIN ví không đúng!', function() {
+          _walPinEntered = '';
+          renderPinBoxes('wpd', '');
+          setTimeout(function() { var inp = $id('walpin-input'); inp.value = ''; inp.focus(); }, 100);
+        });
+        return;
       }
+      executePayment();
     } catch(e) {
       showLoading(false);
       showModal('Lỗi', 'Lỗi xác thực mã PIN.');
@@ -1786,9 +1877,10 @@ function enterPaymentPin() {
   }, 100);
 }
 
+/* ── Ghi giao dịch trừ tiền ── */
 function executePayment() {
-  var amt = _walScannedAmount;
-  
+  var amt = _payAmount;
+
   if ((walletData.balance_main + walletData.balance_bonus) < amt) {
     showLoading(false);
     showModal('Lỗi', 'Số dư không đủ để thanh toán!');
@@ -1811,10 +1903,8 @@ function executePayment() {
   var newMain = bMain - deductMain;
   var newBonus = bBonus - deductBonus;
 
-  // Transaction ID mới
   var receiptId = 'pay_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
-  // Update Firestore
   db.collection('wallets_xolifa').doc(curPhone).update({
     balance_main: newMain,
     balance_bonus: newBonus,
@@ -1822,7 +1912,7 @@ function executePayment() {
   }).then(function() {
     return db.collection('wallet_transactions_xolifa').add({
       transaction_id: receiptId,
-      pos_tx_id: _walScannedTxId,
+      pos_tx_id: _payTxId,
       wallet_id: curPhone,
       type: 'payment',
       amount_main: -deductMain,
@@ -1833,24 +1923,26 @@ function executePayment() {
       completed_at: new Date().toISOString()
     });
   }).then(function() {
-    // Notify POS via Realtime DB
-    return rtdb.ref('wallet_payment_xolifa/' + _walScannedTxId).update({
+    // Notify POS via Realtime DB → POS lắng nghe sẽ tự hoàn tất
+    return rtdb.ref('wallet_payment_xolifa/' + _payTxId).update({
       status: 'completed',
       wallet_id: curPhone,
       completed_at: Date.now()
     });
   }).then(function() {
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]); // Success vibration pulse
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     showLoading(false);
-    showModal('Thành công', 'Đã thanh toán ' + amt.toLocaleString('vi-VN') + 'đ thành công!');
-    _walScannedTxId = null;
-    _walScannedAmount = 0;
+    closePaymentCodePopup();
+    showModal('Thành công ✅', 'Đã thanh toán ' + Number(amt).toLocaleString('vi-VN') + 'đ thành công!\nĐiểm tích lũy sẽ được cộng vào tài khoản của bạn.');
+    _payTxId = null;
+    _payAmount = 0;
   }).catch(function(err) {
     showLoading(false);
     showModal('Lỗi', 'Giao dịch thất bại: ' + err.message);
   });
 }
 
+/* ── Legacy stubs (keep names in case referenced elsewhere) ── */
 </script>
 </body>
 </html>
