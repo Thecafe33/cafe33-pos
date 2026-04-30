@@ -501,7 +501,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
     </div>
     <div id="bank-confirm-area" style="display:none;">
-      <button class="bconf" onclick="proceedPay()">XÁC NHẬN CHUYỂN KHOẢN</button>
+      <!-- Tự động xử lý qua Firebase listener — không cần bấm tay -->
     </div>
   </div>
 </div>
@@ -1322,28 +1322,29 @@ let loyaltyCustomer = null; // dữ liệu Firestore của khách hiện tại
 // ============================================================
 runArchiveIfNeeded();        // archive chạy nền
 
+// ============================================================
+// 🔐 AUTH — Email/Password (thay thế signInAnonymously)
+// ============================================================
 // ⚠️ FIX iOS: Đợi auth hoàn tất rồi mới đọc menu
-// Android nhanh hơn nên không bị, iOS Safari chậm hơn → request
-// đến Firebase trước khi có auth token → bị denied theo rule auth!=null
 let _menuInited = false;
 auth.onAuthStateChanged(user => {
   if (user && !_menuInited) {
-    _menuInited = true;
-    initMenu();              // đọc menu sau khi auth sẵn sàng
-    loadTogoSettings();      // tải cài đặt To Go
-    loadDgSettings();        // tải cài đặt Đồng giá
-  }
-});
-auth.signInAnonymously().catch(err => {
-  // Nếu signIn fail hoàn toàn vẫn thử load (tránh màn hình trắng)
-  console.warn('signInAnonymously failed:', err);
-  if (!_menuInited) {
     _menuInited = true;
     initMenu();
     loadTogoSettings();
     loadDgSettings();
   }
 });
+auth.signInWithEmailAndPassword('cafe33@xolifa.com', 'xolifaangiang')
+  .catch(err => {
+    console.warn('signInWithEmailAndPassword failed:', err);
+    if (!_menuInited) {
+      _menuInited = true;
+      initMenu();
+      loadTogoSettings();
+      loadDgSettings();
+    }
+  });
 
 // ============================================================
 // TO GO — Toggle, Settings, Logic
@@ -2430,10 +2431,12 @@ function closeVietQRPopup() {
 }
 
 function confirmBankTransfer() {
+  // Nhân viên bấm thủ công khi hệ thống chưa tự nhận — ghi đơn luôn
   document.getElementById('vietqr-popup').style.display = 'none';
   stopBankListener(_bankListenerOrderId);
-  document.getElementById('bank-confirm-area').style.display = 'block';
-  toast('✅ Xác nhận đã nhận chuyển khoản — bấm nút xanh để hoàn tất!');
+  curPay = 'bank';
+  toast('✅ Xác nhận chuyển khoản — đang ghi đơn...');
+  confirmPay(null, null);
 }
 
 // ============================================================
@@ -2457,13 +2460,11 @@ function startBankListener(orderId) {
     // Đóng QR popup
     document.getElementById('vietqr-popup').style.display = 'none';
 
-    // Hiện nút xác nhận + toast
-    document.getElementById('bank-confirm-area').style.display = 'block';
+    // Tự động hoàn tất đơn — không cần nhân viên bấm thêm
     curPay = 'bank';
-    document.getElementById('pmba').classList.add('sel');
-
     const amt = data.amount ? data.amount.toLocaleString('vi-VN') + 'đ' : '';
-    toast('💸 Đã nhận chuyển khoản' + (amt ? ' ' + amt : '') + ' — bấm xác nhận để hoàn tất!');
+    toast('💸 Đã nhận ' + (amt || 'chuyển khoản') + ' — đang ghi đơn...');
+    confirmPay(null, null);
   });
 }
 
@@ -2939,7 +2940,7 @@ function confirmPay(cashGiven, cashChange) {
     document.getElementById('cuph').value = '';
     clearCustomer();
     selectedVoucher = null;
-    syncDisplay('done');
+    syncDisplay('done', { total, method: order.method });
     setTimeout(() => resetDisplay(), 5000);
     renderMenu();
     toast('✅ Thanh toán thành công!');
@@ -3986,7 +3987,7 @@ function finalizeSplitPay() {
     clearCustomer();
     selectedVoucher = null;
     // Đẩy state done lên kiosk → hiện thank you, 5s sau reset
-    syncDisplay('done');
+    syncDisplay('done', { total, method: order.method });
     setTimeout(() => resetDisplay(), 5000);
     renderMenu();
     toast('✅ Đã hoàn tất tính riêng!');
@@ -4648,7 +4649,7 @@ function confirmPayWallet() {
     document.getElementById('cuph').value = '';
     clearCustomer();
     selectedVoucher = null;
-    syncDisplay('done');
+    syncDisplay('done', { total: getFinalTotal(), method: 'VÍ' });
     setTimeout(() => resetDisplay(), 5000);
     renderMenu();
     toast('✅ Thanh toán ví thành công!');
