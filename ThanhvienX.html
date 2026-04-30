@@ -1818,25 +1818,28 @@ function submitTxCode() {
     showModal('Lỗi', 'Vui lòng nhập đủ 4 số!'); return;
   }
   showLoading(true);
-  // Tra cứu nhanh qua pin index (không cần scan toàn bộ)
-  rtdb.ref('wallet_pin_index/' + _txCodeEntered).once('value')
+  // Đọc node 'current' — luôn chỉ có 1 mã PIN tồn tại tại 1 thời điểm
+  rtdb.ref('wallet_pin_index/current').once('value')
     .then(function(snap) {
+      showLoading(false);
       if (!snap.exists()) {
-        showLoading(false);
-        showModal('Không tìm thấy', 'Mã giao dịch không đúng hoặc đã hết hạn. Yêu cầu thu ngân tạo lại mã mới!');
+        showModal('Không tìm thấy', 'Chưa có giao dịch nào được tạo. Yêu cầu thu ngân tạo mã mới!');
         return;
       }
-      var idx = snap.val();
+      var cur = snap.val();
       var now = Date.now();
-      if (!idx.txId || idx.expireTime < now) {
-        showLoading(false);
+      // Kiểm tra mã PIN có khớp không
+      if (cur.pin !== _txCodeEntered) {
+        showModal('Sai mã', 'Mã giao dịch không đúng. Vui lòng kiểm tra lại!');
+        return;
+      }
+      if (!cur.txId || cur.expireTime < now) {
         showModal('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo lại!');
         return;
       }
-      // Đọc node giao dịch chính để lấy amount và kiểm tra status còn pending
-      return rtdb.ref('wallet_payment_xolifa/' + idx.txId).once('value')
+      // Đọc node giao dịch chính
+      return rtdb.ref('wallet_payment_xolifa/' + cur.txId).once('value')
         .then(function(txSnap) {
-          showLoading(false);
           if (!txSnap.exists()) {
             showModal('Lỗi', 'Không tìm thấy giao dịch!'); return;
           }
@@ -1844,9 +1847,8 @@ function submitTxCode() {
           if (tx.status !== 'pending') {
             showModal('Lỗi', 'Giao dịch này đã được thanh toán rồi!'); return;
           }
-          _payTxId = idx.txId;
+          _payTxId = cur.txId;
           _payAmount = tx.amount;
-          // Chuyển sang nhập PIN ví
           $id('pay-amount-display').textContent = Number(_payAmount).toLocaleString('vi-VN') + 'đ';
           $id('pay-step-txcode').style.display = 'none';
           $id('pay-step-pin').style.display = 'block';
@@ -1855,7 +1857,7 @@ function submitTxCode() {
     })
     .catch(function(err) {
       showLoading(false);
-      showModal('Lỗi', 'Không thể tìm giao dịch: ' + err.message);
+      showModal('Lỗi', 'Không thể kết nối Firebase: ' + err.message);
     });
 }
 
@@ -1935,8 +1937,8 @@ function executePayment() {
     });
   }).then(function() {
     // Notify POS via Realtime DB → POS lắng nghe sẽ tự hoàn tất
-    // Xoá pin index (dùng 1 lần là hết)
-    rtdb.ref('wallet_pin_index/' + _txCodeEntered).remove().catch(function(){});
+    // Xoá pin index current
+    rtdb.ref('wallet_pin_index/current').remove().catch(function(){});
     return rtdb.ref('wallet_payment_xolifa/' + _payTxId).update({
       status: 'completed',
       wallet_id: curPhone,
