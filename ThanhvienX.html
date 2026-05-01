@@ -1337,35 +1337,54 @@ function renderStamps(count, freeDrinks) {
 function loadLoyalty(phone) {
   db.collection('customers_xolifa').doc(phone).get()
     .then(function(snap) {
-      if (!snap.exists) { renderStamps(0, 0); return; }
-      var d = snap.data();
-      userData = d;
-
-      var pts  = d.total_points || 0;
-      var nick = d.nickname || 'Khách hàng';
-      var stamps = d.stamp_count || 0;
-      var freeDrinks = d.free_drink_available || 0;
-
-      var nameEl = $id('user-name-display');
-      var ptsEl  = $id('user-points');
-      var rankEl = $id('user-rank');
-      var phoneEl = $id('user-phone-display');
-      var editN  = $id('edit-nickname');
-      var editS  = $id('edit-sdt');
-
-      if (nameEl)  nameEl.textContent  = nick;
-      if (ptsEl)   ptsEl.textContent   = Number(pts).toLocaleString('vi-VN');
-      if (rankEl)  rankEl.textContent  = calcRank(pts);
-      if (phoneEl) phoneEl.textContent = phone;
-      if (editN)   editN.value         = nick;
-      if (editS)   editS.value         = phone;
-
-      renderStamps(stamps, freeDrinks);
+      if (snap.exists) {
+        var d = snap.data();
+        userData = d;
+        _renderLoyaltyUI(phone, d.nickname || 'Khách hàng', d.total_points || 0,
+                         d.stamp_count || 0, d.free_drink_available || 0);
+      } else {
+        // Không có FS → thử RTDB (khách The Cafe 33 cũ)
+        rtdb.ref('customers/' + phone).once('value').then(function(rtSnap) {
+          var rt = rtSnap.val();
+          if (rt) {
+            userData = {
+              phone:                phone,
+              nickname:             rt.name || 'Khách hàng',
+              total_points:         rt.points || 0,
+              stamp_count:          0,
+              free_drink_available: 0,
+              _from_rt:             true,
+            };
+            _renderLoyaltyUI(phone, userData.nickname, userData.total_points, 0, 0);
+          } else {
+            renderStamps(0, 0);
+          }
+        }).catch(function() { renderStamps(0, 0); });
+      }
     })
     .catch(function(err) {
       console.error('[loadLoyalty]', err);
       renderStamps(0, 0);
     });
+}
+
+/** Ghi dữ liệu đã gộp lên các element UI — dùng chung cho cả FS và RT */
+function _renderLoyaltyUI(phone, nick, pts, stamps, freeDrinks) {
+  var nameEl  = $id('user-name-display');
+  var ptsEl   = $id('user-points');
+  var rankEl  = $id('user-rank');
+  var phoneEl = $id('user-phone-display');
+  var editN   = $id('edit-nickname');
+  var editS   = $id('edit-sdt');
+
+  if (nameEl)  nameEl.textContent  = nick;
+  if (ptsEl)   ptsEl.textContent   = Number(pts).toLocaleString('vi-VN');
+  if (rankEl)  rankEl.textContent  = calcRank(pts);
+  if (phoneEl) phoneEl.textContent = phone;
+  if (editN)   editN.value         = nick;
+  if (editS)   editS.value         = phone;
+
+  renderStamps(stamps, freeDrinks);
 }
 
 /* ════════════════════════════════════════════════
@@ -1401,7 +1420,14 @@ document.addEventListener('DOMContentLoaded', function() {
           if (snap.exists) {
             showDashboard(saved);
           } else {
-            localStorage.removeItem('xolifa_phone');
+            // Không có FS → thử RT trước khi xoá session
+            rtdb.ref('customers/' + saved).once('value').then(function(rtSnap) {
+              if (rtSnap.exists()) {
+                showDashboard(saved); // khách RT → vào được, loadLoyalty tự fallback
+              } else {
+                localStorage.removeItem('xolifa_phone');
+              }
+            }).catch(function() { localStorage.removeItem('xolifa_phone'); });
           }
         })
         .catch(function(e) {
@@ -1439,7 +1465,18 @@ function doLogin() {
         localStorage.setItem('xolifa_phone', phone);
         showDashboard(phone);
       } else {
-        showModal('Không tìm thấy', 'SĐT chưa đăng ký. Vui lòng tạo tài khoản mới.');
+        // Kiểm tra RTDB (The Cafe 33) trước khi báo lỗi
+        rtdb.ref('customers/' + phone).once('value').then(function(rtSnap) {
+          if (rtSnap.exists()) {
+            // Khách RT → đăng nhập được, loadLoyalty sẽ tự fallback
+            localStorage.setItem('xolifa_phone', phone);
+            showDashboard(phone);
+          } else {
+            showModal('Không tìm thấy', 'SĐT chưa đăng ký. Vui lòng tạo tài khoản mới.');
+          }
+        }).catch(function() {
+          showModal('Không tìm thấy', 'SĐT chưa đăng ký. Vui lòng tạo tài khoản mới.');
+        });
       }
     })
     .catch(function(err) {
@@ -1463,15 +1500,47 @@ function doRegister() {
   btn.disabled    = true;
 
   var docRef = db.collection('customers_xolifa').doc(phone);
-  docRef.get().then(function(snap) {
-    if (snap.exists) {
-      showModal('Đã đăng ký', 'SĐT này đã tồn tại, vui lòng đăng nhập.', function(){
-          btn.textContent = 'Xác nhận';
-          btn.disabled    = false;
-          goLogin();
+
+  // Kiểm tra đồng thời cả Firestore lẫn RTDB trước khi tạo mới
+  Promise.all([
+    docRef.get(),
+    rtdb.ref('customers/' + phone).once('value')
+  ]).then(function(results) {
+    var fsSnap = results[0];
+    var rtSnap = results[1];
+
+    // Đã có FS → chỉ cần đăng nhập
+    if (fsSnap.exists) {
+      showModal('Đã đăng ký', 'SĐT này đã tồn tại, vui lòng đăng nhập.', function() {
+        btn.textContent = 'Xác nhận';
+        btn.disabled    = false;
+        $id('login-sdt').value = phone;
+        goLogin();
       });
       return;
     }
+
+    // Có ở RT (The Cafe 33) nhưng chưa có FS → CHẶN tạo mới, hướng dẫn đăng nhập bằng SĐT này
+    if (rtSnap.exists()) {
+      var rtName = (rtSnap.val() && rtSnap.val().name) ? rtSnap.val().name : '';
+      var greeting = rtName ? ('Xin chào ' + rtName + '! ') : '';
+      showModal(
+        '📱 Bạn đã là thành viên!',
+        greeting +
+        'Số điện thoại này đã được đăng ký tại The Cafe 33. ' +
+        'Bạn có thể đăng nhập ngay bằng số điện thoại ' + phone + ' để sử dụng luôn tại Xolifa — không cần tạo tài khoản mới.',
+        function() {
+          btn.textContent = 'Xác nhận';
+          btn.disabled    = false;
+          // Điền sẵn SĐT vào form đăng nhập và chuyển sang
+          $id('login-sdt').value = phone;
+          goLogin();
+        }
+      );
+      return;
+    }
+
+    // Chưa có ở đâu → tạo mới bình thường
     return docRef.set({
       nickname:             nickname,
       phone:                phone,
