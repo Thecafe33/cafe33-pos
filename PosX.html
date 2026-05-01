@@ -2561,22 +2561,28 @@ function lookupCustomer() {
     loyaltyCustomer = fsData;
 
     if (!data && !fsData) {
-      // Không tìm thấy → hiện nút thêm mới ngay dưới ô SĐT
       showAddMemberHint(phone);
       return;
     }
 
-    // Gộp thông tin từ cả hai nguồn
-    const name   = (data && data.name) || (fsData && fsData.name) || 'Khách hàng';
-    const points = (data && data.points) || 0;
-    const note   = (data && data.note) || '';
+    // Tên: ưu tiên nickname FS > name FS > name RT > 'Khách hàng'
+    const name    = (fsData && (fsData.nickname || fsData.name))
+                 || (data  && data.name)
+                 || 'Khách hàng';
+    const note    = (data && data.note) || '';
     const myGifts = (data && data.myGifts) || {};
 
-    // Thông tin loyalty mới từ customers_xolifa
-    const totalPoints = fsData ? (fsData.total_points || 0) : 0;
-    const stampCount  = fsData ? (fsData.stamp_count  || 0) : 0;
+    // Points hiển thị: FS total_points ưu tiên, fallback RT points
+    const totalPoints = fsData  ? (fsData.total_points || 0)
+                      : (data   ? (data.points        || 0) : 0);
+    const stampCount  = fsData  ? (fsData.stamp_count  || 0) : 0;
 
-    curCustomer = { phone, name, points, note, myGifts };
+    curCustomer = {
+      phone, name,
+      points: (data && data.points) || 0,  // RT points gốc (legacy)
+      note, myGifts,
+      _rtName: (data && data.name) || '',  // lưu lại để dùng khi auto-create FS doc
+    };
     renderCustomerInfo(totalPoints, stampCount);
   }).catch(err => {
     console.error('Lỗi tra cứu:', err);
@@ -2588,7 +2594,7 @@ function renderCustomerInfo(totalPoints, stampCount) {
   if (!curCustomer) return;
   const panel = document.getElementById('custInfo');
 
-  // Ưu tiên nickname từ Firestore (customers_xolifa)
+  // Tên: đã được resolve đúng trong lookupCustomer
   const displayName = (loyaltyCustomer && loyaltyCustomer.nickname) || curCustomer.name;
   document.getElementById('custName').textContent = displayName;
 
@@ -2598,7 +2604,8 @@ function renderCustomerInfo(totalPoints, stampCount) {
   if (stampCount  > 0) ptsHtml += `${ptsHtml ? '  |  ' : ''}☕ ${stampCount}/6 Stamp`;
   const freeDrink = loyaltyCustomer ? (loyaltyCustomer.free_drink_available || 0) : 0;
   if (freeDrink > 0) ptsHtml += `${ptsHtml ? '  |  ' : ''}🎁 ${freeDrink} ly miễn phí`;
-  if (!ptsHtml && curCustomer.points) ptsHtml = `⭐ ${curCustomer.points} điểm`;
+  // Khách RT cũ chưa có FS → hiện điểm RT dạng legacy
+  if (!ptsHtml && curCustomer.points > 0) ptsHtml = `⭐ ${curCustomer.points.toLocaleString('vi-VN')} điểm (cũ)`;
   document.getElementById('custPts').textContent = ptsHtml;
   document.getElementById('custNote').textContent = curCustomer.note;
 
@@ -2820,16 +2827,56 @@ async function loyaltyFetchCustomer(phone) {
   }
 }
 
+/**
+ * Đảm bảo doc customers_xolifa tồn tại.
+ * Nếu khách chỉ có ở RT (chưa có FS doc) → tự động tạo mới với nickname từ RT.
+ * Trả về data hiện tại của doc (sau khi tạo nếu cần).
+ */
+async function loyaltyEnsureDoc(phone) {
+  const doc = fstore.collection('customers_xolifa').doc(phone);
+  const snap = await doc.get();
+  if (snap.exists) return { doc, data: snap.data() };
+
+  // Lấy tên từ RT để điền nickname ban đầu
+  let rtName = 'Khách hàng';
+  try {
+    const rtSnap = await db.ref('customers/' + phone).once('value');
+    const rtData = rtSnap.val();
+    if (rtData && rtData.name) rtName = rtData.name;
+  } catch(_) {}
+
+  const initData = {
+    phone,
+    nickname:             rtName,
+    total_points:         0,
+    stamp_count:          0,
+    stamps_today:         0,
+    last_stamp_date:      '',
+    free_drink_available: 0,
+    joinDate:             new Date().toISOString(),
+    source:               'auto_from_rt',    // đánh dấu nguồn gốc
+    lastVisit:            new Date().toISOString(),
+  };
+  await doc.set(initData);
+  // Cập nhật lại cache autocomplete nếu có
+  if (typeof allCustomersCache !== 'undefined') {
+    allCustomersCache = allCustomersCache.filter(c => c.id !== phone);
+    allCustomersCache.unshift({ id: phone, _src: 'fs', ...initData });
+  }
+  return { doc, data: initData };
+}
+
 /** Tích điểm Tại quán: 100đ = 1 Point */
 async function loyaltyAddPoints(phone, billAmount) {
   if (!phone || billAmount <= 0) return 0;
   const earned = Math.floor(billAmount / 100);
   if (earned <= 0) return 0;
   try {
-    const doc = fstore.collection('customers_xolifa').doc(phone);
-    const snap = await doc.get();
-    const cur = snap.exists ? (snap.data().total_points || 0) : 0;
+    const { doc, data } = await loyaltyEnsureDoc(phone);
+    const cur = data.total_points || 0;
     await doc.update({ total_points: cur + earned, lastVisit: new Date().toISOString() });
+    // Cập nhật loyaltyCustomer trong bộ nhớ để UI đồng bộ
+    if (loyaltyCustomer) loyaltyCustomer.total_points = cur + earned;
     return earned;
   } catch(e) {
     console.warn('Loyalty points error:', e);
@@ -2845,9 +2892,7 @@ async function loyaltyAddPoints(phone, billAmount) {
 async function loyaltyAddStamps(phone, drinkCount) {
   if (!phone || drinkCount <= 0) return { added: 0, newCount: 0, freeDrink: false };
   try {
-    const doc = fstore.collection('customers_xolifa').doc(phone);
-    const snap = await doc.get();
-    const data = snap.exists ? snap.data() : {};
+    const { doc, data } = await loyaltyEnsureDoc(phone);
 
     const today = loyaltyTodayStr();
     const lastDate = data.last_stamp_date || '';
@@ -4311,60 +4356,112 @@ function kcRenderTogoMenuPages() {
 }
 
 // ============================================================
-// AUTOCOMPLETE PHONE NUMBER
+// AUTOCOMPLETE PHONE NUMBER — gộp cả Firestore + RTDB
 // ============================================================
 let allCustomersCache = [];
 
-// Khi load danh sách khách hàng cho tab Khách Hàng, chúng ta lấy ra toàn bộ danh sách,
-// có thể tái sử dụng mảng này làm cache cho auto-complete
+/**
+ * Tải cache khách hàng từ CẢ HAI nguồn song song:
+ *   1. Firestore customers_xolifa  → nickname, total_points, stamp_count
+ *   2. RTDB     customers/         → khách cũ: name, points
+ * Cùng SĐT → ưu tiên giữ bản FS, bổ sung _rt_name/_rt_points từ RT.
+ */
 function fetchAllCustomersCache() {
   if (allCustomersCache.length > 0) return;
-  fstore.collection('customers_xolifa').get().then(snap => {
-    let arr = [];
-    snap.forEach(doc => arr.push({ id: doc.id, ...doc.data() }));
-    // Lưu mảng cache (sắp xếp giảm dần theo điểm luôn)
-    allCustomersCache = arr.sort((a,b) => (b.total_points || 0) - (a.total_points || 0));
-  }).catch(err => console.error("Cache error", err));
+
+  const fsPromise = fstore.collection('customers_xolifa').get().then(snap => {
+    const map = {};
+    snap.forEach(doc => { map[doc.id] = { id: doc.id, _src: 'fs', ...doc.data() }; });
+    return map;
+  });
+
+  const rtPromise = db.ref('customers').once('value').then(snap => {
+    const map = {};
+    const val = snap.val() || {};
+    Object.entries(val).forEach(([phone, d]) => {
+      map[phone] = {
+        id: phone,
+        _src: 'rt',
+        nickname:     d.name  || '',
+        total_points: d.points || 0,
+        stamp_count:  0,
+        _rt_name:     d.name  || '',
+        _rt_points:   d.points || 0,
+      };
+    });
+    return map;
+  }).catch(() => ({}));  // RTDB lỗi → bỏ qua, vẫn dùng FS
+
+  Promise.all([fsPromise, rtPromise]).then(([fsMap, rtMap]) => {
+    const merged = { ...rtMap };
+    Object.entries(fsMap).forEach(([phone, fsEntry]) => {
+      merged[phone] = {
+        ...(merged[phone] || {}),   // RT (fallback)
+        ...fsEntry,                  // FS ghi đè
+        _rt_name:   (merged[phone] && merged[phone]._rt_name)   || '',
+        _rt_points: (merged[phone] && merged[phone]._rt_points) || 0,
+      };
+    });
+    allCustomersCache = Object.values(merged)
+      .sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+  }).catch(err => console.error('Cache error', err));
 }
 
 // Gọi luôn khi khởi tạo
-setTimeout(fetchAllCustomersCache, 5000); 
+setTimeout(fetchAllCustomersCache, 5000);
 
 function onPhoneInput(val) {
-   const ac = document.getElementById('phone-autocomplete');
-   if (!ac) return;
-   
-   // Loại bỏ ký tự không phải số
-   const cleanVal = val.replace(/[^0-9]/g, '');
-   document.getElementById('cuph').value = cleanVal;
-   
-   // Load nếu chưa từng load
-   if (allCustomersCache.length === 0) fetchAllCustomersCache();
-   
-   if (cleanVal.length >= 3) {
-      // Tìm các số ĐT bắt đầu bằng cụm này (hoặc có chứa cụm)
-      const matches = allCustomersCache.filter(c => c.id.startsWith(cleanVal) || c.id.includes(cleanVal));
-      if (matches.length > 0) {
-         ac.innerHTML = matches.slice(0, 8).map(c => {
-           let highlightedPhone = c.id.replace(cleanVal, '<span style="color:var(--primary);">' + cleanVal + '</span>');
-           return `
-           <div onclick="selectPhone('${c.id}')" style="padding:16px 18px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:background 0.15s;"
-                onmousedown="this.style.background='#f5f5f5'" onmouseup="this.style.background='#fff'" ontouchstart="this.style.background='#f5f5f5'" ontouchend="this.style.background='#fff'">
-             <div>
-               <div style="font-size:17px;font-weight:700;color:var(--td);">${highlightedPhone}</div>
-               <div style="font-size:13px;color:var(--gt);">${c.nickname || 'Khách hàng'}</div>
-             </div>
-             <div style="text-align:right;">
-               <div style="font-size:14px;color:var(--gm);font-weight:700;">⭐ ${Number(c.total_points || 0).toLocaleString('vi-VN')}</div>
-             </div>
-           </div>
-         `;}).join('');
-         ac.style.display = 'block';
-         return;
-      }
-   }
-   ac.style.display = 'none';
-   ac.innerHTML = '';
+  const ac = document.getElementById('phone-autocomplete');
+  if (!ac) return;
+
+  // Loại bỏ ký tự không phải số
+  const cleanVal = val.replace(/[^0-9]/g, '');
+  document.getElementById('cuph').value = cleanVal;
+
+  // Load nếu chưa từng load
+  if (allCustomersCache.length === 0) fetchAllCustomersCache();
+
+  if (cleanVal.length === 10) { lookupCustomer(); }
+  if (cleanVal.length < 6)   { clearCustomer(); }
+
+  if (cleanVal.length >= 3) {
+    const matches = allCustomersCache.filter(c =>
+      c.id.startsWith(cleanVal) || c.id.includes(cleanVal));
+    if (matches.length > 0) {
+      ac.innerHTML = matches.slice(0, 8).map(c => {
+        const isRtOnly   = c._src === 'rt';
+        const displayName = c.nickname || c._rt_name || 'Khách hàng';
+        const pts         = c.total_points || c._rt_points || 0;
+        const srcBadge    = isRtOnly
+          ? `<span style="font-size:10px;background:#fff3cd;color:#856404;border-radius:6px;padding:1px 6px;font-weight:700;flex-shrink:0;">Khách cũ</span>`
+          : '';
+        const hlPhone = c.id.replace(
+          new RegExp('(' + cleanVal + ')'),
+          '<span style="color:var(--gm);font-weight:900;">$1</span>'
+        );
+        return `
+        <div onclick="selectPhone('${c.id}')"
+             style="padding:14px 18px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .15s;"
+             onmousedown="this.style.background='#f5f5f5'" onmouseup="this.style.background='#fff'"
+             ontouchstart="this.style.background='#f5f5f5'" ontouchend="this.style.background='#fff'">
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:0;">
+            <div style="font-size:17px;font-weight:700;color:var(--td);">${hlPhone}</div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span style="font-size:13px;color:var(--gt);">${displayName}</span>
+              ${srcBadge}
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:8px;">
+            <div style="font-size:14px;color:var(--gm);font-weight:700;">⭐ ${Number(pts).toLocaleString('vi-VN')}</div>
+          </div>
+        </div>`;
+      }).join('');
+      ac.style.display = 'block';
+      return;
+    }
+  }
+  ac.style.display = 'none';
+  ac.innerHTML = '';
 }
 
 function selectPhone(phone) {
