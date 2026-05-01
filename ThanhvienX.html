@@ -1710,7 +1710,6 @@ function finalizeActivation(pin) {
 function loadWalletHistory() {
   db.collection('wallet_transactions_xolifa')
     .where('wallet_id', '==', curPhone)
-    .where('status', '==', 'completed')
     .orderBy('created_at', 'desc')
     .limit(10)
     .get()
@@ -1748,7 +1747,10 @@ function loadWalletHistory() {
         });
       }
       $id('wallet-history-list').innerHTML = html;
-    }).catch(function(err) {});
+    }).catch(function(err) {
+      console.error('loadWalletHistory error:', err);
+      $id('wallet-history-list').innerHTML = '<div style="text-align:center;padding:20px;color:#ff3b30;font-size:13px;">Không tải được lịch sử: ' + err.message + '</div>';
+    });
 }
 
 // ── PIN Payment Flow ──
