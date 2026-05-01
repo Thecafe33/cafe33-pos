@@ -1818,50 +1818,64 @@ function submitTxCode() {
     showModal('Lỗi', 'Vui lòng nhập đủ 4 số!'); return;
   }
   showLoading(true);
-  // Đọc node 'current' — luôn chỉ có 1 mã PIN tồn tại tại 1 thời điểm
+
+  // Timeout bảo vệ — dù lỗi gì cũng tắt loading sau 8s
+  var _guard = setTimeout(function() {
+    showLoading(false);
+    showModal('Lỗi kết nối', 'Không nhận được phản hồi từ server. Kiểm tra mạng và thử lại!');
+  }, 8000);
+  function done() { clearTimeout(_guard); showLoading(false); }
+
   rtdb.ref('wallet_pin_index/current').once('value')
     .then(function(snap) {
-      showLoading(false);
+      done();
       if (!snap.exists()) {
-        showModal('Không tìm thấy', 'Chưa có giao dịch nào được tạo. Yêu cầu thu ngân tạo mã mới!');
+        showModal('Không tìm thấy', 'Chưa có giao dịch nào. Yêu cầu thu ngân tạo mã mới!');
         return;
       }
       var cur = snap.val();
-      var now = Date.now();
-      // Kiểm tra mã PIN có khớp không
       if (cur.pin !== _txCodeEntered) {
-        showModal('Sai mã', 'Mã giao dịch không đúng. Vui lòng kiểm tra lại!');
+        showModal('Sai mã', 'Mã giao dịch không đúng. Kiểm tra lại!');
         return;
       }
-      if (!cur.txId || cur.expireTime < now) {
+      if (!cur.txId || cur.expireTime < Date.now()) {
         showModal('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo lại!');
         return;
       }
-      // Đọc node giao dịch chính
-      return rtdb.ref('wallet_payment_xolifa/' + cur.txId).once('value')
+      // Bước 2: đọc node giao dịch
+      showLoading(true);
+      var _guard2 = setTimeout(function() {
+        showLoading(false);
+        showModal('Lỗi kết nối', 'Không nhận được phản hồi. Thử lại!');
+      }, 8000);
+
+      rtdb.ref('wallet_payment_xolifa/' + cur.txId).once('value')
         .then(function(txSnap) {
-          if (!txSnap.exists()) {
-            showModal('Lỗi', 'Không tìm thấy giao dịch!'); return;
-          }
+          clearTimeout(_guard2); showLoading(false);
+          if (!txSnap.exists()) { showModal('Lỗi', 'Không tìm thấy giao dịch!'); return; }
           var tx = txSnap.val();
-          if (tx.status !== 'pending') {
-            showModal('Lỗi', 'Giao dịch này đã được thanh toán rồi!'); return;
-          }
+          if (tx.status !== 'pending') { showModal('Lỗi', 'Giao dịch này đã thanh toán rồi!'); return; }
           _payTxId = cur.txId;
           _payAmount = tx.amount;
           $id('pay-amount-display').textContent = Number(_payAmount).toLocaleString('vi-VN') + 'đ';
           $id('pay-step-txcode').style.display = 'none';
           $id('pay-step-pin').style.display = 'block';
           setTimeout(function() { var inp = $id('walpin-input'); inp.value = ''; inp.focus(); }, 100);
+        })
+        .catch(function(err) {
+          clearTimeout(_guard2); showLoading(false);
+          showModal('Lỗi', 'Đọc giao dịch thất bại: ' + err.message);
         });
     })
     .catch(function(err) {
-      showLoading(false);
-      showModal('Lỗi', 'Không thể kết nối Firebase: ' + err.message);
+      done();
+      showModal('Lỗi Firebase', err.code === 'PERMISSION_DENIED'
+        ? 'Không có quyền truy cập. Kiểm tra Firebase Rules!'
+        : 'Lỗi: ' + err.message);
     });
 }
 
-/* ── Step 2: Xác nhận PIN ví & thực hiện thanh toán ── */
+/* ── Step 2: Xác nhận PIN cá nhân & gửi signal cho PosX ── */
 function submitWalletPin() {
   if (_walPinEntered.length !== 4) {
     showModal('Lỗi', 'Vui lòng nhập đủ 4 số PIN!'); return;
@@ -1869,93 +1883,86 @@ function submitWalletPin() {
   if (!_payTxId) {
     showModal('Lỗi', 'Phiên thanh toán đã hết hạn!'); return;
   }
+
+  // Xác thực PIN cá nhân ngay trên client (bcrypt)
   showLoading(true);
+  var _guard = setTimeout(function() {
+    showLoading(false);
+    showModal('Lỗi', 'Xác thực quá lâu. Thử lại!');
+  }, 10000);
+
   setTimeout(function() {
     try {
       var isValid = dcodeIO.bcrypt.compareSync(_walPinEntered, walletData.pin_hash);
       if (!isValid) {
-        showLoading(false);
-        showModal('Lỗi', 'Mã PIN ví không đúng!', function() {
+        clearTimeout(_guard); showLoading(false);
+        showModal('Sai PIN', 'Mã PIN ví không đúng!', function() {
           _walPinEntered = '';
           renderPinBoxes('wpd', '');
           setTimeout(function() { var inp = $id('walpin-input'); inp.value = ''; inp.focus(); }, 100);
         });
         return;
       }
-      executePayment();
+      // PIN đúng → ghi signal vào wallet_pin_index/current để PosX xử lý
+      sendPaymentSignal(_guard);
     } catch(e) {
-      showLoading(false);
-      showModal('Lỗi', 'Lỗi xác thực mã PIN.');
+      clearTimeout(_guard); showLoading(false);
+      showModal('Lỗi', 'Lỗi xác thực PIN: ' + e.message);
     }
-  }, 100);
+  }, 80);
 }
 
-/* ── Ghi giao dịch trừ tiền ── */
-function executePayment() {
-  var amt = _payAmount;
-
-  if ((walletData.balance_main + walletData.balance_bonus) < amt) {
-    showLoading(false);
-    showModal('Lỗi', 'Số dư không đủ để thanh toán!');
-    return;
-  }
-
-  // Tiền thưởng trước, tiền chính sau
-  var deductBonus = 0;
-  var deductMain = 0;
-  var bBonus = walletData.balance_bonus || 0;
-  var bMain = walletData.balance_main || 0;
-
-  if (bBonus >= amt) {
-    deductBonus = amt;
-  } else {
-    deductBonus = bBonus;
-    deductMain = amt - bBonus;
-  }
-
-  var newMain = bMain - deductMain;
-  var newBonus = bBonus - deductBonus;
-
-  var receiptId = 'pay_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-
-  db.collection('wallets_xolifa').doc(curPhone).update({
-    balance_main: newMain,
-    balance_bonus: newBonus,
-    updated_at: new Date().toISOString()
+function sendPaymentSignal(guardTimer) {
+  // Chỉ ghi 2 field — ThanhvienX không chạm vào ví hay lịch sử
+  rtdb.ref('wallet_pin_index/current').update({
+    customer_confirmed: true,
+    wallet_phone: curPhone,
+    confirmed_at: Date.now()
   }).then(function() {
-    return db.collection('wallet_transactions_xolifa').add({
-      transaction_id: receiptId,
-      pos_tx_id: _payTxId,
-      wallet_id: curPhone,
-      type: 'payment',
-      amount_main: -deductMain,
-      amount_bonus: -deductBonus,
-      status: 'completed',
-      description: 'Thanh toán hoá đơn',
-      created_at: new Date().toISOString(),
-      completed_at: new Date().toISOString()
-    });
-  }).then(function() {
-    // Notify POS via Realtime DB → POS lắng nghe sẽ tự hoàn tất
-    // Xoá pin index current
-    rtdb.ref('wallet_pin_index/current').remove().catch(function(){});
-    return rtdb.ref('wallet_payment_xolifa/' + _payTxId).update({
-      status: 'completed',
-      wallet_id: curPhone,
-      completed_at: Date.now()
-    });
-  }).then(function() {
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    showLoading(false);
-    closePaymentCodePopup();
-    showModal('Thành công ✅', 'Đã thanh toán ' + Number(amt).toLocaleString('vi-VN') + 'đ thành công!\nĐiểm tích lũy sẽ được cộng vào tài khoản của bạn.');
-    _payTxId = null;
-    _payAmount = 0;
+    // Lắng nghe PosX phản hồi kết quả
+    listenPaymentResult(guardTimer);
   }).catch(function(err) {
-    showLoading(false);
-    showModal('Lỗi', 'Giao dịch thất bại: ' + err.message);
+    clearTimeout(guardTimer); showLoading(false);
+    showModal('Lỗi', 'Không gửi được tín hiệu: ' + err.message);
   });
 }
+
+function listenPaymentResult(guardTimer) {
+  var resultRef = rtdb.ref('wallet_pin_index/current/result');
+  // Reset guard — PosX có tối đa 15s để xử lý
+  clearTimeout(guardTimer);
+  var _resultGuard = setTimeout(function() {
+    resultRef.off('value');
+    showLoading(false);
+    showModal('Hết thời gian', 'PosX không phản hồi. Hỏi thu ngân để xác nhận!');
+  }, 15000);
+
+  resultRef.on('value', function(snap) {
+    if (!snap.exists()) return; // chờ tiếp
+    var result = snap.val();
+    if (!result || result === 'waiting') return; // PosX chưa xử lý xong
+
+    // Có kết quả → dừng lắng nghe
+    resultRef.off('value');
+    clearTimeout(_resultGuard);
+    showLoading(false);
+
+    if (result === 'success') {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      closePaymentCodePopup();
+      // Reload lại số dư ví từ Firestore
+      loadWalletData(curPhone);
+      showModal('Thành công ✅', 'Đã thanh toán ' + Number(_payAmount).toLocaleString('vi-VN') + 'đ!\nĐiểm tích lũy đã được cộng vào tài khoản.');
+    } else if (result === 'insufficient') {
+      showModal('Không đủ số dư 💸', 'Số dư ví không đủ để thanh toán ' + Number(_payAmount).toLocaleString('vi-VN') + 'đ!');
+    } else if (result === 'expired') {
+      showModal('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo mã mới!');
+    } else {
+      showModal('Lỗi', 'Thanh toán thất bại: ' + result);
+    }
+  });
+}
+
 
 /* ── Legacy stubs (keep names in case referenced elsewhere) ── */
 </script>
