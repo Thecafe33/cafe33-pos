@@ -873,46 +873,43 @@ function submitRegister() {
     btn.innerHTML = "Đang xử lý...";
     btn.disabled = true;
 
-    const userRef = db.ref('customers/' + phone);
-    
-    userRef.once('value', (snapshot) => {
-        if (snapshot.exists()) {
+    const userRef = fstore.collection('customers').doc(phone);
+
+    userRef.get().then((snapshot) => {
+        if (snapshot.exists) {
             alert("SĐT này đã tồn tại! Vui lòng đăng nhập.");
             btn.innerHTML = oldText;
             btn.disabled = false;
             hideRegister();
         } else {
-            // TẠO USER MỚI TRÊN FIREBASE
-            userRef.set({
-                name: name,
-                phone: phone,
-                points: 333, // Tặng 333 điểm như yêu cầu
-                joinDate: new Date().toISOString(),
-                source: 'app_index',
-                
-                // Các trường bắt buộc cho App Bed
-                compName: "",
-                compPhone: "",
-                lastVisit: new Date().toISOString(),
-                pendingFee: 0,          
-                pendingFeeReason: ""    
-            }, (error) => {
-                if (error) {
-                    alert("Lỗi: " + error.message);
-                    btn.innerHTML = oldText;
-                    btn.disabled = false;
-                } else {
-                    // THÀNH CÔNG -> VÀO THẲNG APP
-                    // Không hiện thông báo voucher, không gọi GSA
-                    localStorage.setItem('member_phone', phone);
-                    
-                    document.getElementById('register-screen').classList.add('hidden');
-                    document.getElementById('register-screen').style.display = 'none';
-                    
-                    showDashboard(phone); // Hàm này có sẵn trong index, sẽ tự tải giao diện chính
-                }
+            return userRef.set({
+                name:             name,
+                nickname:         name,
+                phone:            phone,
+                total_points:     333,
+                stamp_count:      0,
+                stamps_today:     0,
+                last_stamp_date:  '',
+                free_drink_available: 0,
+                joinDate:         new Date().toISOString(),
+                lastVisit:        new Date().toISOString(),
+                source:           'app_index',
+                compName:         '',
+                compPhone:        '',
+                pendingFee:       0,
+                pendingFeeReason: '',
+                myGifts:          {},
+            }).then(() => {
+                localStorage.setItem('member_phone', phone);
+                document.getElementById('register-screen').classList.add('hidden');
+                document.getElementById('register-screen').style.display = 'none';
+                showDashboard(phone);
             });
         }
+    }).catch((error) => {
+        alert("Lỗi: " + error.message);
+        btn.innerHTML = oldText;
+        btn.disabled = false;
     });
 }
 // --- 2. LOGIC CHUNG ---
@@ -1008,14 +1005,17 @@ function login() {
     if (phone.length < 9) return alert("SĐT không hợp lệ!");
     
     document.getElementById('loading-overlay').classList.remove('hidden');
-    db.ref('customers/' + phone).once('value', snap => {
+    fstore.collection('customers').doc(phone).get().then(snap => {
         document.getElementById('loading-overlay').classList.add('hidden');
-        if (snap.exists()) {
+        if (snap.exists) {
             localStorage.setItem('member_phone', phone);
             showDashboard(phone);
         } else {
             alert("SĐT này chưa đăng ký thành viên!");
         }
+    }).catch(err => {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        alert("Lỗi kết nối: " + err.message);
     });
 }
 
@@ -1029,30 +1029,30 @@ function showDashboard(phone) {
     document.getElementById('main-app').classList.remove('hidden');
     document.getElementById('nav-bar').classList.remove('hidden');
 
-    // Lắng nghe dữ liệu
-    db.ref('customers/' + phone).on('value', snap => {
-        userData = snap.val();
-        
+    // Lắng nghe dữ liệu realtime từ Firestore
+    if (window._customerUnsub) window._customerUnsub(); // hủy listener cũ nếu có
+    window._customerUnsub = fstore.collection('customers').doc(phone).onSnapshot(snap => {
+        if (!snap.exists) return;
+        userData = snap.data();
+
         if(userData) {
           // === CẬP NHẬT TRANG CHỦ (MỚI) ===
-            const displayName = userData.name || "Bạn mới";
-            // Cập nhật tên ở trang chủ
+            const displayName = userData.nickname || userData.name || "Bạn mới";
             const homeNameEl = document.getElementById('home-cust-name');
             if(homeNameEl) homeNameEl.innerText = displayName;
-            
-            // Cập nhật điểm mini ở trang chủ
+
             const homePointEl = document.getElementById('home-mini-point');
-            if(homePointEl) homePointEl.innerText = (userData.points || 0).toLocaleString();
+            if(homePointEl) homePointEl.innerText = (userData.total_points || 0).toLocaleString();
             // =================================
             // 1. Hiển thị thông tin cơ bản
-            document.getElementById('user-name-display').innerText = userData.name || "Khách hàng";
-            document.getElementById('user-points').innerText = (userData.points || 0).toLocaleString();
+            document.getElementById('user-name-display').innerText = displayName;
+            document.getElementById('user-points').innerText = (userData.total_points || 0).toLocaleString();
             // Hiển thị SĐT trên card
             var phoneEl = document.getElementById('card-phone-display');
             if (phoneEl) { var ph = userData.phone || phone || ''; phoneEl.innerText = ph ? ph.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3') : '••••••••••'; }
-            
+
             // Xếp hạng
-            let p = userData.points || 0;
+            let p = userData.total_points || 0;
             let r = "Thành viên";
             if (p >= 55000) r = "Thành viên 'siu thân'";
             else if (p >= 33000) r = "Thành viên 'thân iu'";
@@ -1199,10 +1199,8 @@ function openMyGifts() {
     modal.style.flexDirection = 'column';
     var list = document.getElementById('my-gifts-list');
     list.innerHTML = '<p style="text-align:center;color:#9ca3af;padding:32px 0;">Đang tải...</p>';
-    var ref = db.ref('customers/' + curPhone + '/myGifts');
-    ref.on('value', function(snap) {
-        ref.off();
-        var gifts = [], raw = snap.val();
+    fstore.collection('customers').doc(curPhone).get().then(function(snap) {
+        var gifts = [], raw = (snap.exists && snap.data().myGifts) ? snap.data().myGifts : {};
         if (raw && typeof raw === 'object') {
             Object.entries(raw).forEach(function(e) {
                 if (e[1] && typeof e[1] === 'object') gifts.push(Object.assign({ key: e[0] }, e[1]));
@@ -1263,13 +1261,14 @@ window.handleUpdate = function() {
     }, 3000); 
 
     const oldName = (typeof userData !== 'undefined' && userData.name) ? userData.name : "---";
-    const updates = {};
-    updates['customers/' + curPhone + '/name'] = newName;
-    updates['customers/' + curPhone + '/compName'] = newComp;
-    updates['customers/' + curPhone + '/compPhone'] = newCompPhone;
-
     // 3. Gửi lệnh update
-    db.ref().update(updates)
+    fstore.collection('customers').doc(curPhone).update({
+        name:      newName,
+        nickname:  newName,
+        compName:  newComp,
+        compPhone: newCompPhone,
+        lastVisit: new Date().toISOString(),
+    })
         .then(() => {
             clearTimeout(safetyTimer);
             
@@ -1948,9 +1947,9 @@ function handleBooking() {
                     }
 
                     if (cName) {
-                        db.ref('customers/' + curPhone).update({
+                        fstore.collection('customers').doc(curPhone).update({
                             compName: cName, compPhone: cPhone
-                        });
+                        }).catch(e => console.warn('update compName:', e));
                     }
 
                     (function(){
@@ -1993,9 +1992,9 @@ function handleBooking() {
                         var writePromises = [];
                         if (finalPreferBedFee > 0) {
                             writePromises.push(
-                                db.ref('customers/' + curPhone).once('value').then(function(cs) {
-                                    const existing = (cs.val() && cs.val().pendingFee) ? cs.val().pendingFee : 0;
-                                    return db.ref('customers/' + curPhone).update({
+                                fstore.collection('customers').doc(curPhone).get().then(function(cs) {
+                                    const existing = (cs.exists && cs.data().pendingFee) ? cs.data().pendingFee : 0;
+                                    return fstore.collection('customers').doc(curPhone).update({
                                         pendingFee: existing + finalPreferBedFee,
                                         pendingFeeReason: 'Phí chọn ô bed ' + finalPreferredBed
                                     });
@@ -2210,15 +2209,15 @@ function openGiftDetail(index) {
     document.getElementById('detail-gift-desc').innerText = item.desc || '...';
     document.getElementById('detail-gift-cost').innerText = item.cost.toLocaleString() + ' ★';
     document.getElementById('detail-gift-img').src = item.img || '';
-    document.getElementById('detail-user-point').innerText = userData.points.toLocaleString() + ' ★';
-    let percent = (userData.points / item.cost) * 100; if (percent > 100) percent = 100;
+    document.getElementById('detail-user-point').innerText = userData.total_points.toLocaleString() + ' ★';
+    let percent = (userData.total_points / item.cost) * 100; if (percent > 100) percent = 100;
     document.getElementById('detail-progress').style.width = percent + '%';
 
     const btn = document.getElementById('btn-confirm-redeem');
     const msg = document.getElementById('detail-message');
     const prog = document.getElementById('detail-progress');
 
-    if (userData.points >= item.cost) {
+    if (userData.total_points >= item.cost) {
         btn.disabled = false; btn.innerHTML = 'XÁC NHẬN ĐỔI NGAY';
         btn.className = "w-full py-4 rounded-2xl bg-[#006241] text-white font-bold text-sm uppercase tracking-widest shadow-lg active:scale-[0.98] transition-transform";
         btn.onclick = () => { document.getElementById('gift-detail-modal').classList.add('hidden'); redeemGift(item.name, item.cost); };
@@ -2228,14 +2227,14 @@ function openGiftDetail(index) {
         btn.disabled = true; btn.innerHTML = 'CHƯA ĐỦ ĐIỂM';
         btn.className = "w-full py-4 rounded-2xl bg-gray-300 text-gray-500 font-bold text-sm uppercase tracking-widest cursor-not-allowed";
         prog.className = "h-full bg-red-500 rounded-full transition-all duration-500";
-        msg.classList.remove('hidden'); msg.innerText = `Thiếu ${(item.cost - userData.points).toLocaleString()} ★ nữa.`;
+        msg.classList.remove('hidden'); msg.innerText = `Thiếu ${(item.cost - userData.total_points).toLocaleString()} ★ nữa.`;
     }
     document.getElementById('gift-detail-modal').classList.remove('hidden');
 }
 
 function redeemGift(name, cost) {
     if(!confirm(`Đổi "${name}" với ${cost} điểm?`)) return;
-    const np = (userData.points || 0) - cost;
+    const np = (userData.total_points || 0) - cost;
     if(np < 0) return alert("Lỗi điểm");
 
     document.getElementById('loading-overlay').classList.remove('hidden');
@@ -2260,26 +2259,34 @@ function redeemGift(name, cost) {
         redeemedAt: now.toISOString()
     };
 
-    // Lưu vào Firebase dưới customers/{phone}/myGifts
-    db.ref('customers/' + curPhone + '/myGifts').push(giftRecord, () => {
-        db.ref('customers/' + curPhone).update({ points: np }, () => {
-            userData.points = np;
-            document.getElementById('loading-overlay').classList.add('hidden');
-            document.getElementById('gift-detail-modal').classList.add('hidden');
+    // Lưu vào Firestore customers/{phone}: myGifts + total_points
+    const giftKey = 'gift_' + Date.now();
+    const giftUpdate = {};
+    giftUpdate['myGifts.' + giftKey + '.name']       = giftRecord.name;
+    giftUpdate['myGifts.' + giftKey + '.code']       = giftRecord.code;
+    giftUpdate['myGifts.' + giftKey + '.cost']       = giftRecord.cost;
+    giftUpdate['myGifts.' + giftKey + '.date']       = giftRecord.date;
+    giftUpdate['myGifts.' + giftKey + '.time']       = giftRecord.time;
+    giftUpdate['myGifts.' + giftKey + '.used']       = giftRecord.used;
+    giftUpdate['myGifts.' + giftKey + '.redeemedAt'] = giftRecord.redeemedAt;
+    giftUpdate['total_points'] = firebase.firestore.FieldValue.increment(-cost);
+    fstore.collection('customers').doc(curPhone).update(giftUpdate).then(() => {
+        userData.total_points = np;
+        document.getElementById('loading-overlay').classList.add('hidden');
+        document.getElementById('gift-detail-modal').classList.add('hidden');
 
-            // Cập nhật điểm hiển thị
-            const pointEl = document.getElementById('user-points');
-            if(pointEl) pointEl.innerText = np.toLocaleString();
+        const pointEl = document.getElementById('user-points');
+        if(pointEl) pointEl.innerText = np.toLocaleString();
 
-            // Hiện phiếu quà đẹp
-            showGiftVoucher({ name, cost, date: dateStr, time: timeStr, code: voucherCode });
+        showGiftVoucher({ name, cost, date: dateStr, time: timeStr, code: voucherCode });
 
-            // Log Google Script
-            fetch(GOOGLE_SCRIPT_URL, {
-                method: 'POST', mode: 'no-cors',
-                body: JSON.stringify({ action: 'logRedeem', phone: curPhone, custName: userData.name, giftName: name, pointCost: cost, voucherCode })
-            }).catch(()=>{});
-        });
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST', mode: 'no-cors',
+            body: JSON.stringify({ action: 'logRedeem', phone: curPhone, custName: userData.name || userData.nickname, giftName: name, pointCost: cost, voucherCode })
+        }).catch(()=>{});
+    }).catch(err => {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        alert("Lỗi đổi quà: " + err.message);
     });
 }
 
@@ -2612,10 +2619,10 @@ function showLateCancelModal(key, timeMsg) {
             }
             // Ghi phí phạt vào hồ sơ khách → POS đọc khi check-in lần tới
             if (phone) {
-                db.ref('customers/' + phone).update({
+                fstore.collection('customers').doc(normalizePhone(phone)).update({
                     pendingFee: 10000,
                     pendingFeeReason: 'Hủy lịch bed muộn (dưới 5 phút trước giờ bắt đầu)'
-                });
+                }).catch(e => console.warn('pendingFee cancel:', e));
             }
             document.getElementById('loading-overlay').classList.add('hidden');
             showAppModal("Đã hủy", "Lịch đã bị hủy.<br>Lần đặt tiếp theo tính thêm <b>10.000đ</b>.", "⚠️");
