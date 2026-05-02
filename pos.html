@@ -2636,9 +2636,11 @@ window.onload = function() {
         document.getElementById('loading-overlay').style.display = 'none';
         alert("Lỗi kết nối: " + error.message);
     });
-db.ref("customers").on("value", snap => {
-    customerMap = snap.val() || {};
-});
+// Realtime listener Firestore customers collection → customerMap
+fstore.collection('customers').onSnapshot(snap => {
+    customerMap = {};
+    snap.forEach(doc => { customerMap[doc.id] = { phone: doc.id, ...doc.data() }; });
+}, err => console.error('[customerMap]', err));
 
     db.ref('beds').on('value', (snapshot) => {
         const data = snapshot.val();
@@ -3683,7 +3685,7 @@ function processHistoryData(data) {
                 dateStr: d.toLocaleDateString('en-GB'),
                 timeStr: d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'}),
                 fullTime: d.toLocaleString('en-GB'),
-                points: o.points || Math.floor((Number(o.total)||0)/100)
+                points: o.earnedPoints || o.points || Math.floor((Number(o.total)||0)/100)
             };
         }).reverse();
         renderHistoryList(historyData);
@@ -5792,22 +5794,32 @@ function submitNewBooking() {
     if(cleanPhone) {
         var existingCustomer = customerMap[cleanPhone];
         if (!existingCustomer) {
-            db.ref('customers/' + cleanPhone).set({
-                name: name,
-                phone: cleanPhone,
-                points: 0,
-                createdAt: new Date().toISOString(),
-                lastVisit: new Date().toISOString(),
-                compName: compName || '',
-                compPhone: compPhone || ''
-            });
+            fstore.collection('customers').doc(cleanPhone).set({
+                name:             name,
+                nickname:         name,
+                phone:            cleanPhone,
+                total_points:     0,
+                stamp_count:      0,
+                stamps_today:     0,
+                last_stamp_date:  '',
+                free_drink_available: 0,
+                joinDate:         new Date().toISOString(),
+                lastVisit:        new Date().toISOString(),
+                compName:         compName || '',
+                compPhone:        compPhone || '',
+                pendingFee:       0,
+                pendingFeeReason: '',
+                myGifts:          {},
+                source:           'pos_tc33',
+            }, { merge: true }).catch(e => console.error('create customer:', e));
         } else {
-            db.ref('customers/' + cleanPhone).update({
-                name: name,
+            fstore.collection('customers').doc(cleanPhone).update({
+                name:      name,
+                nickname:  existingCustomer.nickname || name,
                 lastVisit: new Date().toISOString(),
-                compName: compName || '',
-                compPhone: compPhone || ''
-            });
+                compName:  compName || '',
+                compPhone: compPhone || '',
+            }).catch(e => console.error('update customer:', e));
         }
     }
 
@@ -5981,7 +5993,7 @@ function checkCustomer(){
     const c = findCustomerByPhone(sdt);
     if(c){
         if(label){
-            label.innerText = `✔ ${c.name} — ${c.points} điểm`;
+            label.innerText = `✔ ${c.name} — ${c.total_points || 0} điểm`;
             label.style.color = "#22c55e";
         }
     }else{
@@ -6800,23 +6812,20 @@ function calculateSessionSpend(phone, startTimeStr, endTimeStr) {
 function setCleaningFee(phone, amount, bookingId) {
     if (!phone) return alert("Không tìm thấy SĐT khách!");
 
-    db.ref('customers/' + normalizePhone(phone)).update({
+    fstore.collection('customers').doc(normalizePhone(phone)).update({
         pendingFee: amount,
         pendingFeeReason: "Phí vệ sinh nệm (Lần trước)"
-    }, (error) => {
-        if (error) alert("Lỗi: " + error.message);
-        else {
-            let statusEl = document.getElementById(`fee-status-${bookingId}`);
-            if(statusEl) {
-                statusEl.innerText = `Đã lưu nợ ${amount.toLocaleString()}đ cho lần sau.`;
-                statusEl.classList.remove('text-gray-400');
-                statusEl.classList.add('text-green-600', 'font-bold');
-            }
-            var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
-            if (_bk) _updateBedBooking(_bk, { hasPenalty: true, penaltyAmount: amount });
-            else db.ref('bedBookings/' + bookingId).update({ hasPenalty: true, penaltyAmount: amount });
+    }).then(() => {
+        let statusEl = document.getElementById(`fee-status-${bookingId}`);
+        if(statusEl) {
+            statusEl.innerText = `Đã lưu nợ ${amount.toLocaleString()}đ cho lần sau.`;
+            statusEl.classList.remove('text-gray-400');
+            statusEl.classList.add('text-green-600', 'font-bold');
         }
-    });
+        var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
+        if (_bk) _updateBedBooking(_bk, { hasPenalty: true, penaltyAmount: amount });
+        else db.ref('bedBookings/' + bookingId).update({ hasPenalty: true, penaltyAmount: amount });
+    }).catch(err => alert("Lỗi: " + err.message));
 }
 
 var pendingFeePhone = "";
@@ -6849,26 +6858,24 @@ function submitCleaningFee(amount) {
 function setCleaningFee(phone, amount, bookingId) {
     document.getElementById('loading-overlay').style.display = 'flex';
 
-    db.ref('customers/' + normalizePhone(phone)).update({
+    fstore.collection('customers').doc(normalizePhone(phone)).update({
         pendingFee: amount,
         pendingFeeReason: "Phí vệ sinh nệm"
-    }, (error) => {
-        if (error) {
+    }).then(() => {
+        var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
+        var _doUpdate = _bk
+            ? function(cb) { _updateBedBooking(_bk, { hasPenalty: true, penaltyAmount: amount }, cb); }
+            : function(cb) { db.ref('bedBookings/' + bookingId).update({ hasPenalty: true, penaltyAmount: amount }, cb); };
+        _doUpdate(() => {
             document.getElementById('loading-overlay').style.display = 'none';
-            alert("Lỗi: " + error.message);
-        } else {
-            var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
-            var _doUpdate = _bk
-                ? function(cb) { _updateBedBooking(_bk, { hasPenalty: true, penaltyAmount: amount }, cb); }
-                : function(cb) { db.ref('bedBookings/' + bookingId).update({ hasPenalty: true, penaltyAmount: amount }, cb); };
-            _doUpdate(() => {
-                document.getElementById('loading-overlay').style.display = 'none';
-                openBedManager();
-                setTimeout(() => {
-                    showAppModal("Đã tính phí!", `Khách sẽ bị tính thêm ${amount.toLocaleString()}đ vào lần thanh toán sau.`, "✅");
-                }, 300);
-            });
-        }
+            openBedManager();
+            setTimeout(() => {
+                showAppModal("Đã tính phí!", `Khách sẽ bị tính thêm ${amount.toLocaleString()}đ vào lần thanh toán sau.`, "✅");
+            }, 300);
+        });
+    }).catch(err => {
+        document.getElementById('loading-overlay').style.display = 'none';
+        alert("Lỗi: " + err.message);
     });
 }
 
@@ -6876,10 +6883,10 @@ function deletePenalty(phone, bookingId) {
     showIOSConfirm("Bạn chắc chắn muốn XÓA phí phạt này chứ?", function() {
         document.getElementById('loading-overlay').style.display = 'flex';
 
-        db.ref('customers/' + normalizePhone(phone)).update({
+        fstore.collection('customers').doc(normalizePhone(phone)).update({
             pendingFee: 0,
-            pendingFeeReason: null
-        });
+            pendingFeeReason: '',
+        }).catch(e => console.warn('deletePenalty:', e));
 
         var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
         var _doUpdate = _bk
@@ -7150,12 +7157,10 @@ function saveOrderToFirebase(method) {
             const earnedPoints = Math.floor(currentTotal / 100);
             const normalizedSdt = (typeof normalizePhone === 'function') ? normalizePhone(finalSdt) : finalSdt;
             if (finalSdt && finalSdt !== "Khách vãng lai" && earnedPoints > 0) {
-                db.ref('customers/' + normalizedSdt).once('value', function(snap) {
-                    if (snap.exists()) {
-                        db.ref('customers/' + normalizedSdt + '/points')
-                          .set(firebase.database.ServerValue.increment(earnedPoints));
-                    }
-                });
+                fstore.collection('customers').doc(normalizedSdt).update({
+                    total_points: firebase.firestore.FieldValue.increment(earnedPoints),
+                    lastVisit:    new Date().toISOString(),
+                }).catch(e => console.warn('earnPoints:', e));
             }
             // ─────────────────────────────
 
@@ -9490,7 +9495,7 @@ function scanAndAddDebt(phone, onlyAlert) {
 
 function clearDebtAfterPayment() {
     if (_pendingDebtPhone && _pendingDebtAdded) {
-        db.ref('customers/' + _pendingDebtPhone).update({ pendingFee: 0, pendingFeeReason: null });
+        fstore.collection('customers').doc(_pendingDebtPhone).update({ pendingFee: 0, pendingFeeReason: '' }).catch(e => console.warn('clearDebt:', e));
     }
     _pendingDebtPhone = null;
     _pendingDebtAdded = false;
@@ -9503,13 +9508,13 @@ function resetDebtState() {
 function syncToCustomerDisplay(state, overrideData = {}) {
     const sdtInput = document.getElementById('kh-sdt');
     let sdt = sdtInput ? normalizePhone(sdtInput.value) : "";
-    let cust = customerMap[sdt] || { name: "Khách mới", points: 0 };
+    let cust = customerMap[sdt] || { name: "Khách mới", total_points: 0 };
 
     const payload = {
         state: state,
         updatedAt: firebase.database.ServerValue.TIMESTAMP,
         customerName: cust.name,
-        customerPoints: cust.points,
+        customerPoints: cust.total_points,
         total: currentTotal,
         cart: cart.map(i => ({
             name: i.name,
@@ -9772,18 +9777,21 @@ function scanGiftVouchers(phone) {
         if (panel) panel.classList.add('hidden');
         return;
     }
-    db.ref('customers/' + phone + '/myGifts').once('value', function(snap) {
+    fstore.collection('customers').doc(phone).get().then(function(docSnap) {
         var now = Date.now();
         var EXPIRE = 30 * 24 * 60 * 60 * 1000;
         var gifts = [];
-        snap.forEach(function(child) {
-            var g = child.val();
-            g._key = child.key;
+        var rawGifts = (docSnap.exists && docSnap.data().myGifts) ? docSnap.data().myGifts : {};
+        var expiredUpdates = {};
+        Object.entries(rawGifts).forEach(function([key, g]) {
+            g = Object.assign({}, g);
+            g._key = key;
             if (g.used) return;
             if (g.redeemedAt) {
                 var age = now - new Date(g.redeemedAt).getTime();
                 if (age > EXPIRE) {
-                    db.ref('customers/' + phone + '/myGifts/' + g._key).update({ used: true, usedAt: 'expired' });
+                    expiredUpdates['myGifts.' + key + '.used']   = true;
+                    expiredUpdates['myGifts.' + key + '.usedAt'] = 'expired';
                     return;
                 }
                 var daysLeft = Math.max(0, Math.floor((EXPIRE - age) / 86400000));
@@ -9791,6 +9799,9 @@ function scanGiftVouchers(phone) {
             }
             gifts.push(g);
         });
+        if (Object.keys(expiredUpdates).length) {
+            fstore.collection('customers').doc(phone).update(expiredUpdates).catch(e => console.warn('expireGifts:', e));
+        }
         if (gifts.length === 0) { panel.classList.add('hidden'); return; }
         panel.classList.remove('hidden');
         list.innerHTML = '';
@@ -10053,8 +10064,11 @@ function applyPickedCartItem(idx, reward, vKey, vCode, vName) {
 
 function giftVoucherMarkUsedAndReset(resetOnly) {
     if (!resetOnly && _giftVoucherKey && _giftVoucherPhone) {
-        db.ref('customers/' + _giftVoucherPhone + '/myGifts/' + _giftVoucherKey)
-          .update({ used: true, usedAt: new Date().toISOString() });
+        const _giftUpdateData = {};
+        _giftUpdateData['myGifts.' + _giftVoucherKey + '.used']   = true;
+        _giftUpdateData['myGifts.' + _giftVoucherKey + '.usedAt'] = new Date().toISOString();
+        fstore.collection('customers').doc(_giftVoucherPhone)
+          .update(_giftUpdateData).catch(e => console.warn('markGiftUsed:', e));
     }
     giftVoucherResetOld();
     _giftVoucherKey = null; _giftVoucherPhone = null; _giftOrderDiscount = null;
