@@ -1372,7 +1372,7 @@ let dgSelectedItems = []; // temp selection in picker
 const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
 // ============================================================
-// 🏆 LOYALTY — Tích điểm & Stamp (customers_xolifa)
+// 🏆 LOYALTY — Tích điểm & Stamp (customers)
 // ============================================================
 let loyaltyCustomer = null; // dữ liệu Firestore của khách hiện tại
 
@@ -2552,38 +2552,20 @@ function lookupCustomer() {
   const phone = document.getElementById('cuph').value.trim();
   if (!phone) return;
 
-  // Tra cứu song song: RTDB (voucher/points cũ) + Firestore (loyalty mới)
-  const rtPromise = db.ref('customers/' + phone).once('value');
-  const fsPromise = loyaltyFetchCustomer(phone);
-
-  Promise.all([rtPromise, fsPromise]).then(([snap, fsData]) => {
-    const data = snap.val();
-    loyaltyCustomer = fsData;
-
-    if (!data && !fsData) {
+  fstore.collection('customers').doc(phone).get().then(snap => {
+    if (!snap.exists) {
       showAddMemberHint(phone);
       return;
     }
+    const fsData = { id: phone, ...snap.data() };
+    loyaltyCustomer = fsData;
 
-    // Tên: ưu tiên nickname FS > name FS > name RT > 'Khách hàng'
-    const name    = (fsData && (fsData.nickname || fsData.name))
-                 || (data  && data.name)
-                 || 'Khách hàng';
-    const note    = (data && data.note) || '';
-    const myGifts = (data && data.myGifts) || {};
+    const name    = fsData.nickname || fsData.name || 'Khách hàng';
+    const note    = fsData.note || '';
+    const myGifts = fsData.myGifts || {};
 
-    // Points hiển thị: FS total_points ưu tiên, fallback RT points
-    const totalPoints = fsData  ? (fsData.total_points || 0)
-                      : (data   ? (data.points        || 0) : 0);
-    const stampCount  = fsData  ? (fsData.stamp_count  || 0) : 0;
-
-    curCustomer = {
-      phone, name,
-      points: (data && data.points) || 0,  // RT points gốc (legacy)
-      note, myGifts,
-      _rtName: (data && data.name) || '',  // lưu lại để dùng khi auto-create FS doc
-    };
-    renderCustomerInfo(totalPoints, stampCount);
+    curCustomer = { phone, name, note, myGifts };
+    renderCustomerInfo(fsData.total_points || 0, fsData.stamp_count || 0);
   }).catch(err => {
     console.error('Lỗi tra cứu:', err);
     toast('Lỗi tra cứu: ' + err.message);
@@ -2604,8 +2586,6 @@ function renderCustomerInfo(totalPoints, stampCount) {
   if (stampCount  > 0) ptsHtml += `${ptsHtml ? '  |  ' : ''}☕ ${stampCount}/6 Stamp`;
   const freeDrink = loyaltyCustomer ? (loyaltyCustomer.free_drink_available || 0) : 0;
   if (freeDrink > 0) ptsHtml += `${ptsHtml ? '  |  ' : ''}🎁 ${freeDrink} ly miễn phí`;
-  // Khách RT cũ chưa có FS → hiện điểm RT dạng legacy
-  if (!ptsHtml && curCustomer.points > 0) ptsHtml = `⭐ ${curCustomer.points.toLocaleString('vi-VN')} điểm (cũ)`;
   document.getElementById('custPts').textContent = ptsHtml;
   document.getElementById('custNote').textContent = curCustomer.note;
 
@@ -2645,10 +2625,10 @@ function applyVoucher(key, giftName) {
   if (!curCustomer) return;
   const phone = curCustomer.phone;
 
-  // Cập nhật used: true và usedAt ngay vào Firebase SDK
-  db.ref('customers/' + phone + '/myGifts/' + key).update({
-    used: true,
-    usedAt: new Date().toISOString()
+  // Cập nhật used: true và usedAt vào Firestore customers
+  fstore.collection('customers').doc(phone).update({
+    [`myGifts.${key}.used`]:   true,
+    [`myGifts.${key}.usedAt`]: new Date().toISOString()
   }).then(() => {
     selectedVoucher = { key, giftName };
     document.querySelectorAll('.voucher-item').forEach(el => el.classList.remove('selected'));
@@ -2701,25 +2681,19 @@ async function confirmAddMember() {
   btn.textContent = 'Đang tạo...';
 
   try {
-    // Ghi vào Firestore customers_xolifa
-    await fstore.collection('customers_xolifa').doc(phone).set({
+    // Ghi vào Firestore customers (single source of truth)
+    await fstore.collection('customers').doc(phone).set({
       phone,
       nickname: name,
       name,
       total_points: 0,
       stamp_count: 0,
+      stamps_today: 0,
+      last_stamp_date: '',
       free_drink_available: 0,
-      created_at: new Date().toISOString(),
-      status: 'active'
-    });
-
-    // Ghi vào RTDB customers (legacy)
-    await db.ref('customers/' + phone).set({
-      name,
-      phone,
-      points: 0,
-      note: '',
-      createdAt: Date.now()
+      joinDate: new Date().toISOString(),
+      lastVisit: new Date().toISOString(),
+      source: 'pos_xolifa'
     });
 
     closeAddMemberPopup();
@@ -2731,7 +2705,7 @@ async function confirmAddMember() {
       id: phone, phone, nickname: name, name,
       total_points: 0, stamp_count: 0, free_drink_available: 0
     };
-    curCustomer = { phone, name, points: 0, note: '', myGifts: {} };
+    curCustomer = { phone, name, note: '', myGifts: {} };
     renderCustomerInfo(0, 0);
 
   } catch(err) {
@@ -2754,7 +2728,7 @@ function clearCustomer() {
 function consumeFreeToGoDrink(phone) {
   if (!confirm('Xác nhận đổi 1 ly miễn phí To-Go cho khách hàng này?')) return;
   
-  fstore.collection('customers_xolifa').doc(phone).get().then(snap => {
+  fstore.collection('customers').doc(phone).get().then(snap => {
     if (!snap.exists) return;
     const data = snap.data();
     const curFree = data.free_drink_available || 0;
@@ -2780,7 +2754,7 @@ function consumeFreeToGoDrink(phone) {
 function consumeFreeToGoDrink(phone) {
   if (!confirm('Xác nhận đổi 1 ly miễn phí To-Go cho khách hàng này?')) return;
   
-  fstore.collection('customers_xolifa').doc(phone).get().then(snap => {
+  fstore.collection('customers').doc(phone).get().then(snap => {
     if (!snap.exists) return;
     const data = snap.data();
     const curFree = data.free_drink_available || 0;
@@ -2816,54 +2790,15 @@ function loyaltyTodayStr() {
   return `${y}-${m}-${d}`;
 }
 
-/** Đọc document customers_xolifa theo SĐT */
+/** Đọc document customers theo SĐT */
 async function loyaltyFetchCustomer(phone) {
   try {
-    const snap = await fstore.collection('customers_xolifa').doc(phone).get();
+    const snap = await fstore.collection('customers').doc(phone).get();
     return snap.exists ? { id: phone, ...snap.data() } : null;
   } catch(e) {
     console.warn('Loyalty fetch error:', e);
     return null;
   }
-}
-
-/**
- * Đảm bảo doc customers_xolifa tồn tại.
- * Nếu khách chỉ có ở RT (chưa có FS doc) → tự động tạo mới với nickname từ RT.
- * Trả về data hiện tại của doc (sau khi tạo nếu cần).
- */
-async function loyaltyEnsureDoc(phone) {
-  const doc = fstore.collection('customers_xolifa').doc(phone);
-  const snap = await doc.get();
-  if (snap.exists) return { doc, data: snap.data() };
-
-  // Lấy tên từ RT để điền nickname ban đầu
-  let rtName = 'Khách hàng';
-  try {
-    const rtSnap = await db.ref('customers/' + phone).once('value');
-    const rtData = rtSnap.val();
-    if (rtData && rtData.name) rtName = rtData.name;
-  } catch(_) {}
-
-  const initData = {
-    phone,
-    nickname:             rtName,
-    total_points:         0,
-    stamp_count:          0,
-    stamps_today:         0,
-    last_stamp_date:      '',
-    free_drink_available: 0,
-    joinDate:             new Date().toISOString(),
-    source:               'auto_from_rt',    // đánh dấu nguồn gốc
-    lastVisit:            new Date().toISOString(),
-  };
-  await doc.set(initData);
-  // Cập nhật lại cache autocomplete nếu có
-  if (typeof allCustomersCache !== 'undefined') {
-    allCustomersCache = allCustomersCache.filter(c => c.id !== phone);
-    allCustomersCache.unshift({ id: phone, _src: 'fs', ...initData });
-  }
-  return { doc, data: initData };
 }
 
 /** Tích điểm Tại quán: 100đ = 1 Point */
@@ -2872,11 +2807,12 @@ async function loyaltyAddPoints(phone, billAmount) {
   const earned = Math.floor(billAmount / 100);
   if (earned <= 0) return 0;
   try {
-    const { doc, data } = await loyaltyEnsureDoc(phone);
-    const cur = data.total_points || 0;
-    await doc.update({ total_points: cur + earned, lastVisit: new Date().toISOString() });
-    // Cập nhật loyaltyCustomer trong bộ nhớ để UI đồng bộ
-    if (loyaltyCustomer) loyaltyCustomer.total_points = cur + earned;
+    const ref = fstore.collection('customers').doc(phone);
+    await ref.update({
+      total_points: firebase.firestore.FieldValue.increment(earned),
+      lastVisit: new Date().toISOString()
+    });
+    if (loyaltyCustomer) loyaltyCustomer.total_points = (loyaltyCustomer.total_points || 0) + earned;
     return earned;
   } catch(e) {
     console.warn('Loyalty points error:', e);
@@ -2892,7 +2828,10 @@ async function loyaltyAddPoints(phone, billAmount) {
 async function loyaltyAddStamps(phone, drinkCount) {
   if (!phone || drinkCount <= 0) return { added: 0, newCount: 0, freeDrink: false };
   try {
-    const { doc, data } = await loyaltyEnsureDoc(phone);
+    const ref  = fstore.collection('customers').doc(phone);
+    const snap = await ref.get();
+    if (!snap.exists) return { added: 0, newCount: 0, freeDrink: false };
+    const data = snap.data();
 
     const today = loyaltyTodayStr();
     const lastDate = data.last_stamp_date || '';
@@ -2902,8 +2841,8 @@ async function loyaltyAddStamps(phone, drinkCount) {
     const canAdd = Math.min(drinkCount, Math.max(0, 2 - stampsToday));
     if (canAdd <= 0) return { added: 0, newCount: data.stamp_count || 0, freeDrink: false };
 
-    const oldStamp  = data.stamp_count || 0;
-    let newStamp  = oldStamp + canAdd;
+    const oldStamp = data.stamp_count || 0;
+    let newStamp = oldStamp + canAdd;
     let freeDrinkCount = data.free_drink_available || 0;
     let freeDrink = false;
 
@@ -2914,7 +2853,7 @@ async function loyaltyAddStamps(phone, drinkCount) {
       freeDrink = true;
     }
 
-    await doc.update({
+    await ref.update({
       stamp_count:          newStamp,
       stamps_today:         stampsToday + canAdd,
       last_stamp_date:      today,
@@ -4362,48 +4301,15 @@ let allCustomersCache = [];
 
 /**
  * Tải cache khách hàng từ CẢ HAI nguồn song song:
- *   1. Firestore customers_xolifa  → nickname, total_points, stamp_count
- *   2. RTDB     customers/         → khách cũ: name, points
- * Cùng SĐT → ưu tiên giữ bản FS, bổ sung _rt_name/_rt_points từ RT.
+ *   Firestore customers → nickname, total_points, stamp_count (single source of truth)
  */
 function fetchAllCustomersCache() {
   if (allCustomersCache.length > 0) return;
 
-  const fsPromise = fstore.collection('customers_xolifa').get().then(snap => {
-    const map = {};
-    snap.forEach(doc => { map[doc.id] = { id: doc.id, _src: 'fs', ...doc.data() }; });
-    return map;
-  });
-
-  const rtPromise = db.ref('customers').once('value').then(snap => {
-    const map = {};
-    const val = snap.val() || {};
-    Object.entries(val).forEach(([phone, d]) => {
-      map[phone] = {
-        id: phone,
-        _src: 'rt',
-        nickname:     d.name  || '',
-        total_points: d.points || 0,
-        stamp_count:  0,
-        _rt_name:     d.name  || '',
-        _rt_points:   d.points || 0,
-      };
-    });
-    return map;
-  }).catch(() => ({}));  // RTDB lỗi → bỏ qua, vẫn dùng FS
-
-  Promise.all([fsPromise, rtPromise]).then(([fsMap, rtMap]) => {
-    const merged = { ...rtMap };
-    Object.entries(fsMap).forEach(([phone, fsEntry]) => {
-      merged[phone] = {
-        ...(merged[phone] || {}),   // RT (fallback)
-        ...fsEntry,                  // FS ghi đè
-        _rt_name:   (merged[phone] && merged[phone]._rt_name)   || '',
-        _rt_points: (merged[phone] && merged[phone]._rt_points) || 0,
-      };
-    });
-    allCustomersCache = Object.values(merged)
-      .sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+  fstore.collection('customers').get().then(snap => {
+    const list = [];
+    snap.forEach(doc => { list.push({ id: doc.id, _src: 'fs', ...doc.data() }); });
+    allCustomersCache = list.sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
   }).catch(err => console.error('Cache error', err));
 }
 
@@ -4429,12 +4335,9 @@ function onPhoneInput(val) {
       c.id.startsWith(cleanVal) || c.id.includes(cleanVal));
     if (matches.length > 0) {
       ac.innerHTML = matches.slice(0, 8).map(c => {
-        const isRtOnly   = c._src === 'rt';
-        const displayName = c.nickname || c._rt_name || 'Khách hàng';
-        const pts         = c.total_points || c._rt_points || 0;
-        const srcBadge    = isRtOnly
-          ? `<span style="font-size:10px;background:#fff3cd;color:#856404;border-radius:6px;padding:1px 6px;font-weight:700;flex-shrink:0;">Khách cũ</span>`
-          : '';
+        const displayName = c.nickname || c.name || 'Khách hàng';
+        const pts         = c.total_points || 0;
+        const srcBadge    = '';
         const hlPhone = c.id.replace(
           new RegExp('(' + cleanVal + ')'),
           '<span style="color:var(--gm);font-weight:900;">$1</span>'
@@ -4488,7 +4391,7 @@ function loadCustomerList() {
   if (!container) return;
   container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Đang cập nhật danh sách...</div>';
   
-  fstore.collection('customers_xolifa').orderBy('total_points', 'desc').limit(50).get().then(snap => {
+  fstore.collection('customers').orderBy('total_points', 'desc').limit(50).get().then(snap => {
     if (snap.empty) {
       container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Chưa có khách hàng nào</div>';
       return;
@@ -4584,7 +4487,7 @@ function walletOpenAccount() {
   if (phone.length < 9) { toast('Số điện thoại không hợp lệ!'); return; }
 
   // Kiểm tra khách hàng tồn tại
-  fstore.collection('customers_xolifa').doc(phone).get().then(snap => {
+  fstore.collection('customers').doc(phone).get().then(snap => {
     if (!snap.exists) { toast('⚠ Không tìm thấy khách hàng với SĐT: ' + phone); return; }
 
     // Kiểm tra ví đã tồn tại chưa
@@ -4648,8 +4551,8 @@ function walletSearchForTopup() {
 
     _walTopupPhone = phone;
 
-    // Get customer name from customers_xolifa
-    fstore.collection('customers_xolifa').doc(phone).get().then(custSnap => {
+    // Get customer name from customers
+    fstore.collection('customers').doc(phone).get().then(custSnap => {
       const name = custSnap.exists ? (custSnap.data().nickname || 'Khách hàng') : 'Khách hàng';
       document.getElementById('wal-topup-name').textContent = name + ' (' + phone + ')';
       document.getElementById('wal-topup-bal').textContent = (wal.balance_main || 0).toLocaleString('vi-VN');
