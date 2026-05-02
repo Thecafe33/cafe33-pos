@@ -936,8 +936,17 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
           <input id="dg-min-qty" type="number" inputmode="numeric" placeholder="VD: 2" min="1" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:18px;font-weight:700;color:var(--td);background:transparent;">
         </div>
         <div class="tg-input-group" style="flex:1;">
-          <div class="tg-input-label">Giá đồng giá (đ/ly)</div>
+          <div class="tg-input-label">Đồng giá size M (đ/ly)</div>
           <input id="dg-fixed-price" type="text" inputmode="numeric" placeholder="VD: 20.000" oninput="fmtPriceInput(this)" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:18px;font-weight:700;color:var(--td);background:transparent;">
+        </div>
+      </div>
+      <div class="tg-input-row" style="margin-top:10px;">
+        <div class="tg-input-group" style="flex:1;">
+          <div class="tg-input-label">Đồng giá size L (đ/ly)</div>
+          <input id="dg-fixed-price-l" type="text" inputmode="numeric" placeholder="VD: 25.000" oninput="fmtPriceInput(this)" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:18px;font-weight:700;color:var(--gm);background:transparent;">
+        </div>
+        <div class="tg-input-group" style="flex:1;display:flex;align-items:center;padding-top:16px;">
+          <div style="font-size:11px;color:var(--gt);line-height:1.5;">Bỏ trống → size L giữ nguyên giá gốc</div>
         </div>
       </div>
     </div>
@@ -1365,6 +1374,7 @@ let dgSettings = {
   days:      'all',   // '2-6' | '2-7' | 'all'
   minQty:    2,
   fixedPrice: 20000,
+  fixedPriceL: null,  // null = giữ giá gốc cho size L
   items:     [],      // [{id, name, color}]
   promoImg:  ''       // base64 or URL
 };
@@ -1690,31 +1700,48 @@ function applyDgDiscount() {
   const dgItemIds = (dgSettings.items || []).map(i => i.id);
   if (!dgItemIds.length) return { discountAmt: 0, appliedItems: [] };
 
-  // Count how many cart items are in dg list
-  let eligibleQty = 0;
+  // Đếm tổng số ly trong bill (điều kiện là tổng bill, không chỉ món DG)
+  let totalBillQty = 0;
   const eligibleKeys = [];
   Object.entries(cart).forEach(([k, c]) => {
     if (c.isFree) return;
-    if (dgItemIds.includes(c.itemId)) {
-      eligibleQty += c.qty;
-      eligibleKeys.push(k);
-    }
+    totalBillQty += c.qty;
+    if (dgItemIds.includes(c.itemId)) eligibleKeys.push(k);
   });
 
   const minQty = dgSettings.minQty || 2;
-  if (eligibleQty < minQty) return { discountAmt: 0, appliedItems: [] };
+  if (totalBillQty < minQty) return { discountAmt: 0, appliedItems: [] };
 
-  // Discount = (originalPrice - fixedPrice) * qty for each eligible item
+  // Discount theo size: M → fixedPrice, L → fixedPriceL (null = giữ giá gốc)
   let discountAmt = 0;
   eligibleKeys.forEach(k => {
     const c = cart[k];
     const origPrice = c.price;
-    const fixedP    = dgSettings.fixedPrice || 0;
-    const diff      = origPrice - fixedP;
+    const isL = (c.size || '').toUpperCase() === 'L';
+    let fixedP;
+    if (isL) {
+      fixedP = (dgSettings.fixedPriceL != null && dgSettings.fixedPriceL > 0)
+               ? dgSettings.fixedPriceL : origPrice;
+    } else {
+      fixedP = dgSettings.fixedPrice || 0;
+    }
+    const diff = origPrice - fixedP;
     if (diff > 0) discountAmt += diff * c.qty;
   });
 
   return { discountAmt, appliedItems: eligibleKeys };
+}
+
+
+// Helper: tính giá hiển thị của 1 item sau đồng giá (dùng chung renderCart/syncDisplay/splitPay)
+function getDgDisplayPrice(c, applyDg, dgItemIds) {
+  if (!applyDg || c.isFree || !dgItemIds.includes(c.itemId)) return c.price;
+  const isL = (c.size || '').toUpperCase() === 'L';
+  if (isL) {
+    return (dgSettings.fixedPriceL != null && dgSettings.fixedPriceL > 0)
+           ? dgSettings.fixedPriceL : c.price;
+  }
+  return dgSettings.fixedPrice || c.price;
 }
 
 // Đồng giá Admin UI
@@ -1740,6 +1767,8 @@ function loadDgAdminUI() {
   if (teEl) teEl.value = dgSettings.timeEnd   || '21:00';
   if (mqEl) mqEl.value = dgSettings.minQty    || 2;
   if (fpEl) fpEl.value = dgSettings.fixedPrice ? dgSettings.fixedPrice.toLocaleString('vi-VN') : '';
+  const fpLEl = document.getElementById('dg-fixed-price-l');
+  if (fpLEl) fpLEl.value = dgSettings.fixedPriceL ? dgSettings.fixedPriceL.toLocaleString('vi-VN') : '';
   // Days radio
   const dayVal = dgSettings.days || 'all';
   const radios = document.querySelectorAll('input[name="dg-days"]');
@@ -1875,6 +1904,8 @@ function saveDgSettings() {
   const te = document.getElementById('dg-time-end').value;
   const mq = parseInt(document.getElementById('dg-min-qty').value) || 0;
   const fp = parseInt((document.getElementById('dg-fixed-price').value||'').replace(/[^0-9]/g,'')) || 0;
+  const fpLRaw = (document.getElementById('dg-fixed-price-l').value||'').replace(/[^0-9]/g,'');
+  const fpL = fpLRaw ? (parseInt(fpLRaw) || 0) : null;
   const dayRadio = document.querySelector('input[name="dg-days"]:checked');
 
   if (!ts || !te) { toast('⚠ Chọn giờ bắt đầu và kết thúc'); return; }
@@ -1885,8 +1916,9 @@ function saveDgSettings() {
   dgSettings.timeStart  = ts;
   dgSettings.timeEnd    = te;
   dgSettings.minQty     = mq;
-  dgSettings.fixedPrice = fp;
-  dgSettings.days       = dayRadio ? dayRadio.value : 'all';
+  dgSettings.fixedPrice  = fp;
+  dgSettings.fixedPriceL = fpL;
+  dgSettings.days        = dayRadio ? dayRadio.value : 'all';
 
   saveDgSettingsLocal();
   // Sync lên Firebase để kiosk nhận
@@ -1896,8 +1928,9 @@ function saveDgSettings() {
     timeEnd:    dgSettings.timeEnd,
     days:       dgSettings.days,
     minQty:     dgSettings.minQty,
-    fixedPrice: dgSettings.fixedPrice,
-    items:      dgSettings.items,
+    fixedPrice:  dgSettings.fixedPrice,
+    fixedPriceL: dgSettings.fixedPriceL ?? null,
+    items:       dgSettings.items,
     promoImg:   dgSettings.promoImg || ''
   };
   db.ref('donggia_config').set(payload).then(() => {
@@ -2185,16 +2218,13 @@ function renderCartDrawer() {
   const dgActive  = isDgActive();
   const dgItemIds = dgActive ? (dgSettings.items || []).map(i => i.id) : [];
   const dgMinQty  = dgSettings.minQty || 2;
-  const dgFixedP  = dgSettings.fixedPrice || 0;
-  let eligibleQty = 0;
-  if (dgActive && dgItemIds.length) {
-    Object.values(cart).forEach(c => { if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty; });
-  }
-  const applyDg = dgActive && eligibleQty >= dgMinQty;
+  let totalBillQty = 0;
+  if (dgActive) Object.values(cart).forEach(c => { if (!c.isFree) totalBillQty += c.qty; });
+  const applyDg = dgActive && totalBillQty >= dgMinQty;
 
   body.innerHTML = items.map(([k, c]) => {
     const isDgItem   = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
-    const dispPrice  = isDgItem ? dgFixedP : c.price;
+    const dispPrice  = getDgDisplayPrice(c, applyDg, dgItemIds);
     const lineTotal  = dispPrice * c.qty;
     const priceHtml  = isDgItem
       ? `<div style="text-align:right;">
@@ -2296,12 +2326,10 @@ function syncDisplay(state, extra) {
   const dgMinQty  = dgSettings.minQty || 2;
   const dgFixedP  = dgSettings.fixedPrice || 0;
 
-  // Đếm eligible qty để biết có đủ điều kiện không
-  let eligibleQty = 0;
-  if (dgItemIds.length) {
-    Object.values(cart).forEach(c => { if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty; });
-  }
-  const applyDg = eligibleQty >= dgMinQty && dgItemIds.length > 0;
+  // Đếm tổng bill qty
+  let totalBillQty = 0;
+  Object.values(cart).forEach(c => { if (!c.isFree) totalBillQty += c.qty; });
+  const applyDg = totalBillQty >= dgMinQty && dgItemIds.length > 0;
 
   const cartArr = Object.values(cart).map(c => {
     const isDgItem = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
@@ -2309,7 +2337,7 @@ function syncDisplay(state, extra) {
     return {
       name: c.name,
       size: c.size,
-      price: isDgItem ? dgFixedP : c.price,
+      price: getDgDisplayPrice(c, applyDg, dgItemIds),
       qty: c.qty,
       itemId: c.itemId || '',
       toppings: (c.toppings || []).map(t => ({ name: t.name, price: t.price || 0 })),
@@ -2388,14 +2416,13 @@ function renderScCartPreview() {
   const dgDisc    = getDgDiscountAmt();
   const dgItemIds = dgDisc > 0 ? (dgSettings.items || []).map(i => i.id) : [];
   const dgMinQty  = dgSettings.minQty || 2;
-  const dgFixedP  = dgSettings.fixedPrice || 0;
-  let eligibleQty = 0;
-  if (dgItemIds.length) items.forEach(c => { if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty; });
-  const applyDg = eligibleQty >= dgMinQty && dgItemIds.length > 0;
+  let totalBillQty = 0;
+  items.forEach(c => { if (!c.isFree) totalBillQty += c.qty; });
+  const applyDg = totalBillQty >= dgMinQty && dgItemIds.length > 0;
 
   el.innerHTML = items.map(c => {
     const isDgItem  = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
-    const dispPrice = isDgItem ? dgFixedP : c.price;
+    const dispPrice = getDgDisplayPrice(c, applyDg, dgItemIds);
     const lineTotal = dispPrice * c.qty;
     const priceStr  = c.isFree ? '0đ' : fmt(lineTotal);
     const color     = c.isFree ? 'var(--gm)' : (isDgItem ? 'var(--gm)' : 'var(--td)');
@@ -3928,17 +3955,14 @@ function openSplitPay() {
   const _dgActive    = isDgActive();
   const _dgItemIds   = _dgActive ? (dgSettings.items || []).map(x => x.id) : [];
   const _dgMinQty    = dgSettings.minQty || 2;
-  const _dgFixedP    = dgSettings.fixedPrice || 0;
-  const _eligibleQty = _dgActive
-    ? Object.values(cart).reduce((s, c) => s + (!c.isFree && _dgItemIds.includes(c.itemId) ? c.qty : 0), 0)
-    : 0;
-  const _applyDg = _dgActive && _eligibleQty >= _dgMinQty && _dgItemIds.length > 0;
+  const _totalBillQty = _dgActive
+    ? Object.values(cart).reduce((s, c) => s + (!c.isFree ? c.qty : 0), 0) : 0;
+  const _applyDg = _dgActive && _totalBillQty >= _dgMinQty && _dgItemIds.length > 0;
   // Tách cart thành từng unit riêng lẻ
   spItems = [];
   Object.values(cart).forEach(c => {
-    const isDgItem  = _applyDg && !c.isFree && _dgItemIds.includes(c.itemId);
     const toppingSum = (c.toppings || []).reduce((s, t) => s + t.price, 0);
-    const unitPrice = (isDgItem ? _dgFixedP : c.price) + toppingSum;
+    const unitPrice = getDgDisplayPrice(c, _applyDg, _dgItemIds) + toppingSum;
     const toppingLabel = (c.toppings || []).map(t => t.name).join(', ');
     for (let i = 0; i < c.qty; i++) {
       spItems.push({ name: c.name + (toppingLabel ? ' (+' + toppingLabel + ')' : ''), size: c.size, price: unitPrice, paid: false });
