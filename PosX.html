@@ -2549,7 +2549,8 @@ function onPhoneInput(val) {
 }
 
 function lookupCustomer() {
-  const phone = document.getElementById('cuph').value.trim();
+  let phone = document.getElementById('cuph').value.trim().replace(/[^0-9]/g, '');
+  if (/^84\d{9}$/.test(phone)) phone = '0' + phone.slice(2);
   if (!phone) return;
 
   fstore.collection('customers').doc(phone).get().then(snap => {
@@ -2699,6 +2700,14 @@ async function confirmAddMember() {
     closeAddMemberPopup();
     toast('✅ Đã thêm thành viên: ' + name);
 
+    // Cập nhật cache autocomplete ngay (không cần refetch toàn bộ)
+    const newEntry = {
+      id: phone, _src: 'fs', phone, nickname: name, name,
+      total_points: 0, stamp_count: 0, free_drink_available: 0
+    };
+    allCustomersCache = allCustomersCache.filter(c => c.id !== phone);
+    allCustomersCache.unshift(newEntry);
+
     // Tự chọn thành viên vừa tạo vào đơn hiện tại
     document.getElementById('cuph').value = phone;
     loyaltyCustomer = {
@@ -2790,21 +2799,13 @@ function loyaltyTodayStr() {
   return `${y}-${m}-${d}`;
 }
 
-/** Đọc document customers theo SĐT */
-async function loyaltyFetchCustomer(phone) {
-  try {
-    const snap = await fstore.collection('customers').doc(phone).get();
-    return snap.exists ? { id: phone, ...snap.data() } : null;
-  } catch(e) {
-    console.warn('Loyalty fetch error:', e);
-    return null;
-  }
-}
 
-/** Tích điểm Tại quán: 100đ = 1 Point */
-async function loyaltyAddPoints(phone, billAmount) {
+
+/** Tích điểm Tại quán: 100đ = 5 điểm. Thanh toán Ví: x2 (100đ = 10 điểm) */
+async function loyaltyAddPoints(phone, billAmount, isWallet = false) {
   if (!phone || billAmount <= 0) return 0;
-  const earned = Math.floor(billAmount / 100);
+  const base   = Math.floor(billAmount / 100) * 5;
+  const earned = isWallet ? base * 2 : base;
   if (earned <= 0) return 0;
   try {
     const ref = fstore.collection('customers').doc(phone);
@@ -2869,13 +2870,16 @@ async function loyaltyAddStamps(phone, drinkCount) {
 }
 
 /** Gọi sau khi thanh toán thành công để tích điểm/stamp */
-async function loyaltyProcessAfterPay(phone, billAmount, itemCount) {
+async function loyaltyProcessAfterPay(phone, billAmount, itemCount, isWallet = false) {
   if (!phone) return;
   let msg = '';
   if (!isToGo) {
     // Chế độ Tại quán — tích Point
-    const earned = await loyaltyAddPoints(phone, billAmount);
-    if (earned > 0) msg = `🌟 +${earned.toLocaleString('vi-VN')} Point tích vào tài khoản!`;
+    const earned = await loyaltyAddPoints(phone, billAmount, isWallet);
+    if (earned > 0) {
+      msg = `🌟 +${earned.toLocaleString('vi-VN')} Point tích vào tài khoản!`;
+      if (isWallet) msg += ' (x2 Ví)';
+    }
   } else {
     // Chế độ To Go — tích Stamp
     const result = await loyaltyAddStamps(phone, itemCount);
@@ -3050,14 +3054,8 @@ function confirmPay(cashGiven, cashChange) {
     const loyPhone = document.getElementById('cuph').value.trim();
     if (loyPhone) {
       const drinkCount = items.reduce((s, c) => s + c.qty, 0);
-      loyaltyProcessAfterPay(loyPhone, total, drinkCount);
+      loyaltyProcessAfterPay(loyPhone, total, drinkCount, false);
     }
-
-    // Reset
-    cart = {};
-    togoDiscountAmt = 0;
-    dgDiscountAmt = 0;
-    resetPayMethod();
     resetTogoToggle();
     document.getElementById('cuph').value = '';
     clearCustomer();
@@ -4320,8 +4318,9 @@ function onPhoneInput(val) {
   const ac = document.getElementById('phone-autocomplete');
   if (!ac) return;
 
-  // Loại bỏ ký tự không phải số
-  const cleanVal = val.replace(/[^0-9]/g, '');
+  // Loại bỏ ký tự không phải số, normalize 84xxxxxxxxx → 0xxxxxxxxx
+  let cleanVal = val.replace(/[^0-9]/g, '');
+  if (/^84\d{9}$/.test(cleanVal)) cleanVal = '0' + cleanVal.slice(2);
   document.getElementById('cuph').value = cleanVal;
 
   // Load nếu chưa từng load
@@ -4784,7 +4783,7 @@ function walletListenPayment(txId) {
       setTimeout(() => db.ref('wallet_pin_index/current').remove().catch(()=>{}), 3000);
 
       // 5. Cộng điểm tích lũy (dùng đúng hàm loyalty hiện có của PosX)
-      await loyaltyProcessAfterPay(phone, amt, Object.values(cart).reduce((s,c) => s+c.qty, 0));
+      await loyaltyProcessAfterPay(phone, amt, Object.values(cart).reduce((s,c) => s+c.qty, 0), true);
 
       // 6. Hoàn tất đơn hàng trên PosX
       document.getElementById('walQrStatus').innerHTML = '✅ Thanh toán thành công!';
@@ -4858,7 +4857,7 @@ function confirmPayWallet() {
     const loyPhone = document.getElementById('cuph').value.trim();
     if (loyPhone) {
       const drinkCount = items.reduce((s, c) => s + c.qty, 0);
-      loyaltyProcessAfterPay(loyPhone, total, drinkCount);
+      loyaltyProcessAfterPay(loyPhone, total, drinkCount, true);
     }
 
     // Reset
