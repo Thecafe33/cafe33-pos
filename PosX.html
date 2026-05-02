@@ -883,8 +883,9 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 
     <!-- Trạng thái hiện tại -->
     <div id="dg-status-banner" style="display:none;margin:0 16px 16px;background:linear-gradient(135deg,#1a4a2e,#1e6b3c);border-radius:18px;padding:16px 20px;color:#fff;">
-      <div style="font-size:11px;font-weight:700;letter-spacing:.8px;opacity:.8;margin-bottom:4px;text-transform:uppercase;">🟢 ĐANG HOẠT ĐỘNG</div>
-      <div id="dg-status-text" style="font-size:16px;font-weight:700;"></div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.8px;opacity:.8;margin-bottom:6px;text-transform:uppercase;">🟢 ĐANG HOẠT ĐỘNG</div>
+      <div id="dg-status-text" style="font-size:28px;font-weight:900;letter-spacing:-.5px;line-height:1.1;"></div>
+      <div id="dg-status-sub" style="font-size:12px;font-weight:600;opacity:.75;margin-top:4px;"></div>
     </div>
 
     <!-- Kích hoạt -->
@@ -1762,7 +1763,16 @@ function updDgStatusBanner() {
   if (isDgActive()) {
     banner.style.display = 'block';
     const items = (dgSettings.items || []).map(i => i.name).join(', ');
-    text.textContent = `${dgSettings.timeStart}–${dgSettings.timeEnd} · Đồng giá ${fmt(dgSettings.fixedPrice||0)}/ly · ${items}`;
+    // Dòng to: chỉ highlight giá M
+    text.textContent = `${fmt(dgSettings.fixedPrice||0)}/ly`;
+    // Dòng nhỏ: khung giờ + chênh lệch size L + danh sách món
+    const subEl = document.getElementById('dg-status-sub');
+    if (subEl) {
+      const lDiff = (dgSettings.fixedPriceL != null && dgSettings.fixedPriceL > 0 && dgSettings.fixedPrice)
+        ? ` · Size L +${fmt(dgSettings.fixedPriceL - dgSettings.fixedPrice)}`
+        : '';
+      subEl.textContent = `${dgSettings.timeStart}–${dgSettings.timeEnd}${lDiff} · ${items}`;
+    }
     const badge = document.getElementById('dg-sidebar-badge');
     if (badge) badge.style.display = 'inline-block';
   } else {
