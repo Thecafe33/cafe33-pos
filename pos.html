@@ -1196,7 +1196,7 @@ input, button, select, textarea { font-size: 1rem; }
 
                         <div>
                             <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:8px;">Áp dụng tại</label>
-                            <select id="df-scope" onchange="dfUpdateCodePrefix()"
+                            <select id="df-scope" onchange="dfUpdateCodePrefix();dfUpdateTargetPanelsByScope()"
                                 style="width:100%;padding:12px 16px;border-radius:14px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.9rem;font-weight:700;color:#111827;box-sizing:border-box;cursor:pointer;">
                                 <option value="cafe33">🔵 The Cafe 33</option>
                                 <option value="xolifa">🟣 XOLIFA</option>
@@ -1246,22 +1246,53 @@ input, button, select, textarea { font-size: 1rem; }
                         </div>
 
                         <div id="df-target-row">
-                            <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:8px;">Chọn món áp dụng</label>
-                            <div style="position:relative;">
-                                <input id="df-target-search" type="text" placeholder="🔍 Tìm tên món..."
-                                    style="width:100%;padding:13px 18px;border-radius:24px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.95rem;font-weight:600;color:#1f2937;box-sizing:border-box;transition:border-color 0.2s;"
-                                    oninput="dfFilterMenu(this.value)"
-                                    onfocus="this.style.borderColor='#006241';dfShowMenuDropdown()"
-                                    onblur="setTimeout(dfHideMenuDropdown,200)">
-                                <div id="df-menu-dropdown"
-                                    style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:white;border-radius:24px;box-shadow:0 8px 32px rgba(0,0,0,0.14);z-index:999;max-height:200px;overflow-y:auto;border:2px solid #f0fdf4;"
-                                    class="custom-scrollbar"></div>
+                            <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:10px;">Chọn món áp dụng</label>
+
+                            <!-- Vùng chọn món The Cafe 33 -->
+                            <div id="df-target-cafe33-wrap" style="margin-bottom:10px;">
+                                <div style="font-size:0.62rem;font-weight:900;color:#006241;background:#F0FDF4;border-radius:12px 12px 0 0;padding:6px 14px;border:2px solid #bbf7d0;border-bottom:none;display:flex;align-items:center;gap:6px;">
+                                    🔵 The Cafe 33
+                                </div>
+                                <div style="border:2px solid #bbf7d0;border-top:none;border-radius:0 0 16px 16px;padding:10px;background:white;position:relative;">
+                                    <input id="df-target-search-c33" type="text" placeholder="🔍 Tìm món Cafe 33..."
+                                        style="width:100%;padding:10px 14px;border-radius:18px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.88rem;font-weight:600;color:#1f2937;box-sizing:border-box;transition:border-color 0.2s;"
+                                        oninput="dfFilterMenuPanel('c33',this.value)"
+                                        onfocus="this.style.borderColor='#006241';dfShowPanelDropdown('c33')"
+                                        onblur="setTimeout(function(){dfHidePanelDropdown('c33')},200)">
+                                    <div id="df-menu-dropdown-c33"
+                                        style="display:none;position:absolute;top:calc(100% - 6px);left:10px;right:10px;background:white;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.14);z-index:999;max-height:180px;overflow-y:auto;border:2px solid #bbf7d0;"
+                                        class="custom-scrollbar"></div>
+                                    <div id="df-selected-c33" style="display:none;margin-top:8px;padding:9px 14px;background:#F0FDF4;border-radius:14px;border:2px solid #bbf7d0;align-items:center;justify-content:space-between;">
+                                        <span id="df-selected-c33-name" style="font-weight:700;font-size:0.85rem;color:#166534;"></span>
+                                        <button onclick="dfClearPanel('c33')" style="background:none;border:none;cursor:pointer;font-size:1rem;color:#4ade80;font-weight:900;padding:0 4px;">✕</button>
+                                    </div>
+                                </div>
                             </div>
-                            <div id="df-selected-item" style="display:none;margin-top:8px;padding:11px 16px;background:#F0FDF4;border-radius:22px;border:2px solid #bbf7d0;display:none;align-items:center;justify-content:space-between;">
-                                <span id="df-selected-item-name" style="font-weight:700;font-size:0.9rem;color:#166534;"></span>
-                                <button onclick="dfClearSelectedItem()" style="background:none;border:none;cursor:pointer;font-size:1rem;color:#4ade80;font-weight:900;padding:0 4px;">✕</button>
+
+                            <!-- Vùng chọn món XOLIFA -->
+                            <div id="df-target-xolifa-wrap" style="margin-bottom:4px;">
+                                <div style="font-size:0.62rem;font-weight:900;color:#5B21B6;background:#F5F3FF;border-radius:12px 12px 0 0;padding:6px 14px;border:2px solid #c4b5fd;border-bottom:none;display:flex;align-items:center;gap:6px;">
+                                    🟣 XOLIFA
+                                </div>
+                                <div style="border:2px solid #c4b5fd;border-top:none;border-radius:0 0 16px 16px;padding:10px;background:white;position:relative;">
+                                    <input id="df-target-search-xl" type="text" placeholder="🔍 Tìm món XOLIFA..."
+                                        style="width:100%;padding:10px 14px;border-radius:18px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.88rem;font-weight:600;color:#1f2937;box-sizing:border-box;transition:border-color 0.2s;"
+                                        oninput="dfFilterMenuPanel('xl',this.value)"
+                                        onfocus="this.style.borderColor='#7C3AED';dfShowPanelDropdown('xl')"
+                                        onblur="setTimeout(function(){dfHidePanelDropdown('xl')},200)">
+                                    <div id="df-menu-dropdown-xl"
+                                        style="display:none;position:absolute;top:calc(100% - 6px);left:10px;right:10px;background:white;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.14);z-index:999;max-height:180px;overflow-y:auto;border:2px solid #c4b5fd;"
+                                        class="custom-scrollbar"></div>
+                                    <div id="df-selected-xl" style="display:none;margin-top:8px;padding:9px 14px;background:#F5F3FF;border-radius:14px;border:2px solid #c4b5fd;align-items:center;justify-content:space-between;">
+                                        <span id="df-selected-xl-name" style="font-weight:700;font-size:0.85rem;color:#5B21B6;"></span>
+                                        <button onclick="dfClearPanel('xl')" style="background:none;border:none;cursor:pointer;font-size:1rem;color:#a78bfa;font-weight:900;padding:0 4px;">✕</button>
+                                    </div>
+                                </div>
                             </div>
+
+                            <!-- Hidden inputs vẫn giữ để tương thích save logic -->
                             <input type="hidden" id="df-target">
+                            <input type="hidden" id="df-target-search"><!-- kept for compat -->
                         </div>
 
                         <div id="df-condition-row" style="display:none;">
@@ -10396,11 +10427,15 @@ function discountFormLoad(key, d) {
     document.getElementById('df-cost').value = d.cost || 0;
     document.getElementById('df-limit').value = d.usageLimit || 0;
     dfPreviewImg(d.img || '');
-    var s = document.getElementById('df-target-search');
-    var h = document.getElementById('df-target');
-    if (s) s.value = d.targetItem || '';
-    if (h) h.value = d.targetItem || '';
-    dfShowSelectedItem(d.targetItem || '');
+    // Populate dual panels theo menuSource
+    dfClearPanel('c33'); dfClearPanel('xl');
+    var ms = d.menuSource || 'cafe33';
+    if (d.targetItem) {
+        if (ms === 'cafe33' || ms === 'both') dfSelectPanelItem('c33', d.targetItem);
+        if (ms === 'xolifa') dfSelectPanelItem('xl', d.targetItem);
+        if (ms === 'both' && d.targetItemXl) dfSelectPanelItem('xl', d.targetItemXl);
+        else if (ms === 'both' && !d.targetItemXl) dfSelectPanelItem('xl', d.targetItem);
+    }
     _dfType = d.type || 'item';
     _dfActive = d.active !== false;
     dfSetType(_dfType);
@@ -10429,7 +10464,8 @@ function discountFormClear() {
     document.getElementById('df-limit').value = '0';
     var scopeEl = document.getElementById('df-scope');
     if (scopeEl) scopeEl.value = 'cafe33';
-    dfShowSelectedItem('');
+    dfClearPanel('c33'); dfClearPanel('xl');
+    dfUpdateTargetPanelsByScope();
     dfPreviewImg('');
     _dfType = 'item'; _dfActive = true;
     dfSetType('item');
@@ -10457,88 +10493,105 @@ function dfPreviewImg(url) {
     }
 }
 
-function dfShowMenuDropdown() {
-    dfFilterMenu(document.getElementById('df-target-search').value || '');
-    var dd = document.getElementById('df-menu-dropdown');
-    if (dd) dd.style.display = 'block';
+// ── Dual-panel item picker (Cafe33 + XOLIFA) ──────────────────
+// panel: 'c33' | 'xl'
+var _dfPanelCfg = {
+    c33: { srcFn: function() { return typeof menu !== 'undefined' ? menu : []; }, accentColor: '#006241', hoverBg: '#F0FDF4' },
+    xl:  { srcFn: function() { return window._menuXolifaData || []; },            accentColor: '#7C3AED', hoverBg: '#F5F3FF' }
+};
+
+function dfShowPanelDropdown(panel) {
+    dfFilterMenuPanel(panel, document.getElementById('df-target-search-' + panel).value || '');
 }
-function dfHideMenuDropdown() {
-    var dd = document.getElementById('df-menu-dropdown');
+function dfHidePanelDropdown(panel) {
+    var dd = document.getElementById('df-menu-dropdown-' + panel);
     if (dd) dd.style.display = 'none';
 }
-function dfFilterMenu(q) {
-    var dd = document.getElementById('df-menu-dropdown');
+function dfFilterMenuPanel(panel, q) {
+    var dd = document.getElementById('df-menu-dropdown-' + panel);
     if (!dd) return;
-
-    // Gộp cả 2 menu, đánh dấu nguồn
-    var cafe33Items = (typeof menu !== 'undefined' ? menu : []).map(function(m) {
-        return Object.assign({}, m, { _source: 'cafe33' });
-    });
-    var xolifaItems = (window._menuXolifaData || []).map(function(m) {
-        return Object.assign({}, m, { _source: 'xolifa' });
-    });
-    var allItems = cafe33Items.concat(xolifaItems);
-
+    var cfg = _dfPanelCfg[panel];
+    var items = cfg.srcFn();
     var lq = q.trim().toLowerCase();
-    var fil = lq === '' ? allItems : allItems.filter(function(m) {
+    var fil = lq === '' ? items : items.filter(function(m) {
         return m.name && m.name.toLowerCase().indexOf(lq) !== -1;
     });
-
     dd.innerHTML = '';
     if (fil.length === 0) {
-        dd.innerHTML = '<div style="padding:14px;text-align:center;color:#9ca3af;font-size:0.85rem;">Không tìm thấy</div>';
+        dd.innerHTML = '<div style="padding:12px;text-align:center;color:#9ca3af;font-size:0.82rem;">Không tìm thấy</div>';
     } else {
-        var lastSource = null;
-        fil.slice(0, 60).forEach(function(m) {
-            // Header nhóm khi nguồn thay đổi
-            if (m._source !== lastSource) {
-                lastSource = m._source;
-                var header = document.createElement('div');
-                var isXolifa = m._source === 'xolifa';
-                header.style.cssText = 'padding:6px 18px 4px;font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:' + (isXolifa ? '#5B21B6' : '#006241') + ';background:' + (isXolifa ? '#F5F3FF' : '#F0FDF4') + ';border-bottom:1px solid ' + (isXolifa ? '#EDE9FE' : '#DCFCE7') + ';';
-                header.innerText = isXolifa ? '🟣 XOLIFA' : '🔵 The Cafe 33';
-                dd.appendChild(header);
-            }
+        fil.slice(0, 50).forEach(function(m) {
             var row = document.createElement('div');
-            row.style.cssText = 'padding:11px 18px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;';
-            row.onmouseover = function() { this.style.background = '#F0FDF4'; };
+            row.style.cssText = 'padding:10px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;';
+            row.onmouseover = function() { this.style.background = cfg.hoverBg; };
             row.onmouseout = function() { this.style.background = ''; };
             var nm = document.createElement('span');
-            nm.style.cssText = 'font-weight:600;font-size:0.9rem;color:#1f2937;';
+            nm.style.cssText = 'font-weight:600;font-size:0.88rem;color:#1f2937;';
             nm.innerText = m.name;
             var pr = document.createElement('span');
-            pr.style.cssText = 'font-size:0.75rem;color:#9ca3af;font-weight:700;';
+            pr.style.cssText = 'font-size:0.72rem;color:#9ca3af;font-weight:700;flex-shrink:0;margin-left:8px;';
             pr.innerText = m.priceM ? m.priceM.toLocaleString() + 'đ' : '';
             row.appendChild(nm);
             row.appendChild(pr);
-            row.addEventListener('click', function() { dfSelectMenuItem(m.name); });
+            row.addEventListener('click', function() { dfSelectPanelItem(panel, m.name); });
             dd.appendChild(row);
         });
     }
     dd.style.display = 'block';
 }
-function dfSelectMenuItem(name) {
-    document.getElementById('df-target-search').value = name;
-    document.getElementById('df-target').value = name;
-    dfHideMenuDropdown();
-    dfShowSelectedItem(name);
-    document.getElementById('df-target-search').style.borderColor = 'transparent';
+function dfSelectPanelItem(panel, name) {
+    var searchEl  = document.getElementById('df-target-search-' + panel);
+    var selectedEl = document.getElementById('df-selected-' + panel);
+    var nameEl    = document.getElementById('df-selected-' + panel + '-name');
+    if (searchEl)  searchEl.value = name;
+    if (nameEl)    nameEl.innerText = '✓ ' + name;
+    if (selectedEl) selectedEl.style.display = 'flex';
+    dfHidePanelDropdown(panel);
+    if (searchEl) searchEl.style.borderColor = 'transparent';
+    dfSyncTargetHidden();
 }
+function dfClearPanel(panel) {
+    var searchEl   = document.getElementById('df-target-search-' + panel);
+    var selectedEl = document.getElementById('df-selected-' + panel);
+    if (searchEl)  searchEl.value = '';
+    if (selectedEl) selectedEl.style.display = 'none';
+    dfSyncTargetHidden();
+}
+function dfSyncTargetHidden() {
+    // Ghi giá trị vào #df-target dạng "c33:Tên|xl:Tên" để save logic đọc
+    var c33Val = (document.getElementById('df-target-search-c33') || {}).value || '';
+    var xlVal  = (document.getElementById('df-target-search-xl') || {}).value || '';
+    var parts = [];
+    if (c33Val.trim()) parts.push('c33:' + c33Val.trim());
+    if (xlVal.trim())  parts.push('xl:'  + xlVal.trim());
+    var hidden = document.getElementById('df-target');
+    if (hidden) hidden.value = parts.join('|');
+}
+
+// Compat shims cho code cũ còn gọi
+function dfShowMenuDropdown() { dfShowPanelDropdown('c33'); }
+function dfHideMenuDropdown() { dfHidePanelDropdown('c33'); dfHidePanelDropdown('xl'); }
+function dfFilterMenu(q) { dfFilterMenuPanel('c33', q); }
+function dfSelectMenuItem(name) { dfSelectPanelItem('c33', name); }
 function dfShowSelectedItem(name) {
-    var row = document.getElementById('df-selected-item');
-    var nameEl = document.getElementById('df-selected-item-name');
-    if (!row || !nameEl) return;
-    if (name) {
-        nameEl.innerText = '✓ ' + name;
-        row.style.display = 'flex';
-    } else {
-        row.style.display = 'none';
-    }
+    // Clear cả 2 panels nếu gọi với ''
+    if (!name) { dfClearPanel('c33'); dfClearPanel('xl'); }
 }
-function dfClearSelectedItem() {
-    document.getElementById('df-target-search').value = '';
-    document.getElementById('df-target').value = '';
-    dfShowSelectedItem('');
+function dfClearSelectedItem() { dfClearPanel('c33'); dfClearPanel('xl'); }
+
+// Ẩn/hiện vùng chọn món theo scope
+function dfUpdateTargetPanelsByScope() {
+    var scope = (document.getElementById('df-scope') || {}).value || 'cafe33';
+    var c33Wrap = document.getElementById('df-target-cafe33-wrap');
+    var xlWrap  = document.getElementById('df-target-xolifa-wrap');
+    if (!c33Wrap || !xlWrap) return;
+    var showC33 = (scope === 'cafe33' || scope === 'both');
+    var showXl  = (scope === 'xolifa' || scope === 'both');
+    c33Wrap.style.display = showC33 ? 'block' : 'none';
+    xlWrap.style.display  = showXl  ? 'block' : 'none';
+    // Nếu ẩn vùng nào thì clear luôn
+    if (!showC33) dfClearPanel('c33');
+    if (!showXl)  dfClearPanel('xl');
 }
 
 function dfSetType(type) {
@@ -10629,6 +10682,12 @@ function discountFormSave() {
     var img   = (document.getElementById('df-img').value || '').trim();
     var desc  = (document.getElementById('df-desc').value || '').trim();
     var target = (document.getElementById('df-target').value || '').trim().toLowerCase();
+    // Đọc riêng từng panel
+    var targetC33 = (document.getElementById('df-target-search-c33') || {}).value || '';
+    var targetXl  = (document.getElementById('df-target-search-xl') || {}).value || '';
+    // target chính = panel nào có giá trị (ưu tiên c33 nếu cả 2 có — scope=both)
+    var targetMain = (targetC33 || targetXl).trim().toLowerCase();
+    if (!target) target = targetMain; // fallback về hidden nếu rỗng
     var value  = parseFloat(document.getElementById('df-value').value) || 0;
     var cost   = parseInt(document.getElementById('df-cost').value) || 0;
     var limit  = parseInt(document.getElementById('df-limit').value) || 0;
@@ -10645,7 +10704,7 @@ function discountFormSave() {
     }
 
     if (!label) return alert('Vui lòng nhập tên quà!');
-    if (_dfType === 'item' && !target) return alert('Vui lòng chọn món áp dụng!');
+    if (_dfType === 'item' && !targetC33 && !targetXl) return alert('Vui lòng chọn món áp dụng!');
 
     var condCategory = (document.getElementById('df-cond-category') || {}).value || '';
     var condMaxPrice = parseInt((document.getElementById('df-cond-maxprice') || {}).value) || 0;
@@ -10665,12 +10724,22 @@ function discountFormSave() {
         usedCount:  0,
         scope:      scope
     };
-    // Xác định menuSource cho voucher theo món
+    // Xác định targetItem và menuSource từ 2 panel
     if (_dfType === 'item' || _dfType === 'item_free' || _dfType === 'item_upsize') {
-        if (target) record.targetItem = target;
-        var inCafe33 = !!(window._menuData || []).find(function(m) { return m.name && m.name.toLowerCase() === target; });
-        var inXolifa  = !!(window._menuXolifaData || []).find(function(m) { return m.name && m.name.toLowerCase() === target; });
-        record.menuSource = (inCafe33 && inXolifa) ? 'both' : inXolifa ? 'xolifa' : 'cafe33';
+        var hasC33 = !!targetC33.trim();
+        var hasXl  = !!targetXl.trim();
+        if (hasC33 && hasXl) {
+            // Scope=both, 2 món có thể khác tên — lưu cả 2
+            record.targetItem   = targetC33.trim().toLowerCase();
+            record.targetItemXl = targetXl.trim().toLowerCase();
+            record.menuSource   = 'both';
+        } else if (hasXl) {
+            record.targetItem = targetXl.trim().toLowerCase();
+            record.menuSource = 'xolifa';
+        } else if (hasC33) {
+            record.targetItem = targetC33.trim().toLowerCase();
+            record.menuSource = 'cafe33';
+        }
     }
     if (_dfType === 'item_free' || _dfType === 'item_upsize') {
         if (condCategory) record.conditionCategory = condCategory;
