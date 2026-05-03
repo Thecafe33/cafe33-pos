@@ -2637,14 +2637,6 @@ window.onload = function() {
         if (data) {
             menu = Array.isArray(data) ? data : Object.values(data);
             window._menuData = menu;
-            window._menuXolifaData = window._menuXolifaData || []; // init if not loaded yet
-            // Load menu XOLIFA song song (nếu chưa có)
-            if (!window._menuXolifaData.length) {
-                db.ref('menu_xolifa').once('value', function(snapX) {
-                    var dataX = snapX.val() || {};
-                    window._menuXolifaData = Object.values(dataX).filter(Boolean);
-                });
-            }
             renderTabs();
             renderMenu();
         } else {
@@ -2653,6 +2645,13 @@ window.onload = function() {
     }, (error) => {
         document.getElementById('loading-overlay').style.display = 'none';
         alert("Lỗi kết nối: " + error.message);
+    });
+
+    // Load menu XOLIFA độc lập để dùng khi tạo voucher
+    window._menuXolifaData = [];
+    db.ref('menu_xolifa').on('value', function(snapX) {
+        var dataX = snapX.val() || {};
+        window._menuXolifaData = Object.values(dataX).filter(Boolean);
     });
 // Realtime listener Firestore customers collection → customerMap
 fstore.collection('customers').onSnapshot(snap => {
@@ -10470,15 +10469,36 @@ function dfHideMenuDropdown() {
 function dfFilterMenu(q) {
     var dd = document.getElementById('df-menu-dropdown');
     if (!dd) return;
-    var items = (typeof menu !== 'undefined' ? menu : []);
-    var fil = q.trim() === '' ? items : items.filter(function(m) {
-        return m.name && m.name.toLowerCase().indexOf(q.toLowerCase()) !== -1;
+
+    // Gộp cả 2 menu, đánh dấu nguồn
+    var cafe33Items = (typeof menu !== 'undefined' ? menu : []).map(function(m) {
+        return Object.assign({}, m, { _source: 'cafe33' });
     });
+    var xolifaItems = (window._menuXolifaData || []).map(function(m) {
+        return Object.assign({}, m, { _source: 'xolifa' });
+    });
+    var allItems = cafe33Items.concat(xolifaItems);
+
+    var lq = q.trim().toLowerCase();
+    var fil = lq === '' ? allItems : allItems.filter(function(m) {
+        return m.name && m.name.toLowerCase().indexOf(lq) !== -1;
+    });
+
     dd.innerHTML = '';
     if (fil.length === 0) {
         dd.innerHTML = '<div style="padding:14px;text-align:center;color:#9ca3af;font-size:0.85rem;">Không tìm thấy</div>';
     } else {
-        fil.slice(0, 40).forEach(function(m) {
+        var lastSource = null;
+        fil.slice(0, 60).forEach(function(m) {
+            // Header nhóm khi nguồn thay đổi
+            if (m._source !== lastSource) {
+                lastSource = m._source;
+                var header = document.createElement('div');
+                var isXolifa = m._source === 'xolifa';
+                header.style.cssText = 'padding:6px 18px 4px;font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:' + (isXolifa ? '#5B21B6' : '#006241') + ';background:' + (isXolifa ? '#F5F3FF' : '#F0FDF4') + ';border-bottom:1px solid ' + (isXolifa ? '#EDE9FE' : '#DCFCE7') + ';';
+                header.innerText = isXolifa ? '🟣 XOLIFA' : '🔵 The Cafe 33';
+                dd.appendChild(header);
+            }
             var row = document.createElement('div');
             row.style.cssText = 'padding:11px 18px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;';
             row.onmouseover = function() { this.style.background = '#F0FDF4'; };
