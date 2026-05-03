@@ -2707,17 +2707,36 @@ function renderCustomerInfo(totalPoints, stampCount) {
   }
 
   if (available.length > 0) {
-    vHtml += available.map(([key, g]) => `
-      <div class="voucher-item" id="vi_${key}">
-        <span class="voucher-name">🎁 ${g.giftName || key}</span>
-        <button class="voucher-btn" onclick="applyVoucher('${key}','${(g.giftName||key).replace(/'/g,"\\'")}','${g.rewardKey||''}')">Áp dụng</button>
-      </div>`).join('');
+    vHtml += available.map(([key, g]) => {
+      const safeName = (g.name || key).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+      const safeCode = (g.code || '').replace(/&/g,'&amp;');
+      const dName = (g.name || key).replace(/'/g, "\'");
+      const dCode = (g.code || '');
+      const dRewKey = (g.rewardKey || '');
+      return `<div class="voucher-item" id="vi_${key}">
+        <div style="flex:1;min-width:0;">
+          <div class="voucher-name">🎁 ${safeName}</div>
+          ${safeCode ? `<div style="font-size:10px;color:#aaa;font-weight:600;margin-top:1px;">${safeCode}</div>` : ''}
+        </div>
+        <button class="voucher-btn" data-key="${key}" data-name="${safeName}" data-code="${safeCode}" data-rewkey="${dRewKey}">Áp dụng</button>
+      </div>`;
+    }).join('');
   }
 
   if (!vHtml) {
     vList.innerHTML = `<div style="font-size:12px;color:#bbb;text-align:center;padding:4px">Không có voucher khả dụng</div>`;
   } else {
     vList.innerHTML = vHtml;
+    // Gán sự kiện click cho các nút voucher (tránh dùng inline onclick để không bị lỗi escape)
+    vList.querySelectorAll('.voucher-btn[data-key]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const k = this.dataset.key;
+        const n = this.dataset.name;
+        const c = this.dataset.code;
+        const r = this.dataset.rewkey;
+        applyVoucher(k, n, r, c);
+      });
+    });
   }
   panel.classList.add('show');
 }
@@ -2907,7 +2926,7 @@ function removeAppliedDiscount() {
 }
 
 // ── Gift Voucher từ myGifts khách hàng ──────────────────────────
-function applyVoucher(key, giftName, rewardKey) {
+function applyVoucher(key, giftName, rewardKey, giftCode) {
   if (!curCustomer) return;
   if (_appliedDiscountId)  { toast('Bill đã có mã giảm giá'); return; }
   if (_giftVoucherKey)     { removeGiftVoucher(); }
@@ -2992,8 +3011,8 @@ function applyVoucher(key, giftName, rewardKey) {
       applyReward(r);
     });
   } else {
-    // Fallback: tìm theo code
-    const codeUp = (giftName || '').toUpperCase().trim();
+    // Fallback: tìm theo code (dùng giftCode nếu có, không thì thử giftName)
+    const codeUp = (giftCode || giftName || '').toUpperCase().trim();
     let found = null;
     Object.keys(_discountCache).forEach(k => {
       if (!found && _discountCache[k].code && _discountCache[k].code.toUpperCase() === codeUp) found = _discountCache[k];
@@ -3026,13 +3045,14 @@ function removeGiftVoucher() {
 
 function openPickCartModal(reward, vKey, vName) {
   // Modal chọn món khi type = item_free hoặc item_upsize
-  // Hiện tại dùng confirm đơn giản, có thể nâng cấp UI sau
   const isUpsize = reward.type === 'item_upsize';
   const cartItems = Object.entries(cart).filter(([,ci]) => !ci._vKey && !ci._discountId);
   if (!cartItems.length) { toast('Không có món để áp dụng'); return; }
 
-  const choices = cartItems.map(([k,ci], i) => `${i+1}. ${ci.name} (${ci.size}) - ${ci.price.toLocaleString('vi-VN')}đ`).join('\n');
-  const idx = prompt((isUpsize ? 'Chọn món để upsize miễn phí:\n' : 'Chọn món miễn phí:\n') + choices + '\n\nNhập số thứ tự:');
+  // Tạo danh sách lựa chọn
+  const choices = cartItems.map(([k,ci], i) => (i+1) + '. ' + ci.name + ' (' + ci.size + ') - ' + ci.price.toLocaleString('vi-VN') + 'đ').join('\n');
+  const prompt_title = (isUpsize ? 'Chọn món để upsize miễn phí:\n' : 'Chọn món miễn phí:\n') + choices + '\n\nNhập số thứ tự:';
+  const idx = prompt(prompt_title);
   const chosen = cartItems[parseInt(idx) - 1];
   if (!chosen) return;
 
@@ -3040,7 +3060,6 @@ function openPickCartModal(reward, vKey, vName) {
   if (isUpsize) {
     chosenItem._vKey = vKey; chosenItem._giftType = 'item_upsize';
     chosenItem._giftLabel = vName; chosenItem._originalPrice = chosenItem.price;
-    // Upsize: free price delta (giữ nguyên, quán tự xử lý)
     toast('🎁 Upsize miễn phí: ' + chosenItem.name);
   } else {
     // item_free: set giá 0
