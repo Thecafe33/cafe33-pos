@@ -2690,9 +2690,13 @@ function renderCustomerInfo(totalPoints, stampCount) {
   document.getElementById('custPts').textContent = ptsHtml;
   document.getElementById('custNote').textContent = curCustomer.note;
 
-  // Lọc Voucher chưa dùng (used !== true)
+  // Lọc Voucher chưa dùng (used !== true) và đúng scope XOLIFA
   const gifts = curCustomer.myGifts || {};
-  const available = Object.entries(gifts).filter(([, g]) => !g.used);
+  const available = Object.entries(gifts).filter(([, g]) => {
+    if (g.used) return false;
+    const s = g.scope || 'cafe33'; // gift cũ chưa migrate → mặc định cafe33
+    return s === 'xolifa' || s === 'both';
+  });
 
   const vList = document.getElementById('voucherList');
   let vHtml = '';
@@ -2713,10 +2717,15 @@ function renderCustomerInfo(totalPoints, stampCount) {
       const dName = (g.name || key).replace(/'/g, "\'");
       const dCode = (g.code || '');
       const dRewKey = (g.rewardKey || '');
+      const gScp = g.scope || 'cafe33';
+      const scopeTag = gScp === 'both'
+        ? `<span style="font-size:9px;color:#166534;font-weight:800;background:#DCFCE7;padding:1px 6px;border-radius:999px;">🟢 Cả 2 quán</span>`
+        : `<span style="font-size:9px;color:#5B21B6;font-weight:800;background:#EDE9FE;padding:1px 6px;border-radius:999px;">🟣 XOLIFA</span>`;
       return `<div class="voucher-item" id="vi_${key}">
         <div style="flex:1;min-width:0;">
           <div class="voucher-name">🎁 ${safeName}</div>
           ${safeCode ? `<div style="font-size:10px;color:#aaa;font-weight:600;margin-top:1px;">${safeCode}</div>` : ''}
+          ${scopeTag}
         </div>
         <button class="voucher-btn" data-key="${key}" data-name="${safeName}" data-code="${safeCode}" data-rewkey="${dRewKey}">Áp dụng</button>
       </div>`;
@@ -2838,7 +2847,14 @@ function clearCustomer() {
 function loadDiscountCodes() {
   fstore.collection('rewards').onSnapshot(snap => {
     _discountCache = {};
-    snap.forEach(doc => { _discountCache[doc.id] = doc.data(); });
+    snap.forEach(doc => {
+      const d = doc.data();
+      // Chỉ load voucher dành cho XOLIFA hoặc cả 2 quán
+      const s = d.scope || 'cafe33'; // doc cũ chưa migrate → mặc định cafe33
+      if (s === 'xolifa' || s === 'both') {
+        _discountCache[doc.id] = d;
+      }
+    });
   }, err => console.error('loadDiscountCodes:', err));
 }
 
@@ -3091,18 +3107,25 @@ function resetDiscountState() {
 }
 
 function _finalizeDiscountAfterPay() {
-  // Tăng usedCount cho mã thủ công
+  const jobs = [];
+  // Tăng usedCount — dùng increment tránh race condition
   if (_appliedDiscountId && _discountCache[_appliedDiscountId]) {
-    const cur = _discountCache[_appliedDiscountId].usedCount || 0;
-    fstore.collection('rewards').doc(_appliedDiscountId).update({ usedCount: cur + 1 }).catch(() => {});
+    jobs.push(
+      fstore.collection('rewards').doc(_appliedDiscountId).update({
+        usedCount: firebase.firestore.FieldValue.increment(1)
+      }).catch(() => {})
+    );
   }
   // Đánh dấu used cho gift voucher
   if (_giftVoucherKey && _giftVoucherPhone) {
-    fstore.collection('customers').doc(_giftVoucherPhone).update({
-      [`myGifts.${_giftVoucherKey}.used`]:   true,
-      [`myGifts.${_giftVoucherKey}.usedAt`]: new Date().toISOString()
-    }).catch(() => {});
+    jobs.push(
+      fstore.collection('customers').doc(_giftVoucherPhone).update({
+        [`myGifts.${_giftVoucherKey}.used`]:   true,
+        [`myGifts.${_giftVoucherKey}.usedAt`]: new Date().toISOString()
+      }).catch(() => {})
+    );
   }
+  return Promise.all(jobs);
 }
 
 function consumeFreeToGoDrink(phone) {
@@ -3427,7 +3450,7 @@ function confirmPay(cashGiven, cashChange) {
       const drinkCount = items.reduce((s, c) => s + c.qty, 0);
       loyaltyProcessAfterPay(loyPhone, total, drinkCount, false);
     }
-    _finalizeDiscountAfterPay();
+    _finalizeDiscountAfterPay().then(() => {
     cart = {};
     dgDiscountAmt = 0;
     togoDiscountAmt = 0;
@@ -3442,6 +3465,7 @@ function confirmPay(cashGiven, cashChange) {
     renderCartDrawer();
     toast('✅ Thanh toán thành công!');
     showScreen('sm');
+    }); // end _finalizeDiscountAfterPay().then
   }).catch(err => {
     console.error('Lỗi ghi đơn:', err);
     toast('❌ Lỗi lưu đơn — thử lại!');
@@ -5238,7 +5262,7 @@ function confirmPayWallet() {
     }
 
     // Reset
-    _finalizeDiscountAfterPay();
+    _finalizeDiscountAfterPay().then(() => {
     cart = {};
     togoDiscountAmt = 0;
     dgDiscountAmt = 0;
@@ -5255,6 +5279,7 @@ function confirmPayWallet() {
     renderCartDrawer();
     toast('✅ Thanh toán ví thành công!');
     showScreen('sm');
+    }); // end _finalizeDiscountAfterPay().then
   }).catch(err => toast('❌ Lỗi: ' + err.message));
 }
 

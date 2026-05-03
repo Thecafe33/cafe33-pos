@@ -1190,8 +1190,18 @@ input, button, select, textarea { font-size: 1rem; }
                             <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:8px;">Mã khuyến mãi (để trống nếu chỉ đổi điểm)</label>
                             <input id="df-code" type="text" placeholder="VD: GIAM5K" maxlength="20"
                                 style="width:100%;padding:14px 20px;border-radius:22px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:1.6rem;font-weight:900;color:#006241;letter-spacing:0.1em;text-transform:uppercase;font-family:monospace;box-sizing:border-box;transition:border-color 0.2s;"
-                                oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')"
+                                oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9\-]/g,'')"
                                 onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
+                        </div>
+
+                        <div>
+                            <label style="font-size:0.65rem;font-weight:900;color:#9ca3af;text-transform:uppercase;letter-spacing:0.12em;display:block;margin-bottom:8px;">Áp dụng tại</label>
+                            <select id="df-scope" onchange="dfUpdateCodePrefix()"
+                                style="width:100%;padding:12px 16px;border-radius:14px;background:#F8F8F8;border:2px solid transparent;outline:none;font-size:0.9rem;font-weight:700;color:#111827;box-sizing:border-box;cursor:pointer;">
+                                <option value="cafe33">🔵 The Cafe 33</option>
+                                <option value="xolifa">🟣 XOLIFA</option>
+                                <option value="both">🟢 Cả 2 quán</option>
+                            </select>
                         </div>
 
                         <div>
@@ -2627,6 +2637,14 @@ window.onload = function() {
         if (data) {
             menu = Array.isArray(data) ? data : Object.values(data);
             window._menuData = menu;
+            window._menuXolifaData = window._menuXolifaData || []; // init if not loaded yet
+            // Load menu XOLIFA song song (nếu chưa có)
+            if (!window._menuXolifaData.length) {
+                db.ref('menu_xolifa').once('value', function(snapX) {
+                    var dataX = snapX.val() || {};
+                    window._menuXolifaData = Object.values(dataX).filter(Boolean);
+                });
+            }
             renderTabs();
             renderMenu();
         } else {
@@ -9750,14 +9768,16 @@ function applyDiscountCode() {
     statusEl.style.color = '#006241';
     input.value = '';
 
-    var newCount = (found.usedCount || 0) + 1;
-    fstore.collection('rewards').doc(foundKey).update({ usedCount: newCount });
+    fstore.collection('rewards').doc(foundKey).update({
+        usedCount: firebase.firestore.FieldValue.increment(1)
+    });
 }
 
 function resetDiscountState(noFirebase) {
     if (!noFirebase && _appliedDiscountId && _discountCache[_appliedDiscountId]) {
-        var cur = _discountCache[_appliedDiscountId].usedCount || 0;
-        if (cur > 0) fstore.collection('rewards').doc(_appliedDiscountId).update({ usedCount: cur - 1 });
+        if (cur > 0) fstore.collection('rewards').doc(_appliedDiscountId).update({
+            usedCount: firebase.firestore.FieldValue.increment(-1)
+        });
     }
     _appliedDiscountId = null;
     var statusEl = document.getElementById('discount-status');
@@ -9810,12 +9830,17 @@ function scanGiftVouchers(phone) {
             var daysText  = g._daysLeft !== undefined ? ('Còn ' + g._daysLeft + ' ngày') : '';
             var safeName = (g.name || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
             var safeCode = (g.code || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+            var gScp = g.scope || 'cafe33';
+            var scopeTag = gScp === 'both'
+                ? '<span style="font-size:0.55rem;color:#166534;font-weight:800;background:#DCFCE7;padding:1px 6px;border-radius:999px;">🟢 Cả 2 quán</span>'
+                : '<span style="font-size:0.55rem;color:#1D4ED8;font-weight:800;background:#DBEAFE;padding:1px 6px;border-radius:999px;">🔵 The Cafe 33</span>';
             var row = document.createElement('div');
             row.className = 'bg-white rounded-xl p-2 border border-amber-100 flex items-center justify-between gap-2';
             row.innerHTML =
                 '<div class="flex-1 min-w-0">' +
                     '<p class="font-black text-[11px] text-gray-800 truncate">' + safeName + '</p>' +
                     '<p class="font-mono text-[9px] text-green-700 font-bold">' + safeCode + '</p>' +
+                    scopeTag +
                     (daysText ? '<p class="text-[9px] font-bold" style="color:' + daysColor + '">' + daysText + '</p>' : '') +
                 '</div>' +
                 '<button class="bg-green-700 text-white text-[9px] font-black px-2.5 py-1.5 rounded-lg uppercase active:scale-95">+ Bill</button>';
@@ -9972,7 +9997,8 @@ function openPickCartModal(reward, vKey, vCode, vName) {
 
         var eligible = true;
         if (reward.conditionCategory) {
-            var menuItem = (window._menuData || []).find(function(m) { return m.name === ci.name; });
+            var allMenu = (window._menuData || []).concat(window._menuXolifaData || []);
+            var menuItem = allMenu.find(function(m) { return m.name === ci.name; });
             if (!menuItem || (menuItem.type || '').toLowerCase() !== reward.conditionCategory.toLowerCase()) eligible = false;
         }
         if (reward.conditionMaxPrice && ci.price > reward.conditionMaxPrice) eligible = false;
@@ -10044,7 +10070,7 @@ function applyPickedCartItem(idx, reward, vKey, vCode, vName) {
         }
     } else if (reward.type === 'item_upsize') {
         var surcharge = reward.value || 0;
-        var menuItem = (window._menuData || []).find(function(m) { return m.name === item.name; });
+        var menuItem = (window._menuData || []).concat(window._menuXolifaData || []).find(function(m) { return m.name === item.name; });
         var upsizeNote = 'Size L (Voucher)';
         cart.splice(idx + 1, 0, {
             name: origName + ' ↑L',
@@ -10331,12 +10357,19 @@ function renderDiscountList() {
                 ? '<span style="font-size:0.6rem;font-weight:900;background:#FEE2E2;color:#EF4444;padding:2px 8px;border-radius:999px;">TẮT</span>'
                 : '<span style="font-size:0.6rem;font-weight:900;background:#D1FAE5;color:#059669;padding:2px 8px;border-radius:999px;">BẬT</span>';
 
+            var _scopeLabels = { both: '🟢 Cả 2', cafe33: '🔵 Cafe33', xolifa: '🟣 XOLIFA' };
+            var _scopeBg     = { both: '#DCFCE7', cafe33: '#DBEAFE', xolifa: '#EDE9FE' };
+            var _scopeClr    = { both: '#166534', cafe33: '#1D4ED8', xolifa: '#5B21B6' };
+            var _scp = d.scope || 'cafe33';
+            var scopeBadge = '<span style="font-size:0.6rem;font-weight:800;background:' + _scopeBg[_scp] + ';color:' + _scopeClr[_scp] + ';padding:2px 8px;border-radius:999px;">' + _scopeLabels[_scp] + '</span>';
+
             var info = document.createElement('div');
             info.style.cssText = 'flex:1;min-width:0;';
             info.innerHTML =
                 '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">' +
                     (d.code ? '<span style="font-family:monospace;font-weight:900;font-size:0.95rem;color:#006241;letter-spacing:0.06em;">' + d.code + '</span>' : '') +
                     (d.type ? '<span style="font-size:0.6rem;font-weight:800;background:' + tBg + ';color:' + tClr + ';padding:2px 8px;border-radius:999px;">' + (typeLabels[d.type] || d.type) + '</span>' : '') +
+                    scopeBadge +
                     statusHtml +
                 '</div>' +
                 '<p style="font-size:0.875rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0 0 4px 0;">' + (d.label || d.name || '') + '</p>' +
@@ -10384,6 +10417,8 @@ function discountFormLoad(key, d) {
     if (condMin) condMin.value = d.conditionMinPrice || '';
     document.getElementById('discount-form-title').innerText = '✏️ Chỉnh sửa';
     document.getElementById('df-delete-btn').style.display = 'block';
+    var scopeEl = document.getElementById('df-scope');
+    if (scopeEl) scopeEl.value = d.scope || 'cafe33';
 }
 
 function discountFormClear() {
@@ -10393,6 +10428,8 @@ function discountFormClear() {
     });
     document.getElementById('df-cost').value = '0';
     document.getElementById('df-limit').value = '0';
+    var scopeEl = document.getElementById('df-scope');
+    if (scopeEl) scopeEl.value = 'cafe33';
     dfShowSelectedItem('');
     dfPreviewImg('');
     _dfType = 'item'; _dfActive = true;
@@ -10400,6 +10437,11 @@ function discountFormClear() {
     dfRenderActiveToggle();
     document.getElementById('discount-form-title').innerText = '✦ Thêm quà mới';
     document.getElementById('df-delete-btn').style.display = 'none';
+}
+
+function dfUpdateCodePrefix() {
+    // Preview prefix cho nhân viên khi đổi scope (không bắt buộc, chỉ gợi ý)
+    // Prefix thực sự được thêm khi save
 }
 
 function dfPreviewImg(url) {
@@ -10571,6 +10613,16 @@ function discountFormSave() {
     var cost   = parseInt(document.getElementById('df-cost').value) || 0;
     var limit  = parseInt(document.getElementById('df-limit').value) || 0;
     var editKey = document.getElementById('df-editing-key').value;
+    var scope  = (document.getElementById('df-scope') || {}).value || 'cafe33';
+
+    // Tự động thêm prefix cho code theo scope
+    if (code) {
+        if (scope === 'xolifa' && !code.startsWith('XL-'))  code = 'XL-'  + code;
+        if (scope === 'cafe33' && !code.startsWith('C33-')) code = 'C33-' + code;
+        // scope = 'both' → không thêm prefix
+        var codeEl = document.getElementById('df-code');
+        if (codeEl) codeEl.value = code; // hiển thị cho nhân viên thấy mã thực tế
+    }
 
     if (!label) return alert('Vui lòng nhập tên quà!');
     if (_dfType === 'item' && !target) return alert('Vui lòng chọn món áp dụng!');
@@ -10590,10 +10642,15 @@ function discountFormSave() {
         cost:       cost || 0,
         active:     _dfActive,
         usageLimit: limit,
-        usedCount:  0
+        usedCount:  0,
+        scope:      scope
     };
+    // Xác định menuSource cho voucher theo món
     if (_dfType === 'item' || _dfType === 'item_free' || _dfType === 'item_upsize') {
         if (target) record.targetItem = target;
+        var inCafe33 = !!(window._menuData || []).find(function(m) { return m.name && m.name.toLowerCase() === target; });
+        var inXolifa  = !!(window._menuXolifaData || []).find(function(m) { return m.name && m.name.toLowerCase() === target; });
+        record.menuSource = (inCafe33 && inXolifa) ? 'both' : inXolifa ? 'xolifa' : 'cafe33';
     }
     if (_dfType === 'item_free' || _dfType === 'item_upsize') {
         if (condCategory) record.conditionCategory = condCategory;
