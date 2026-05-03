@@ -1988,6 +1988,7 @@ function initMenu() {
   ]).then(([snapNormal, snapTogo, snapToppings]) => {
     MENU      = parseMenuSnap(snapNormal.val());
     MENU_TOGO = parseMenuSnap(snapTogo.val());
+    window._menuXolifaData = MENU; // expose cho openPickCartModal / conditionCategory filter
     const tData = snapToppings.val();
     TOPPINGS = tData ? Object.entries(tData).map(([id, v]) => ({ id, name: v.name || '', price: Number(v.price) || 0, priceTogo: Number(v.priceTogo) || 0 })) : [];
     loadMenu();
@@ -2879,24 +2880,41 @@ function applyDiscountCode() {
   if (_appliedDiscountId)                                 return _dcStatus(statusEl, '✗ Bill đã có mã giảm giá');
   if (_giftVoucherKey)                                    return _dcStatus(statusEl, '✗ Bill đã có voucher khách hàng');
 
-  // Tính số tiền giảm
   const baseTotal = getCartTotal();
-  let discountAmt = 0, targetName = '';
 
+  // ── item_free / item_upsize: dùng openPickCartModal, không tính discountAmt âm vào cart ──
+  if (found.type === 'item_free' || found.type === 'item_upsize') {
+    _appliedDiscountId = foundKey;
+    input.value = '';
+    _dcStatus(statusEl, '✓ Chọn món áp dụng...', true);
+    // Wrap thành gift-voucher flow để dùng openPickCartModal
+    _giftVoucherKey   = '__dc__' + foundKey;
+    _giftVoucherPhone = null; // mã thủ công, không phải từ myGifts
+    openPickCartModal(found, _giftVoucherKey, found.label || foundKey);
+    renderCartDrawer(); updFooter();
+    return;
+  }
+
+  // ── item: giảm giá 1 món cụ thể ──
+  let discountAmt = 0, targetName = '';
   if (found.type === 'item') {
-    const target = (found.targetItem || '').toLowerCase().trim();
+    const target = (found.targetItemXl || found.targetItem || '').toLowerCase().trim();
     let matchItem = null;
     Object.values(cart).forEach(ci => {
       if (!ci._vKey && !ci._discountId && ci.name.toLowerCase().includes(target)) matchItem = ci;
     });
-    if (!matchItem) return _dcStatus(statusEl, `✗ Giỏ hàng không có "${found.targetItem}"`);
+    if (!matchItem) return _dcStatus(statusEl, `✗ Giỏ hàng không có "${found.targetItemXl || found.targetItem}"`);
     discountAmt = found.value;
     targetName = matchItem.name;
+
+  // ── percent: phần trăm toàn đơn ──
   } else if (found.type === 'percent') {
-    discountAmt = Math.round(baseTotal * found.value / 100);
+    discountAmt = Math.round(baseTotal * (found.value||0) / 100);
     targetName = 'Toàn đơn';
+
+  // ── order / fixed: giảm cố định toàn đơn ──
   } else {
-    discountAmt = found.value;
+    discountAmt = found.value || 0;
     targetName = 'Toàn đơn';
   }
 
@@ -2933,6 +2951,12 @@ function removeAppliedDiscount() {
   if (_appliedDiscountId) {
     const dcKey = '__discount__' + _appliedDiscountId;
     delete cart[dcKey];
+    // Nếu item_free/item_upsize đã áp qua _giftVoucherKey = '__dc__' + foundKey
+    const dcVKey = '__dc__' + _appliedDiscountId;
+    if (_giftVoucherKey === dcVKey) {
+      // Dùng removeGiftVoucher để hoàn tác item_free/item_upsize
+      removeGiftVoucher();
+    }
     _appliedDiscountId = null;
   }
   const el = document.getElementById('discount-code-status');
@@ -2963,15 +2987,15 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
     if (!r) { _giftVoucherKey = null; _giftVoucherPhone = null; toast('Không đọc được reward'); return; }
 
     if (r.type === 'item') {
-      // Giảm giá 1 món cụ thể
-      const target = (r.targetItem || '').toLowerCase().trim();
+      // Giảm giá 1 món cụ thể — XOLIFA ưu tiên targetItemXl, fallback targetItem
+      const target = (r.targetItemXl || r.targetItem || '').toLowerCase().trim();
       let targetKey = null;
       Object.entries(cart).forEach(([k, ci]) => {
         if (!ci._vKey && !ci._discountId && ci.name.toLowerCase().includes(target)) targetKey = k;
       });
       if (!targetKey) {
         _giftVoucherKey = null; _giftVoucherPhone = null;
-        toast(`Cần có món "${r.targetItem}" trong giỏ trước!`); return;
+        toast(`Cần có món "${r.targetItemXl || r.targetItem}" trong giỏ trước!`); return;
       }
       const ci = cart[targetKey];
       if (ci.qty > 1) {
@@ -3060,40 +3084,91 @@ function removeGiftVoucher() {
 }
 
 function openPickCartModal(reward, vKey, vName) {
-  // Modal chọn món khi type = item_free hoặc item_upsize
-  const isUpsize = reward.type === 'item_upsize';
-  const cartItems = Object.entries(cart).filter(([,ci]) => !ci._vKey && !ci._discountId);
-  if (!cartItems.length) { toast('Không có món để áp dụng'); return; }
+  const isUpsize  = reward.type === 'item_upsize';
+  const isFree    = reward.type === 'item_free';
 
-  // Tạo danh sách lựa chọn
-  const choices = cartItems.map(([k,ci], i) => (i+1) + '. ' + ci.name + ' (' + ci.size + ') - ' + ci.price.toLocaleString('vi-VN') + 'đ').join('\n');
-  const prompt_title = (isUpsize ? 'Chọn món để upsize miễn phí:\n' : 'Chọn món miễn phí:\n') + choices + '\n\nNhập số thứ tự:';
-  const idx = prompt(prompt_title);
-  const chosen = cartItems[parseInt(idx) - 1];
-  if (!chosen) return;
+  // Lọc các item trong giỏ chưa có voucher
+  let cartItems = Object.entries(cart).filter(([, ci]) => !ci._vKey && !ci._discountId);
 
-  const [chosenKey, chosenItem] = chosen;
-  if (isUpsize) {
-    chosenItem._vKey = vKey; chosenItem._giftType = 'item_upsize';
-    chosenItem._giftLabel = vName; chosenItem._originalPrice = chosenItem.price;
-    toast('🎁 Upsize miễn phí: ' + chosenItem.name);
-  } else {
-    // item_free: set giá 0
-    if (chosenItem.qty > 1) {
-      chosenItem.qty -= 1;
-      cart[chosenKey + '_v'] = {
-        name: chosenItem.name, size: chosenItem.size, price: 0, qty: 1,
-        _vKey: vKey, _giftType: 'item_free', _giftLabel: vName,
-        _originalPrice: chosenItem.price
-      };
-    } else {
-      chosenItem._vKey = vKey; chosenItem._giftType = 'item_free';
-      chosenItem._giftLabel = vName; chosenItem._originalPrice = chosenItem.price;
-      chosenItem.price = 0;
-    }
-    toast('🎁 Miễn phí: ' + chosenItem.name);
+  // Nếu có conditionCategory / conditionMaxPrice / conditionMinPrice → lọc thêm
+  if (reward.conditionCategory || reward.conditionMaxPrice || reward.conditionMinPrice) {
+    const allMenu = (window._menuXolifaData || []);
+    cartItems = cartItems.filter(([, ci]) => {
+      const menuItem = allMenu.find(m => m.name === ci.name);
+      if (reward.conditionCategory && menuItem && menuItem.type !== reward.conditionCategory) return false;
+      if (reward.conditionMaxPrice && ci.price > reward.conditionMaxPrice) return false;
+      if (reward.conditionMinPrice && ci.price < reward.conditionMinPrice) return false;
+      return true;
+    });
   }
-  renderCartDrawer(); updFooter();
+
+  if (!cartItems.length) {
+    toast('Không có món phù hợp trong giỏ để áp dụng');
+    _giftVoucherKey = null; _giftVoucherPhone = null;
+    return;
+  }
+
+  // Build modal
+  const modal  = document.getElementById('xl-pick-modal');
+  const titleEl = document.getElementById('xl-pick-title');
+  const subEl   = document.getElementById('xl-pick-subtitle');
+  const listEl  = document.getElementById('xl-pick-list');
+  if (!modal) return;
+
+  titleEl.innerText = isUpsize ? '⬆️ Chọn món để upsize M→L' : '🎁 Chọn món miễn phí';
+  const hints = [];
+  if (reward.conditionCategory) hints.push('Danh mục: ' + reward.conditionCategory);
+  if (reward.conditionMaxPrice) hints.push('Giá ≤ ' + reward.conditionMaxPrice.toLocaleString('vi-VN') + 'đ');
+  if (reward.conditionMinPrice) hints.push('Giá ≥ ' + reward.conditionMinPrice.toLocaleString('vi-VN') + 'đ');
+  subEl.innerText = hints.length ? hints.join(' · ') : (isUpsize ? 'Chọn ly muốn nâng cỡ lên L' : 'Chọn 1 ly được miễn phí');
+
+  listEl.innerHTML = '';
+  cartItems.forEach(([k, ci]) => {
+    const btn = document.createElement('button');
+    btn.style.cssText = 'width:100%;padding:13px 16px;border-radius:16px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-family:\'Google Sans\',sans-serif;text-align:left;';
+    btn.onmouseover = () => btn.style.borderColor = 'var(--gm,#006241)';
+    btn.onmouseout  = () => btn.style.borderColor = '#e5e7eb';
+    btn.innerHTML =
+      `<span style="font-weight:700;font-size:.92rem;color:#111;">${ci.name}${ci.size ? ' <span style="color:#9ca3af;font-size:.78rem;">(' + ci.size + ')</span>' : ''}</span>` +
+      `<span style="font-weight:800;font-size:.85rem;color:#006241;flex-shrink:0;margin-left:10px;">${ci.price.toLocaleString('vi-VN')}đ</span>`;
+    btn.addEventListener('click', () => {
+      xlPickModalClose();
+      if (isUpsize) {
+        // Upsize: giữ nguyên giá, chỉ tag
+        ci._vKey = vKey; ci._giftType = 'item_upsize';
+        ci._giftLabel = vName; ci._originalPrice = ci.price;
+        // Đổi tên thêm ↑L để nhân viên biết
+        ci._originalName = ci.name;
+        ci.name = ci.name.replace(/ *\↑L$/, '') + ' ↑L';
+        ci.size = 'L';
+        toast('🎁 Upsize miễn phí: ' + ci._originalName);
+      } else {
+        // item_free: set giá 0
+        if (ci.qty > 1) {
+          ci.qty -= 1;
+          cart[k + '_v'] = {
+            name: ci.name, size: ci.size, price: 0, qty: 1,
+            _vKey: vKey, _giftType: 'item_free', _giftLabel: vName,
+            _originalPrice: ci.price
+          };
+        } else {
+          ci._vKey = vKey; ci._giftType = 'item_free';
+          ci._giftLabel = vName; ci._originalPrice = ci.price;
+          ci.price = 0;
+        }
+        toast('🎁 Miễn phí: ' + ci.name);
+      }
+      renderCartDrawer(); updFooter();
+    });
+    listEl.appendChild(btn);
+  });
+
+  modal.style.display = 'flex';
+}
+
+function xlPickModalClose() {
+  const modal = document.getElementById('xl-pick-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 function resetDiscountState() {
@@ -5451,6 +5526,19 @@ function resetPayMethod() {
       style="width:100%;padding:16px;background:var(--gd);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;font-family:'Google Sans',sans-serif;cursor:pointer;letter-spacing:.3px;">
       ✅ Thêm thành viên & chọn vào đơn
     </button>
+  </div>
+</div>
+
+<!-- Modal chọn món (item_free / item_upsize) -->
+<div id="xl-pick-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:flex-end;justify-content:center;"
+     onclick="if(event.target===this)xlPickModalClose()">
+  <div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:22px 20px 32px;max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <p id="xl-pick-title" style="font-size:1rem;font-weight:900;color:#111;margin:0;"></p>
+      <button onclick="xlPickModalClose()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <p id="xl-pick-subtitle" style="font-size:0.75rem;color:#9ca3af;font-weight:600;margin:0 0 14px;"></p>
+    <div id="xl-pick-list" style="display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
 </body>
