@@ -2710,7 +2710,7 @@ function renderCustomerInfo(totalPoints, stampCount) {
     vHtml += available.map(([key, g]) => `
       <div class="voucher-item" id="vi_${key}">
         <span class="voucher-name">🎁 ${g.giftName || key}</span>
-        <button class="voucher-btn" onclick="applyVoucher('${key}','${(g.giftName||key).replace(/'/g,"\\\\'")}','${g.rewardKey||\'\'}')">Áp dụng</button>
+        <button class="voucher-btn" onclick="applyVoucher('${key}','${(g.giftName||key).replace(/'/g,"\\'")}','${g.rewardKey||''}')">Áp dụng</button>
       </div>`).join('');
   }
 
@@ -3031,13 +3031,8 @@ function openPickCartModal(reward, vKey, vName) {
   const cartItems = Object.entries(cart).filter(([,ci]) => !ci._vKey && !ci._discountId);
   if (!cartItems.length) { toast('Không có món để áp dụng'); return; }
 
-  const choices = cartItems.map(([k,ci], i) => `${i+1}. ${ci.name} (${ci.size}) - ${ci.price.toLocaleString('vi-VN')}đ`).join('
-');
-  const idx = prompt((isUpsize ? 'Chọn món để upsize miễn phí:
-' : 'Chọn món miễn phí:
-') + choices + '
-
-Nhập số thứ tự:');
+  const choices = cartItems.map(([k,ci], i) => `${i+1}. ${ci.name} (${ci.size}) - ${ci.price.toLocaleString('vi-VN')}đ`).join('\n');
+  const idx = prompt((isUpsize ? 'Chọn món để upsize miễn phí:\n' : 'Chọn món miễn phí:\n') + choices + '\n\nNhập số thứ tự:');
   const chosen = cartItems[parseInt(idx) - 1];
   if (!chosen) return;
 
