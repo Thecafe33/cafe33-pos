@@ -2691,13 +2691,10 @@ function renderCustomerInfo(totalPoints, stampCount) {
   document.getElementById('custPts').textContent = ptsHtml;
   document.getElementById('custNote').textContent = curCustomer.note;
 
-  // Lọc Voucher chưa dùng (used !== true) và đúng scope XOLIFA
+  // Lọc Voucher chưa dùng (used !== true) — hiển thị tất cả, không filter scope
+  // vì gift đã được cấp đích danh cho khách này
   const gifts = curCustomer.myGifts || {};
-  const available = Object.entries(gifts).filter(([, g]) => {
-    if (g.used) return false;
-    const s = g.scope || 'cafe33'; // gift cũ chưa migrate → mặc định cafe33
-    return s === 'xolifa' || s === 'both';
-  });
+  const available = Object.entries(gifts).filter(([, g]) => !g.used);
 
   const vList = document.getElementById('voucherList');
   let vHtml = '';
@@ -2849,12 +2846,8 @@ function loadDiscountCodes() {
   fstore.collection('rewards').onSnapshot(snap => {
     _discountCache = {};
     snap.forEach(doc => {
-      const d = doc.data();
-      // Chỉ load voucher dành cho XOLIFA hoặc cả 2 quán
-      const s = d.scope || 'cafe33'; // doc cũ chưa migrate → mặc định cafe33
-      if (s === 'xolifa' || s === 'both') {
-        _discountCache[doc.id] = d;
-      }
+      // Load TẤT CẢ rewards vào cache — scope filter chỉ áp khi hiển thị mã nhập tay
+      _discountCache[doc.id] = doc.data();
     });
   }, err => console.error('loadDiscountCodes:', err));
 }
@@ -2987,32 +2980,50 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
     if (!r) { _giftVoucherKey = null; _giftVoucherPhone = null; toast('Không đọc được reward'); return; }
 
     if (r.type === 'item') {
-      // Giảm giá 1 món cụ thể — XOLIFA ưu tiên targetItemXl, fallback targetItem
-      const target = (r.targetItemXl || r.targetItem || '').toLowerCase().trim();
-      let targetKey = null;
-      Object.entries(cart).forEach(([k, ci]) => {
-        if (!ci._vKey && !ci._discountId && ci.name.toLowerCase().includes(target)) targetKey = k;
-      });
-      if (!targetKey) {
+      // Hỗ trợ targetItemsXl (array mới) và targetItemXl/targetItem (string cũ)
+      const targets = (r.targetItemsXl && r.targetItemsXl.length ? r.targetItemsXl
+        : r.targetItemXl ? [r.targetItemXl]
+        : r.targetItems  && r.targetItems.length ? r.targetItems
+        : r.targetItem   ? [r.targetItem] : [])
+        .map(t => t.toLowerCase().trim());
+
+      if (!targets.length) {
         _giftVoucherKey = null; _giftVoucherPhone = null;
-        toast(`Cần có món "${r.targetItemXl || r.targetItem}" trong giỏ trước!`); return;
+        toast('Voucher này chưa cấu hình món áp dụng'); return;
       }
-      const ci = cart[targetKey];
-      if (ci.qty > 1) {
-        // Tách 1 món ra để giảm
-        ci.qty -= 1;
-        cart[targetKey + '_v'] = {
-          name: ci.name, size: ci.size,
-          price: Math.max(0, ci.price - (r.value || 0)),
-          qty: 1, _vKey: key, _giftType: 'item',
-          _giftLabel: giftName, _originalPrice: ci.price, _originalName: ci.name
-        };
-      } else {
-        ci._vKey = key; ci._giftType = 'item';
-        ci._giftLabel = giftName;
-        ci._originalPrice = ci.price;
-        ci.price = Math.max(0, ci.price - (r.value || 0));
+
+      // Tìm TẤT CẢ cart items khớp với bất kỳ target nào
+      const matchedKeys = Object.keys(cart).filter(k => {
+        const ci = cart[k];
+        if (ci._vKey || ci._discountId) return false;
+        const nm = ci.name.toLowerCase();
+        return targets.some(t => nm.includes(t));
+      });
+
+      if (!matchedKeys.length) {
+        _giftVoucherKey = null; _giftVoucherPhone = null;
+        const displayList = (r.targetItemsXl || r.targetItems || [r.targetItemXl || r.targetItem]).filter(Boolean).join(', ');
+        toast(`Cần có món "${displayList}" trong giỏ trước!`); return;
       }
+
+      // Áp giảm lên TẤT CẢ món match
+      matchedKeys.forEach(k => {
+        const ci = cart[k];
+        if (ci.qty > 1) {
+          ci.qty -= 1;
+          cart[k + '_v'] = {
+            name: ci.name, size: ci.size,
+            price: Math.max(0, ci.price - (r.value || 0)),
+            qty: 1, _vKey: key, _giftType: 'item',
+            _giftLabel: giftName, _originalPrice: ci.price, _originalName: ci.name
+          };
+        } else {
+          ci._vKey = key; ci._giftType = 'item';
+          ci._giftLabel = giftName;
+          ci._originalPrice = ci.price;
+          ci.price = Math.max(0, ci.price - (r.value || 0));
+        }
+      });
       renderCartDrawer(); updFooter();
       toast('🎁 ' + giftName + ' đã áp dụng!');
 
@@ -3042,22 +3053,41 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
     }
   }
 
-  if (rewardKey && _discountCache[rewardKey]) {
-    applyReward(_discountCache[rewardKey]);
-  } else if (rewardKey) {
-    fstore.collection('rewards').doc(rewardKey).get().then(doc => {
-      const r = doc.exists ? doc.data() : null;
-      if (r) _discountCache[rewardKey] = r;
-      applyReward(r);
-    });
+  // Luôn fetch từ Firestore khi có rewardKey (không phụ thuộc scope filter của _discountCache)
+  if (rewardKey) {
+    // Check cache trước (không filter scope), nếu không có thì fetch
+    const cached = _discountCache[rewardKey];
+    if (cached) {
+      applyReward(cached);
+    } else {
+      fstore.collection('rewards').doc(rewardKey).get().then(doc => {
+        const r = doc.exists ? doc.data() : null;
+        if (r) _discountCache[rewardKey] = r; // cache lại để dùng sau
+        applyReward(r);
+      }).catch(err => {
+        console.error('applyVoucher fetch error:', err);
+        applyReward(null);
+      });
+    }
   } else {
-    // Fallback: tìm theo code (dùng giftCode nếu có, không thì thử giftName)
+    // Fallback: tìm theo code trong cache (mã thủ công không có rewardKey)
     const codeUp = (giftCode || giftName || '').toUpperCase().trim();
     let found = null;
     Object.keys(_discountCache).forEach(k => {
       if (!found && _discountCache[k].code && _discountCache[k].code.toUpperCase() === codeUp) found = _discountCache[k];
     });
-    applyReward(found);
+    if (found) {
+      applyReward(found);
+    } else if (codeUp) {
+      // Cache miss — tìm thẳng Firestore theo code
+      fstore.collection('rewards').where('code', '==', codeUp).limit(1).get().then(snap => {
+        const r = !snap.empty ? snap.docs[0].data() : null;
+        if (r) _discountCache[snap.docs[0].id] = r;
+        applyReward(r);
+      }).catch(() => applyReward(null));
+    } else {
+      applyReward(null);
+    }
   }
 }
 
