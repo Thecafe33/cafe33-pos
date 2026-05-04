@@ -2488,16 +2488,35 @@ function renderScCartPreview() {
     const isDgItem  = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
     const dispPrice = isDgItem ? dgFixedP : c.price;
     const lineTotal = dispPrice * c.qty;
-    const priceStr  = c.isFree ? '0đ' : fmt(lineTotal);
-    const color     = c.isFree ? 'var(--gm)' : (isDgItem ? 'var(--gm)' : 'var(--td)');
-    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-      <div style="display:flex;align-items:center;gap:5px;min-width:0;flex:1;">
-        <span style="font-size:11px;font-weight:700;color:var(--gt);flex-shrink:0;">${c.qty}x</span>
+    const isGifted  = !!c._vKey;
+    const isFreeItem = c.isFree || (isGifted && c._giftType === 'item_free');
+
+    // Giá hiển thị
+    let priceHtml;
+    if (isFreeItem) {
+      const orig = c._originalPrice ? `<span style="text-decoration:line-through;color:#ccc;margin-right:3px;">${fmt(c._originalPrice * c.qty)}</span>` : '';
+      priceHtml = `${orig}<span style="color:var(--gm);font-weight:800;">0đ</span>`;
+    } else if (isGifted && c._originalPrice !== undefined) {
+      const orig = `<span style="text-decoration:line-through;color:#ccc;margin-right:3px;">${fmt(c._originalPrice * c.qty)}</span>`;
+      priceHtml = `${orig}<span style="color:var(--gm);font-weight:800;">${fmt(lineTotal)}</span>`;
+    } else {
+      const color = isDgItem ? 'var(--gm)' : 'var(--td)';
+      priceHtml = `<span style="color:${color};font-weight:700;">${fmt(lineTotal)}</span>`;
+    }
+
+    // Badge
+    let badge = '';
+    if (isDgItem) badge = `<span style="font-size:9px;font-weight:800;background:#e8f5ee;color:var(--gm);border-radius:4px;padding:1px 5px;flex-shrink:0;">ĐG</span>`;
+    else if (isGifted) badge = `<span style="font-size:9px;font-weight:800;background:#fef9c3;color:#92400e;border-radius:4px;padding:1px 5px;flex-shrink:0;">🎁</span>`;
+
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #f3f4f6;">
+      <div style="display:flex;align-items:center;gap:4px;min-width:0;flex:1;">
+        <span style="font-size:11px;font-weight:700;color:var(--gt);flex-shrink:0;">${c.qty}×</span>
         <span style="font-size:12px;font-weight:600;color:var(--td);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</span>
-        <span style="font-size:10px;font-weight:700;color:var(--gt);background:#f0f0f0;border-radius:4px;padding:1px 5px;flex-shrink:0;">${c.size}</span>
-        ${isDgItem ? `<span style="font-size:10px;font-weight:700;background:#e8f5ee;color:var(--gm);border-radius:4px;padding:1px 5px;flex-shrink:0;">ĐG</span>` : ''}
+        ${c.size ? `<span style="font-size:9px;font-weight:700;color:var(--gt);background:#f0f0f0;border-radius:4px;padding:1px 4px;flex-shrink:0;">${c.size}</span>` : ''}
+        ${badge}
       </div>
-      <span style="font-size:12px;font-weight:700;color:${color};flex-shrink:0;">${priceStr}</span>
+      <div style="font-size:12px;flex-shrink:0;white-space:nowrap;">${priceHtml}</div>
     </div>`;
   }).join('');
 }
@@ -2977,7 +2996,12 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
   }
 
   function applyReward(r) {
-    if (!r) { _giftVoucherKey = null; _giftVoucherPhone = null; toast('Không đọc được reward'); return; }
+    if (!r) {
+      _giftVoucherKey = null; _giftVoucherPhone = null;
+      removeGiftVoucher();
+      toast('⚠️ Không tìm thấy cấu hình voucher này\n(rewardKey: ' + (rewardKey||'?') + ')');
+      return;
+    }
 
     if (r.type === 'item') {
       // Hỗ trợ targetItemsXl (array mới) và targetItemXl/targetItem (string cũ)
@@ -2992,40 +3016,32 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
         toast('Voucher này chưa cấu hình món áp dụng'); return;
       }
 
-      // Tìm TẤT CẢ cart items khớp với bất kỳ target nào
+      // Tìm cart items khớp với bất kỳ target nào
       const matchedKeys = Object.keys(cart).filter(k => {
         const ci = cart[k];
         if (ci._vKey || ci._discountId) return false;
-        const nm = ci.name.toLowerCase();
-        return targets.some(t => nm.includes(t));
+        return targets.some(t => ci.name.toLowerCase().includes(t));
       });
 
+      const displayList = [...new Set(
+        (r.targetItemsXl || r.targetItems || [r.targetItemXl || r.targetItem]).filter(Boolean)
+      )].join(', ');
+
+      // Không có món match → thông báo rõ
       if (!matchedKeys.length) {
         _giftVoucherKey = null; _giftVoucherPhone = null;
-        const displayList = (r.targetItemsXl || r.targetItems || [r.targetItemXl || r.targetItem]).filter(Boolean).join(', ');
-        toast(`Cần có món "${displayList}" trong giỏ trước!`); return;
+        removeGiftVoucher();
+        toast(`🛒 Giỏ chưa có món phù hợp\nVoucher dành cho: ${displayList}`);
+        return;
       }
 
-      // Áp giảm lên TẤT CẢ món match
-      matchedKeys.forEach(k => {
-        const ci = cart[k];
-        if (ci.qty > 1) {
-          ci.qty -= 1;
-          cart[k + '_v'] = {
-            name: ci.name, size: ci.size,
-            price: Math.max(0, ci.price - (r.value || 0)),
-            qty: 1, _vKey: key, _giftType: 'item',
-            _giftLabel: giftName, _originalPrice: ci.price, _originalName: ci.name
-          };
-        } else {
-          ci._vKey = key; ci._giftType = 'item';
-          ci._giftLabel = giftName;
-          ci._originalPrice = ci.price;
-          ci.price = Math.max(0, ci.price - (r.value || 0));
-        }
-      });
-      renderCartDrawer(); updFooter();
-      toast('🎁 ' + giftName + ' đã áp dụng!');
+      // Có món match → mở modal để nhân viên chọn đúng 1 món được giảm
+      // Truyền fake reward với type item_pick để openPickCartModal xử lý đúng
+      openPickCartModal(
+        Object.assign({}, r, { type: 'item_pick', _discountValue: r.value || 0, _targets: targets }),
+        key, giftName
+      );
+      return;
 
     } else if (r.type === 'item_free') {
       // Miễn phí 1 món — cần chọn món từ giỏ
@@ -3053,42 +3069,52 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
     }
   }
 
-  // Luôn fetch từ Firestore khi có rewardKey (không phụ thuộc scope filter của _discountCache)
-  if (rewardKey) {
-    // Check cache trước (không filter scope), nếu không có thì fetch
-    const cached = _discountCache[rewardKey];
-    if (cached) {
-      applyReward(cached);
-    } else {
-      fstore.collection('rewards').doc(rewardKey).get().then(doc => {
-        const r = doc.exists ? doc.data() : null;
-        if (r) _discountCache[rewardKey] = r; // cache lại để dùng sau
-        applyReward(r);
-      }).catch(err => {
-        console.error('applyVoucher fetch error:', err);
-        applyReward(null);
-      });
+  // Tìm reward: rewardKey có thể là doc ID hoặc code của reward
+  async function findReward(rewardKey, giftCode) {
+    // 1. Thử tìm trong cache theo key (doc ID)
+    if (rewardKey && _discountCache[rewardKey]) return _discountCache[rewardKey];
+
+    // 2. Thử fetch Firestore theo doc ID
+    if (rewardKey) {
+      try {
+        const doc = await fstore.collection('rewards').doc(rewardKey).get();
+        if (doc.exists) {
+          _discountCache[rewardKey] = doc.data();
+          return doc.data();
+        }
+      } catch(e) {}
+      // 3. rewardKey có thể là code (không phải doc ID) → tìm theo code field
+      try {
+        const snap = await fstore.collection('rewards').where('code', '==', rewardKey.toUpperCase()).limit(1).get();
+        if (!snap.empty) {
+          const d = snap.docs[0].data();
+          _discountCache[snap.docs[0].id] = d;
+          return d;
+        }
+      } catch(e) {}
     }
-  } else {
-    // Fallback: tìm theo code trong cache (mã thủ công không có rewardKey)
-    const codeUp = (giftCode || giftName || '').toUpperCase().trim();
-    let found = null;
-    Object.keys(_discountCache).forEach(k => {
-      if (!found && _discountCache[k].code && _discountCache[k].code.toUpperCase() === codeUp) found = _discountCache[k];
-    });
-    if (found) {
-      applyReward(found);
-    } else if (codeUp) {
-      // Cache miss — tìm thẳng Firestore theo code
-      fstore.collection('rewards').where('code', '==', codeUp).limit(1).get().then(snap => {
-        const r = !snap.empty ? snap.docs[0].data() : null;
-        if (r) _discountCache[snap.docs[0].id] = r;
-        applyReward(r);
-      }).catch(() => applyReward(null));
-    } else {
-      applyReward(null);
+
+    // 4. Thử tìm theo giftCode
+    const codeUp = (giftCode || '').toUpperCase().trim();
+    if (codeUp) {
+      // cache
+      const cached = Object.values(_discountCache).find(d => d.code && d.code.toUpperCase() === codeUp);
+      if (cached) return cached;
+      // Firestore
+      try {
+        const snap = await fstore.collection('rewards').where('code', '==', codeUp).limit(1).get();
+        if (!snap.empty) {
+          const d = snap.docs[0].data();
+          _discountCache[snap.docs[0].id] = d;
+          return d;
+        }
+      } catch(e) {}
     }
+
+    return null;
   }
+
+  findReward(rewardKey, giftCode).then(r => applyReward(r));
 }
 
 function removeGiftVoucher() {
@@ -3116,11 +3142,19 @@ function removeGiftVoucher() {
 function openPickCartModal(reward, vKey, vName) {
   const isUpsize  = reward.type === 'item_upsize';
   const isFree    = reward.type === 'item_free';
+  const isItemPick = reward.type === 'item_pick'; // giảm giá 1 món cụ thể
 
   // Lọc các item trong giỏ chưa có voucher
   let cartItems = Object.entries(cart).filter(([, ci]) => !ci._vKey && !ci._discountId);
 
-  // Nếu có conditionCategory / conditionMaxPrice / conditionMinPrice → lọc thêm
+  // item_pick → chỉ hiện các món nằm trong danh sách targets
+  if (isItemPick && reward._targets && reward._targets.length) {
+    cartItems = cartItems.filter(([, ci]) =>
+      reward._targets.some(t => ci.name.toLowerCase().includes(t))
+    );
+  }
+
+  // conditionCategory / price filter (cho item_free / item_upsize)
   if (reward.conditionCategory || reward.conditionMaxPrice || reward.conditionMinPrice) {
     const allMenu = (window._menuXolifaData || []);
     cartItems = cartItems.filter(([, ci]) => {
@@ -3139,56 +3173,84 @@ function openPickCartModal(reward, vKey, vName) {
   }
 
   // Build modal
-  const modal  = document.getElementById('xl-pick-modal');
+  const modal   = document.getElementById('xl-pick-modal');
   const titleEl = document.getElementById('xl-pick-title');
   const subEl   = document.getElementById('xl-pick-subtitle');
   const listEl  = document.getElementById('xl-pick-list');
   if (!modal) return;
 
-  titleEl.innerText = isUpsize ? '⬆️ Chọn món để upsize M→L' : '🎁 Chọn món miễn phí';
+  if (isUpsize)    titleEl.innerText = '⬆️ Chọn món để upsize M→L';
+  else if (isFree) titleEl.innerText = '🎁 Chọn món miễn phí';
+  else             titleEl.innerText = '🎁 Chọn món được giảm giá';
+
   const hints = [];
   if (reward.conditionCategory) hints.push('Danh mục: ' + reward.conditionCategory);
   if (reward.conditionMaxPrice) hints.push('Giá ≤ ' + reward.conditionMaxPrice.toLocaleString('vi-VN') + 'đ');
   if (reward.conditionMinPrice) hints.push('Giá ≥ ' + reward.conditionMinPrice.toLocaleString('vi-VN') + 'đ');
-  subEl.innerText = hints.length ? hints.join(' · ') : (isUpsize ? 'Chọn ly muốn nâng cỡ lên L' : 'Chọn 1 ly được miễn phí');
+  if (isUpsize)         subEl.innerText = hints.length ? hints.join(' · ') : 'Chọn ly muốn nâng cỡ lên L';
+  else if (isFree)      subEl.innerText = hints.length ? hints.join(' · ') : 'Chọn 1 ly được miễn phí';
+  else if (isItemPick)  subEl.innerText = `Giảm ${(reward._discountValue||0).toLocaleString('vi-VN')}đ · chọn 1 món`;
 
   listEl.innerHTML = '';
   cartItems.forEach(([k, ci]) => {
     const btn = document.createElement('button');
-    btn.style.cssText = 'width:100%;padding:13px 16px;border-radius:16px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-family:\'Google Sans\',sans-serif;text-align:left;';
+    btn.style.cssText = 'width:100%;padding:13px 16px;border-radius:16px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-family:\'Google Sans\',sans-serif;text-align:left;margin-bottom:6px;';
     btn.onmouseover = () => btn.style.borderColor = 'var(--gm,#006241)';
     btn.onmouseout  = () => btn.style.borderColor = '#e5e7eb';
+
+    // Hiện giá sau giảm nếu là item_pick
+    let priceHtml;
+    if (isItemPick) {
+      const newPrice = Math.max(0, ci.price - (reward._discountValue || 0));
+      priceHtml = `<div style="text-align:right;flex-shrink:0;margin-left:10px;">
+        <div style="font-size:.75rem;text-decoration:line-through;color:#ccc;">${ci.price.toLocaleString('vi-VN')}đ</div>
+        <div style="font-size:.88rem;font-weight:800;color:var(--gm);">${newPrice.toLocaleString('vi-VN')}đ</div>
+      </div>`;
+    } else {
+      priceHtml = `<span style="font-weight:800;font-size:.85rem;color:var(--gm);flex-shrink:0;margin-left:10px;">${ci.price.toLocaleString('vi-VN')}đ</span>`;
+    }
+
     btn.innerHTML =
-      `<span style="font-weight:700;font-size:.92rem;color:#111;">${ci.name}${ci.size ? ' <span style="color:#9ca3af;font-size:.78rem;">(' + ci.size + ')</span>' : ''}</span>` +
-      `<span style="font-weight:800;font-size:.85rem;color:#006241;flex-shrink:0;margin-left:10px;">${ci.price.toLocaleString('vi-VN')}đ</span>`;
+      `<span style="font-weight:700;font-size:.92rem;color:#111;">${ci.name}${ci.size ? ` <span style="color:#9ca3af;font-size:.78rem;">(${ci.size})</span>` : ''}</span>` +
+      priceHtml;
+
     btn.addEventListener('click', () => {
       xlPickModalClose();
       if (isUpsize) {
-        // Upsize: giữ nguyên giá, chỉ tag
         ci._vKey = vKey; ci._giftType = 'item_upsize';
         ci._giftLabel = vName; ci._originalPrice = ci.price;
-        // Đổi tên thêm ↑L để nhân viên biết
         ci._originalName = ci.name;
-        ci.name = ci.name.replace(/ *\↑L$/, '') + ' ↑L';
+        ci.name = ci.name.replace(/ *↑L$/, '') + ' ↑L';
         ci.size = 'L';
-        toast('🎁 Upsize miễn phí: ' + ci._originalName);
-      } else {
-        // item_free: set giá 0
+        toast('🎁 Upsize: ' + ci._originalName);
+      } else if (isFree) {
+        if (ci.qty > 1) {
+          ci.qty -= 1;
+          cart[k + '_v'] = { name: ci.name, size: ci.size, price: 0, qty: 1,
+            _vKey: vKey, _giftType: 'item_free', _giftLabel: vName, _originalPrice: ci.price };
+        } else {
+          ci._vKey = vKey; ci._giftType = 'item_free';
+          ci._giftLabel = vName; ci._originalPrice = ci.price; ci.price = 0;
+        }
+        toast('🎁 Miễn phí: ' + ci.name);
+      } else if (isItemPick) {
+        const disc = reward._discountValue || 0;
         if (ci.qty > 1) {
           ci.qty -= 1;
           cart[k + '_v'] = {
-            name: ci.name, size: ci.size, price: 0, qty: 1,
-            _vKey: vKey, _giftType: 'item_free', _giftLabel: vName,
-            _originalPrice: ci.price
+            name: ci.name, size: ci.size,
+            price: Math.max(0, ci.price - disc), qty: 1,
+            _vKey: vKey, _giftType: 'item', _giftLabel: vName,
+            _originalPrice: ci.price, _originalName: ci.name
           };
         } else {
-          ci._vKey = vKey; ci._giftType = 'item_free';
+          ci._vKey = vKey; ci._giftType = 'item';
           ci._giftLabel = vName; ci._originalPrice = ci.price;
-          ci.price = 0;
+          ci.price = Math.max(0, ci.price - disc);
         }
-        toast('🎁 Miễn phí: ' + ci.name);
+        toast(`🎁 ${vName} −${disc.toLocaleString('vi-VN')}đ`);
       }
-      renderCartDrawer(); updFooter();
+      renderCartDrawer(); updFooter(); renderScCartPreview();
     });
     listEl.appendChild(btn);
   });
