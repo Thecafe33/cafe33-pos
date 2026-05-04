@@ -10799,20 +10799,10 @@ function discountFormSave() {
     var isNew = !editKey;
     var key = isNew ? ('gift_' + (code || Date.now())) : editKey;
 
-    if (!isNew && _dfType === 'item' && !target) {
-        var cached = _discountCache[editKey];
-        if (cached && cached.targetItem) {
-            target = cached.targetItem;
-            var hEl = document.getElementById('df-target');
-            if (hEl) hEl.value = target;
-        }
-    }
-
     var save = function(usedCount, existingData) {
         record.usedCount = usedCount || 0;
+        // Khi edit: giữ lại conditionCategory/Price nếu form để trống
         if (!isNew && existingData) {
-            if (!record.targetItem && existingData.targetItem)
-                record.targetItem = existingData.targetItem;
             if (!record.conditionCategory && existingData.conditionCategory)
                 record.conditionCategory = existingData.conditionCategory;
             if (!record.conditionMaxPrice && existingData.conditionMaxPrice)
@@ -10821,13 +10811,12 @@ function discountFormSave() {
                 record.conditionMinPrice = existingData.conditionMinPrice;
         }
         fstore.collection('rewards').doc(key).set(record).then(function() {
-            // Mirror to RT for customer app (index.html) to read without Firestore auth
             db.ref('rewards_mirror/' + key).set(Object.assign({}, record, {_docId: key}));
             showAppModal(isNew ? 'Đã tạo' : 'Đã lưu', 'Quà <b>' + label + '</b> ' + (isNew ? 'đã được tạo!' : 'đã được cập nhật!'), '🎁');
             discountFormClear();
             renderDiscountList();
             _discountCache[key] = record;
-        }).catch(function(err) { alert('Lỗi: ' + err.message); });
+        }).catch(function(err) { alert('Lỗi lưu: ' + err.message); });
     };
     if (!isNew) {
         fstore.collection('rewards').doc(editKey).get().then(function(doc) {
