@@ -2433,6 +2433,7 @@ function onCheckoutClick() {
     const base = getCartTotal();
     const finalTotal = getFinalTotal();
     showScreen('sc');
+    renderScCartPreview(); // render giỏ hàng mini ngay khi mở màn thanh toán
     const el = document.getElementById('cotn');
     if (el) {
       if (allDisc > 0) {
@@ -3071,50 +3072,89 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
 
   // Tìm reward: rewardKey có thể là doc ID hoặc code của reward
   async function findReward(rewardKey, giftCode) {
-    // 1. Thử tìm trong cache theo key (doc ID)
-    if (rewardKey && _discountCache[rewardKey]) return _discountCache[rewardKey];
+    console.log('[findReward] rewardKey=', rewardKey, '| giftCode=', giftCode, '| cacheKeys=', Object.keys(_discountCache));
 
-    // 2. Thử fetch Firestore theo doc ID
+    // 1. Thử tìm trong cache theo key (doc ID)
+    if (rewardKey && _discountCache[rewardKey]) {
+      console.log('[findReward] found in cache by doc ID');
+      return _discountCache[rewardKey];
+    }
+
+    // 2. Tìm trong cache theo code field (case-insensitive)
+    const rkUp = (rewardKey || '').toUpperCase();
+    const byCode = Object.values(_discountCache).find(d => d.code && d.code.toUpperCase() === rkUp);
+    if (byCode) {
+      console.log('[findReward] found in cache by code match');
+      return byCode;
+    }
+
+    // 3. Thử fetch Firestore theo doc ID
     if (rewardKey) {
       try {
         const doc = await fstore.collection('rewards').doc(rewardKey).get();
         if (doc.exists) {
+          console.log('[findReward] found in Firestore by doc ID');
           _discountCache[rewardKey] = doc.data();
           return doc.data();
         }
-      } catch(e) {}
-      // 3. rewardKey có thể là code (không phải doc ID) → tìm theo code field
+      } catch(e) { console.warn('[findReward] doc fetch error:', e); }
+
+      // 4. rewardKey có thể là code → tìm theo code field trong Firestore
       try {
-        const snap = await fstore.collection('rewards').where('code', '==', rewardKey.toUpperCase()).limit(1).get();
+        const snap = await fstore.collection('rewards').where('code', '==', rkUp).limit(1).get();
         if (!snap.empty) {
+          console.log('[findReward] found in Firestore by code field');
           const d = snap.docs[0].data();
           _discountCache[snap.docs[0].id] = d;
           return d;
         }
-      } catch(e) {}
+      } catch(e) { console.warn('[findReward] code query error:', e); }
     }
 
-    // 4. Thử tìm theo giftCode
+    // 5. Thử tìm theo giftCode
     const codeUp = (giftCode || '').toUpperCase().trim();
-    if (codeUp) {
-      // cache
-      const cached = Object.values(_discountCache).find(d => d.code && d.code.toUpperCase() === codeUp);
-      if (cached) return cached;
-      // Firestore
+    if (codeUp && codeUp !== rkUp) {
+      const byGiftCode = Object.values(_discountCache).find(d => d.code && d.code.toUpperCase() === codeUp);
+      if (byGiftCode) {
+        console.log('[findReward] found in cache by giftCode');
+        return byGiftCode;
+      }
       try {
         const snap = await fstore.collection('rewards').where('code', '==', codeUp).limit(1).get();
         if (!snap.empty) {
+          console.log('[findReward] found in Firestore by giftCode');
           const d = snap.docs[0].data();
           _discountCache[snap.docs[0].id] = d;
           return d;
         }
-      } catch(e) {}
+      } catch(e) { console.warn('[findReward] giftCode query error:', e); }
     }
 
+    console.warn('[findReward] NOT FOUND — rewardKey:', rewardKey, 'giftCode:', giftCode);
     return null;
   }
 
-  findReward(rewardKey, giftCode).then(r => applyReward(r));
+  // giftName cũng có thể khớp với label/name của reward doc
+  findReward(rewardKey, giftCode).then(async r => {
+    if (!r && giftName) {
+      // Last resort: tìm theo label hoặc name field trong cache
+      const byLabel = Object.values(_discountCache).find(d =>
+        (d.label || d.name || '').toLowerCase() === giftName.toLowerCase()
+      );
+      if (byLabel) { console.log('[findReward] found by label/name in cache'); return applyReward(byLabel); }
+      // Firestore query by label
+      try {
+        const snap = await fstore.collection('rewards').where('label', '==', giftName).limit(1).get();
+        if (!snap.empty) {
+          const d = snap.docs[0].data();
+          _discountCache[snap.docs[0].id] = d;
+          console.log('[findReward] found by label in Firestore');
+          return applyReward(d);
+        }
+      } catch(e) {}
+    }
+    applyReward(r);
+  });
 }
 
 function removeGiftVoucher() {
