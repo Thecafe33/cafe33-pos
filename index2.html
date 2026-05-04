@@ -89,41 +89,151 @@
     ::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 10px; }
   </style>
   <style>
-    /* CSS RIÊNG CHO THANH MENU APPLE (STYLE TINH TẾ - GIỐNG ẢNH MẪU) */
+    /* CSS BOTTOM BAR — LIQUID GLASS STYLE */
+
+    /* ── LIQUID GLASS — Class dùng chung ── */
+    .liquid-glass {
+        background: rgba(255, 255, 255, 0.01);
+        background-blend-mode: luminosity;
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        border: none;
+        box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        position: relative;
+        overflow: hidden;
+        border-radius: 9999px;
+        color: white;
+        padding: 10px 24px;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+    }
+    .liquid-glass:hover { transform: scale(1.03); }
+    .liquid-glass::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 1.4px;
+        background: linear-gradient(
+            180deg,
+            rgba(255,255,255,0.45) 0%,
+            rgba(255,255,255,0.15) 20%,
+            rgba(255,255,255,0) 40%,
+            rgba(255,255,255,0) 60%,
+            rgba(255,255,255,0.15) 80%,
+            rgba(255,255,255,0.45) 100%
+        );
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+    }
+
+    /* Thanh nav chính: liquid glass toàn bar */
+    #nav-bar {
+        background: rgba(255, 255, 255, 0.12) !important;
+        background-blend-mode: luminosity;
+        backdrop-filter: blur(24px) saturate(180%) !important;
+        -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+        border: none !important;
+        box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 0.45),
+            0 8px 32px rgba(0, 0, 0, 0.18),
+            0 2px 8px rgba(0, 0, 0, 0.10) !important;
+        position: relative;
+        overflow: visible;
+    }
+
+    /* Viền gradient cho nav bar */
+    #nav-bar::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 2.5rem;
+        padding: 1.4px;
+        background: linear-gradient(
+            180deg,
+            rgba(255,255,255,0.55) 0%,
+            rgba(255,255,255,0.18) 20%,
+            rgba(255,255,255,0) 40%,
+            rgba(255,255,255,0) 60%,
+            rgba(255,255,255,0.18) 80%,
+            rgba(255,255,255,0.45) 100%
+        );
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+        z-index: 0;
+    }
+
+    /* Các nút nav: màu mờ khi chưa chọn */
     .nav-item {
-        color: #9CA3AF; /* Màu xám khi chưa chọn */
-        border: 1px solid transparent; 
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Hiệu ứng chuyển động mượt */
+        color: rgba(255, 255, 255, 0.55);
+        border: 1px solid transparent;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        z-index: 1;
     }
 
-    /* Khi đang chọn (Active): NỀN TRẮNG + BÓNG ĐỔ + ÁNH SÁNG */
+    .nav-item svg {
+        stroke: rgba(255, 255, 255, 0.55) !important;
+        transition: all 0.3s ease;
+    }
+
+    .nav-item span {
+        color: rgba(255, 255, 255, 0.55) !important;
+        transition: all 0.3s ease;
+    }
+
+    /* Khi đang chọn (Active): Liquid Glass pill nổi lên */
     .nav-item.active {
-        background-color: #ffffff !important; /* Nền trắng tệp với bar */
-        
-        /* Kỹ thuật đổ bóng cao cấp: 
-           1. Inset trắng: Tạo ánh sáng viền trên
-           2. Shadow ngoài: Tạo độ nổi nhẹ nhàng 
-        */
-        box-shadow: 
-            inset 0 1px 2px rgba(255, 255, 255, 1), 
-            0 4px 15px rgba(0, 0, 0, 0.08),
-            0 1px 3px rgba(0, 0, 0, 0.05) !important;
-            
-        border: 1px solid rgba(243, 244, 246, 0.8) !important; /* Viền xám siêu mờ để tách biệt */
-        transform: translateY(-4px); /* Nổi lên cao hơn chút nữa */
+        background: rgba(255, 255, 255, 0.01) !important;
+        background-blend-mode: luminosity;
+        backdrop-filter: blur(4px) !important;
+        -webkit-backdrop-filter: blur(4px) !important;
+        box-shadow:
+            inset 0 1px 1px rgba(255, 255, 255, 0.18),
+            0 4px 16px rgba(0, 0, 0, 0.12),
+            0 1px 4px rgba(0, 0, 0, 0.08) !important;
+        border: none !important;
+        transform: translateY(-4px);
+        overflow: hidden;
     }
 
-    /* Đổi màu Icon thành Xanh khi chọn */
-    .nav-item.active svg {
-        stroke: #006241 !important;
-        /* Thêm tí bóng cho Icon nó sâu hơn */
-        filter: drop-shadow(0 2px 2px rgba(0, 98, 65, 0.15));
-        fill: transparent !important; /* Không tô màu nền icon nữa cho tinh tế */
+    /* Viền gradient cho item active */
+    .nav-item.active::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 2rem;
+        padding: 1.4px;
+        background: linear-gradient(
+            180deg,
+            rgba(255,255,255,0.45) 0%,
+            rgba(255,255,255,0.15) 20%,
+            rgba(255,255,255,0) 40%,
+            rgba(255,255,255,0) 60%,
+            rgba(255,255,255,0.15) 80%,
+            rgba(255,255,255,0.45) 100%
+        );
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
     }
-    
+
+    /* Icon và chữ khi active: trắng rõ */
+    .nav-item.active svg {
+        stroke: #ffffff !important;
+        filter: drop-shadow(0 1px 4px rgba(255, 255, 255, 0.4)) !important;
+        fill: transparent !important;
+    }
+
     .nav-item.active span {
-        color: #006241 !important;
+        color: #ffffff !important;
         font-weight: 800;
+        text-shadow: 0 1px 4px rgba(0,0,0,0.2);
     }
     /* CSS GỢI Ý THÔNG MINH - THE CAFE 33 */
 /* CSS GỢI Ý THÔNG MINH - THE CAFE 33 (PREMIUM) */
@@ -466,7 +576,7 @@
     <p style="font-size:9px;font-weight:500;color:#9ca3af;letter-spacing:4px;text-transform:uppercase;font-family:Georgia,serif;margin-bottom:20px;">COFFEE &amp; TEA</p>
     <p class="text-[11px] font-bold text-gray-400 mb-12 uppercase tracking-widest">Tích điểm nhận đặc quyền</p>
     <input type="tel" id="login-sdt" placeholder="Số điện thoại của bạn..." class="w-full p-5 rounded-3xl bg-gray-50 border border-gray-100 mb-4 text-center outline-none text-lg">
-    <button id="btn-login" onclick="login()" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-lg">Đăng nhập</button>
+    <button id="btn-login" onclick="login()" class="liquid-glass w-full active:scale-95 font-bold uppercase text-lg" style="padding:20px 24px;border-radius:1.5rem;background:linear-gradient(135deg,rgba(0,60,35,0.80) 0%,rgba(0,40,25,0.90) 100%);">Đăng nhập</button>
     <p class="mt-6 text-sm text-gray-400 font-medium">Chưa có tài khoản?</p>
 <button onclick="showRegister()" class="text-[#006241] font-bold text-sm uppercase tracking-widest hover:underline py-2">
     Đăng ký thành viên mới
@@ -503,11 +613,11 @@
 </div>
   <div id="main-app" class="hidden">
     <div style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;pointer-events:none;">
-      <div style="pointer-events:auto;background:rgba(255,255,255,0.88);border:1px solid rgba(0,98,65,0.13);border-radius:99px;padding:8px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.09),inset 0 1px 0 rgba(255,255,255,1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
-        <span style="font-size:14px;font-weight:800;color:#006241;font-family:'League Spartan',sans-serif;">The cafe 33</span>
+      <div class="liquid-glass" style="pointer-events:auto;padding:8px 18px;background:linear-gradient(135deg,rgba(0,60,35,0.72) 0%,rgba(0,40,25,0.82) 100%);">
+        <span style="font-size:14px;font-weight:800;color:#ffffff;font-family:'League Spartan',sans-serif;text-shadow:0 1px 4px rgba(0,0,0,0.3);">The cafe 33</span>
       </div>
-      <div style="pointer-events:auto;background:rgba(255,255,255,0.88);border:1px solid rgba(45,58,90,0.15);border-radius:99px;padding:8px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.09),inset 0 1px 0 rgba(255,255,255,1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
-        <span style="font-size:14px;font-weight:800;color:#2d3a5a;font-family:'League Spartan',sans-serif;letter-spacing:0.5px;">XOLIFA</span>
+      <div class="liquid-glass" style="pointer-events:auto;padding:8px 18px;background:linear-gradient(135deg,rgba(20,28,55,0.72) 0%,rgba(10,15,35,0.82) 100%);">
+        <span style="font-size:14px;font-weight:800;color:#ffffff;font-family:'League Spartan',sans-serif;letter-spacing:0.5px;text-shadow:0 1px 4px rgba(0,0,0,0.3);">XOLIFA</span>
       </div>
     </div>
 
@@ -930,7 +1040,7 @@
     </div>
   </div>
 
-  <nav id="nav-bar" class="fixed bottom-6 left-6 right-6 h-20 bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-white/60 flex justify-between items-center p-2 z-50 hidden">
+  <nav id="nav-bar" class="fixed bottom-6 left-6 right-6 h-20 rounded-[2.5rem] flex justify-between items-center p-2 z-50 hidden" style="background:linear-gradient(135deg,rgba(0,60,35,0.72) 0%,rgba(0,40,25,0.80) 100%)">
     <button onclick="showTab('user')" id="nav-user" class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1.5 active:scale-95">
         <div class="relative w-6 h-6">
             <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
