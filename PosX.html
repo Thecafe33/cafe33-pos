@@ -302,6 +302,14 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 .hit.togo-order{background:#fffbeb;border:1.5px solid #fde68a;}
 .hit.togo-order .hii{background:#fef3c7;}
 .hit.togo-order .hii svg{stroke:#d97706;}
+/* Đồng giá badge on history */
+.hit.dg-order{background:#f0f7ff;border:1.5px solid #bfdbfe;}
+.hit.dg-order .hii{background:#dbeafe;}
+.hit.dg-order .hii svg{stroke:#2563eb;}
+.hit.dg-order .hip{color:#1d4ed8;}
+/* Strikethrough original price in bill detail */
+.dg-orig-price{text-decoration:line-through;color:#bbb;font-size:13px;font-weight:500;margin-left:6px;}
+.dg-new-price{color:#1d4ed8;font-weight:700;}
 /* To Go admin screen */
 #tg{background:var(--bg);}
 .tg-section{background:#fff;border-radius:20px;margin:0 16px 16px;padding:20px;}
@@ -3934,12 +3942,20 @@ function renderH(f = '') {
   list.innerHTML = Object.keys(grp).map(d =>
     `<div class="hdg"><div class="hdl">${d}</div>${grp[d].map(o => {
       const isToGoOrder = o.isToGo === true;
-      const togoClass = isToGoOrder ? ' togo-order' : '';
-      const togoBadge = isToGoOrder ? '<span style="background:#fbbf24;color:#92400e;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">TO GO</span>' : '';
-      return `<div class="hit${togoClass}" onclick="showDet('${o.id}')">
-        <div class="hii"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${isToGoOrder ? '#d97706' : '#1e6b3c'}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></div>
-        <div class="hin"><div class="hitime">${o.time}${togoBadge}</div><div class="himeta">${o.phone||'Khách vãng lai'}</div></div>
-        <div style="text-align:right;flex-shrink:0;min-width:110px;"><div class="hip">${o.total.toLocaleString('vi-VN')}<sup>đ</sup></div><div class="him">${o.method}</div></div>
+      const isDgOrder   = !!(o.dgDiscount && o.dgDiscount > 0);
+      const togoClass   = isToGoOrder ? ' togo-order' : '';
+      const dgClass     = (!isToGoOrder && isDgOrder) ? ' dg-order' : '';
+      const togoBadge   = isToGoOrder ? '<span style="background:#fbbf24;color:#92400e;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">TO GO</span>' : '';
+      const dgBadge     = isDgOrder   ? '<span style="background:#2563eb;color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">ĐỒNG GIÁ</span>' : '';
+      const iconStroke  = isToGoOrder ? '#d97706' : (isDgOrder ? '#2563eb' : '#1e6b3c');
+      const origTotal   = isDgOrder ? (o.total + o.dgDiscount) : null;
+      const priceHtml   = isDgOrder
+        ? `<div class="hip dg-new-price">${o.total.toLocaleString('vi-VN')}<sup>đ</sup></div><div style="text-decoration:line-through;color:#aaa;font-size:11px;font-weight:500;">gốc ${origTotal.toLocaleString('vi-VN')}đ</div>`
+        : `<div class="hip">${o.total.toLocaleString('vi-VN')}<sup>đ</sup></div>`;
+      return `<div class="hit${togoClass}${dgClass}" onclick="showDet('${o.id}')">
+        <div class="hii"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${iconStroke}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></div>
+        <div class="hin"><div class="hitime">${o.time}${togoBadge}${dgBadge}</div><div class="himeta">${o.phone||'Khách vãng lai'}</div></div>
+        <div style="text-align:right;flex-shrink:0;min-width:110px;">${priceHtml}<div class="him">${o.method}</div></div>
       </div>`;
     }).join('')}</div>`).join('');
 }
@@ -3957,25 +3973,35 @@ function showDet(id) {
   const cashChange = o.cashChange !== undefined ? o.cashChange : 0;
   const isCash = o.method === 'TIỀN MẶT';
 
+  // ── Đồng giá helpers ──
+  const isDgBill  = !!(o.dgDiscount && o.dgDiscount > 0);
+  const dgDisc    = isDgBill ? o.dgDiscount : 0;
+  const origTotal = isDgBill ? (o.total + dgDisc) : o.total;
+
   document.getElementById('dc2').innerHTML = `
     <!-- Bill card -->
-    <div style="background:#fff;border-radius:24px;padding:28px 24px 20px;margin-bottom:12px;">
+    <div style="background:#fff;border-radius:24px;padding:28px 24px 20px;margin-bottom:12px;${isDgBill ? 'border:2px solid #bfdbfe;' : ''}">
       <div style="font-family:'Google Sans Display',sans-serif;font-size:32px;font-weight:900;color:var(--gd);letter-spacing:-1px;margin-bottom:2px;">The cafe 33</div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:${o.isToGo ? '8px' : '24px'};">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:${(o.isToGo || isDgBill) ? '8px' : '24px'};">
         <span style="width:8px;height:8px;border-radius:50%;background:var(--gm);display:inline-block;"></span>
         <span style="font-size:12px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.8px;">Hóa đơn điện tử</span>
       </div>
-      ${o.isToGo ? `<div style="background:#fef3c7;border-radius:12px;padding:8px 14px;margin-bottom:20px;display:inline-flex;align-items:center;gap:8px;">
-        <span style="font-size:16px;font-weight:700;">TO GO</span>
+      ${o.isToGo ? `<div style="background:#fef3c7;border-radius:12px;padding:8px 14px;margin-bottom:${isDgBill?'8px':'20px'};display:inline-flex;align-items:center;gap:8px;">
+        <span style="font-size:16px;font-weight:700;">🛵</span>
         <span style="font-size:13px;font-weight:700;color:#92400e;">ĐƠN MANG VỀ (TO GO)</span>
-        ${o.discountAmt ? `<span style="font-size:12px;font-weight:700;color:#d97706;background:#fff;border-radius:8px;padding:2px 8px;">-${o.discountAmt.toLocaleString('vi-VN')}đ</span>` : ''}
+      </div>` : ''}
+      ${isDgBill ? `<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">🏷️</span>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:800;color:#1d4ed8;">ÁP DỤNG CHƯƠNG TRÌNH ĐỒNG GIÁ</div>
+          <div style="font-size:12px;color:#3b82f6;margin-top:2px;">Giá gốc: <span style="text-decoration:line-through;color:#94a3b8;">${origTotal.toLocaleString('vi-VN')}đ</span> → Giảm: <span style="font-weight:800;color:#1d4ed8;">−${dgDisc.toLocaleString('vi-VN')}đ</span></div>
+        </div>
       </div>` : ''}
       ${o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length
         ? o.splitGroups.map((grp, gi) => {
             const isCashGrp = grp.method === 'TIỀN MẶT';
             const iconBg = isCashGrp ? '#d4f0da' : 'var(--bb)';
             const iconColor = isCashGrp ? 'var(--gm)' : 'var(--bi)';
-            const methodLabel = isCashGrp ? '💵 Tiền mặt' : '🏦 Chuyển khoản';
             return `
             <div style="border:2px solid ${isCashGrp ? 'var(--gm)' : 'var(--bi)'};border-radius:18px;padding:16px;margin-bottom:${gi < o.splitGroups.length-1 ? '14px' : '0'};">
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #f0f0f0;">
@@ -4007,15 +4033,22 @@ function showDet(id) {
               </div>` : ''}
             </div>`;
           }).join('')
-        : itemsList.map((it, i) => `
+        : itemsList.map((it, i) => {
+            // Giá lưu trong itemsArray là GIÁ GỐC (trước đồng giá)
+            // Nếu bill có đồng giá → gạch ngang giá gốc, badge màu xanh dương
+            const itemOrigAmt = it.price * it.qty;
+            const sizeBg    = isDgBill ? '#eff6ff' : 'var(--gl)';
+            const sizeColor = isDgBill ? '#1d4ed8' : 'var(--gd)';
+            return `
         <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;${i < itemsList.length - 1 ? 'border-bottom:1px solid #f0f0f0;' : ''}">
           <span style="font-size:17px;font-weight:700;color:var(--td);min-width:20px;">${i+1}</span>
           <div style="flex:1;">
             <div style="font-size:17px;font-weight:700;color:var(--td);margin-bottom:5px;">${it.name}${it.qty > 1 ? ` <span style="font-size:13px;color:var(--gm);font-weight:700;">×${it.qty}</span>` : ''}</div>
-            <span style="display:inline-flex;align-items:center;gap:4px;background:var(--gl);color:var(--gd);border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;">${it.size}&nbsp;&nbsp;${it.price.toLocaleString('vi-VN')}</span>
+            <span style="display:inline-flex;align-items:center;gap:4px;background:${sizeBg};color:${sizeColor};border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;">${it.size}&nbsp;&nbsp;${it.price.toLocaleString('vi-VN')}${isDgBill ? ' (gốc)' : ''}</span>
           </div>
-          <div style="font-size:17px;font-weight:700;color:var(--td);white-space:nowrap;">${(it.price * it.qty).toLocaleString('vi-VN')}</div>
-        </div>`).join('')}
+          <div style="font-size:17px;font-weight:700;color:${isDgBill ? '#94a3b8' : 'var(--td)'};white-space:nowrap;${isDgBill ? 'text-decoration:line-through;' : ''}">${itemOrigAmt.toLocaleString('vi-VN')}</div>
+        </div>`;
+          }).join('')}
     </div>
 
     <!-- Meta row -->
@@ -4035,10 +4068,25 @@ function showDet(id) {
     </div>
 
     <!-- Total card -->
-    <div style="background:#fff;border-radius:20px;padding:22px 24px;">
-      <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Tổng Bill</div>
-      <div style="font-size:52px;font-weight:700;color:var(--td);line-height:1;letter-spacing:-1px;">${o.total.toLocaleString('vi-VN')}<span style="font-size:24px;color:var(--gt);">đ</span></div>
-      <div style="font-size:13px;color:var(--gt);margin-top:6px;margin-bottom:${(o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length) ? '0' : '16px'};">Số lượng: ${totalQty} món${o.voucherUsed ? ' · 🎁 ' + o.voucherUsed : ''}</div>
+    <div style="background:#fff;border-radius:20px;padding:22px 24px;${isDgBill ? 'border:2px solid #bfdbfe;' : ''}">
+      <div style="font-size:11px;font-weight:700;color:${isDgBill ? '#1d4ed8' : 'var(--gt)'};text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">${isDgBill ? '💙 TỔNG SAU ĐỒNG GIÁ' : 'Tổng Bill'}</div>
+      <div style="font-size:52px;font-weight:700;color:${isDgBill ? '#1d4ed8' : 'var(--td)'};line-height:1;letter-spacing:-1px;">${o.total.toLocaleString('vi-VN')}<span style="font-size:24px;color:${isDgBill ? '#3b82f6' : 'var(--gt)'};">đ</span></div>
+      <div style="font-size:13px;color:var(--gt);margin-top:6px;margin-bottom:${(o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length) ? '0' : '12px'};">Số lượng: ${totalQty} món${o.voucherUsed ? ' · 🎁 ' + o.voucherUsed : ''}</div>
+      ${isDgBill ? `
+      <div style="background:#eff6ff;border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">Tổng giá gốc</span>
+          <span style="font-size:15px;font-weight:700;color:#94a3b8;text-decoration:line-through;">${origTotal.toLocaleString('vi-VN')}đ</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.4px;">🏷️ Giảm đồng giá</span>
+          <span style="font-size:15px;font-weight:800;color:#1d4ed8;">−${dgDisc.toLocaleString('vi-VN')}đ</span>
+        </div>
+        <div style="border-top:1.5px dashed #bfdbfe;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;font-weight:800;color:#1d4ed8;text-transform:uppercase;">✅ Thực thu</span>
+          <span style="font-size:18px;font-weight:900;color:#1d4ed8;">${o.total.toLocaleString('vi-VN')}đ</span>
+        </div>
+      </div>` : ''}
       ${!(o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length) ? `
       <div style="border-top:1px solid #f0f0f0;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f5f5f5;">
@@ -5025,7 +5073,7 @@ function loadCustomerList() {
   if (!container) return;
   container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Đang cập nhật danh sách...</div>';
   
-  fstore.collection('customers').orderBy('total_points', 'desc').get().then(snap => {
+  fstore.collection('customers').orderBy('total_points', 'desc').limit(50).get().then(snap => {
     if (snap.empty) {
       container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Chưa có khách hàng nào</div>';
       return;
