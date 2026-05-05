@@ -3676,7 +3676,10 @@ function confirmPay(cashGiven, cashChange) {
     createdAt: now.toISOString(),
     isToGo: isToGo,
     discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0) ? (togoDiscountAmt + dgDiscountAmt) : null,
-    dgDiscount:  dgDiscountAmt > 0 ? dgDiscountAmt : null
+    dgDiscount:    dgDiscountAmt > 0 ? dgDiscountAmt : null,
+    dgItemIds:     dgDiscountAmt > 0 ? (dgSettings.items || []).map(i => i.id) : null,
+    dgFixedPrice:  dgDiscountAmt > 0 ? (dgSettings.fixedPrice  || null) : null,
+    dgFixedPriceL: dgDiscountAmt > 0 ? (dgSettings.fixedPriceL || null) : null
   };
 
   db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
@@ -4034,19 +4037,37 @@ function showDet(id) {
             </div>`;
           }).join('')
         : itemsList.map((it, i) => {
-            // Giá lưu trong itemsArray là GIÁ GỐC (trước đồng giá)
-            // Nếu bill có đồng giá → gạch ngang giá gốc, badge màu xanh dương
-            const itemOrigAmt = it.price * it.qty;
-            const sizeBg    = isDgBill ? '#eff6ff' : 'var(--gl)';
-            const sizeColor = isDgBill ? '#1d4ed8' : 'var(--gd)';
+            // Xác định item này có nằm trong danh sách đồng giá không
+            // Ưu tiên dùng dgItemIds đã lưu vào order, fallback về dgSettings hiện tại
+            const dgIds   = isDgBill ? (o.dgItemIds || (dgSettings.items || []).map(x => x.id)) : [];
+            const isEligible = isDgBill && !it.isFree && dgIds.includes(it.itemId || '');
+
+            // Tính giá đồng giá cho item này (M → dgFixedPrice, L → dgFixedPriceL)
+            const fixedPM  = isDgBill ? (o.dgFixedPrice  || dgSettings.fixedPrice  || 0) : 0;
+            const fixedPL  = isDgBill ? (o.dgFixedPriceL || dgSettings.fixedPriceL || null) : null;
+            const isL      = (it.size || '').toUpperCase() === 'L';
+            const fixedP   = isL ? (fixedPL != null && fixedPL > 0 ? fixedPL : it.price) : fixedPM;
+            const reducedPrice = isEligible ? fixedP : it.price;
+            const itemOrigAmt  = it.price * it.qty;
+            const itemReducedAmt = reducedPrice * it.qty;
+
             return `
         <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;${i < itemsList.length - 1 ? 'border-bottom:1px solid #f0f0f0;' : ''}">
           <span style="font-size:17px;font-weight:700;color:var(--td);min-width:20px;">${i+1}</span>
           <div style="flex:1;">
             <div style="font-size:17px;font-weight:700;color:var(--td);margin-bottom:5px;">${it.name}${it.qty > 1 ? ` <span style="font-size:13px;color:var(--gm);font-weight:700;">×${it.qty}</span>` : ''}</div>
-            <span style="display:inline-flex;align-items:center;gap:4px;background:${sizeBg};color:${sizeColor};border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;">${it.size}&nbsp;&nbsp;${it.price.toLocaleString('vi-VN')}${isDgBill ? ' (gốc)' : ''}</span>
+            ${isEligible
+              ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;">${it.size}&nbsp;&nbsp;<span style="text-decoration:line-through;color:#94a3b8;font-weight:500;">${it.price.toLocaleString('vi-VN')}</span>&nbsp;→&nbsp;${reducedPrice.toLocaleString('vi-VN')}</span>`
+              : `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gl);color:var(--gd);border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;">${it.size}&nbsp;&nbsp;${it.price.toLocaleString('vi-VN')}</span>`
+            }
           </div>
-          <div style="font-size:17px;font-weight:700;color:${isDgBill ? '#94a3b8' : 'var(--td)'};white-space:nowrap;${isDgBill ? 'text-decoration:line-through;' : ''}">${itemOrigAmt.toLocaleString('vi-VN')}</div>
+          <div style="text-align:right;white-space:nowrap;">
+            ${isEligible
+              ? `<div style="font-size:17px;font-weight:700;color:#1d4ed8;">${itemReducedAmt.toLocaleString('vi-VN')}</div>
+                 <div style="font-size:12px;color:#94a3b8;text-decoration:line-through;">${itemOrigAmt.toLocaleString('vi-VN')}</div>`
+              : `<div style="font-size:17px;font-weight:700;color:var(--td);">${itemOrigAmt.toLocaleString('vi-VN')}</div>`
+            }
+          </div>
         </div>`;
           }).join('')}
     </div>
@@ -5529,7 +5550,10 @@ function confirmPayWallet() {
     createdAt: now.toISOString(),
     isToGo: isToGo,
     discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0) ? (togoDiscountAmt + dgDiscountAmt) : null,
-    dgDiscount: dgDiscountAmt > 0 ? dgDiscountAmt : null,
+    dgDiscount:    dgDiscountAmt > 0 ? dgDiscountAmt : null,
+    dgItemIds:     dgDiscountAmt > 0 ? (dgSettings.items || []).map(i => i.id) : null,
+    dgFixedPrice:  dgDiscountAmt > 0 ? (dgSettings.fixedPrice  || null) : null,
+    dgFixedPriceL: dgDiscountAmt > 0 ? (dgSettings.fixedPriceL || null) : null,
     walletTxId: _walCurrentTxId
   };
 
