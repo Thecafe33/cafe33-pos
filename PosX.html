@@ -1367,6 +1367,7 @@ let _discountCache = {};      // cache rewards collection
 let _appliedDiscountId = null; // doc key của mã đang áp dụng
 let _giftVoucherKey = null;   // myGifts key đang áp dụng
 let _giftVoucherPhone = null; // phone của khách đang dùng gift
+let _pendingVoucherArgs = null; // args để re-apply khi nhân viên thêm món vào giỏ
 let _rvFrom = null, _rvTo = null;
 let isToGo = false; // To Go toggle state
 
@@ -2119,7 +2120,17 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
-  if (id === 'sc') updCoTotal();
+  if (id === 'sc') {
+    updCoTotal(); renderScCartPreview(); // Bug 3: luôn render cart khi vào màn sc
+    // Bug 1: nếu có voucher đang chờ (chưa match được món) → thử apply lại
+    if (_giftVoucherKey && _giftVoucherPhone) {
+      const alreadyApplied = Object.values(cart).some(ci => ci._vKey === _giftVoucherKey);
+      if (!alreadyApplied && _pendingVoucherArgs) {
+        // Re-apply với args đã lưu
+        applyVoucher(..._pendingVoucherArgs);
+      }
+    }
+  }
   if (id === 'mn') renderMnList();
   if (id === 'tg') { loadTogoSettings(); loadTgAdminUI(); }
   if (id === 'dgscreen') { loadDgSettings(); loadDgAdminUI(); }
@@ -2978,6 +2989,16 @@ function removeAppliedDiscount() {
   updFooter();
 }
 
+// Helper: cập nhật total + mini cart ngay sau bất kỳ thay đổi cart nào
+function _refreshSc() {
+  updFooter();
+  const scEl = document.getElementById('sc');
+  if (scEl && scEl.classList.contains('active')) {
+    updCoTotal();
+    renderScCartPreview();
+  }
+}
+
 // ── Gift Voucher từ myGifts khách hàng ──────────────────────────
 function applyVoucher(key, giftName, rewardKey, giftCode) {
   if (!curCustomer) return;
@@ -2986,6 +3007,7 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
 
   _giftVoucherKey   = key;
   _giftVoucherPhone = curCustomer.phone;
+  _pendingVoucherArgs = [key, giftName, rewardKey, giftCode]; // lưu để re-apply
 
   // Highlight UI
   document.querySelectorAll('.voucher-item').forEach(el => el.classList.remove('selected'));
@@ -3065,7 +3087,7 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
         size: '', price: -amt, qty: 1,
         _vKey: key, _giftType: r.type, _giftLabel: giftName
       };
-      renderCartDrawer(); updFooter();
+      renderCartDrawer(); _refreshSc();
       toast('🎁 ' + giftName + ' −' + amt.toLocaleString('vi-VN') + 'đ');
     }
   }
@@ -3290,7 +3312,8 @@ function openPickCartModal(reward, vKey, vName) {
         }
         toast(`🎁 ${vName} −${disc.toLocaleString('vi-VN')}đ`);
       }
-      renderCartDrawer(); updFooter(); renderScCartPreview();
+      renderCartDrawer(); _refreshSc();
+      _pendingVoucherArgs = null; // apply thành công, không cần re-apply nữa
     });
     listEl.appendChild(btn);
   });
@@ -3304,12 +3327,12 @@ function xlPickModalClose() {
 }
 
 function resetDiscountState() {
-  // Gọi khi clear cart hoặc sau thanh toán (KHÔNG write Firestore ở đây — confirmPay lo)
   removeAppliedDiscount();
   removeGiftVoucher();
   _appliedDiscountId = null;
   _giftVoucherKey = null;
   _giftVoucherPhone = null;
+  _pendingVoucherArgs = null;
   selectedVoucher = null;
 }
 
