@@ -1367,7 +1367,8 @@ let _discountCache = {};      // cache rewards collection
 let _appliedDiscountId = null; // doc key của mã đang áp dụng
 let _giftVoucherKey = null;   // myGifts key đang áp dụng
 let _giftVoucherPhone = null; // phone của khách đang dùng gift
-let _pendingVoucherArgs = null; // args để re-apply khi nhân viên thêm món vào giỏ
+let _pendingVoucherArgs = null; // [key, giftName, rewardKey, giftCode] để re-apply
+let _pendingVoucherFn = null;  // closure gọi applyReward khi nhân viên đã thêm món
 let _rvFrom = null, _rvTo = null;
 let isToGo = false; // To Go toggle state
 
@@ -2121,14 +2122,10 @@ function showScreen(id) {
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
   if (id === 'sc') {
-    updCoTotal(); renderScCartPreview(); // Bug 3: luôn render cart khi vào màn sc
-    // Bug 1: nếu có voucher đang chờ (chưa match được món) → thử apply lại
-    if (_giftVoucherKey && _giftVoucherPhone) {
-      const alreadyApplied = Object.values(cart).some(ci => ci._vKey === _giftVoucherKey);
-      if (!alreadyApplied && _pendingVoucherArgs) {
-        // Re-apply với args đã lưu
-        applyVoucher(..._pendingVoucherArgs);
-      }
+    updCoTotal(); // updCoTotal đã gọi renderScCartPreview() bên trong
+    // Bug 1: nếu có voucher đang chờ → thử apply lại ngay
+    if (_pendingVoucherFn) {
+      setTimeout(_pendingVoucherFn, 100); // nhỏ delay để cart render xong
     }
   }
   if (id === 'mn') renderMnList();
@@ -2486,6 +2483,7 @@ function renderScCartPreview() {
   const el = document.getElementById('sc-cart-lines');
   if (!el) return;
   const items = Object.values(cart);
+  console.log('[renderScCartPreview] cart keys:', Object.keys(cart), '| items count:', items.length);
   if (!items.length) { el.innerHTML = '<div style="font-size:12px;color:#bbb;">Giỏ trống</div>'; return; }
 
   const dgDisc    = getDgDiscountAmt();
@@ -3050,16 +3048,18 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
         (r.targetItemsXl || r.targetItems || [r.targetItemXl || r.targetItem]).filter(Boolean)
       )].join(', ');
 
-      // Không có món match → thông báo rõ
+      // Không có món match → thông báo rõ, lưu fn để auto-apply khi quay lại
       if (!matchedKeys.length) {
         _giftVoucherKey = null; _giftVoucherPhone = null;
         removeGiftVoucher();
-        toast(`🛒 Giỏ chưa có món phù hợp\nVoucher dành cho: ${displayList}`);
+        // Lưu lại để tự retry khi nhân viên bấm Thanh toán sau khi thêm món
+        _pendingVoucherFn = () => applyVoucher(key, giftName, rewardKey, giftCode);
+        toast(`🛒 Giỏ chưa có món phù hợp\nVoucher dành cho: ${displayList}\n→ Thêm món rồi bấm Thanh toán lại`);
         return;
       }
 
-      // Có món match → mở modal để nhân viên chọn đúng 1 món được giảm
-      // Truyền fake reward với type item_pick để openPickCartModal xử lý đúng
+      // Có món match → mở modal chọn 1 món
+      _pendingVoucherFn = null; // không cần retry nữa
       openPickCartModal(
         Object.assign({}, r, { type: 'item_pick', _discountValue: r.value || 0, _targets: targets }),
         key, giftName
@@ -3088,6 +3088,7 @@ function applyVoucher(key, giftName, rewardKey, giftCode) {
         _vKey: key, _giftType: r.type, _giftLabel: giftName
       };
       renderCartDrawer(); _refreshSc();
+      _pendingVoucherFn = null;
       toast('🎁 ' + giftName + ' −' + amt.toLocaleString('vi-VN') + 'đ');
     }
   }
@@ -3313,7 +3314,7 @@ function openPickCartModal(reward, vKey, vName) {
         toast(`🎁 ${vName} −${disc.toLocaleString('vi-VN')}đ`);
       }
       renderCartDrawer(); _refreshSc();
-      _pendingVoucherArgs = null; // apply thành công, không cần re-apply nữa
+      _pendingVoucherArgs = null; _pendingVoucherFn = null;
     });
     listEl.appendChild(btn);
   });
@@ -3333,6 +3334,7 @@ function resetDiscountState() {
   _giftVoucherKey = null;
   _giftVoucherPhone = null;
   _pendingVoucherArgs = null;
+  _pendingVoucherFn = null;
   selectedVoucher = null;
 }
 
