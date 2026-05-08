@@ -1033,32 +1033,31 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <button onclick="saveDgSettings()" class="tg-save-btn">💾 Lưu cài đặt đồng giá</button>
     </div>
 
-    <!-- Cài đặt màn hình phụ khi bật đồng giá -->
-    <div style="padding:0 16px 6px;margin-top:8px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Màn hình phụ (Kiosk) — Khi đồng giá bật</div></div>
+    <!-- Slide riêng cho phần 40% khi đồng giá bật -->
+    <div style="padding:0 16px 6px;margin-top:8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Slide màn hình phụ (40% trên)</div>
+    </div>
     <div class="tg-section">
-      <div style="font-size:13px;color:#666;line-height:1.6;margin-bottom:14px;">Khi đồng giá hoạt động, màn phụ sẽ chia đôi:<br><span style="font-weight:700;color:var(--gd);">40% trên</span> — slideshow bình thường tiếp tục chạy<br><span style="font-weight:700;color:var(--gd);">60% dưới</span> — bảng đồng giá + ảnh nền</div>
+      <div style="font-size:12px;color:#888;line-height:1.6;margin-bottom:14px;">Ảnh này dùng riêng cho vùng <strong style="color:var(--gd);">40% phía trên</strong> màn kiosk khi đồng giá đang bật. Tỉ lệ khung hình khác slide bình thường nên cần cấu hình riêng.<br>Nếu không có sẽ dùng slide bình thường.</div>
 
-      <!-- Preview layout -->
-      <div style="background:#f0f0f0;border-radius:14px;overflow:hidden;margin-bottom:14px;aspect-ratio:9/16;max-height:220px;position:relative;display:flex;flex-direction:column;border:2px solid #e0e0e0;">
-        <div style="flex:0 0 40%;background:#c8dece;display:flex;align-items:center;justify-content:center;border-bottom:1.5px dashed #aaa;position:relative;">
-          <span style="font-size:10px;font-weight:700;color:#666;letter-spacing:1px;">SLIDESHOW 40%</span>
-          <svg style="position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:.4;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="m10 9 6 3-6 3V9z"/></svg>
-        </div>
-        <div style="flex:0 0 60%;background:linear-gradient(160deg,#0d2b1a,#1e6b3c);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:10px 14px;gap:4px;">
-          <span style="font-size:8px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,.6);">ĐỒNG GIÁ</span>
-          <span style="font-size:18px;font-weight:900;color:#f9d857;line-height:1;">20.000đ</span>
-          <span style="font-size:7px;color:rgba(255,255,255,.7);">/ ly · Bill từ 2 ly · 14:00 – 17:00</span>
-          <div style="display:flex;flex-direction:column;gap:3px;margin-top:4px;width:100%;">
-            <div style="background:rgba(255,255,255,.12);border-radius:6px;padding:3px 8px;font-size:7px;color:#fff;font-weight:700;">● Trà sữa</div>
-            <div style="background:rgba(255,255,255,.12);border-radius:6px;padding:3px 8px;font-size:7px;color:#fff;font-weight:700;">● Cà phê</div>
+      <!-- Danh sách ảnh đã thêm -->
+      <div id="dg-slides-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
+
+      <!-- Nút thêm ảnh -->
+      <label id="dg-slide-add-btn" style="display:flex;align-items:center;justify-content:center;gap:10px;background:#f5f5f5;border-radius:14px;padding:14px;cursor:pointer;border:2px dashed #ddd;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gm)" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span style="font-size:14px;font-weight:600;color:var(--gm);">Thêm ảnh slide</span>
+        <input type="file" accept="image/*" id="dg-slide-file-input" onchange="onDgSlideFileAdd(this)" style="display:none;" multiple>
+      </label>
+      <div style="margin-top:8px;">
+        <button onclick="document.getElementById('dg-slide-url-row').style.display=document.getElementById('dg-slide-url-row').style.display==='none'?'block':'none'" style="background:none;border:none;font-size:12px;color:#aaa;cursor:pointer;font-family:'Google Sans',sans-serif;">Hoặc nhập URL ảnh</button>
+        <div id="dg-slide-url-row" style="display:none;margin-top:8px;background:#fff;border-radius:14px;padding:12px 14px;display:none;">
+          <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">URL ảnh</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="dg-slide-url-input" type="url" placeholder="https://..." style="flex:1;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:13px;color:var(--td);background:transparent;">
+            <button onclick="onDgSlideUrlAdd()" style="background:var(--gd);color:#fff;border:none;border-radius:10px;padding:7px 14px;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Thêm</button>
           </div>
         </div>
-      </div>
-
-      <div style="font-size:12px;color:#999;line-height:1.6;">
-        ✅ Ảnh nền sẽ <strong>trải đầy 100%</strong> vùng 60% — không bị cắt, không overlay xanh che<br>
-        ✅ Text & danh sách món luôn đọc được nhờ lớp tối mờ phía trên ảnh<br>
-        ✅ Slideshow 40% trên vẫn chạy bình thường song song
       </div>
     </div>
   </div>
@@ -1923,6 +1922,8 @@ function loadDgAdminUI() {
   radios.forEach(r => { r.checked = r.value === dayVal; });
   // Items
   renderDgItemList();
+  // DG Slides (40% top area)
+  renderDgSlidesList();
   // Image
   if (dgSettings.promoImg) {
     document.getElementById('dg-img-el').src = dgSettings.promoImg;
@@ -2047,6 +2048,69 @@ function onDgImgUrlInput(val) {
   }
 }
 
+/* ── DG SLIDES (40% top area) ── */
+function renderDgSlidesList() {
+  const el = document.getElementById('dg-slides-list');
+  if (!el) return;
+  const slides = dgSettings.dgSlides || [];
+  if (!slides.length) {
+    el.innerHTML = '<div style="text-align:center;padding:12px;color:#bbb;font-size:13px;">Chưa có ảnh nào — sẽ dùng slide bình thường</div>';
+    return;
+  }
+  el.innerHTML = slides.map((s, i) => `
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:10px 12px;">
+      <img src="${s.url}" style="width:52px;height:36px;object-fit:cover;border-radius:8px;flex-shrink:0;background:#eee;">
+      <span style="flex:1;font-size:12px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.label || 'Slide ' + (i+1)}</span>
+      <div style="display:flex;gap:6px;">
+        ${i > 0 ? `<button onclick="moveDgSlide(${i},-1)" style="background:#f0f0f0;border:none;border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px;">↑</button>` : ''}
+        ${i < slides.length-1 ? `<button onclick="moveDgSlide(${i},1)" style="background:#f0f0f0;border:none;border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px;">↓</button>` : ''}
+        <button onclick="removeDgSlide(${i})" style="background:#fee2e2;border:none;border-radius:8px;padding:5px 10px;font-size:12px;color:#e74c3c;font-weight:700;cursor:pointer;">Xoá</button>
+      </div>
+    </div>`).join('');
+}
+
+function onDgSlideFileAdd(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  let loaded = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      if (!dgSettings.dgSlides) dgSettings.dgSlides = [];
+      dgSettings.dgSlides.push({ url: e.target.result, label: file.name, type: 'image' });
+      loaded++;
+      if (loaded === files.length) renderDgSlidesList();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+}
+
+function onDgSlideUrlAdd() {
+  const input = document.getElementById('dg-slide-url-input');
+  const val = (input.value || '').trim();
+  if (!val) return;
+  if (!dgSettings.dgSlides) dgSettings.dgSlides = [];
+  dgSettings.dgSlides.push({ url: val, label: val.split('/').pop() || 'Ảnh', type: 'image' });
+  input.value = '';
+  renderDgSlidesList();
+}
+
+function removeDgSlide(idx) {
+  if (!dgSettings.dgSlides) return;
+  dgSettings.dgSlides.splice(idx, 1);
+  renderDgSlidesList();
+}
+
+function moveDgSlide(idx, dir) {
+  const arr = dgSettings.dgSlides;
+  if (!arr) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= arr.length) return;
+  [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+  renderDgSlidesList();
+}
+
 function saveDgSettings() {
   const ts = document.getElementById('dg-time-start').value;
   const te = document.getElementById('dg-time-end').value;
@@ -2079,7 +2143,8 @@ function saveDgSettings() {
     fixedPrice:  dgSettings.fixedPrice,
     fixedPriceL: dgSettings.fixedPriceL ?? null,
     items:       dgSettings.items,
-    promoImg:   dgSettings.promoImg || ''
+    promoImg:   dgSettings.promoImg || '',
+    dgSlides:   dgSettings.dgSlides || []
   };
   db.ref('donggia_config').set(payload).then(() => {
     toast('✅ Đã lưu & đồng bộ cài đặt đồng giá');
