@@ -461,7 +461,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
     </div>
     <div class="sdi" onclick="closeSdb();showScreen('tg')">
       <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1e6b3c" stroke-width="2" stroke-linecap="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg></div>
-      <div style="flex:1"><div class="sdit">To Go</div><div class="sdid">Cài đặt khuyến mãi mang về</div></div>
+      <div style="flex:1"><div class="sdit">KM Mang Về &amp; Bán Qua App</div><div class="sdid">Khuyến mãi mang về &amp; phí sàn app</div></div>
       <span class="sdar">›</span>
     </div>
     <div class="sdi" onclick="closeSdb();showScreen('dgscreen')">
@@ -564,6 +564,19 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
         <div style="font-size:12px;color:#aaa;margin-top:2px;">Tách bill cho từng khách</div>
       </div>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+    <!-- Bán qua App button -->
+    <div onclick="toggleAppSale()" id="pmapp" style="background:#fff;border-radius:22px;padding:20px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s;">
+      <div id="pmapp-icon" style="width:60px;height:60px;border-radius:16px;background:#e8f4fd;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="5" y="2" width="14" height="20" rx="3" fill="#1976d2" opacity=".15"/><rect x="5" y="2" width="14" height="20" rx="3" stroke="#1976d2" stroke-width="1.8"/><circle cx="12" cy="17" r="1.2" fill="#1976d2"/><path d="M9 7h6M9 10h4" stroke="#1976d2" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div id="pmapp-title" style="font-size:16px;font-weight:700;color:#1565c0;">Bán qua App</div>
+        <div id="pmapp-sub" style="font-size:12px;color:#aaa;margin-top:2px;">Khấu trừ phí sàn <span id="pmapp-pct-label">10</span>%</div>
+      </div>
+      <div id="pmapp-toggle-wrap" class="togo-toggle-wrap" style="margin-left:auto;pointer-events:none;">
+        <div id="pmapp-switch" class="togo-switch"></div>
+      </div>
     </div>
     <div id="bank-confirm-area" style="display:none;">
       <!-- Tự động xử lý qua Firebase listener — không cần bấm tay -->
@@ -819,7 +832,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
     <button class="btn-close-screen" onclick="showScreen('sm')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
-    <span style="font-size:20px;font-weight:700;color:var(--td);">CÀI ĐẶT TO GO</span>
+    <span style="font-size:20px;font-weight:700;color:var(--td);">KM MANG VỀ & BÁN QUA APP</span>
     <div style="width:44px;"></div>
   </div>
   <div style="overflow-y:auto;flex:1;padding:16px 0 40px;">
@@ -881,6 +894,21 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
         </div>
       </div>
       <button class="tg-save-btn" onclick="saveTgDisc()">💾 Lưu cài đặt giảm giá</button>
+    </div>
+
+    <!-- Bán Qua App -->
+    <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Phí Sàn Bán Qua App</div></div>
+    <div class="tg-section">
+      <div style="background:#e8f4fd;border-radius:14px;padding:14px;margin-bottom:12px;font-size:12px;font-weight:600;color:#1565c0;">
+        📱 Khi bật "Bán qua App", hệ thống sẽ tự động khấu trừ % phí sàn khỏi tổng bill trước khi thanh toán.
+      </div>
+      <div class="tg-input-row">
+        <div class="tg-input-group" style="flex:1;">
+          <div class="tg-input-label">% Phí sàn khấu trừ</div>
+          <input id="app-fee-pct" type="number" inputmode="numeric" placeholder="VD: 10" min="0" max="100" value="10">
+        </div>
+      </div>
+      <button class="tg-save-btn" onclick="saveAppFeeSettings()" style="background:linear-gradient(135deg,#1565c0,#1976d2);">💾 Lưu cài đặt phí sàn</button>
     </div>
   </div>
 </div>
@@ -1388,6 +1416,12 @@ let togoSettings = {
 let togoGiftSelected = null; // selected gift item in popup
 
 // ============================================================
+// BÁN QUA APP — State & Settings
+// ============================================================
+let appSaleSettings = { feePct: 10 }; // % phí sàn mặc định 10%
+let isAppSale = false; // trạng thái nút "Bán qua App"
+
+// ============================================================
 // ĐỒNG GIÁ — State & Settings
 // ============================================================
 let dgSettings = {
@@ -1427,6 +1461,7 @@ auth.onAuthStateChanged(user => {
     loadTogoSettings();
     loadDgSettings();
     loadDiscountCodes();
+    loadAppFeeSettings();
   }
 });
 auth.signInWithEmailAndPassword('cafe33@xolifa.com', 'xolifaangiang')
@@ -1467,6 +1502,9 @@ function resetTogoToggle() {
   renderMenu();
   // Báo kiosk thoát To Go
   db.ref('session_display_xolifa/isToGo').set(false).catch(() => {});
+  // Reset App Sale
+  isAppSale = false;
+  renderAppSaleBtn();
 }
 
 function loadTogoSettings() {
@@ -1478,6 +1516,70 @@ function loadTogoSettings() {
 
 function saveTogoSettingsLocal() {
   localStorage.setItem('togoSettings_xolifa', JSON.stringify(togoSettings));
+}
+
+// ============================================================
+// BÁN QUA APP — Functions
+// ============================================================
+function loadAppFeeSettings() {
+  try {
+    const raw = localStorage.getItem('appFeeSettings_xolifa');
+    if (raw) { appSaleSettings = JSON.parse(raw); }
+  } catch(e) {}
+  // Cập nhật label % trên nút
+  const pctLabel = document.getElementById('pmapp-pct-label');
+  if (pctLabel) pctLabel.textContent = appSaleSettings.feePct || 10;
+  // Cập nhật input trong màn hình cài đặt
+  const inp = document.getElementById('app-fee-pct');
+  if (inp) inp.value = appSaleSettings.feePct || 10;
+}
+
+function saveAppFeeSettings() {
+  const pct = parseInt(document.getElementById('app-fee-pct').value) || 0;
+  if (pct < 0 || pct > 100) { toast('⚠ % phí sàn không hợp lệ (0-100)'); return; }
+  appSaleSettings.feePct = pct;
+  localStorage.setItem('appFeeSettings_xolifa', JSON.stringify(appSaleSettings));
+  // Cập nhật label trên nút
+  const pctLabel = document.getElementById('pmapp-pct-label');
+  if (pctLabel) pctLabel.textContent = pct;
+  toast('✅ Đã lưu cài đặt phí sàn ' + pct + '%');
+}
+
+function toggleAppSale() {
+  isAppSale = !isAppSale;
+  renderAppSaleBtn();
+  // Cập nhật tổng bill ngay lập tức
+  updCoTotal();
+}
+
+function renderAppSaleBtn() {
+  const wrap = document.getElementById('pmapp-toggle-wrap');
+  const sw = document.getElementById('pmapp-switch');
+  const pmapp = document.getElementById('pmapp');
+  const icon = document.getElementById('pmapp-icon');
+  const title = document.getElementById('pmapp-title');
+  if (!wrap) return;
+  wrap.classList.toggle('active', isAppSale);
+  if (sw) sw; // switch animation via CSS
+  if (pmapp) pmapp.style.background = isAppSale ? '#e3f2fd' : '#fff';
+  if (icon) icon.style.background = isAppSale ? '#bbdefb' : '#e8f4fd';
+  if (title) title.style.color = isAppSale ? '#0d47a1' : '#1565c0';
+}
+
+function getAppSaleDiscount() {
+  if (!isAppSale) return 0;
+  const base = getCartTotal();
+  const pct = appSaleSettings.feePct || 10;
+  return Math.round(base * pct / 100);
+}
+
+// Làm tròn tiền mặt theo quy tắc:
+// 0-799 → làm tròn xuống, 800-999 → làm tròn lên (theo đơn vị 1000đ)
+function roundCashAmount(amount) {
+  const thousands = Math.floor(amount / 1000);
+  const remainder = amount % 1000;
+  if (remainder >= 800) return (thousands + 1) * 1000;
+  return thousands * 1000;
 }
 
 function toggleTgGift() {
@@ -1966,13 +2068,14 @@ function getDgDiscountAmt() {
 function getFinalTotal() {
   const dgDisc   = getDgDiscountAmt();
   const togoDisc = togoDiscountAmt;
-  return Math.max(0, getCartTotal() - dgDisc - togoDisc);
+  const appDisc  = getAppSaleDiscount();
+  return Math.max(0, getCartTotal() - dgDisc - togoDisc - appDisc);
 }
 
 function computeAllDiscounts() {
   dgDiscountAmt   = getDgDiscountAmt();
   if (dgDiscountAmt > 0) togoDiscountAmt = 0; // không stack
-  return dgDiscountAmt + togoDiscountAmt;
+  return dgDiscountAmt + togoDiscountAmt + getAppSaleDiscount();
 }
 
 // ============================================================
@@ -2054,18 +2157,23 @@ function loadRecentOrders() {
 
 // Load dữ liệu từ Firestore Archive cho các ngày cũ hơn 3 ngày
 // dateList: mảng { month:'apr', day:'09', year:2026 }
+// Tập hợp các ngày đã được load đầy đủ từ archive (tránh load lại)
+const _archiveLoadedDays = new Set();
+
 function loadArchiveDates(dateList) {
   const needed = dateList.filter(({ month, day, year }) => {
     const key = `${day}/${String(MONTH_KEYS.indexOf(month)+1).padStart(2,'0')}/${year}`;
-    return !orders.find(o => o.date === key); // chưa có trong RAM
+    return !_archiveLoadedDays.has(key); // chỉ skip nếu đã load ĐẦY ĐỦ ngày này
   });
   if (!needed.length) return Promise.resolve();
 
   // Nhóm các ngày theo docId (mỗi doc = 1 ngày)
   const jobs = needed.map(({ month, day, year }) => {
     const docId = month + '_' + day + '_' + year;
+    const dateKey = `${day}/${String(MONTH_KEYS.indexOf(month)+1).padStart(2,'0')}/${year}`;
     return fstore.collection('orders_xolifa_archive').doc(docId).get()
       .then(doc => {
+        _archiveLoadedDays.add(dateKey); // đánh dấu đã load xong (dù có hay không có data)
         if (!doc.exists) return;
         const data = doc.data().orders || {};
         Object.entries(data).forEach(([key, o]) => {
@@ -2137,7 +2245,7 @@ function showScreen(id) {
     }
   }
   if (id === 'mn') renderMnList();
-  if (id === 'tg') { loadTogoSettings(); loadTgAdminUI(); }
+  if (id === 'tg') { loadTogoSettings(); loadTgAdminUI(); loadAppFeeSettings(); }
   if (id === 'dgscreen') { loadDgSettings(); loadDgAdminUI(); }
   if (id === 'kc') { kcLoadFromFirebase(); }
   if (id === 'walletScreen') { loadWalletAdminUI(); }
@@ -2448,6 +2556,7 @@ function onCheckoutClick() {
     const allDisc = computeAllDiscounts();
     const base = getCartTotal();
     const finalTotal = getFinalTotal();
+    const appDisc = getAppSaleDiscount();
     showScreen('sc');
     renderScCartPreview(); // render giỏ hàng mini ngay khi mở màn thanh toán
     const el = document.getElementById('cotn');
@@ -2455,6 +2564,7 @@ function onCheckoutClick() {
       if (allDisc > 0) {
         let discLabel = '';
         if (dgDiscountAmt > 0) discLabel = ` <span style="font-size:12px;background:#e8f5ee;color:var(--gm);border-radius:8px;padding:2px 8px;font-weight:700;">ĐỒNG GIÁ -${fmt(dgDiscountAmt)}</span>`;
+        else if (appDisc > 0) discLabel = ` <span style="font-size:13px;background:#e3f2fd;color:#1565c0;border-radius:8px;padding:2px 8px;font-weight:700;">APP -${fmt(appDisc)}</span> <span style="font-size:14px;color:#e74c3c;font-weight:700;text-decoration:line-through;">${fmt(base)}</span>`;
         else if (togoDiscountAmt > 0) discLabel = ` <span style="font-size:14px;color:#e74c3c;font-weight:700;text-decoration:line-through;">${fmt(base)}</span>`;
         el.innerHTML = `${fmt(finalTotal)}${discLabel}`;
       } else {
@@ -2474,9 +2584,12 @@ function updCoTotal() {
   const finalTotal = getFinalTotal();
   const base       = getCartTotal();
   const dgDisc     = getDgDiscountAmt();
+  const appDisc    = getAppSaleDiscount();
   const el         = document.getElementById('cotn');
   if (dgDisc > 0) {
     el.innerHTML = `${fmt(finalTotal)} <span style="font-size:13px;background:#e8f5ee;color:var(--gm);border-radius:8px;padding:2px 8px;font-weight:700;">ĐỒNG GIÁ -${fmt(dgDisc)}</span>`;
+  } else if (appDisc > 0) {
+    el.innerHTML = `${fmt(finalTotal)} <span style="font-size:13px;background:#e3f2fd;color:#1565c0;border-radius:8px;padding:2px 8px;font-weight:700;">APP -${fmt(appDisc)}</span> <span style="font-size:14px;color:#e74c3c;font-weight:700;text-decoration:line-through;">${fmt(base)}</span>`;
   } else if (togoDiscountAmt > 0) {
     el.innerHTML = `${fmt(finalTotal)} <span style="font-size:14px;color:#e74c3c;font-weight:700;text-decoration:line-through;">${fmt(base)}</span>`;
   } else {
@@ -3542,7 +3655,13 @@ function proceedPay() {
 
 function openCashScreen() {
   const allDisc = computeAllDiscounts();
-  const total = getFinalTotal();
+  let total = getFinalTotal();
+
+  // Làm tròn tiền mặt khi bán qua App
+  if (isAppSale) {
+    total = roundCashAmount(total);
+  }
+
   document.getElementById('cp-total-amt').textContent = total.toLocaleString('vi-VN');
 
   // Gợi ý: mỗi mệnh giá d → total + d (thối đúng 1 tờ d)
@@ -3601,7 +3720,8 @@ function getCpInputVal() {
 }
 
 function updCpChange() {
-  const total = getFinalTotal();
+  let total = getFinalTotal();
+  if (isAppSale) total = roundCashAmount(total);
   const given = getCpInputVal();
   const changeCard = document.getElementById('cp-change-card');
   const changeAmt = document.getElementById('cp-change-amt');
@@ -3635,7 +3755,8 @@ function updCpChange() {
 }
 
 function confirmCashPay() {
-  const total = getFinalTotal();
+  let total = getFinalTotal();
+  if (isAppSale) total = roundCashAmount(total);
   const given = getCpInputVal();
   const change = given - total;
   const cashGiven = given > 0 ? given : total;
@@ -3652,7 +3773,9 @@ function confirmPay(cashGiven, cashChange) {
 
   const baseTotal = getCartTotal();
   const allDisc   = computeAllDiscounts();
-  const total     = getFinalTotal();
+  let total     = getFinalTotal();
+  // Làm tròn tiền mặt khi bán qua App
+  if (isAppSale && curPay === 'cash') total = roundCashAmount(total);
   const now = new Date();
   const p = n => String(n).padStart(2, '0');
 
@@ -3675,7 +3798,9 @@ function confirmPay(cashGiven, cashChange) {
     cashChange: cashChange !== null && cashChange !== undefined ? cashChange : 0,
     createdAt: now.toISOString(),
     isToGo: isToGo,
-    discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0) ? (togoDiscountAmt + dgDiscountAmt) : null,
+    isAppSale: isAppSale,
+    appFeePct: isAppSale ? (appSaleSettings.feePct || 10) : null,
+    discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0 || getAppSaleDiscount() > 0) ? (togoDiscountAmt + dgDiscountAmt + getAppSaleDiscount()) : null,
     dgDiscount:    dgDiscountAmt > 0 ? dgDiscountAmt : null,
     dgItemIds:     dgDiscountAmt > 0 ? (dgSettings.items || []).map(i => i.id) : null,
     dgFixedPrice:  dgDiscountAmt > 0 ? (dgSettings.fixedPrice  || null) : null,
@@ -3799,8 +3924,20 @@ function updRv(filtered) {
 function setTab(btn, period) {
   document.querySelectorAll('.tbb').forEach(b => b.classList.remove('active')); btn.classList.add('active');
   _rvFrom = null; _rvTo = null;
-  document.getElementById('rv-date-label').textContent = '';
   const now = new Date();
+  const p2 = x => String(x).padStart(2,'0');
+
+  // Gán label ngày tháng cho từng tab
+  if (period === 'today') {
+    document.getElementById('rv-date-label').textContent = `Hôm nay: ${p2(now.getDate())}/${p2(now.getMonth()+1)}/${now.getFullYear()}`;
+  } else if (period === 'week') {
+    const fromW = new Date(now); fromW.setDate(fromW.getDate() - 6); fromW.setHours(0,0,0,0);
+    document.getElementById('rv-date-label').textContent = `7 ngày: ${p2(fromW.getDate())}/${p2(fromW.getMonth()+1)} – ${p2(now.getDate())}/${p2(now.getMonth()+1)}`;
+  } else if (period === 'month') {
+    document.getElementById('rv-date-label').textContent = `Tháng ${now.getMonth()+1}/${now.getFullYear()}`;
+  } else {
+    document.getElementById('rv-date-label').textContent = `Năm ${now.getFullYear()}`;
+  }
 
   const render = () => {
     let filtered;
