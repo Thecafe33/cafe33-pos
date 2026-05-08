@@ -955,11 +955,16 @@ function buildDgPromoSlide(cfg) {
   // Shrink slide-container to 40% (top)
   var slideContainer = document.getElementById('slide-container');
   slideContainer.style.cssText = 'position:absolute;top:0;left:0;right:0;height:40%;';
-  // Restart normal slides in the 40% area
-  if (slides.length > 0) {
+
+  // Use dgSlides if configured, otherwise fall back to normal slides
+  var dgSlideItems = (cfg.dgSlides && cfg.dgSlides.length) ? cfg.dgSlides : null;
+  if (dgSlideItems) {
+    buildSlides(dgSlideItems, 6000);
+  } else if (slides.length > 0) {
+    // Restart normal slides in the 40% area
     slides[0].classList.add('active');
     var fv = slides[0].querySelector('video');
-    if (fv) { fv.play().catch(function(){}); fv.onended = function() {}; }
+    if (fv) { fv.play().catch(function(){}); }
     else {
       slideTimer = setTimeout(function advSlide() {
         if (!dgPromoActive) return;
