@@ -940,64 +940,112 @@ function isDgNowActive(cfg) {
 }
 
 function buildDgPromoSlide(cfg) {
-  var container = document.getElementById('slide-container');
-  var dots      = document.getElementById('slide-dots');
+  var panelLeft = document.getElementById('panel-left');
 
   // Pause normal slideshow
   if (slideTimer) { clearTimeout(slideTimer); slideTimer = null; }
   if (slides.length) {
     slides.forEach(function(s) { s.classList.remove('active'); var v = s.querySelector('video'); if (v) v.pause(); });
   }
-  dots.innerHTML = '';
 
-  // Remove old promo slide if any
-  var old = document.getElementById('dg-promo-slide');
+  // Remove old promo wrapper if any
+  var old = document.getElementById('dg-promo-wrapper');
   if (old) old.remove();
 
-  // Build promo slide
-  var slide = document.createElement('div');
-  slide.className = 'slide active';
-  slide.id = 'dg-promo-slide';
-  slide.style.cssText = 'background:linear-gradient(135deg,#0d2b1a 0%,#1a4a2e 60%,#1e6b3c 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;gap:0;';
-
-  var fmtP = function(p) { return new Intl.NumberFormat('vi-VN').format(p); };
-
-  // Promo image
-  var imgHtml = '';
-  if (cfg.promoImg) {
-    imgHtml = '<img src="'+cfg.promoImg+'" style="width:100%;height:55%;object-fit:cover;position:absolute;top:0;left:0;opacity:0.35;">';
+  // Shrink slide-container to 40% (top)
+  var slideContainer = document.getElementById('slide-container');
+  slideContainer.style.cssText = 'position:absolute;top:0;left:0;right:0;height:40%;';
+  // Restart normal slides in the 40% area
+  if (slides.length > 0) {
+    slides[0].classList.add('active');
+    var fv = slides[0].querySelector('video');
+    if (fv) { fv.play().catch(function(){}); fv.onended = function() {}; }
+    else {
+      slideTimer = setTimeout(function advSlide() {
+        if (!dgPromoActive) return;
+        var dots = document.getElementById('slide-dots');
+        var dotEls = dots ? dots.querySelectorAll('.dot') : [];
+        if (dotEls[cur]) dotEls[cur].classList.remove('active');
+        slides[cur].classList.remove('active');
+        cur = (cur + 1) % slides.length;
+        slides[cur].classList.add('active');
+        if (dotEls[cur]) dotEls[cur].classList.add('active');
+        slideTimer = setTimeout(advSlide, 6000);
+      }, 6000);
+    }
   }
+
+  var fmtNum = function(p) { return new Intl.NumberFormat('vi-VN').format(p); };
 
   // Items list
   var items = cfg.items || [];
   var itemsHtml = items.map(function(it) {
-    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;">'
-      + '<div style="width:12px;height:12px;border-radius:50%;background:'+( it.color||'#4caf50')+'55;border:2px solid '+(it.color||'#4caf50')+';flex-shrink:0;"></div>'
-      + '<span style="font-size:14px;font-weight:700;color:#ffffff;letter-spacing:.3px;">'+it.name+'</span>'
+    return '<div style="display:flex;align-items:center;gap:12px;padding:8px 16px;background:rgba(255,255,255,0.12);border-radius:12px;">'
+      + '<div style="width:8px;height:8px;border-radius:50%;background:#f9d857;flex-shrink:0;"></div>'
+      + '<span style="font-size:15px;font-weight:700;color:#ffffff;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+it.name+'</span>'
       + '</div>';
   }).join('');
 
-  slide.innerHTML = imgHtml
-    + '<div style="position:relative;z-index:2;width:100%;display:flex;flex-direction:column;align-items:center;gap:6px;">'
-    + '<div style="font-size:10px;font-weight:700;letter-spacing:3px;color:rgba(255,255,255,.6);text-transform:uppercase;margin-bottom:4px;">KHUYẾN MÃI</div>'
-    + '<div style="font-size:38px;font-weight:900;color:#ffffff;letter-spacing:-1px;line-height:1;font-family:\'Google Sans Display\',sans-serif;">ĐỒNG GIÁ</div>'
-    + '<div style="font-size:46px;font-weight:900;color:#f9d857;letter-spacing:-2px;line-height:1;font-family:\'Google Sans Display\',sans-serif;">'+ fmtP(cfg.fixedPrice||0) +'đ</div>'
-    + '<div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px;">/ ly — Bill từ '+(cfg.minQty||2)+' ly</div>'
-    + '<div style="width:48px;height:2px;background:rgba(255,255,255,.3);border-radius:2px;margin:8px 0;"></div>'
-    + '<div style="width:100%;padding:0 8px;">'+itemsHtml+'</div>'
-    + '<div style="margin-top:8px;background:rgba(255,255,255,.12);border-radius:20px;padding:6px 16px;">'
-    + '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.8);letter-spacing:.5px;">'+cfg.timeStart+' – '+cfg.timeEnd+'</span>'
+  // Price label
+  var priceLabel = fmtNum(cfg.fixedPrice||0) + 'đ';
+  var priceLLabel = (cfg.fixedPriceL && cfg.fixedPriceL > 0) ? ' · L: ' + fmtNum(cfg.fixedPriceL) + 'đ' : '';
+
+  // Build 60% promo panel
+  var promo = document.createElement('div');
+  promo.id = 'dg-promo-wrapper';
+  promo.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:60%;overflow:hidden;';
+
+  // Background: image fills fully, dark overlay for readability
+  var bgHtml = '';
+  if (cfg.promoImg) {
+    bgHtml = '<img src="'+cfg.promoImg+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;">'
+           + '<div style="position:absolute;inset:0;background:linear-gradient(160deg,rgba(10,30,18,0.82) 0%,rgba(20,60,35,0.78) 100%);"></div>';
+  } else {
+    bgHtml = '<div style="position:absolute;inset:0;background:linear-gradient(160deg,#0d2b1a 0%,#1a4a2e 60%,#1e6b3c 100%);"></div>';
+  }
+
+  promo.innerHTML = bgHtml
+    + '<div style="position:relative;z-index:2;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;padding:16px 18px;gap:8px;">'
+    + '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">'
+    + '<span style="font-size:11px;font-weight:700;letter-spacing:2.5px;color:rgba(255,255,255,.65);text-transform:uppercase;">ĐỒNG GIÁ</span>'
+    + '<div style="height:1px;flex:1;background:rgba(255,255,255,.2);align-self:center;"></div>'
+    + '<span style="font-size:10px;font-weight:700;color:rgba(255,255,255,.6);letter-spacing:.5px;">'+cfg.timeStart+' – '+cfg.timeEnd+'</span>'
     + '</div>'
+    + '<div style="font-family:\'Google Sans Display\',\'Google Sans\',sans-serif;font-size:42px;font-weight:900;color:#f9d857;letter-spacing:-2px;line-height:1;">'+priceLabel+'</div>'
+    + '<div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:-4px;font-weight:600;">/ ly' + (priceLLabel ? ' (size M)' + priceLLabel : '') + ' · Bill từ '+(cfg.minQty||2)+' ly</div>'
+    + '<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">'+itemsHtml+'</div>'
     + '</div>';
 
-  container.insertBefore(slide, container.firstChild);
+  panelLeft.appendChild(promo);
+
+  // Divider line between 40% and 60%
+  var divider = document.createElement('div');
+  divider.id = 'dg-divider';
+  divider.style.cssText = 'position:absolute;top:40%;left:0;right:0;height:1px;background:rgba(0,0,0,0.15);z-index:10;';
+  panelLeft.appendChild(divider);
+
+  // Move dots above divider
+  var dots = document.getElementById('slide-dots');
+  if (dots) dots.style.bottom = '62%';
+
   dgPromoActive = true;
 }
 
 function removeDgPromoSlide() {
-  var old = document.getElementById('dg-promo-slide');
-  if (old) { old.remove(); }
+  var promo = document.getElementById('dg-promo-wrapper');
+  if (promo) promo.remove();
+  var divider = document.getElementById('dg-divider');
+  if (divider) divider.remove();
   dgPromoActive = false;
+
+  // Restore slide-container to full height
+  var slideContainer = document.getElementById('slide-container');
+  slideContainer.style.cssText = '';
+
+  // Restore dots position
+  var dots = document.getElementById('slide-dots');
+  if (dots) dots.style.bottom = '';
+
   // Restart normal slideshow if we have slides
   if (slides.length > 0 && dgConfig) {
     buildSlides(slides.map(function(s) {
