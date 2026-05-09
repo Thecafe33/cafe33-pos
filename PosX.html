@@ -643,8 +643,33 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   </div>
   <!-- Biểu đồ -->
   <div class="cs">
-    <div class="ch"><span class="cht">Biểu đồ doanh thu</span></div>
+    <div class="ch"><span class="cht">Biểu đồ doanh thu</span><span style="font-size:10px;color:var(--gt);margin-left:6px;">(không bao gồm Food)</span></div>
     <div class="cw"><canvas id="rvc2"></canvas></div>
+  </div>
+  <!-- Doanh thu Food riêng -->
+  <div id="rv-food-section" style="display:none;margin:0 16px 24px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <span style="font-size:13px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.6px;">🍽 Doanh thu Food</span>
+      <span style="font-size:10px;background:#fef3c7;color:#b45309;border-radius:8px;padding:2px 8px;font-weight:700;">Tách riêng</span>
+    </div>
+    <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:20px;padding:16px 20px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.6px;">TỔNG THU FOOD</div>
+        <div id="rv-food-total" style="font-size:22px;font-weight:700;color:#b45309;">0 đ</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div style="background:#fff7ed;border-radius:14px;padding:14px;">
+          <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">TIỀN MẶT</div>
+          <div id="rv-food-cash" style="font-size:18px;font-weight:700;color:#b45309;">0</div>
+          <div style="font-size:11px;color:#d97706;">đ</div>
+        </div>
+        <div style="background:#fff7ed;border-radius:14px;padding:14px;">
+          <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">CHUYỂN KHOẢN</div>
+          <div id="rv-food-bank" style="font-size:18px;font-weight:700;color:#b45309;">0</div>
+          <div style="font-size:11px;color:#d97706;">đ</div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1395,6 +1420,33 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   </div>
 </div>
 
+<!-- FOOD ITEM FORM POPUP -->
+<div id="food-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);padding:24px;" onclick="if(event.target===this)closeFoodForm()">
+  <div style="background:#f2f2f2;border-radius:28px;padding:24px 20px 24px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;animation:pi .22s ease;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <span id="food-form-title" style="font-size:18px;font-weight:700;color:var(--td);">Thêm món Food mới</span>
+      <button onclick="closeFoodForm()" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <div style="background:#fef3c7;border-radius:14px;padding:12px 14px;margin-bottom:16px;font-size:13px;color:#b45309;font-weight:600;">
+      🍽 Món Food sẽ được tách riêng trong báo cáo doanh thu, không tính vào tổng đồ uống.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#fff;border-radius:18px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Tên món *</div>
+        <input id="food-f-name" type="text" placeholder="VD: Bánh mì, Snack..." style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:600;color:var(--td);background:transparent;">
+      </div>
+      <div style="background:#fff;border-radius:18px;padding:16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Giá (đ) *</div>
+        <input id="food-f-price" type="text" inputmode="numeric" placeholder="VD: 25.000" style="width:100%;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;color:var(--td);background:transparent;" oninput="fmtPriceInput(this)">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px;">
+        <button id="food-f-del" onclick="deleteFoodItem()" style="display:none;flex:0 0 auto;padding:14px 18px;background:#fee2e2;color:#e74c3c;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">Xoá</button>
+        <button onclick="saveFoodItem()" style="flex:1;padding:16px;background:#b45309;color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:16px;font-weight:700;cursor:pointer;">Lưu món Food</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toastEl"></div>
 
 <script>
@@ -1424,7 +1476,7 @@ const auth   = firebase.auth();
 // ============================================================
 // STATE — khai báo trước khi gọi bất kỳ hàm nào
 // ============================================================
-let MENU = [], MENU_TOGO = [], TOPPINGS = [], orders = [], cart = {}, curPay = null, curOid = null, curFilter = 'all';
+let MENU = [], MENU_TOGO = [], TOPPINGS = [], FOOD_MENU = [], orders = [], cart = {}, curPay = null, curOid = null, curFilter = 'all';
 let _curMenuTab = 'normal'; // 'normal' | 'togo' | 'topping' — active tab trong quản lý menu
 let _tpEditId = null; // null = thêm mới, string = id topping đang sửa
 let _tpPickerKey = null; // cart key đang add topping
@@ -2191,15 +2243,27 @@ function parseMenuSnap(data) {
   }).filter(m => m.name && m.sizes.length > 0);
 }
 
+function parseFoodMenuSnap(data) {
+  if (!data) return [];
+  return Object.entries(data).map(([key, val]) => ({
+    id: key,
+    name: val.name || '',
+    price: Number(val.price) || 0,
+    color: val.color || '#b45309'
+  })).filter(m => m.name && m.price > 0);
+}
+
 function initMenu() {
   // Load song song cả menu thường và menu togo
   Promise.all([
     db.ref('menu_xolifa').once('value'),
     db.ref('menu_togo_xolifa').once('value'),
-    db.ref('toppings_xolifa').once('value')
-  ]).then(([snapNormal, snapTogo, snapToppings]) => {
+    db.ref('toppings_xolifa').once('value'),
+    db.ref('food_xolifa').once('value')
+  ]).then(([snapNormal, snapTogo, snapToppings, snapFood]) => {
     MENU      = parseMenuSnap(snapNormal.val());
     MENU_TOGO = parseMenuSnap(snapTogo.val());
+    FOOD_MENU = parseFoodMenuSnap(snapFood.val());
     window._menuXolifaData = MENU; // expose cho openPickCartModal / conditionCategory filter
     const tData = snapToppings.val();
     TOPPINGS = tData ? Object.entries(tData).map(([id, v]) => ({ id, name: v.name || '', price: Number(v.price) || 0, priceTogo: Number(v.priceTogo) || 0 })) : [];
@@ -2429,11 +2493,13 @@ function renderMenu() {
   const g = document.getElementById('mg');
   const activeMenu = getActiveMenu();
   const filtered = curFilter === 'all' ? activeMenu : activeMenu.filter(m => m.type === curFilter);
-  if (!filtered.length) {
+
+  let html = '';
+  if (!filtered.length && !FOOD_MENU.length) {
     g.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:50px;color:#bbb;font-size:14px">Chưa có sản phẩm</div>`;
     return;
   }
-  g.innerHTML = filtered.map(m => {
+  html += filtered.map(m => {
     const q = getQty(m.id);
     const minP = Math.min(...m.sizes.map(s => s.price));
     const bg = m.color || '#1a4a2e';
@@ -2443,6 +2509,24 @@ function renderMenu() {
       ${q ? `<span class="qb">${q}</span>` : ''}
     </div>`;
   }).join('');
+
+  // Thêm khu vực Food ở cuối nếu có
+  if (FOOD_MENU.length) {
+    html += `<div style="grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:8px;margin-bottom:4px;">
+      <span style="font-size:11px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.6px;">🍽 Food</span>
+      <div style="flex:1;height:1px;background:#fde68a;"></div>
+    </div>`;
+    html += FOOD_MENU.map(f => {
+      const qFood = (cart['food_' + f.id] || {}).qty || 0;
+      return `<div class="mi" style="background:#b45309;" onclick="addFoodToCart('${f.id}')">
+        <span class="mn">${f.name}</span>
+        <span class="mp">${fmtK(f.price)}</span>
+        ${qFood ? `<span class="qb">${qFood}</span>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  g.innerHTML = html;
   updFooter();
 }
 
@@ -3884,12 +3968,21 @@ function confirmPay(cashGiven, cashChange) {
   const itemsArray = items.map(c => ({ ...c }));
   const itemsSummary = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
 
+  // Tách food items
+  const foodItems = items.filter(c => c.isFood === true);
+  const foodTotal = foodItems.reduce((s, c) => s + c.price * c.qty, 0);
+  const netTotal = total - foodTotal; // doanh thu thực không bao gồm food
+
   const order = {
     time: `${p(now.getHours())}:${p(now.getMinutes())}`,
     date: `${day}/${p(now.getMonth()+1)}/${now.getFullYear()}`,
     items: itemsSummary,
     itemsArray,
     total,
+    netTotal: foodTotal > 0 ? netTotal : null,
+    foodTotal: foodTotal > 0 ? foodTotal : null,
+    foodItems: foodTotal > 0 ? foodItems.map(c => ({ name: c.name, qty: c.qty, price: c.price })) : null,
+    foodMethod: foodTotal > 0 ? (curPay === 'cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN') : null,
     method: curPay === 'cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN',
     phone: document.getElementById('cuph').value || '',
     voucherUsed: _giftVoucherKey ? (Object.values(cart).find(c=>c._vKey===_giftVoucherKey)?._giftLabel || _giftVoucherKey) : (_appliedDiscountId ? (_discountCache[_appliedDiscountId]?.label || _appliedDiscountId) : null),
@@ -3993,25 +4086,49 @@ function updRv(filtered) {
   const list = filtered || (_rvFrom ? _ordersInRange(_rvFrom, _rvTo) : orders.filter(o => o.date === todayKey()));
 
   let cash = 0, bank = 0;
+  let foodCash = 0, foodBank = 0;
+
   list.forEach(o => {
+    const ft = o.foodTotal || 0;
+    const fMethod = o.foodMethod || o.method;
+    // Food revenue breakdown
+    if (ft > 0) {
+      if (fMethod === 'TIỀN MẶT') foodCash += ft;
+      else if (fMethod === 'CHUYỂN KHOẢN') foodBank += ft;
+      else { // TÍNH RIÊNG hoặc ví — chia theo splitGroups nếu có, else cash
+        if (o.splitGroups && o.splitGroups.length) {
+          // Heuristic: phân chia food theo tỉ lệ cash/bank của splitGroups
+          const sgCash = o.splitGroups.filter(g => g.method === 'TIỀN MẶT').reduce((s,g) => s+(g.total||0),0);
+          const sgBank = o.splitGroups.filter(g => g.method === 'CHUYỂN KHOẢN').reduce((s,g) => s+(g.total||0),0);
+          const sgTot = sgCash + sgBank || 1;
+          foodCash += Math.round(ft * sgCash / sgTot);
+          foodBank += Math.round(ft * sgBank / sgTot);
+        } else {
+          foodCash += ft;
+        }
+      }
+    }
+
+    // Net revenue (excluding food)
+    const netAmt = ft > 0 ? (o.total - ft) : o.total;
     if (o.method === 'TIỀN MẶT') {
-      cash += o.total;
+      cash += netAmt;
     } else if (o.method === 'CHUYỂN KHOẢN') {
-      bank += o.total;
+      bank += netAmt;
     } else if (o.method === 'TÍNH RIÊNG' && o.splitGroups && o.splitGroups.length) {
-      // Tính từng nhóm trong split
       o.splitGroups.forEach(g => {
-        if (g.method === 'TIỀN MẶT') cash += g.total || 0;
-        else if (g.method === 'CHUYỂN KHOẢN') bank += g.total || 0;
+        const ratio = o.total > 0 ? (netAmt / o.total) : 1;
+        if (g.method === 'TIỀN MẶT') cash += Math.round((g.total || 0) * ratio);
+        else if (g.method === 'CHUYỂN KHOẢN') bank += Math.round((g.total || 0) * ratio);
       });
     } else {
-      // Fallback: gộp vào tiền mặt nếu không rõ
-      cash += o.total;
+      cash += netAmt;
     }
   });
 
-  const total   = list.reduce((a,o) => a + o.total, 0);
-  const togo    = list.filter(o => o.isToGo === true).reduce((a,o) => a + o.total, 0);
+  const foodTotal = foodCash + foodBank;
+  const total = list.reduce((a,o) => a + (o.total - (o.foodTotal||0)), 0);
+  const togo    = list.filter(o => o.isToGo === true).reduce((a,o) => a + (o.total - (o.foodTotal||0)), 0);
   const instore = total - togo;
 
   document.getElementById('rv-cash').textContent    = cash.toLocaleString('vi-VN');
@@ -4019,6 +4136,15 @@ function updRv(filtered) {
   document.getElementById('rv-instore').textContent = instore.toLocaleString('vi-VN');
   document.getElementById('rv-togo').textContent    = togo.toLocaleString('vi-VN');
   document.getElementById('rvtb').textContent       = fmt(total);
+
+  // Cập nhật vùng Food riêng
+  const foodSec = document.getElementById('rv-food-section');
+  if (foodSec) {
+    document.getElementById('rv-food-total').textContent = fmt(foodTotal);
+    document.getElementById('rv-food-cash').textContent  = foodCash.toLocaleString('vi-VN');
+    document.getElementById('rv-food-bank').textContent  = foodBank.toLocaleString('vi-VN');
+    foodSec.style.display = foodTotal > 0 ? 'block' : 'none';
+  }
 }
 function setTab(btn, period) {
   document.querySelectorAll('.tbb').forEach(b => b.classList.remove('active')); btn.classList.add('active');
@@ -4081,6 +4207,9 @@ function drawChart(period, filteredOrders) {
   const cW = W - pl - pr, cH = H - pt - pb;
   const now = new Date();
 
+  // Helper: net revenue of an order (excluding food)
+  const netRv = o => o.total - (o.foodTotal || 0);
+
   let hd, labels;
   if (!period || period === 'today') {
     // 12 khung 2 giờ trong ngày
@@ -4088,7 +4217,7 @@ function drawChart(period, filteredOrders) {
     const tk = todayKey();
     _orders.filter(o => o.date === tk).forEach(o => {
       const h = parseInt(o.time.split(':')[0]);
-      hd[Math.min(Math.floor(h / 2), 11)] += o.total;
+      hd[Math.min(Math.floor(h / 2), 11)] += netRv(o);
     });
     labels = ['0H','2H','4H','6H','8H','10H','12H','14H','16H','18H','20H','22H'];
   } else if (period === 'week') {
@@ -4098,7 +4227,7 @@ function drawChart(period, filteredOrders) {
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now); d.setDate(d.getDate() - i);
       const key = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
-      hd[6 - i] = _orders.filter(o => o.date === key).reduce((a, o) => a + o.total, 0);
+      hd[6 - i] = _orders.filter(o => o.date === key).reduce((a, o) => a + netRv(o), 0);
       labels.push(`${d.getDate()}/${d.getMonth()+1}`);
     }
   } else if (period === 'month') {
@@ -4110,7 +4239,7 @@ function drawChart(period, filteredOrders) {
     _orders.filter(o => o.date.slice(3,10) === `${mm}/${yyyy}`).forEach(o => {
       const day = parseInt(o.date.split('/')[0]);
       const wi = Math.min(Math.floor((day - 1) / 7), weeks - 1);
-      hd[wi] += o.total;
+      hd[wi] += netRv(o);
     });
     for (let i = 0; i < weeks; i++) labels.push(`T${i+1}`);
   } else if (period === 'year') {
@@ -4118,13 +4247,13 @@ function drawChart(period, filteredOrders) {
     const yyyy = String(now.getFullYear());
     _orders.filter(o => o.date.endsWith(yyyy)).forEach(o => {
       const m = parseInt(o.date.split('/')[1]) - 1;
-      hd[m] += o.total;
+      hd[m] += netRv(o);
     });
     labels = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
   } else {
     // custom date range — nhóm theo ngày
     const byDate = {};
-    _orders.forEach(o => { byDate[o.date] = (byDate[o.date]||0) + o.total; });
+    _orders.forEach(o => { byDate[o.date] = (byDate[o.date]||0) + netRv(o); });
     const keys = Object.keys(byDate).sort((a,b)=>{
       const [da,ma,ya]=a.split('/'), [db,mb,yb]=b.split('/');
       return new Date(+ya,+ma-1,+da) - new Date(+yb,+mb-1,+db);
@@ -4450,7 +4579,7 @@ function renderMnList() {
   const el = document.getElementById('mn-list');
   const menuSrc = _curMenuTab === 'togo' ? MENU_TOGO : MENU;
   const tabLabel = _curMenuTab === 'togo' ? 'To Go' : 'Tại quán';
-  if (!menuSrc.length) {
+  if (!menuSrc.length && !FOOD_MENU.length) {
     el.innerHTML = `<div style="text-align:center;padding:40px;color:#bbb;font-size:14px;">Chưa có món ${tabLabel} nào</div>`;
     return;
   }
@@ -4461,7 +4590,7 @@ function renderMnList() {
     if (!grp[t]) grp[t] = [];
     grp[t].push(m);
   });
-  el.innerHTML = Object.entries(grp).map(([type, items]) => `
+  let html = Object.entries(grp).map(([type, items]) => `
     <div style="margin-bottom:20px;">
       <div style="font-size:12px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:8px 4px 10px;">${type}</div>
       ${items.map(m => {
@@ -4479,6 +4608,30 @@ function renderMnList() {
         </div>`;
       }).join('')}
     </div>`).join('');
+
+  // Food section — cố định ở cuối, dùng nút thêm riêng
+  html += `
+    <div style="margin-bottom:20px;" id="mn-food-section">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px 10px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:12px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.7px;">🍽 Food</span>
+          <span style="font-size:10px;background:#fef3c7;color:#b45309;border-radius:8px;padding:2px 8px;font-weight:700;">Tách doanh thu riêng</span>
+        </div>
+        <button onclick="openFoodForm(null)" style="background:#b45309;color:#fff;border:none;border-radius:14px;padding:6px 14px;font-family:'Google Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;">+ Thêm món food</button>
+      </div>
+      ${FOOD_MENU.length ? FOOD_MENU.map(f => `
+        <div onclick="openFoodForm('${f.id}')" style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:18px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:10px;cursor:pointer;">
+          <div style="width:44px;height:44px;border-radius:12px;background:${f.color||'#b45309'};flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;">🍽</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:16px;font-weight:700;color:var(--td);">${f.name}</div>
+            <div style="font-size:12px;color:#b45309;margin-top:3px;font-weight:600;">${f.price.toLocaleString('vi-VN')}đ · Food</div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>`).join('')
+      : `<div style="text-align:center;padding:20px;color:#d97706;font-size:13px;">Chưa có món Food nào</div>`}
+    </div>`;
+
+  el.innerHTML = html;
 }
 
 const MN_COLORS = ['#1a4a2e','#2d6a4f','#1a5276','#6c3483','#922b21','#784212','#0e6655','#4a235a','#2e4057','#d35400','#1a6b6b','#5d4037'];
@@ -4640,9 +4793,88 @@ function deleteMenuItem() {
   }).catch(err => toast('❌ Lỗi: ' + err.message));
 }
 
+function deleteMenuItem() {
+  if (!_mnEditId) return;
+  const tabLabel = _curMenuTab === 'togo' ? 'menu To Go' : 'menu';
+  if (!confirm('Xoá món này khỏi ' + tabLabel + '?')) return;
+  db.ref(getMnFirebaseRef() + '/' + _mnEditId).remove().then(() => {
+    toast('🗑 Đã xoá món');
+    closeMenuForm();
+    initMenu();
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
 // ============================================================
-// TOPPINGS — Quản lý & cart logic
+// FOOD MENU — Phân loại tách doanh thu riêng
 // ============================================================
+let _foodEditId = null;
+
+function openFoodForm(id) {
+  _foodEditId = id;
+  const popup = document.getElementById('food-popup');
+  const title = document.getElementById('food-form-title');
+  const delBtn = document.getElementById('food-f-del');
+  if (id) {
+    const f = FOOD_MENU.find(x => x.id === id);
+    if (!f) return;
+    title.textContent = 'Chỉnh sửa món Food';
+    document.getElementById('food-f-name').value = f.name;
+    document.getElementById('food-f-price').value = f.price ? f.price.toLocaleString('vi-VN') : '';
+    delBtn.style.display = 'block';
+  } else {
+    title.textContent = 'Thêm món Food mới';
+    document.getElementById('food-f-name').value = '';
+    document.getElementById('food-f-price').value = '';
+    delBtn.style.display = 'none';
+  }
+  popup.style.display = 'flex';
+}
+
+function closeFoodForm() {
+  document.getElementById('food-popup').style.display = 'none';
+}
+
+function saveFoodItem() {
+  const name = document.getElementById('food-f-name').value.trim();
+  if (!name) { toast('Vui lòng nhập tên món!'); return; }
+  const priceRaw = document.getElementById('food-f-price').value.replace(/[^0-9]/g, '');
+  const price = parseInt(priceRaw) || 0;
+  if (!price) { toast('Vui lòng nhập giá món!'); return; }
+  const data = { name, price, color: '#b45309' };
+  const ref = _foodEditId ? db.ref('food_xolifa/' + _foodEditId) : db.ref('food_xolifa').push();
+  ref.set(data).then(() => {
+    toast(_foodEditId ? '✅ Đã cập nhật món Food!' : '✅ Đã thêm món Food mới!');
+    closeFoodForm();
+    initMenu();
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
+function deleteFoodItem() {
+  if (!_foodEditId) return;
+  if (!confirm('Xoá món Food này?')) return;
+  db.ref('food_xolifa/' + _foodEditId).remove().then(() => {
+    toast('🗑 Đã xoá món Food');
+    closeFoodForm();
+    initMenu();
+  }).catch(err => toast('❌ Lỗi: ' + err.message));
+}
+
+// Thêm món Food vào giỏ hàng (isFood = true để tách doanh thu)
+function addFoodToCart(foodId) {
+  const f = FOOD_MENU.find(x => x.id === foodId);
+  if (!f) return;
+  const key = 'food_' + foodId;
+  if (cart[key]) {
+    cart[key].qty++;
+  } else {
+    cart[key] = { itemId: foodId, name: f.name, size: '-', price: f.price, qty: 1, isFood: true };
+  }
+  renderCartDrawer();
+  renderMenu();
+  toast('🍽 Đã thêm ' + f.name);
+}
+
+
 
 function renderMnToppingList() {
   const el = document.getElementById('mn-list');
@@ -5029,10 +5261,16 @@ function finalizeSplitPay() {
   const day   = p(now.getDate());
   const itemsArray = items.map(c => ({ ...c }));
   const itemsSummary = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
+  const foodItems = items.filter(c => c.isFood === true);
+  const foodTotal = foodItems.reduce((s, c) => s + c.price * c.qty, 0);
   const order = {
     time: `${p(now.getHours())}:${p(now.getMinutes())}`,
     date: `${day}/${p(now.getMonth()+1)}/${now.getFullYear()}`,
     items: itemsSummary, itemsArray, total,
+    netTotal: foodTotal > 0 ? total - foodTotal : null,
+    foodTotal: foodTotal > 0 ? foodTotal : null,
+    foodItems: foodTotal > 0 ? foodItems.map(c => ({ name: c.name, qty: c.qty, price: c.price })) : null,
+    foodMethod: foodTotal > 0 ? 'TÍNH RIÊNG' : null,
     method: 'TÍNH RIÊNG',
     splitGroups: spGroups,
     phone: document.getElementById('cuph').value || '',
@@ -5775,12 +6013,21 @@ function confirmPayWallet() {
   const itemsArray = items.map(c => ({ ...c }));
   const itemsSummary = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
 
+  // Tách food items
+  const foodItems = items.filter(c => c.isFood === true);
+  const foodTotal = foodItems.reduce((s, c) => s + c.price * c.qty, 0);
+  const netTotal = total - foodTotal;
+
   const order = {
     time: `${p(now.getHours())}:${p(now.getMinutes())}`,
     date: `${day}/${p(now.getMonth() + 1)}/${now.getFullYear()}`,
     items: itemsSummary,
     itemsArray,
     total,
+    netTotal: foodTotal > 0 ? netTotal : null,
+    foodTotal: foodTotal > 0 ? foodTotal : null,
+    foodItems: foodTotal > 0 ? foodItems.map(c => ({ name: c.name, qty: c.qty, price: c.price })) : null,
+    foodMethod: foodTotal > 0 ? 'VÍ KHÁCH HÀNG' : null,
     method: 'VÍ KHÁCH HÀNG',
     phone: document.getElementById('cuph').value || '',
     voucherUsed: _giftVoucherKey ? (Object.values(cart).find(c=>c._vKey===_giftVoucherKey)?._giftLabel || _giftVoucherKey) : (_appliedDiscountId ? (_discountCache[_appliedDiscountId]?.label || _appliedDiscountId) : null),
