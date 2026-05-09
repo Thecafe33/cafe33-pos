@@ -4428,6 +4428,14 @@ function showDet(id) {
             const itemOrigAmt  = it.price * it.qty;
             const itemReducedAmt = reducedPrice * it.qty;
 
+            const itToppings = it.toppings || [];
+            const toppingSum = itToppings.reduce((s, t) => s + (t.price || 0), 0);
+            const toppingHtml = itToppings.length
+              ? itToppings.map(t => `<span style="display:inline-flex;align-items:center;gap:3px;background:#fff3e0;color:#b45309;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;margin-right:4px;margin-top:4px;">+ ${t.name}${t.price ? ' <span style="color:#e67e22;margin-left:2px;">+${t.price.toLocaleString("vi-VN")}</span>' : ''}</span>`).join('')
+              : '';
+            const itemTotalAmt = (reducedPrice + toppingSum) * it.qty;
+            const itemOrigTotalAmt = (it.price + toppingSum) * it.qty;
+
             return `
         <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 0;${i < itemsList.length - 1 ? 'border-bottom:1px solid #f0f0f0;' : ''}">
           <span style="font-size:17px;font-weight:700;color:var(--td);min-width:20px;">${i+1}</span>
@@ -4437,12 +4445,13 @@ function showDet(id) {
               ? `<span style="display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;">${it.size}&nbsp;&nbsp;<span style="text-decoration:line-through;color:#94a3b8;font-weight:500;">${it.price.toLocaleString('vi-VN')}</span>&nbsp;→&nbsp;${reducedPrice.toLocaleString('vi-VN')}</span>`
               : `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--gl);color:var(--gd);border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;">${it.size}&nbsp;&nbsp;${it.price.toLocaleString('vi-VN')}</span>`
             }
+            ${toppingHtml ? `<div style="display:flex;flex-wrap:wrap;margin-top:2px;">${toppingHtml}</div>` : ''}
           </div>
           <div style="text-align:right;white-space:nowrap;">
             ${isEligible
-              ? `<div style="font-size:17px;font-weight:700;color:#1d4ed8;">${itemReducedAmt.toLocaleString('vi-VN')}</div>
-                 <div style="font-size:12px;color:#94a3b8;text-decoration:line-through;">${itemOrigAmt.toLocaleString('vi-VN')}</div>`
-              : `<div style="font-size:17px;font-weight:700;color:var(--td);">${itemOrigAmt.toLocaleString('vi-VN')}</div>`
+              ? `<div style="font-size:17px;font-weight:700;color:#1d4ed8;">${itemTotalAmt.toLocaleString('vi-VN')}</div>
+                 <div style="font-size:12px;color:#94a3b8;text-decoration:line-through;">${itemOrigTotalAmt.toLocaleString('vi-VN')}</div>`
+              : `<div style="font-size:17px;font-weight:700;color:var(--td);">${itemTotalAmt.toLocaleString('vi-VN')}</div>`
             }
           </div>
         </div>`;
