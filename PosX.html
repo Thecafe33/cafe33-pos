@@ -1250,6 +1250,15 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
         </div>
         <div><div class="wal-action-title">Nạp tiền</div><div class="wal-action-desc">Nạp tiền vào ví khách hàng</div></div>
       </button>
+      <button class="wal-action-btn" onclick="openPointConvertRequests()" style="position:relative;">
+        <div class="wal-action-icon" style="background:#f0e6ff;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div>
+          <div class="wal-action-title" style="display:flex;align-items:center;gap:6px;">Yêu cầu quy đổi <span id="convert-req-badge" style="display:none;background:#e74c3c;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;align-items:center;justify-content:center;">0</span></div>
+          <div class="wal-action-desc">Xác nhận quy đổi điểm → X point</div>
+        </div>
+      </button>
     </div>
 
   </div>
@@ -1276,6 +1285,20 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <div class="wal-pin-display" id="walPinDisplay"></div>
       <div style="font-size:12px;color:#e74c3c;font-weight:600;margin-top:8px;">⚠ Mã PIN chỉ hiển thị 1 lần duy nhất</div>
       <button onclick="document.getElementById('walOpenPopup').classList.remove('show');document.getElementById('walOpenStep1').style.display='block';document.getElementById('walOpenStep2').style.display='none';" style="width:100%;padding:14px;background:var(--gd);color:#fff;border:none;border-radius:16px;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px;">Xong</button>
+    </div>
+  </div>
+</div>
+
+<!-- POINT CONVERT REQUESTS POPUP -->
+<div class="wal-popup" id="pointConvertPopup" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="wal-popup-box" style="max-height:85vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span class="wal-popup-title">Yêu cầu quy đổi điểm</span>
+      <button onclick="document.getElementById('pointConvertPopup').classList.remove('show')" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <p style="font-size:12px;color:#999;margin-bottom:16px;font-family:'Google Sans',sans-serif;">1.000 điểm = 1.000 X point · Chỉ dùng tại XOLIFA</p>
+    <div id="convert-req-list" style="display:flex;flex-direction:column;gap:12px;">
+      <div style="text-align:center;padding:30px 0;color:#bbb;font-size:14px;font-family:'Google Sans',sans-serif;">Đang tải yêu cầu...</div>
     </div>
   </div>
 </div>
@@ -6113,7 +6136,173 @@ function resetPayMethod() {
   if (pmwa) pmwa.classList.remove('sel');
   document.getElementById('bank-confirm-area').style.display = 'none';
 }
-</script>
+
+// ════════════════════════════════════════════════
+// QUẢN LÝ YÊU CẦU QUY ĐỔI ĐIỂM SANG VÍ
+// ════════════════════════════════════════════════
+var _convertReqListener = null;
+
+function openPointConvertRequests() {
+  document.getElementById('pointConvertPopup').classList.add('show');
+  loadConvertRequests();
+}
+
+function loadConvertRequests() {
+  var listEl = document.getElementById('convert-req-list');
+  listEl.innerHTML = '<div style="text-align:center;padding:30px 0;color:#bbb;font-size:14px;font-family:\'Google Sans\',sans-serif;">Đang tải...</div>';
+
+  if (_convertReqListener) { _convertReqListener(); _convertReqListener = null; }
+
+  var ref = db.ref('point_convert_requests').orderByChild('status').equalTo('pending');
+  _convertReqListener = ref.on('value', function(snap) {
+    var requests = [];
+    snap.forEach(function(child) {
+      requests.push(Object.assign({ key: child.key }, child.val()));
+    });
+
+    // Update badge
+    var badge = document.getElementById('convert-req-badge');
+    if (requests.length > 0) {
+      badge.textContent = requests.length;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+
+    if (requests.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center;padding:30px 0;color:#bbb;font-size:14px;font-family:\'Google Sans\',sans-serif;">Không có yêu cầu nào đang chờ</div>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    requests.forEach(function(req) {
+      var card = document.createElement('div');
+      card.style.cssText = 'background:#fff;border-radius:18px;padding:16px 18px;border:1.5px solid #f0e6ff;';
+      card.innerHTML = [
+        '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;">',
+          '<div>',
+            '<div style="font-size:16px;font-weight:700;color:var(--gd);">' + (req.name || 'Khách') + '</div>',
+            '<div style="font-size:13px;color:#999;margin-top:2px;font-family:\'Google Sans\',sans-serif;">' + (req.phone || '') + '</div>',
+          '</div>',
+          '<div style="background:#f0e6ff;border-radius:12px;padding:6px 12px;text-align:right;flex-shrink:0;">',
+            '<div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;">Quy đổi</div>',
+            '<div style="font-size:18px;font-weight:800;color:#7c3aed;">' + Number(req.points).toLocaleString('vi-VN') + '</div>',
+            '<div style="font-size:10px;color:#a78bfa;font-weight:600;">điểm → X point</div>',
+          '</div>',
+        '</div>',
+        '<div id="conv-wallet-status-' + req.key + '" style="font-size:11px;color:#999;margin-bottom:10px;"></div>',
+        '<button onclick="approveConvertRequest(\'' + req.key + '\',\'' + (req.phone||'') + '\',' + req.points + ',\'' + (req.name||'') + '\')" style="width:100%;padding:13px;background:var(--gd);color:#fff;border:none;border-radius:14px;font-family:\'Google Sans\',sans-serif;font-size:14px;font-weight:700;cursor:pointer;">✅ Xác nhận quy đổi cho khách</button>',
+        '<button onclick="rejectConvertRequest(\'' + req.key + '\')" style="width:100%;padding:10px;background:transparent;border:none;font-family:\'Google Sans\',sans-serif;font-size:13px;font-weight:600;color:#e74c3c;cursor:pointer;margin-top:6px;">✕ Từ chối</button>'
+      ].join('');
+      listEl.appendChild(card);
+
+      // Check wallet status async
+      checkWalletForConvert(req.phone, req.key);
+    });
+  });
+}
+
+function checkWalletForConvert(phone, reqKey) {
+  if (!phone) return;
+  firebase.firestore().collection('wallets_xolifa').doc(phone).get().then(function(doc) {
+    var statusEl = document.getElementById('conv-wallet-status-' + reqKey);
+    if (!statusEl) return;
+    if (!doc.exists || !doc.data().is_active) {
+      statusEl.innerHTML = '<span style="color:#e67e22;font-weight:700;">⚠ Ví chưa kích hoạt — Sẽ được kích hoạt tự động khi xác nhận</span>';
+    } else {
+      var bal = (doc.data().balance_main || 0) + (doc.data().balance_bonus || 0);
+      statusEl.innerHTML = '<span style="color:var(--gm);font-weight:600;">✅ Ví đang hoạt động · Số dư: ' + Number(bal).toLocaleString('vi-VN') + ' X</span>';
+    }
+  }).catch(function() {
+    var statusEl = document.getElementById('conv-wallet-status-' + reqKey);
+    if (statusEl) statusEl.innerHTML = '<span style="color:#e67e22;">⚠ Ví chưa kích hoạt — Sẽ được kích hoạt tự động</span>';
+  });
+}
+
+function approveConvertRequest(reqKey, phone, points, name) {
+  if (!confirm('Xác nhận quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm sang ' + Number(points).toLocaleString('vi-VN') + ' X point cho ' + name + '?')) return;
+
+  const toastEl = (msg) => toast(msg);
+  toastEl('⏳ Đang xử lý...');
+
+  const fstore = firebase.firestore();
+  const walRef = fstore.collection('wallets_xolifa').doc(phone);
+
+  walRef.get().then(function(doc) {
+    const now = new Date().toISOString();
+    const batch = fstore.batch();
+
+    if (!doc.exists || !doc.data().is_active) {
+      // Kích hoạt ví mới với X point
+      const newWallet = {
+        phone: phone,
+        name: name,
+        is_active: true,
+        balance_main: points,
+        balance_bonus: 0,
+        created_at: now,
+        updated_at: now,
+        activated_by: 'pos_convert',
+        pin_hash: '' // no PIN needed — activated through POS
+      };
+      batch.set(walRef, newWallet, { merge: true });
+    } else {
+      // Cộng thêm vào ví hiện có
+      batch.update(walRef, {
+        balance_main: firebase.firestore.FieldValue.increment(points),
+        updated_at: now
+      });
+    }
+
+    // Ghi lịch sử giao dịch ví
+    const txRef = fstore.collection('wallet_transactions_xolifa').doc();
+    batch.set(txRef, {
+      wallet_id: phone,
+      type: 'point_convert',
+      amount_main: points,
+      amount_bonus: 0,
+      status: 'completed',
+      description: 'Quy đổi điểm tích lũy → X point (' + Number(points).toLocaleString('vi-VN') + ' điểm)',
+      created_at: now
+    });
+
+    return batch.commit();
+  }).then(function() {
+    // Trừ điểm thành viên
+    return db.ref('members').orderByChild('phone').equalTo(phone).once('value').then(function(snap) {
+      var updates = {};
+      snap.forEach(function(child) {
+        var cur = child.val().points || 0;
+        updates['members/' + child.key + '/points'] = Math.max(0, cur - points);
+      });
+      return db.ref().update(updates);
+    });
+  }).then(function() {
+    // Cập nhật trạng thái yêu cầu
+    return db.ref('point_convert_requests/' + reqKey).update({ status: 'approved', approved_at: Date.now() });
+  }).then(function() {
+    toast('✅ Đã quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm thành công!');
+  }).catch(function(err) {
+    toast('❌ Lỗi: ' + err.message);
+  });
+}
+
+function rejectConvertRequest(reqKey) {
+  db.ref('point_convert_requests/' + reqKey).update({ status: 'rejected', rejected_at: Date.now() }).then(function() {
+    toast('Đã từ chối yêu cầu');
+  });
+}
+
+// Lắng nghe badge pending realtime
+db.ref('point_convert_requests').orderByChild('status').equalTo('pending').on('value', function(snap) {
+  var count = 0;
+  snap.forEach(function() { count++; });
+  var badge = document.getElementById('convert-req-badge');
+  if (!badge) return;
+  if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+});
+
 
 <!-- TOPPING FORM POPUP -->
 <div id="tp-popup" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);padding:24px;" onclick="if(event.target===this)closeToppingForm()">
