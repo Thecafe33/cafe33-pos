@@ -15,6 +15,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
@@ -221,6 +222,217 @@
 }
 
 </style>
+
+<style>
+/* ══════════════════════════════════════════
+   STAMP CARD TO GO — phong cách The cafe 33
+══════════════════════════════════════════ */
+.togo-stamp-card {
+  background: #ffffff;
+  border-radius: 2rem;
+  padding: 20px 20px 18px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+  border: 1px solid rgba(0,98,65,0.08);
+  position: relative;
+  overflow: hidden;
+}
+.togo-stamp-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #006241, #00a36c);
+  border-radius: 2rem 2rem 0 0;
+}
+.togo-stamp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.togo-stamp-title-main {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1e3932;
+  letter-spacing: -0.2px;
+  font-family: 'League Spartan', sans-serif;
+}
+.togo-stamp-title-sub {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+  font-weight: 600;
+}
+.togo-stamp-count-badge {
+  font-size: 13px;
+  font-weight: 800;
+  color: #006241;
+  background: #ecfdf5;
+  padding: 5px 12px;
+  border-radius: 20px;
+  letter-spacing: -0.3px;
+  border: 1px solid #d1fae5;
+}
+.togo-stamp-grid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  gap: 4px;
+}
+.togo-stamp-cell {
+  flex: 1;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.togo-stamp-cell svg {
+  width: 48%; height: 48%;
+  color: #d1d5db;
+  transition: color 0.3s;
+}
+.togo-stamp-cell.on {
+  background: #006241;
+  box-shadow: 0 3px 10px rgba(0,98,65,0.28);
+}
+.togo-stamp-cell.on svg { color: #ffffff; }
+.togo-stamp-cell.gift {
+  background: #f3f4f6;
+  border: 1.5px dashed #d1d5db;
+}
+.togo-stamp-cell.gift svg { color: #d1d5db; }
+.togo-stamp-cell.gift.unlocked {
+  background: #006241;
+  border: 2px solid #006241;
+  box-shadow: 0 4px 14px rgba(0,98,65,0.32);
+}
+.togo-stamp-cell.gift.unlocked svg { color: #ffffff; }
+.togo-stamp-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+  font-weight: 500;
+}
+.togo-stamp-done, .togo-free-drinks-badge {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  background: #ecfdf5;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-top: 14px;
+  border: 1px solid #d1fae5;
+}
+.togo-stamp-done.show, .togo-free-drinks-badge.show { display: flex; }
+.togo-banner-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #006241;
+  margin-bottom: 2px;
+}
+.togo-banner-sub {
+  font-size: 12px;
+  color: #047857;
+}
+.togo-banner-icon svg {
+  width: 28px; height: 28px;
+  color: #006241;
+}
+
+/* ══════════════════════════════════════════
+   VÍ XOLIFA — phong cách The cafe 33
+══════════════════════════════════════════ */
+#tab-wallet .wallet-card-xo {
+  background: #111111;
+  border-radius: 1.8rem;
+  padding: 24px;
+  margin-bottom: 20px;
+  color: #ffffff;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1.58;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+#tab-wallet .wallet-card-xo::before {
+  content: "";
+  position: absolute; top:0; left:0; right:0; bottom:0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+#tab-wallet .wallet-inactive-xo {
+  background: #f8f9fa;
+  border-radius: 2rem;
+  padding: 28px 22px;
+  text-align: center;
+  margin-bottom: 20px;
+  border: 1px solid #f3f4f6;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+#tab-wallet .wallet-btn-xo {
+  width: 100%; padding: 16px;
+  border-radius: 14px; font-weight: 700; font-size: 15px;
+  border: none; cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 14px;
+}
+#tab-wallet .wallet-btn-xo:active { transform: scale(0.98); }
+#tab-wallet .wallet-btn-xo.primary { background: #1e3932; color: #ffffff; }
+#tab-wallet .wallet-btn-xo.primary:active { background: #006241; }
+#tab-wallet .wallet-btn-xo.secondary { background: #e5e5ea; color: #1e3932; font-weight: 600; }
+
+#tab-wallet .wallet-history-item-xo {
+  background: transparent;
+  padding: 14px 0;
+  display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+#tab-wallet .wallet-hist-icon-xo {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: #f3f4f6; color: #1e3932;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+#tab-wallet .pin-input-group-xo {
+  display: flex; justify-content: center; gap: 12px; margin: 28px 0;
+}
+#tab-wallet .pin-digit-xo {
+  width: 50px; height: 50px;
+  background: #f3f4f6; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 900; color: #1e3932;
+  transition: all 0.1s;
+}
+#tab-wallet .pin-digit-xo.active {
+  background: #006241; color: #fff; transform: scale(1.1);
+}
+#tab-wallet .pay-pin-digit-xo {
+  width: 54px; height: 60px;
+  background: #f3f4f6; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 900; color: #006241;
+  border: 2px solid transparent;
+  transition: all .15s;
+}
+#tab-wallet .pay-pin-digit-xo.filled {
+  background: #ecfdf5; border-color: #006241;
+}
+#tab-wallet .pay-pin-digit-xo.active-cursor {
+  border-color: #006241; background: #fff;
+}
+@keyframes slideUpConv {
+  from { opacity: 0; transform: translateY(60px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
 </head>
 <body class="min-h-screen pb-32">
 
@@ -248,7 +460,14 @@
   </div>
 
   <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-8 bg-white text-center">
-    <h1 class="text-5xl text-[#006241] mb-4 brand-font">The cafe 33</h1>
+    <h1 class="text-5xl text-[#006241] mb-2 brand-font">The cafe 33</h1>
+    <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px;">
+      <div style="height:1px;width:28px;background:linear-gradient(to left,#d1d5db,transparent);"></div>
+      <span style="font-size:9px;font-weight:700;color:#9ca3af;letter-spacing:0.2em;text-transform:uppercase;">và</span>
+      <div style="height:1px;width:28px;background:linear-gradient(to right,#d1d5db,transparent);"></div>
+    </div>
+    <p style="font-size:26px;font-weight:900;color:#2d3a5a;font-family:'League Spartan',sans-serif;letter-spacing:2px;margin-bottom:4px;line-height:1;">XOLIFA</p>
+    <p style="font-size:9px;font-weight:500;color:#9ca3af;letter-spacing:4px;text-transform:uppercase;font-family:Georgia,serif;margin-bottom:20px;">COFFEE &amp; TEA</p>
     <p class="text-[11px] font-bold text-gray-400 mb-12 uppercase tracking-widest">Tích điểm nhận đặc quyền</p>
     <input type="tel" id="login-sdt" placeholder="Số điện thoại của bạn..." class="w-full p-5 rounded-3xl bg-gray-50 border border-gray-100 mb-4 text-center outline-none text-lg">
     <button id="btn-login" onclick="login()" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-lg">Đăng nhập</button>
@@ -288,15 +507,11 @@
 </div>
   <div id="main-app" class="hidden">
     <div style="position:fixed;top:0;left:0;right:0;z-index:50;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;pointer-events:none;">
-      <div style="pointer-events:auto;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.88);border:1px solid rgba(0,98,65,0.13);border-radius:99px;padding:7px 16px 7px 10px;box-shadow:0 2px 12px rgba(0,0,0,0.09),inset 0 1px 0 rgba(255,255,255,1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
-        <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#006241,#00a36c);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,98,65,0.35);flex-shrink:0;">
-          <span style="font-size:11px;font-weight:900;color:white;font-family:'League Spartan',sans-serif;line-height:1;">33</span>
-        </div>
+      <div style="pointer-events:auto;background:rgba(255,255,255,0.88);border:1px solid rgba(0,98,65,0.13);border-radius:99px;padding:8px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.09),inset 0 1px 0 rgba(255,255,255,1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
         <span style="font-size:14px;font-weight:800;color:#006241;font-family:'League Spartan',sans-serif;">The cafe 33</span>
       </div>
-      <div style="pointer-events:auto;display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.88);border:1px solid rgba(0,0,0,0.07);border-radius:99px;padding:7px 14px;box-shadow:0 2px 12px rgba(0,0,0,0.09),inset 0 1px 0 rgba(255,255,255,1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
-        <div style="width:6px;height:6px;border-radius:50%;background:#34a853;box-shadow:0 0 0 2px rgba(52,168,83,0.22);flex-shrink:0;"></div>
-        <span id="live-clock" style="font-size:12px;font-weight:700;color:#3c4043;">--:--</span>
+      <div style="pointer-events:auto;background:rgba(255,255,255,0.88);border:1px solid rgba(45,58,90,0.15);border-radius:99px;padding:8px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.09),inset 0 1px 0 rgba(255,255,255,1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);">
+        <span style="font-size:14px;font-weight:800;color:#2d3a5a;font-family:'League Spartan',sans-serif;letter-spacing:0.5px;">XOLIFA</span>
       </div>
     </div>
 
@@ -309,6 +524,53 @@
         </div>
         <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
       </div>
+
+      <!-- ── NÚT CHUYỂN ĐIỂM SANG VÍ ── -->
+      <div id="btn-convert-points" onclick="openConvertPointsPopup()" style="background:linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%);border:1.5px solid rgba(0,98,65,0.18);border-radius:2rem;padding:16px 20px;margin-bottom:20px;cursor:pointer;display:flex;align-items:center;gap:14px;-webkit-tap-highlight-color:transparent;transition:all 0.15s;box-shadow:0 2px 12px rgba(0,98,65,0.07);" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.98)'" ontouchend="this.style.transform='scale(1)'">
+        <div style="width:46px;height:46px;border-radius:15px;background:#006241;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 12px rgba(0,98,65,0.3);">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5"/><path d="M7 15h4"/></svg>
+        </div>
+        <div style="flex:1;">
+          <p style="font-size:13px;font-weight:900;color:#1e3932;margin:0 0 3px;letter-spacing:-0.01em;">Chuyển đổi điểm sang Ví</p>
+          <p style="font-size:10px;color:#6b7280;font-weight:600;margin:0;line-height:1.5;">1.000 điểm = 1.000 X point · Chỉ dùng tại XOLIFA · Không quy đổi thành tiền mặt</p>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#006241" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <!-- ── END NÚT CHUYỂN ĐIỂM ── -->
+
+      <!-- ── STAMP CARD TO GO (từ Xolifa) ── -->
+      <div class="togo-stamp-card mb-6">
+        <div class="togo-stamp-header">
+          <div>
+            <div class="togo-stamp-title-main">Thẻ tích dấu To Go</div>
+            <div class="togo-stamp-title-sub">1 ly mang về = 1 dấu · Tối đa 2/ngày</div>
+          </div>
+          <div class="togo-stamp-count-badge">
+            <span id="togo-stamp-count-num">0</span> / 6
+          </div>
+        </div>
+        <div class="togo-stamp-grid" id="togo-stamp-grid"></div>
+        <p class="togo-stamp-hint">Tích đủ 6 dấu để đổi 1 ly miễn phí</p>
+        <div class="togo-stamp-done" id="togo-stamp-done">
+          <div style="flex:1;">
+            <div class="togo-banner-title">Đã đủ 6 dấu 🎉</div>
+            <div class="togo-banner-sub">Xuất trình để nhận 1 ly miễn phí</div>
+          </div>
+          <div class="togo-banner-icon">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          </div>
+        </div>
+        <div class="togo-free-drinks-badge" id="togo-free-drinks-badge">
+          <div style="flex:1;">
+            <div class="togo-banner-title" id="togo-free-drinks-text">Bạn có ly miễn phí</div>
+            <div class="togo-banner-sub">Hãy sử dụng ngay hôm nay</div>
+          </div>
+          <div class="togo-banner-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+          </div>
+        </div>
+      </div>
+      <!-- ── END STAMP CARD TO GO ── -->
 
       <div id="btn-open-history" onclick="openHistory()" class="bg-white p-5 rounded-[2.5rem] shadow-sm border border-gray-100 flex items-center justify-between cursor-pointer mb-4 active:scale-95 transition-transform">
         <div class="flex items-center gap-4">
@@ -409,6 +671,20 @@
       </div>
     </div>
     <div id="tab-bed" class="p-6 pb-40 tab-content hidden" style="padding-top:72px;">
+
+      <!-- ── BANNER CHÚ Ý ── -->
+      <div style="background:linear-gradient(135deg,#1e3932 0%,#006241 60%,#00a36c 100%);border-radius:20px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 24px rgba(0,98,65,0.28),0 2px 8px rgba(0,0,0,0.08);position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,0.05);border-radius:50%;pointer-events:none;"></div>
+        <div style="width:40px;height:40px;border-radius:14px;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(255,255,255,0.2);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5V20M3 20H21M3 20V21M21 20V9.5M21 20V21M3 9.5C3 8.39543 3.89543 7.5 5 7.5H9C10.1046 7.5 11 8.39543 11 9.5V11H3V9.5ZM21 9.5C21 8.39543 20.1046 7.5 19 7.5H15C13.8954 7.5 13 8.39543 13 9.5V11H21V9.5Z"/><path d="M3 11H21V16H3V11Z"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <p style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.6);letter-spacing:0.18em;text-transform:uppercase;margin:0 0 3px;">Lưu ý quan trọng</p>
+          <p style="font-size:14px;font-weight:900;color:#ffffff;margin:0;line-height:1.35;font-family:'League Spartan',sans-serif;letter-spacing:-0.01em;">☕ Cafe in Bed chỉ có tại <span style="color:#86efac;">The cafe 33</span> — không có Bed ở XOLIFA!</p>
+        </div>
+      </div>
+      <!-- ── END BANNER ── -->
+
       <h3 class="text-2xl text-[#006241] mb-6 brand-font text-left">Đặt chỗ Cafe in Bed</h3>
       <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-7 text-left">
         <div class="space-y-4"><label class="text-[10px] font-bold text-gray-400 uppercase ml-2 tracking-widest">Ngày bạn đến</label><input type="date" id="book-date" class="w-full p-4 rounded-2xl bg-gray-50 outline-none mt-1 shadow-inner text-center">
@@ -553,7 +829,190 @@
     </div>
 
     <div id="tab-rewards" class="p-6 tab-content hidden pb-40" style="padding-top:72px;"><h3 class="text-2xl text-[#006241] mb-6 brand-font text-left">Đổi quà tặng</h3><div id="rewards-list" class="grid grid-cols-1 gap-4"></div></div>
+
+    <!-- ══════════════════════════════════════
+         TAB VÍ XOLIFA
+    ══════════════════════════════════════ -->
+    <div id="tab-wallet" class="p-5 tab-content hidden pb-40" style="padding-top:72px;">
+
+      <!-- STATE: Inactive -->
+      <div id="wallet-inactive-view">
+        <div class="wallet-inactive-xo">
+          <div style="width:68px;height:68px;background:#e9f5f0;border-radius:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;box-shadow:0 4px 14px rgba(0,98,65,0.12);">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#006241" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5"/></svg>
+          </div>
+          <h2 class="brand-font text-xl text-[#1e3932] mb-2">Ví Xolifa</h2>
+          <p style="font-size:13px;color:#9ca3af;line-height:1.5;margin-bottom:22px;" id="wallet-desc-text">Thanh toán nhanh chóng, nhận ngay ưu đãi nạp tiền hấp dẫn từ Xolifa.</p>
+          <button class="wallet-btn-xo primary" onclick="showWalletActivation()">Kích hoạt ví ngay</button>
+        </div>
+      </div>
+
+      <!-- STATE: Activation Flow -->
+      <div id="wallet-activation-view" style="display:none;">
+        <div class="wallet-inactive-xo">
+          <h2 class="brand-font text-xl text-[#1e3932] mb-2" id="wal-act-title">Nhập mã kích hoạt</h2>
+          <p style="font-size:13px;color:#9ca3af;margin-bottom:4px;" id="wal-act-sub">Mã này được cung cấp bởi nhân viên tại quầy</p>
+          <div class="pin-input-group-xo" id="wal-act-pin-group">
+            <div class="pin-digit-xo active"></div>
+            <div class="pin-digit-xo"></div>
+            <div class="pin-digit-xo"></div>
+            <div class="pin-digit-xo"></div>
+          </div>
+          <div style="position:fixed;bottom:-200px;left:0;opacity:0;">
+            <input type="tel" id="wal-act-input" maxlength="4" oninput="walHandlePinInput(this)" autofocus>
+          </div>
+          <button class="wallet-btn-xo secondary" onclick="cancelWalletActivation()">Hủy</button>
+        </div>
+      </div>
+
+      <!-- STATE: Active -->
+      <div id="wallet-active-view" style="display:none;">
+        <div class="wallet-card-xo">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;z-index:1;position:relative;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:2.5px;opacity:0.5;text-transform:uppercase;font-family:'League Spartan',sans-serif;">XOLIFA WALLET</div>
+            <div style="font-size:10px;opacity:0.4;letter-spacing:0.5px;">Acct: <span id="wal-card-no"></span></div>
+          </div>
+          <div style="z-index:1;position:relative;">
+            <div style="font-size:10px;font-weight:600;opacity:0.5;letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">Số dư</div>
+            <div style="font-size:38px;font-weight:800;line-height:1;letter-spacing:-1px;"><span id="wal-bal-total">0</span><span style="font-size:18px;margin-left:4px;opacity:0.8;font-weight:600;"> X</span></div>
+            <div style="margin-top:7px;font-size:11px;opacity:0.45;display:flex;gap:12px;">
+              <span>Chính: <span id="wal-bal-main">0</span> X</span>
+              <span style="opacity:0.5;">·</span>
+              <span>Thưởng: <span id="wal-bal-bonus">0</span> X</span>
+            </div>
+          </div>
+          <div style="z-index:1;position:relative;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.13);">
+            <div style="font-size:9.5px;line-height:1.6;opacity:0.5;letter-spacing:0.2px;">
+              1.000 X tương đương 1.000 VND · Chỉ sử dụng tại hệ thống Xolifa để thanh toán đồ uống
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:20px;">
+          <button class="wallet-btn-xo primary" style="margin:0;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="openPaymentCodePopup()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5"/></svg>
+            Thanh toán bằng ví
+          </button>
+        </div>
+
+        <h4 class="font-bold text-[10px] uppercase text-gray-400 ml-2 tracking-widest mb-3">Lịch sử giao dịch</h4>
+        <div id="wallet-history-list"></div>
+      </div>
+
+    </div>
+    <!-- ══ END TAB VÍ ══ -->
+
   </div>
+
+  <!-- ══════════════════════════════════════
+       PAYMENT CODE POPUP
+  ══════════════════════════════════════ -->
+  <div id="payment-code-popup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(8px);">
+    <div style="background:#fff;border-radius:2rem;padding:28px 22px 30px;width:100%;max-width:400px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div class="brand-font" style="font-size:18px;font-weight:900;color:#006241;">Nhập mã thanh toán</div>
+        <button onclick="closePaymentCodePopup()" style="background:#f3f4f6;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:15px;color:#6b7280;">✕</button>
+      </div>
+      <div style="font-size:12px;color:#9ca3af;margin-bottom:22px;font-weight:600;">Nhân viên thu ngân đọc mã 4 số cho bạn</div>
+
+      <!-- Step 1 -->
+      <div id="pay-step-txcode">
+        <div style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Mã giao dịch (4 số)</div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px;">
+          <div class="pay-pin-digit-xo" id="txd-0"></div>
+          <div class="pay-pin-digit-xo" id="txd-1"></div>
+          <div class="pay-pin-digit-xo" id="txd-2"></div>
+          <div class="pay-pin-digit-xo" id="txd-3"></div>
+        </div>
+        <input type="tel" id="txcode-input" maxlength="4" inputmode="numeric" style="position:absolute;left:-9999px;opacity:0;" oninput="onTxCodeInput(this)" onblur="this.focus()">
+        <button class="wallet-btn-xo primary" style="margin:0;" onclick="submitTxCode()">Tiếp tục →</button>
+      </div>
+
+      <!-- Step 2 -->
+      <div id="pay-step-pin" style="display:none;">
+        <div style="font-size:13px;color:#6b7280;margin-bottom:16px;">
+          Số tiền: <strong id="pay-amount-display" style="color:#006241;font-size:16px;font-family:'League Spartan',sans-serif;"></strong>
+        </div>
+        <div style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">Mã PIN ví của bạn</div>
+        <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px;">
+          <div class="pay-pin-digit-xo" id="wpd-0"></div>
+          <div class="pay-pin-digit-xo" id="wpd-1"></div>
+          <div class="pay-pin-digit-xo" id="wpd-2"></div>
+          <div class="pay-pin-digit-xo" id="wpd-3"></div>
+        </div>
+        <input type="tel" id="walpin-input" maxlength="4" inputmode="numeric" style="position:absolute;left:-9999px;opacity:0;" oninput="onWalPinInput(this)" onblur="this.focus()">
+        <button class="wallet-btn-xo primary" style="margin:0 0 8px;" onclick="submitWalletPin()">Xác nhận thanh toán</button>
+        <button onclick="backToTxCode()" style="width:100%;padding:12px;background:transparent;border:none;color:#9ca3af;font-size:13px;font-weight:600;cursor:pointer;">← Nhập lại mã giao dịch</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       POPUP CHUYỂN ĐIỂM SANG VÍ
+  ══════════════════════════════════════ -->
+  <div id="convert-points-popup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:flex-end;justify-content:center;padding:0;backdrop-filter:blur(8px);" onclick="if(event.target===this)closeConvertPointsPopup()">
+    <div style="background:#f8f9fa;border-radius:2rem 2rem 0 0;padding:28px 22px 40px;width:100%;max-width:430px;animation:slideUpConv .35s cubic-bezier(0.34,1.2,0.64,1);">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:18px;font-weight:900;color:#1e3932;font-family:'League Spartan',sans-serif;">Chuyển điểm sang Ví</div>
+        <button onclick="closeConvertPointsPopup()" style="background:#e5e7eb;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:15px;color:#6b7280;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
+      <p style="font-size:11px;color:#9ca3af;font-weight:600;margin-bottom:20px;">1.000 điểm = 1.000 X point · Chỉ sử dụng tại XOLIFA · Không quy đổi thành tiền mặt</p>
+
+      <!-- Điểm hiện có -->
+      <div style="background:#006241;border-radius:18px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);letter-spacing:0.1em;text-transform:uppercase;margin:0 0 4px;">Điểm tích lũy của bạn</p>
+          <p style="font-size:36px;font-weight:900;color:#fff;margin:0;font-family:'League Spartan',sans-serif;line-height:1;"><span id="conv-points-display">0</span> <span style="font-size:16px;font-weight:600;opacity:0.7;">điểm</span></p>
+        </div>
+        <div style="width:44px;height:44px;background:rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:center;justify-content:center;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+      </div>
+
+      <!-- Số điểm muốn đổi -->
+      <div style="background:#fff;border-radius:18px;padding:18px 20px;margin-bottom:16px;">
+        <p style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 12px;">Số điểm muốn đổi</p>
+
+        <!-- Thanh kéo -->
+        <input type="range" id="conv-slider" min="0" max="1000" value="0" step="100"
+          oninput="onConvSliderChange(this.value)"
+          style="width:100%;height:6px;accent-color:#006241;cursor:pointer;margin-bottom:14px;">
+
+        <!-- Hiển thị giá trị + nút nhập tay -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="flex:1;background:#f3f4f6;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:8px;">
+            <input type="tel" id="conv-input" inputmode="numeric" placeholder="Hoặc nhập số điểm..."
+              style="flex:1;border:none;outline:none;background:transparent;font-size:20px;font-weight:800;color:#1e3932;font-family:'League Spartan',sans-serif;width:100%;"
+              oninput="onConvInputChange(this.value)">
+            <span style="font-size:13px;font-weight:600;color:#9ca3af;">điểm</span>
+          </div>
+        </div>
+
+        <!-- Preview X point -->
+        <div style="margin-top:12px;background:#ecfdf5;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:12px;font-weight:700;color:#065f46;">Nhận được</span>
+          <span style="font-size:18px;font-weight:900;color:#006241;font-family:'League Spartan',sans-serif;"><span id="conv-xpoint-preview">0</span> X point</span>
+        </div>
+      </div>
+
+      <!-- Ghi chú -->
+      <div style="background:#fffbe8;border-radius:12px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:flex-start;gap:8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p style="font-size:11px;color:#92400e;font-weight:600;margin:0;line-height:1.5;">Điểm quy đổi không thể hoàn lại. Yêu cầu sẽ được gửi đến thu ngân và xử lý ngay tại quầy.</p>
+      </div>
+
+      <!-- Nút -->
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeConvertPointsPopup()" style="flex:1;padding:15px;background:#e5e7eb;color:#6b7280;border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Hủy bỏ</button>
+        <button onclick="submitConvertPoints()" style="flex:2;padding:15px;background:#006241;color:#fff;border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Xác nhận đổi
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- ══ END POPUP CHUYỂN ĐIỂM ══ -->
 
   <nav id="nav-bar" class="fixed bottom-6 left-6 right-6 h-20 bg-white/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-white/60 flex justify-between items-center p-2 z-50 hidden">
     <button onclick="showTab('user')" id="nav-user" class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1.5 active:scale-95">
@@ -563,7 +1022,7 @@
                 <circle cx="12" cy="7" r="4"/>
             </svg>
         </div>
-        <span class="text-[10px] font-bold tracking-widest uppercase">Bạn</span>
+        <span class="text-[10px] font-bold tracking-widest uppercase">Tích điểm</span>
     </button>
 
     <button onclick="showTab('bed')" id="nav-bed" class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1.5 active:scale-95">
@@ -574,6 +1033,17 @@
             </svg>
         </div>
         <span class="text-[10px] font-bold tracking-widest uppercase">Đặt Bed</span>
+    </button>
+
+    <button onclick="showTab('wallet')" id="nav-wallet" class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1.5 active:scale-95">
+        <div class="relative w-6 h-6">
+            <svg class="w-full h-full stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="5" width="20" height="14" rx="2"/>
+                <path d="M2 10h20"/>
+                <circle cx="17" cy="15" r="1.5"/>
+            </svg>
+        </div>
+        <span class="text-[10px] font-bold tracking-widest uppercase">Ví</span>
     </button>
 
     <button onclick="showTab('rewards')" id="nav-rewards" class="nav-item flex-1 h-full rounded-[2rem] flex flex-col items-center justify-center gap-1.5 active:scale-95">
@@ -1083,6 +1553,11 @@ function showDashboard(phone) {
 
             // Cập nhật card nợ phí
             _renderDebtCard(userData);
+
+            // ── Cập nhật stamp To Go (từ Xolifa) ──
+            if (typeof renderToGoStamps === 'function') {
+                renderToGoStamps(userData.stamp_count || 0, userData.free_drink_available || 0);
+            }
         }
     });
     loadRewards();
@@ -2859,6 +3334,7 @@ function openRescheduleModal(key) {
         }
 
         editingBookingKey = key;
+      _editingBookingPath = _reshPath;
 
         const p = (booking.date || cached.date).split('/');
         document.getElementById('re-date').value = `${p[2]}-${p[1]}-${p[0]}`;
@@ -3167,7 +3643,7 @@ window.handleLogout = function() {
     <div class="bg-gradient-to-br from-[#1e3932] to-[#006241] px-8 py-5 flex items-center justify-between">
       <div>
         <p class="text-white/60 text-[10px] font-bold uppercase tracking-widest">The cafe 33</p>
-        <h3 class="brand-font text-white text-lg font-black leading-tight mt-0.5">Hướng dẫn vị trí<br>đậu xe · Cafe in Bed</h3>
+        <h3 class="brand-font text-white text-lg font-black leading-tight mt-0.5">Chào đón quán mới<br>XOLIFA</h3>
       </div>
       <button 
         onclick="document.getElementById('welcome-popup').classList.add('hidden'); document.getElementById('welcome-popup').style.display='none';"
@@ -3179,8 +3655,8 @@ window.handleLogout = function() {
     <!-- Ảnh -->
     <div class="relative">
       <img 
-        src="https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/%C4%90%E1%BB%81%20m%E1%BB%A5c_20260225_161744_0000.png?alt=media&token=c7ecb95d-6449-4724-b9dd-345683c71bad" 
-        alt="Hướng dẫn đậu xe"
+        src="https://firebasestorage.googleapis.com/v0/b/the-cafe-33.firebasestorage.app/o/Screenshot_2026-05-10-16-02-42-274_1778404795826edit.jpg?alt=media&token=e1b49eeb-d936-4d15-9a8f-76158fcb8efe" 
+        alt="Vị Trí XOLIFA"
         class="w-full object-cover"
         onclick="document.getElementById('zoomed-img').src=this.src; document.getElementById('image-overlay').classList.remove('hidden');"
         style="cursor:zoom-in;"
@@ -3193,7 +3669,7 @@ window.handleLogout = function() {
     <!-- Footer -->
     <div class="px-6 py-5 flex items-center gap-3">
       <div class="flex-1 bg-green-50 rounded-2xl px-4 py-3 border border-green-100">
-        <p class="text-[#006241] text-xs font-bold">🅿️ Vui lòng đậu xe đúng vị trí để tránh ùn tắc khu vực quán nhé!</p>
+        <p class="text-[#006241] text-xs font-bold">The cafe 33 và XOLIFA là 2 quán riêng biệt nhé!</p>
       </div>
       <button 
         onclick="document.getElementById('welcome-popup').classList.add('hidden'); document.getElementById('welcome-popup').style.display='none';"
@@ -3780,6 +4256,540 @@ function _poFlushToRT(bookingKey, bookingDate) {
     });
     _poPendingPreorder = null;
 }
+</script>
+
+<script>
+/* ════════════════════════════════════════════════
+   STAMP CARD TO GO — JS
+   Đọc từ Firestore collection 'customers' (cùng document curPhone)
+   Fields: stamp_count, free_drink_available
+════════════════════════════════════════════════ */
+function renderToGoStamps(count, freeDrinks) {
+  var n    = Math.min(Math.max(0, parseInt(count) || 0), 6);
+  var free = parseInt(freeDrinks) || 0;
+  var grid = document.getElementById('togo-stamp-grid');
+  if (!grid) return;
+
+  var html = '';
+  for (var i = 0; i < 6; i++) {
+    if (i < n) {
+      html += '<div class="togo-stamp-cell on">'
+        + '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>'
+        + '</div>';
+    } else {
+      html += '<div class="togo-stamp-cell"></div>';
+    }
+  }
+  var giftClass = free > 0 ? 'togo-stamp-cell gift unlocked' : 'togo-stamp-cell gift';
+  html += '<div class="' + giftClass + '">'
+    + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>'
+    + '</div>';
+
+  grid.innerHTML = html;
+
+  var numEl = document.getElementById('togo-stamp-count-num');
+  var doneEl = document.getElementById('togo-stamp-done');
+  if (numEl) numEl.textContent = n;
+  if (doneEl) doneEl.classList.toggle('show', n >= 6);
+
+  var badgeEl = document.getElementById('togo-free-drinks-badge');
+  if (badgeEl) {
+    badgeEl.classList.toggle('show', free > 0);
+    if (free > 0) {
+      var txt = document.getElementById('togo-free-drinks-text');
+      if (txt) txt.textContent = 'Bạn có ' + free + ' ly miễn phí';
+    }
+  }
+}
+
+/* ════════════════════════════════════════════════
+   VÍ XOLIFA — JS (tích hợp vào The cafe 33)
+   Dùng lại: fstore (firebase.firestore()), db (firebase.database()),
+             curPhone, showAppModal (đổi tên internal)
+════════════════════════════════════════════════ */
+var walletData = null;
+
+// Helper: hiển thị modal dùng hệ thống của The cafe 33
+function walShowMsg(title, msg, cb) {
+  showAppModal(title, msg, '💳', cb || null, false);
+}
+
+function loadWalletData() {
+  if (!curPhone) return;
+
+  fstore.collection('wallet_config').doc('main').get().then(function(snap) {
+    if (snap.exists && snap.data().description) {
+      var el = document.getElementById('wallet-desc-text');
+      if (el) el.textContent = snap.data().description;
+    }
+  }).catch(function(){});
+
+  fstore.collection('wallets_xolifa').doc(curPhone).onSnapshot(function(snap) {
+    if (!snap.exists) { showWalletState('inactive'); return; }
+    walletData = snap.data();
+    if (walletData.status === 'active' && walletData.is_active) {
+      showWalletState('active');
+      var bMain  = walletData.balance_main  || 0;
+      var bBonus = walletData.balance_bonus || 0;
+      var balEl = document.getElementById('wal-bal-total');
+      var mainEl = document.getElementById('wal-bal-main');
+      var bonusEl = document.getElementById('wal-bal-bonus');
+      var cardEl = document.getElementById('wal-card-no');
+      if (balEl) balEl.textContent = Number(bMain + bBonus).toLocaleString('vi-VN');
+      if (mainEl) mainEl.textContent = Number(bMain).toLocaleString('vi-VN');
+      if (bonusEl) bonusEl.textContent = Number(bBonus).toLocaleString('vi-VN');
+      if (cardEl) cardEl.textContent = curPhone ? '****' + curPhone.slice(-4) : '********';
+      loadWalletHistory();
+    } else {
+      showWalletState('inactive');
+    }
+  }, function(err) { console.warn('[wallet] onSnapshot err:', err.message); });
+}
+
+function showWalletState(state) {
+  var el = function(id) { return document.getElementById(id); };
+  if (el('wallet-inactive-view'))   el('wallet-inactive-view').style.display   = state === 'inactive'   ? 'block' : 'none';
+  if (el('wallet-activation-view')) el('wallet-activation-view').style.display = state === 'activation' ? 'block' : 'none';
+  if (el('wallet-active-view'))     el('wallet-active-view').style.display     = state === 'active'     ? 'block' : 'none';
+}
+
+// ── Activation ──────────────────────────────────
+var walActStep = 1;
+var walTempPin = '';
+var walNewPin  = '';
+
+function showWalletActivation() {
+  if (walletData && walletData.status === 'pending') {
+    walActStep = 1; walTempPin = ''; walNewPin = '';
+    walUpdatePinUI();
+    document.getElementById('wal-act-title').textContent = 'Nhập mã kích hoạt';
+    document.getElementById('wal-act-sub').textContent = 'Mã này được nhân viên thu ngân cung cấp';
+    showWalletState('activation');
+    setTimeout(function() {
+      var inp = document.getElementById('wal-act-input');
+      if (inp) { inp.value = ''; inp.focus(); }
+    }, 100);
+  } else {
+    walShowMsg('Thông báo', 'Bạn cần liên hệ thu ngân để mở ví trước khi kích hoạt.');
+  }
+}
+
+function cancelWalletActivation() { showWalletState('inactive'); }
+
+function walUpdatePinUI() {
+  var input = document.getElementById('wal-act-input');
+  if (!input) return;
+  var val = input.value;
+  var digits = document.getElementById('wal-act-pin-group').querySelectorAll('.pin-digit-xo');
+  for (var i = 0; i < 4; i++) {
+    if (i < val.length) { digits[i].textContent = '•'; digits[i].classList.remove('active'); }
+    else if (i === val.length) { digits[i].textContent = ''; digits[i].classList.add('active'); }
+    else { digits[i].textContent = ''; digits[i].classList.remove('active'); }
+  }
+  if (val.length === 4) {
+    input.blur();
+    setTimeout(function() { walProcessPinStep(val); }, 200);
+  }
+}
+
+function walHandlePinInput(el) {
+  el.value = el.value.replace(/[^0-9]/g, '');
+  walUpdatePinUI();
+}
+
+function walProcessPinStep(pin) {
+  var input = document.getElementById('wal-act-input');
+  if (walActStep === 1) {
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    setTimeout(function() {
+      try {
+        var isValid = dcodeIO.bcrypt.compareSync(pin, walletData.temp_pin);
+        document.getElementById('loading-overlay').classList.add('hidden');
+        if (isValid) {
+          walActStep = 2; walTempPin = pin;
+          input.value = ''; walUpdatePinUI();
+          document.getElementById('wal-act-title').textContent = 'Tạo mã PIN mới';
+          document.getElementById('wal-act-sub').textContent = 'Mã PIN gồm 4 số để thanh toán';
+          setTimeout(function() { input.focus(); }, 100);
+        } else {
+          walShowMsg('Lỗi', 'Mã kích hoạt không đúng!');
+          input.value = ''; walUpdatePinUI();
+          setTimeout(function() { input.focus(); }, 100);
+        }
+      } catch(e) {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        walShowMsg('Lỗi', 'Có lỗi xảy ra. Vui lòng thử lại.');
+        input.value = ''; walUpdatePinUI();
+      }
+    }, 50);
+  } else if (walActStep === 2) {
+    walActStep = 3; walNewPin = pin;
+    input.value = ''; walUpdatePinUI();
+    document.getElementById('wal-act-title').textContent = 'Nhập lại mã PIN mới';
+    document.getElementById('wal-act-sub').textContent = 'Xác nhận mã PIN của bạn';
+    setTimeout(function() { input.focus(); }, 100);
+  } else if (walActStep === 3) {
+    if (pin === walNewPin) {
+      walFinalizeActivation(walNewPin);
+    } else {
+      walShowMsg('Lỗi', 'Mã PIN không khớp. Vui lòng thử lại!');
+      walActStep = 2; walNewPin = '';
+      input.value = ''; walUpdatePinUI();
+      document.getElementById('wal-act-title').textContent = 'Tạo mã PIN mới';
+      document.getElementById('wal-act-sub').textContent = 'Mã PIN gồm 4 số để thanh toán';
+      setTimeout(function() { input.focus(); }, 100);
+    }
+  }
+}
+
+function walFinalizeActivation(pin) {
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  setTimeout(function() {
+    try {
+      var salt = dcodeIO.bcrypt.genSaltSync(10);
+      var hash = dcodeIO.bcrypt.hashSync(pin, salt);
+      fstore.collection('wallets_xolifa').doc(curPhone).update({
+        is_active: true, status: 'active', pin_hash: hash,
+        temp_pin: firebase.firestore.FieldValue.delete(),
+        updated_at: new Date().toISOString()
+      }).then(function() {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        walShowMsg('Thành công ✅', 'Ví đã được kích hoạt thành công!');
+      }).catch(function(err) {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        walShowMsg('Lỗi', 'Kích hoạt thất bại: ' + err.message);
+      });
+    } catch(e) {
+      document.getElementById('loading-overlay').classList.add('hidden');
+      walShowMsg('Lỗi', 'Lỗi bảo mật khi tạo PIN.');
+    }
+  }, 50);
+}
+
+// ── Wallet History ───────────────────────────────
+function loadWalletHistory() {
+  fstore.collection('wallet_transactions_xolifa')
+    .where('wallet_id', '==', curPhone)
+    .orderBy('created_at', 'desc').limit(10).get()
+    .then(function(snap) {
+      var listEl = document.getElementById('wallet-history-list');
+      if (!listEl) return;
+      var html = '';
+      if (snap.empty) {
+        html = '<div style="text-align:center;padding:24px;color:#9ca3af;font-size:13px;font-weight:600;">Chưa có giao dịch nào</div>';
+      } else {
+        snap.forEach(function(doc) {
+          var tx = doc.data();
+          var dt = new Date(tx.created_at);
+          var dateStr = dt.toLocaleDateString('vi-VN') + ' ' + dt.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'});
+          var isTopup = tx.type === 'topup';
+          var sign = isTopup ? '+' : '-';
+          var color = isTopup ? 'color:#006241' : 'color:#ef4444';
+          var iconBg = isTopup ? 'background:#ecfdf5' : 'background:#fef2f2';
+          var iconColor = isTopup ? '#006241' : '#ef4444';
+          var icon = isTopup
+            ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="'+iconColor+'" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
+            : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="'+iconColor+'" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+          var amt = Math.abs((tx.amount_main || 0) + (tx.amount_bonus || 0));
+          var desc = tx.description || (isTopup ? 'Nạp tiền' : 'Thanh toán');
+          html += '<div class="wallet-history-item-xo">'
+            + '<div class="wallet-hist-icon-xo" style="'+iconBg+'">'+icon+'</div>'
+            + '<div style="flex:1;">'
+            +   '<div style="font-weight:700;font-size:14px;color:#1e3932;">'+desc+'</div>'
+            +   '<div style="font-size:11px;color:#9ca3af;margin-top:2px;font-weight:600;">'+dateStr+'</div>'
+            + '</div>'
+            + '<div style="font-weight:800;font-size:14px;'+color+';font-family:\'League Spartan\',sans-serif;">'+sign+Number(amt).toLocaleString('vi-VN')+' X</div>'
+            + '</div>';
+        });
+      }
+      listEl.innerHTML = html;
+    }).catch(function(err) {
+      console.error('[wallet history]', err);
+    });
+}
+
+// ── Hook into showTab để load ví khi bấm ──────────
+var _origShowTab = showTab;
+showTab = function(t) {
+  _origShowTab(t);
+  if (t === 'wallet' && curPhone) loadWalletData();
+};
+
+// ── Payment Code Popup ────────────────────────────
+var _payTxId = null;
+var _payAmount = 0;
+var _txCodeEntered = '';
+var _walPinEntered = '';
+
+function openPaymentCodePopup() {
+  if (!walletData || !walletData.is_active) {
+    walShowMsg('Thông báo', 'Ví chưa kích hoạt!'); return;
+  }
+  _payTxId = null; _payAmount = 0;
+  _txCodeEntered = ''; _walPinEntered = '';
+  walRenderPinBoxes('txd', '');
+  walRenderPinBoxes('wpd', '');
+  document.getElementById('pay-step-txcode').style.display = 'block';
+  document.getElementById('pay-step-pin').style.display = 'none';
+  var popup = document.getElementById('payment-code-popup');
+  popup.style.display = 'flex';
+  setTimeout(function() {
+    var inp = document.getElementById('txcode-input');
+    if (inp) { inp.value = ''; inp.focus(); }
+  }, 200);
+}
+
+function closePaymentCodePopup() {
+  document.getElementById('payment-code-popup').style.display = 'none';
+  _payTxId = null;
+}
+
+function backToTxCode() {
+  _txCodeEntered = ''; _walPinEntered = '';
+  walRenderPinBoxes('txd', '');
+  document.getElementById('pay-step-pin').style.display = 'none';
+  document.getElementById('pay-step-txcode').style.display = 'block';
+  setTimeout(function() {
+    var inp = document.getElementById('txcode-input');
+    if (inp) { inp.value = ''; inp.focus(); }
+  }, 100);
+}
+
+function walRenderPinBoxes(prefix, val) {
+  for (var i = 0; i < 4; i++) {
+    var el = document.getElementById(prefix + '-' + i);
+    if (!el) continue;
+    el.textContent = val.length > i ? '●' : '';
+    var cls = 'pay-pin-digit-xo';
+    if (val.length > i) cls += ' filled';
+    if (val.length === i) cls += ' active-cursor';
+    el.className = cls;
+  }
+}
+
+function onTxCodeInput(el) {
+  var val = el.value.replace(/\D/g, '').slice(0, 4);
+  el.value = val; _txCodeEntered = val;
+  walRenderPinBoxes('txd', val);
+}
+
+function onWalPinInput(el) {
+  var val = el.value.replace(/\D/g, '').slice(0, 4);
+  el.value = val; _walPinEntered = val;
+  walRenderPinBoxes('wpd', val);
+}
+
+function submitTxCode() {
+  if (_txCodeEntered.length !== 4) {
+    walShowMsg('Lỗi', 'Vui lòng nhập đủ 4 số!'); return;
+  }
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  var _guard = setTimeout(function() {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    walShowMsg('Lỗi kết nối', 'Không nhận được phản hồi từ server. Kiểm tra mạng và thử lại!');
+  }, 8000);
+  function done33() { clearTimeout(_guard); document.getElementById('loading-overlay').classList.add('hidden'); }
+
+  db.ref('wallet_pin_index/current').once('value').then(function(snap) {
+    done33();
+    if (!snap.exists()) {
+      walShowMsg('Không tìm thấy', 'Chưa có giao dịch nào. Yêu cầu thu ngân tạo mã mới!'); return;
+    }
+    var cur = snap.val();
+    if (cur.pin !== _txCodeEntered) {
+      walShowMsg('Sai mã', 'Mã giao dịch không đúng. Kiểm tra lại!'); return;
+    }
+    if (!cur.txId || cur.expireTime < Date.now()) {
+      walShowMsg('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo lại!'); return;
+    }
+    document.getElementById('loading-overlay').classList.remove('hidden');
+    var _guard2 = setTimeout(function() {
+      document.getElementById('loading-overlay').classList.add('hidden');
+      walShowMsg('Lỗi kết nối', 'Không nhận được phản hồi. Thử lại!');
+    }, 8000);
+    db.ref('wallet_payment_xolifa/' + cur.txId).once('value').then(function(txSnap) {
+      clearTimeout(_guard2); document.getElementById('loading-overlay').classList.add('hidden');
+      if (!txSnap.exists()) { walShowMsg('Lỗi', 'Không tìm thấy giao dịch!'); return; }
+      var tx = txSnap.val();
+      if (tx.status !== 'pending') { walShowMsg('Lỗi', 'Giao dịch này đã thanh toán rồi!'); return; }
+      _payTxId = cur.txId; _payAmount = tx.amount;
+      var amtEl = document.getElementById('pay-amount-display');
+      if (amtEl) amtEl.textContent = Number(_payAmount).toLocaleString('vi-VN') + 'đ';
+      document.getElementById('pay-step-txcode').style.display = 'none';
+      document.getElementById('pay-step-pin').style.display = 'block';
+      setTimeout(function() {
+        var inp = document.getElementById('walpin-input');
+        if (inp) { inp.value = ''; inp.focus(); }
+      }, 100);
+    }).catch(function(err) {
+      clearTimeout(_guard2); document.getElementById('loading-overlay').classList.add('hidden');
+      walShowMsg('Lỗi', 'Đọc giao dịch thất bại: ' + err.message);
+    });
+  }).catch(function(err) {
+    done33();
+    walShowMsg('Lỗi Firebase', err.code === 'PERMISSION_DENIED'
+      ? 'Không có quyền truy cập. Kiểm tra Firebase Rules!'
+      : 'Lỗi: ' + err.message);
+  });
+}
+
+function submitWalletPin() {
+  if (_walPinEntered.length !== 4) {
+    walShowMsg('Lỗi', 'Vui lòng nhập đủ 4 số PIN!'); return;
+  }
+  if (!_payTxId) {
+    walShowMsg('Lỗi', 'Phiên thanh toán đã hết hạn!'); return;
+  }
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  var _guard = setTimeout(function() {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    walShowMsg('Lỗi', 'Xác thực quá lâu. Thử lại!');
+  }, 10000);
+
+  setTimeout(function() {
+    try {
+      var isValid = dcodeIO.bcrypt.compareSync(_walPinEntered, walletData.pin_hash);
+      if (!isValid) {
+        clearTimeout(_guard); document.getElementById('loading-overlay').classList.add('hidden');
+        walShowMsg('Sai PIN', 'Mã PIN ví không đúng!', function() {
+          _walPinEntered = ''; walRenderPinBoxes('wpd', '');
+          setTimeout(function() {
+            var inp = document.getElementById('walpin-input');
+            if (inp) { inp.value = ''; inp.focus(); }
+          }, 100);
+        });
+        return;
+      }
+      // PIN đúng → ghi signal
+      db.ref('wallet_pin_index/current').update({
+        customer_confirmed: true,
+        wallet_phone: curPhone,
+        confirmed_at: Date.now()
+      }).then(function() {
+        walListenPaymentResult(_guard);
+      }).catch(function(err) {
+        clearTimeout(_guard); document.getElementById('loading-overlay').classList.add('hidden');
+        walShowMsg('Lỗi', 'Không gửi được tín hiệu: ' + err.message);
+      });
+    } catch(e) {
+      clearTimeout(_guard); document.getElementById('loading-overlay').classList.add('hidden');
+      walShowMsg('Lỗi', 'Lỗi xác thực PIN: ' + e.message);
+    }
+  }, 80);
+}
+
+function walListenPaymentResult(guardTimer) {
+  var resultRef = db.ref('wallet_pin_index/current/result');
+  clearTimeout(guardTimer);
+  var _rg = setTimeout(function() {
+    resultRef.off('value');
+    document.getElementById('loading-overlay').classList.add('hidden');
+    walShowMsg('Hết thời gian', 'PosX không phản hồi. Hỏi thu ngân để xác nhận!');
+  }, 15000);
+
+  resultRef.on('value', function(snap) {
+    if (!snap.exists()) return;
+    var result = snap.val();
+    if (!result || result === 'waiting') return;
+    resultRef.off('value');
+    clearTimeout(_rg);
+    document.getElementById('loading-overlay').classList.add('hidden');
+    if (result === 'success') {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      closePaymentCodePopup();
+      loadWalletData();
+      walShowMsg('Thành công ✅', 'Đã thanh toán ' + Number(_payAmount).toLocaleString('vi-VN') + ' X point!\nĐiểm tích lũy đã được cộng vào tài khoản của bạn.');
+    } else if (result === 'insufficient') {
+      walShowMsg('Không đủ X point 💸', 'Số dư ví không đủ để thanh toán ' + Number(_payAmount).toLocaleString('vi-VN') + ' X point!');
+    } else if (result === 'expired') {
+      walShowMsg('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo mã mới!');
+    } else {
+      walShowMsg('Lỗi', 'Thanh toán thất bại: ' + result);
+    }
+  });
+}
+
+// ════════════════════════════════════════════════
+// CHUYỂN ĐIỂM SANG VÍ
+// ════════════════════════════════════════════════
+function openConvertPointsPopup() {
+  if (!curPhone) { showModal('Thông báo', 'Bạn cần đăng nhập trước!'); return; }
+  var pts = parseInt((document.getElementById('user-points') || {}).textContent || '0') || 0;
+  document.getElementById('conv-points-display').textContent = pts.toLocaleString('vi-VN');
+  var slider = document.getElementById('conv-slider');
+  slider.max = Math.floor(pts / 100) * 100 || 0;
+  slider.value = 0;
+  document.getElementById('conv-input').value = '';
+  document.getElementById('conv-xpoint-preview').textContent = '0';
+  var popup = document.getElementById('convert-points-popup');
+  popup.style.display = 'flex';
+}
+
+function closeConvertPointsPopup() {
+  document.getElementById('convert-points-popup').style.display = 'none';
+}
+
+function onConvSliderChange(val) {
+  document.getElementById('conv-input').value = val > 0 ? Number(val).toLocaleString('vi-VN') : '';
+  document.getElementById('conv-xpoint-preview').textContent = Number(val).toLocaleString('vi-VN');
+}
+
+function onConvInputChange(val) {
+  var clean = val.replace(/[^0-9]/g, '');
+  var pts = parseInt((document.getElementById('user-points') || {}).textContent || '0') || 0;
+  var num = Math.min(parseInt(clean) || 0, pts);
+  var slider = document.getElementById('conv-slider');
+  slider.value = num;
+  document.getElementById('conv-xpoint-preview').textContent = num.toLocaleString('vi-VN');
+}
+
+function submitConvertPoints() {
+  var inputVal = document.getElementById('conv-input').value.replace(/[^0-9]/g, '');
+  var amount = parseInt(inputVal) || 0;
+  if (amount <= 0) { showModal('Thông báo', 'Vui lòng nhập số điểm muốn đổi!'); return; }
+  var pts = parseInt((document.getElementById('user-points') || {}).textContent || '0') || 0;
+  if (amount > pts) { showModal('Thông báo', 'Số điểm đổi vượt quá điểm hiện có!'); return; }
+
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  var reqKey = db.ref('point_convert_requests').push().key;
+  var reqData = {
+    phone: curPhone,
+    name: (document.getElementById('user-name-display') || {}).textContent || '',
+    points: amount,
+    xpoint: amount,
+    status: 'pending',
+    created_at: Date.now()
+  };
+  db.ref('point_convert_requests/' + reqKey).set(reqData).then(function() {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    closeConvertPointsPopup();
+    showModal('Đã gửi yêu cầu ✅', 'Yêu cầu đổi ' + amount.toLocaleString('vi-VN') + ' điểm sang ' + amount.toLocaleString('vi-VN') + ' X point đã được gửi đến thu ngân. Vui lòng chờ xác nhận!');
+    // Lắng nghe kết quả
+    listenConvertResult(reqKey, amount);
+  }).catch(function(err) {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    showModal('Lỗi', 'Không gửi được yêu cầu: ' + err.message);
+  });
+}
+
+function listenConvertResult(reqKey, amount) {
+  var ref = db.ref('point_convert_requests/' + reqKey + '/status');
+  var timeout = setTimeout(function() { ref.off('value'); }, 120000);
+  ref.on('value', function(snap) {
+    var status = snap.val();
+    if (!status || status === 'pending') return;
+    ref.off('value'); clearTimeout(timeout);
+    if (status === 'approved') {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      // Cập nhật điểm local
+      loadUserData && loadUserData();
+      showModal('Thành công 🎉', 'Ví của bạn đã được kích hoạt và ' + amount.toLocaleString('vi-VN') + ' X point đã được cộng vào ví!');
+    } else if (status === 'rejected') {
+      showModal('Bị từ chối', 'Yêu cầu quy đổi điểm của bạn đã bị từ chối. Liên hệ thu ngân để biết thêm chi tiết.');
+    }
+  });
+}
+
 </script>
 
 </body>
