@@ -1303,6 +1303,43 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   </div>
 </div>
 
+<!-- WALLET ACTIVATION PIN POPUP -->
+<div class="wal-popup" id="walActivationPinPopup">
+  <div class="wal-popup-box" style="text-align:center;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <span class="wal-popup-title">Ví đang chờ kích hoạt</span>
+      <button onclick="closeActivationPinPopup()" style="background:#e0e0e0;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;">✕</button>
+    </div>
+    <p class="wal-popup-sub" id="walActPinSubtitle">Đọc mã kích hoạt bên dưới cho khách</p>
+
+    <!-- Tên + SĐT khách -->
+    <div style="background:#f8f8f8;border-radius:16px;padding:12px 16px;margin-bottom:16px;text-align:left;">
+      <div id="walActPinName" style="font-size:16px;font-weight:700;color:var(--td);"></div>
+      <div id="walActPinPhone" style="font-size:13px;color:var(--gt);margin-top:2px;"></div>
+    </div>
+
+    <!-- Mã PIN lớn -->
+    <div style="background:var(--gd);border-radius:20px;padding:24px 16px;margin-bottom:16px;">
+      <p style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);letter-spacing:.15em;text-transform:uppercase;margin:0 0 8px;">Mã kích hoạt ví</p>
+      <div id="walActPinCode" style="font-size:52px;font-weight:900;color:#fff;letter-spacing:16px;font-family:'Google Sans',sans-serif;line-height:1;"></div>
+      <p style="font-size:11px;color:rgba(255,255,255,0.5);margin:10px 0 0;">Mã chỉ dùng 1 lần · Không chia sẻ với người khác</p>
+    </div>
+
+    <!-- X point sắp vào ví -->
+    <div style="background:#ecfdf5;border-radius:14px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:13px;font-weight:600;color:#065f46;">X point sẽ vào ví sau khi kích hoạt</span>
+      <span id="walActPinPoints" style="font-size:20px;font-weight:900;color:var(--gd);font-family:'Google Sans',sans-serif;"></span>
+    </div>
+
+    <!-- Trạng thái chờ -->
+    <div id="walActPinStatus" style="display:flex;align-items:center;justify-content:center;gap:8px;color:var(--gt);font-size:13px;font-weight:600;">
+      <div style="width:14px;height:14px;border:2px solid var(--gd);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div>
+      Đang chờ khách kích hoạt…
+    </div>
+  </div>
+</div>
+<!-- END WALLET ACTIVATION PIN POPUP -->
+
 <!-- WALLET TOPUP POPUP -->
 <div class="wal-popup" id="walTopupPopup" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="wal-popup-box">
@@ -6163,8 +6200,45 @@ function resetPayMethod() {
 }
 
 // ════════════════════════════════════════════════
-// QUẢN LÝ YÊU CẦU QUY ĐỔI ĐIỂM SANG VÍ
+// POPUP MÃ KÍCH HOẠT VÍ (sau khi approve quy đổi)
 // ════════════════════════════════════════════════
+var _activationPinListener = null;
+
+function showActivationPinPopup(phone, name, pin, points) {
+  document.getElementById('walActPinName').textContent  = name || 'Khách hàng';
+  document.getElementById('walActPinPhone').textContent = phone;
+  document.getElementById('walActPinCode').textContent  = pin;
+  document.getElementById('walActPinPoints').textContent = Number(points).toLocaleString('vi-VN') + ' X';
+  document.getElementById('walActPinSubtitle').textContent = 'Đọc mã kích hoạt bên dưới cho khách';
+  document.getElementById('walActPinStatus').innerHTML =
+    '<div style="width:14px;height:14px;border:2px solid var(--gd);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;"></div> Đang chờ khách kích hoạt…';
+  document.getElementById('walActivationPinPopup').classList.add('show');
+
+  // Dọn listener cũ nếu có
+  if (_activationPinListener) { _activationPinListener(); _activationPinListener = null; }
+
+  // Lắng nghe Firestore: khi is_active chuyển sang true → khách đã kích hoạt xong
+  var unsub = fstore.collection('wallets_xolifa').doc(phone).onSnapshot(function(snap) {
+    if (!snap.exists) return;
+    if (snap.data().is_active === true) {
+      unsub();
+      _activationPinListener = null;
+      document.getElementById('walActPinStatus').innerHTML =
+        '<span style="color:#1e6b3c;font-size:22px;">✅</span> <span style="color:#1e6b3c;">Khách đã kích hoạt ví thành công!</span>';
+      document.getElementById('walActPinSubtitle').textContent = 'Ví đã sẵn sàng thanh toán';
+      setTimeout(function() {
+        document.getElementById('walActivationPinPopup').classList.remove('show');
+      }, 3000);
+    }
+  });
+  _activationPinListener = unsub;
+}
+
+function closeActivationPinPopup() {
+  document.getElementById('walActivationPinPopup').classList.remove('show');
+  if (_activationPinListener) { _activationPinListener(); _activationPinListener = null; }
+}
+
 var _convertReqListener = null;
 
 function openPointConvertRequests() {
@@ -6309,9 +6383,8 @@ function approveConvertRequest(reqKey, phone, points, name) {
           }, { merge: false }).then(function() {
             return db.ref('point_convert_requests/' + reqKey).update({ status: 'approved', approved_at: Date.now() });
           }).then(function() {
-            // Hiển thị mã PIN cho thu ngân đọc cho khách
             toast('✅ Đã tạo ví & quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm!');
-            alert('📋 Mã kích hoạt ví của ' + name + ':\n\n' + pin.split('').join('  ') + '\n\nĐọc mã này cho khách. Khách vào app → Tab Ví → nhập mã → tạo PIN để sử dụng.');
+            showActivationPinPopup(phone, name, pin, points);
           });
         });
       }
