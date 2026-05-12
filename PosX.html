@@ -6220,68 +6220,52 @@ function checkWalletForConvert(phone, reqKey) {
 }
 
 function approveConvertRequest(reqKey, phone, points, name) {
-  if (!confirm('Xác nhận quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm sang ' + Number(points).toLocaleString('vi-VN') + ' X point cho ' + name + '?')) return;
+  if (!confirm('Xác nhận quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm → ' + Number(points).toLocaleString('vi-VN') + ' X point cho ' + name + ' (' + phone + ')?')) return;
 
   toast('⏳ Đang xử lý...');
 
-  const walRef = fstore.collection('wallets_xolifa').doc(phone);
+  const now = new Date().toISOString();
+  const custRef = fstore.collection('customers').doc(phone);
+  const walRef  = fstore.collection('wallets_xolifa').doc(phone);
 
-  walRef.get().then(function(doc) {
-    const now = new Date().toISOString();
-    const batch = fstore.batch();
-
-    if (!doc.exists || !doc.data().is_active) {
-      // Kích hoạt ví mới với X point
-      const newWallet = {
-        phone: phone,
-        name: name,
-        is_active: true,
-        balance_main: points,
-        balance_bonus: 0,
-        created_at: now,
-        updated_at: now,
-        activated_by: 'pos_convert',
-        pin_hash: '' // no PIN needed — activated through POS
-      };
-      batch.set(walRef, newWallet, { merge: true });
-    } else {
-      // Cộng thêm vào ví hiện có
-      batch.update(walRef, {
-        balance_main: firebase.firestore.FieldValue.increment(points),
-        updated_at: now
-      });
+  // Guard double-approve từ RTDB trước
+  db.ref('point_convert_requests/' + reqKey).once('value').then(function(reqSnap) {
+    if (!reqSnap.exists() || reqSnap.val().status !== 'pending') {
+      toast('⚠ Yêu cầu này đã được xử lý rồi!'); return;
     }
 
-    // Ghi lịch sử giao dịch ví
-    const txRef = fstore.collection('wallet_transactions_xolifa').doc();
-    batch.set(txRef, {
-      wallet_id: phone,
-      type: 'point_convert',
-      amount_main: points,
-      amount_bonus: 0,
-      status: 'completed',
-      description: 'Quy đổi điểm tích lũy → X point (' + Number(points).toLocaleString('vi-VN') + ' điểm)',
-      created_at: now
-    });
+    // Firestore transaction: kiểm tra điểm + trừ điểm + cộng ví + ghi lịch sử
+    return fstore.runTransaction(function(tx) {
+      return Promise.all([tx.get(custRef), tx.get(walRef)]).then(function(results) {
+        var custDoc = results[0], walDoc = results[1];
+        var curPoints = custDoc.exists ? (custDoc.data().total_points || 0) : 0;
 
-    return batch.commit();
-  }).then(function() {
-    // Trừ điểm thành viên
-    return db.ref('members').orderByChild('phone').equalTo(phone).once('value').then(function(snap) {
-      var updates = {};
-      snap.forEach(function(child) {
-        var cur = child.val().points || 0;
-        updates['members/' + child.key + '/points'] = Math.max(0, cur - points);
+        if (curPoints < points) throw new Error('Điểm không đủ! Khách chỉ có ' + curPoints.toLocaleString('vi-VN') + ' điểm');
+
+        // Trừ điểm
+        tx.update(custRef, { total_points: firebase.firestore.FieldValue.increment(-points) });
+
+        // Cộng ví (kích hoạt nếu chưa có)
+        if (!walDoc.exists || !walDoc.data().is_active) {
+          tx.set(walRef, { phone: phone, name: name, is_active: true, balance_main: points, balance_bonus: 0, created_at: now, updated_at: now, activated_by: 'pos_convert' }, { merge: true });
+        } else {
+          tx.update(walRef, { balance_main: firebase.firestore.FieldValue.increment(points), updated_at: now });
+        }
+
+        // Lịch sử giao dịch
+        tx.set(fstore.collection('wallet_transactions_xolifa').doc(), {
+          wallet_id: phone, type: 'point_convert', amount_main: points,
+          description: 'Quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm → X point',
+          created_at: now, approved_by: 'pos'
+        });
       });
-      return db.ref().update(updates);
     });
   }).then(function() {
-    // Cập nhật trạng thái yêu cầu
     return db.ref('point_convert_requests/' + reqKey).update({ status: 'approved', approved_at: Date.now() });
   }).then(function() {
-    toast('✅ Đã quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm thành công!');
+    toast('✅ Đã quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm cho ' + name + '!');
   }).catch(function(err) {
-    toast('❌ Lỗi: ' + err.message);
+    toast('❌ ' + err.message);
   });
 }
 
