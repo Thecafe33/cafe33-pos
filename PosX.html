@@ -3997,69 +3997,84 @@ function confirmPay(cashGiven, cashChange) {
   const month = MONTH_KEYS[now.getMonth()];
   const day   = p(now.getDate());
 
-  const itemsArray = items.map(c => ({ ...c }));
-  const itemsSummary = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
+  const itemsArray    = items.map(c => ({ ...c }));
+  const itemsSummary  = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
 
-  // Tách food items
   const foodItems = items.filter(c => c.isFood === true);
   const foodTotal = foodItems.reduce((s, c) => s + c.price * c.qty, 0);
-  const netTotal = total - foodTotal; // doanh thu thực không bao gồm food
+  const netTotal  = total - foodTotal;
+
+  // Nếu đang là split bill ví cơ bản: method = combo
+  const isSplitWallet = _walLevel1Applied;
+  const splitMethod   = isSplitWallet
+    ? ('VÍ CƠ BẢN + ' + (curPay === 'cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN'))
+    : (curPay === 'cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN');
 
   const order = {
     time: `${p(now.getHours())}:${p(now.getMinutes())}`,
     date: `${day}/${p(now.getMonth()+1)}/${now.getFullYear()}`,
     items: itemsSummary,
     itemsArray,
-    total,
+    total,                                    // số tiền thực khách trả cuối cùng (sau -50%)
     netTotal: foodTotal > 0 ? netTotal : null,
     foodTotal: foodTotal > 0 ? foodTotal : null,
     foodItems: foodTotal > 0 ? foodItems.map(c => ({ name: c.name, qty: c.qty, price: c.price })) : null,
-    foodMethod: foodTotal > 0 ? (curPay === 'cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN') : null,
-    method: curPay === 'cash' ? 'TIỀN MẶT' : 'CHUYỂN KHOẢN',
+    foodMethod: foodTotal > 0 ? splitMethod : null,
+    method: splitMethod,
     phone: document.getElementById('cuph').value || '',
-    voucherUsed: _giftVoucherKey ? (Object.values(cart).find(c=>c._vKey===_giftVoucherKey)?._giftLabel || _giftVoucherKey) : (_appliedDiscountId ? (_discountCache[_appliedDiscountId]?.label || _appliedDiscountId) : null),
+    voucherUsed: _giftVoucherKey
+      ? (Object.values(cart).find(c=>c._vKey===_giftVoucherKey)?._giftLabel || _giftVoucherKey)
+      : (_appliedDiscountId ? (_discountCache[_appliedDiscountId]?.label || _appliedDiscountId) : null),
     cashGiven: cashGiven !== null && cashGiven !== undefined ? cashGiven : total,
     cashChange: cashChange !== null && cashChange !== undefined ? cashChange : 0,
     createdAt: now.toISOString(),
     isToGo: isToGo,
     isAppSale: isAppSale,
     appFeePct: isAppSale ? (appSaleSettings.feePct || 10) : null,
-    discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0 || getAppSaleDiscount() > 0) ? (togoDiscountAmt + dgDiscountAmt + getAppSaleDiscount()) : null,
+    discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0 || getAppSaleDiscount() > 0)
+      ? (togoDiscountAmt + dgDiscountAmt + getAppSaleDiscount()) : null,
     dgDiscount:    dgDiscountAmt > 0 ? dgDiscountAmt : null,
     dgItemIds:     dgDiscountAmt > 0 ? (dgSettings.items || []).map(i => i.id) : null,
     dgFixedPrice:  dgDiscountAmt > 0 ? (dgSettings.fixedPrice  || null) : null,
-    dgFixedPriceL: dgDiscountAmt > 0 ? (dgSettings.fixedPriceL || null) : null
+    dgFixedPriceL: dgDiscountAmt > 0 ? (dgSettings.fixedPriceL || null) : null,
+    // ── Ví cơ bản split bill ──
+    walletLevel1:      isSplitWallet ? true : null,
+    walletTxId:        isSplitWallet ? _walLevel1TxId : null,
+    walletDeduct:      isSplitWallet ? _walLevel1Deduct : null,
+    walletFullAmount:  isSplitWallet ? _walLevel1FullAmount : null,
+    walletDiscount50:  isSplitWallet ? _walLevel1Deduct : null
   };
 
   db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
-    orders.unshift({
-      id: ref.key,
-      ...order,
-      items: itemsArray
-    });
+    orders.unshift({ id: ref.key, ...order, items: itemsArray });
 
-    // 🏆 Tích điểm / stamp sau khi thanh toán thành công
     const loyPhone = document.getElementById('cuph').value.trim();
     if (loyPhone) {
       const drinkCount = items.reduce((s, c) => s + c.qty, 0);
       loyaltyProcessAfterPay(loyPhone, total, drinkCount, false);
     }
+
     _finalizeDiscountAfterPay().then(() => {
-    cart = {};
-    dgDiscountAmt = 0;
-    togoDiscountAmt = 0;
-    resetDiscountState();
-    resetTogoToggle();
-    document.getElementById('cuph').value = '';
-    clearCustomer();
-    selectedVoucher = null;
-    syncDisplay('done', { total, method: order.method });
-    setTimeout(() => resetDisplay(), 5000);
-    renderMenu();
-    renderCartDrawer();
-    toast('✅ Thanh toán thành công!');
-    showScreen('sm');
-    }); // end _finalizeDiscountAfterPay().then
+      cart = {};
+      dgDiscountAmt = 0;
+      togoDiscountAmt = 0;
+      // Reset wallet level 1 state
+      _walLevel1Applied = false; _walLevel1Phone = null;
+      _walLevel1Deduct = 0; _walLevel1TxId = null; _walLevel1FullAmount = 0;
+      _walCurrentTxId = null; _walCurrentLevel = null; _walCurrentDeduct = null;
+      resetPayMethod();
+      resetDiscountState();
+      resetTogoToggle();
+      document.getElementById('cuph').value = '';
+      clearCustomer();
+      selectedVoucher = null;
+      syncDisplay('done', { total, method: order.method });
+      setTimeout(() => resetDisplay(), 5000);
+      renderMenu();
+      renderCartDrawer();
+      toast('✅ Thanh toán thành công!');
+      showScreen('sm');
+    });
   }).catch(err => {
     console.error('Lỗi ghi đơn:', err);
     toast('❌ Lỗi lưu đơn — thử lại!');
@@ -5667,7 +5682,14 @@ function loadCustomerList() {
 let walletConfig = { description: '', topupX: 0, topupY: 0 };
 let _walQrTimerInterval = null;
 let _walPaymentListener = null;
-let _walCurrentTxId = null;
+let _walCurrentTxId   = null;
+let _walCurrentLevel  = null;
+let _walCurrentDeduct = null;
+let _walLevel1Applied    = false;
+let _walLevel1Phone      = null;
+let _walLevel1Deduct     = 0;
+let _walLevel1TxId       = null;
+let _walLevel1FullAmount = 0;
 
 // ── Load / Save config ──
 function loadWalletConfig() {
@@ -5826,13 +5848,18 @@ function walletTopUp() {
     const wal = snap.data();
     const newMain = (wal.balance_main || 0) + amount;
     const newBonus = (wal.balance_bonus || 0) + bonus;
+    const newDeposited = (wal.total_deposited || 0) + amount;
+    const isUpgrade = (wal.wallet_level || 1) < 2 && newDeposited >= 100000;
 
-    return fstore.collection('wallets_xolifa').doc(_walTopupPhone).update({
+    const updateData = {
       balance_main: newMain,
       balance_bonus: newBonus,
+      total_deposited: newDeposited,
+      wallet_level: newDeposited >= 100000 ? 2 : (wal.wallet_level || 1),
       updated_at: new Date().toISOString()
-    }).then(() => {
-      // Ghi transaction
+    };
+
+    return fstore.collection('wallets_xolifa').doc(_walTopupPhone).update(updateData).then(() => {
       const txId = 'topup_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
       return fstore.collection('wallet_transactions_xolifa').add({
         transaction_id: txId,
@@ -5847,7 +5874,7 @@ function walletTopUp() {
       });
     }).then(() => {
       document.getElementById('walTopupPopup').classList.remove('show');
-      toast(`✅ Đã nạp ${fmt(amount)}${bonus > 0 ? ' + thưởng ' + fmt(bonus) : ''}`);
+      toast(`✅ Đã nạp ${fmt(amount)}${bonus > 0 ? ' + thưởng ' + fmt(bonus) : ''}${isUpgrade ? ' 🎉 Ví nâng cấp VIP!' : ''}`);
     });
   }).catch(err => toast('❌ Lỗi: ' + err.message));
 }
@@ -5937,95 +5964,90 @@ function walletStartTimer(expireTime) {
 function walletListenPayment(txId) {
   if (_walPaymentListener) _walPaymentListener();
 
-  // Lắng nghe customer_confirmed từ ThanhvienX
   const ref = db.ref('wallet_pin_index/current/customer_confirmed');
   const handler = ref.on('value', async snap => {
-    if (!snap.val()) return; // chưa confirm
+    if (!snap.val()) return;
 
     ref.off('value', handler);
     _walPaymentListener = null;
 
-    // Đọc phone khách gửi lên
     const curSnap = await db.ref('wallet_pin_index/current').once('value');
     const cur = curSnap.val();
     if (!cur || !cur.wallet_phone) {
-      await db.ref('wallet_pin_index/current/result').set('error_no_phone');
-      return;
+      await db.ref('wallet_pin_index/current/result').set('error_no_phone'); return;
     }
     const phone = cur.wallet_phone;
 
-    // Kiểm tra giao dịch còn pending & còn hạn
     const txSnap = await db.ref('wallet_payment_xolifa/' + txId).once('value');
     const tx = txSnap.val();
     if (!tx || tx.status !== 'pending' || tx.expire_time < Date.now()) {
-      await db.ref('wallet_pin_index/current/result').set('expired');
-      return;
+      await db.ref('wallet_pin_index/current/result').set('expired'); return;
     }
 
-    // Đọc số dư ví từ Firestore
-    const walSnap = await firebase.firestore().collection('wallets_xolifa').doc(phone).get();
+    const walSnap = await fstore.collection('wallets_xolifa').doc(phone).get();
     if (!walSnap.exists) {
-      await db.ref('wallet_pin_index/current/result').set('error_no_wallet');
-      return;
+      await db.ref('wallet_pin_index/current/result').set('error_no_wallet'); return;
     }
     const wal = walSnap.data();
-    const totalBalance = (wal.balance_main || 0) + (wal.balance_bonus || 0);
-    const amt = tx.amount;
+    const walLevel = wal.wallet_level || 1;
+    const fullAmount = tx.amount; // getFinalTotal() tại thời điểm tạo mã
 
-    if (totalBalance < amt) {
-      // Không đủ tiền → báo ThanhvienX
-      await db.ref('wallet_pin_index/current/result').set('insufficient');
-      return;
+    // Tính số tiền ví sẽ thực sự trừ
+    const walDeduct = walLevel >= 2
+      ? fullAmount                                          // VIP: trả toàn bộ
+      : Math.floor(fullAmount * 0.5 / 1000) * 1000;       // Cơ bản: 50%, làm tròn xuống 1.000
+
+    const totalBalance = (wal.balance_main || 0) + (wal.balance_bonus || 0);
+    if (totalBalance < walDeduct) {
+      await db.ref('wallet_pin_index/current/result').set('insufficient'); return;
     }
 
-    // Đủ tiền → trừ (bonus trước, main sau)
-    const deductBonus = Math.min(wal.balance_bonus || 0, amt);
-    const deductMain = amt - deductBonus;
-    const newMain = (wal.balance_main || 0) - deductMain;
-    const newBonus = (wal.balance_bonus || 0) - deductBonus;
+    // Trừ ví (bonus trước, main sau)
+    const deductBonus = Math.min(wal.balance_bonus || 0, walDeduct);
+    const deductMain  = walDeduct - deductBonus;
 
     try {
-      // 1. Trừ tiền ví
-      await firebase.firestore().collection('wallets_xolifa').doc(phone).update({
-        balance_main: newMain,
-        balance_bonus: newBonus,
+      await fstore.collection('wallets_xolifa').doc(phone).update({
+        balance_main:  (wal.balance_main  || 0) - deductMain,
+        balance_bonus: (wal.balance_bonus || 0) - deductBonus,
         updated_at: new Date().toISOString()
       });
 
-      // 2. Ghi lịch sử giao dịch
-      await firebase.firestore().collection('wallet_transactions_xolifa').add({
+      await fstore.collection('wallet_transactions_xolifa').add({
         pos_tx_id: txId,
         wallet_id: phone,
         type: 'payment',
-        amount_main: -deductMain,
+        amount_main:  -deductMain,
         amount_bonus: -deductBonus,
-        status: 'completed',
-        description: tx.items_summary || 'Thanh toán hoá đơn',
+        wallet_level: walLevel,
+        description: walLevel >= 2
+          ? (tx.items_summary || 'Thanh toán hoá đơn')
+          : (tx.items_summary || 'Thanh toán hoá đơn') + ' [Ví cơ bản −50%]',
         created_at: new Date().toISOString()
       });
 
-      // 3. Cập nhật giao dịch hoàn tất
       await db.ref('wallet_payment_xolifa/' + txId).update({
         status: 'completed',
         wallet_id: phone,
+        wallet_level: walLevel,
+        wallet_deduct: walDeduct,
         completed_at: Date.now()
       });
 
-      // 4. Báo ThanhvienX thành công TRƯỚC khi xóa index
       await db.ref('wallet_pin_index/current/result').set('success');
-      // Xóa pin index sau 3 giây (cho ThanhvienX kịp nhận)
-      setTimeout(() => db.ref('wallet_pin_index/current').remove().catch(()=>{}), 3000);
+      setTimeout(() => db.ref('wallet_pin_index/current').remove().catch(() => {}), 3000);
 
-      // 5. Cộng điểm tích lũy (dùng đúng hàm loyalty hiện có của PosX)
-      await loyaltyProcessAfterPay(phone, amt, Object.values(cart).reduce((s,c) => s+c.qty, 0), true);
+      // Lưu vào biến global để confirmPayWallet dùng
+      _walCurrentLevel  = walLevel;
+      _walCurrentDeduct = walDeduct;
 
-      // 6. Hoàn tất đơn hàng trên PosX
       document.getElementById('walQrStatus').innerHTML = '✅ Thanh toán thành công!';
       document.getElementById('walQrStatus').style.color = '#1e6b3c';
       document.getElementById('walQrTimer').textContent = '✓';
+
       setTimeout(() => {
         document.getElementById('walQrPopup').classList.remove('show');
-        confirmPayWallet(phone, amt);
+        confirmPayWallet(phone, walDeduct, walLevel, fullAmount);
       }, 1800);
 
     } catch(err) {
@@ -6042,90 +6064,93 @@ function walletCancelPayment() {
   if (_walPaymentListener && _walCurrentTxId) {
     db.ref('wallet_payment_xolifa/' + _walCurrentTxId + '/status').off();
     db.ref('wallet_payment_xolifa/' + _walCurrentTxId + '/status').set('expired').catch(() => {});
-    // Xoá pin index current
     db.ref('wallet_pin_index/current').remove().catch(()=>{});
     _walPaymentListener = null;
   }
-  _walCurrentTxId = null;
+  _walCurrentTxId = null; _walCurrentLevel = null; _walCurrentDeduct = null;
+  _walLevel1Applied = false; _walLevel1Phone = null;
+  _walLevel1Deduct = 0; _walLevel1TxId = null; _walLevel1FullAmount = 0;
   document.getElementById('walQrPopup').classList.remove('show');
   resetPayMethod();
 }
 
-function confirmPayWallet() {
-  // Ghi đơn hàng giống confirmPay nhưng method = VÍ KHÁCH HÀNG
+function confirmPayWallet(phone, walDeduct, walLevel, fullAmount) {
   const items = Object.values(cart);
   if (!items.length) return;
 
-  const baseTotal = getCartTotal();
-  const allDisc = computeAllDiscounts();
-  const total = getFinalTotal();
-  const now = new Date();
-  const p = n => String(n).padStart(2, '0');
-  const month = MONTH_KEYS[now.getMonth()];
-  const day = p(now.getDate());
-  const itemsArray = items.map(c => ({ ...c }));
-  const itemsSummary = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
+  if (walLevel >= 2) {
+    // ── VIP: thanh toán toàn bộ, đóng bill như cũ ──────────────
+    const baseTotal = getCartTotal();
+    const allDisc   = computeAllDiscounts();
+    const total     = getFinalTotal();
+    const now = new Date();
+    const p   = n => String(n).padStart(2, '0');
+    const month = MONTH_KEYS[now.getMonth()];
+    const day   = p(now.getDate());
+    const itemsArray    = items.map(c => ({ ...c }));
+    const itemsSummary  = items.map(c => `${c.name}(${c.size})x${c.qty}`).join(', ');
+    const foodItems     = items.filter(c => c.isFood === true);
+    const foodTotal     = foodItems.reduce((s, c) => s + c.price * c.qty, 0);
 
-  // Tách food items
-  const foodItems = items.filter(c => c.isFood === true);
-  const foodTotal = foodItems.reduce((s, c) => s + c.price * c.qty, 0);
-  const netTotal = total - foodTotal;
+    const order = {
+      time: `${p(now.getHours())}:${p(now.getMinutes())}`,
+      date: `${p(now.getDate())}/${p(now.getMonth()+1)}/${now.getFullYear()}`,
+      items: itemsSummary, itemsArray, total,
+      netTotal: foodTotal > 0 ? total - foodTotal : null,
+      foodTotal: foodTotal > 0 ? foodTotal : null,
+      foodItems: foodTotal > 0 ? foodItems.map(c => ({ name: c.name, qty: c.qty, price: c.price })) : null,
+      foodMethod: foodTotal > 0 ? 'VÍ KHÁCH HÀNG VIP' : null,
+      method: 'VÍ KHÁCH HÀNG VIP',
+      phone: document.getElementById('cuph').value || '',
+      voucherUsed: _giftVoucherKey ? (Object.values(cart).find(c=>c._vKey===_giftVoucherKey)?._giftLabel || _giftVoucherKey) : (_appliedDiscountId ? (_discountCache[_appliedDiscountId]?.label || _appliedDiscountId) : null),
+      cashGiven: total, cashChange: 0,
+      createdAt: now.toISOString(), isToGo,
+      discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0) ? (togoDiscountAmt + dgDiscountAmt) : null,
+      dgDiscount: dgDiscountAmt > 0 ? dgDiscountAmt : null,
+      dgItemIds:  dgDiscountAmt > 0 ? (dgSettings.items||[]).map(i=>i.id) : null,
+      dgFixedPrice:  dgDiscountAmt > 0 ? (dgSettings.fixedPrice||null)  : null,
+      dgFixedPriceL: dgDiscountAmt > 0 ? (dgSettings.fixedPriceL||null) : null,
+      walletTxId: _walCurrentTxId, walletLevel: 2
+    };
 
-  const order = {
-    time: `${p(now.getHours())}:${p(now.getMinutes())}`,
-    date: `${day}/${p(now.getMonth() + 1)}/${now.getFullYear()}`,
-    items: itemsSummary,
-    itemsArray,
-    total,
-    netTotal: foodTotal > 0 ? netTotal : null,
-    foodTotal: foodTotal > 0 ? foodTotal : null,
-    foodItems: foodTotal > 0 ? foodItems.map(c => ({ name: c.name, qty: c.qty, price: c.price })) : null,
-    foodMethod: foodTotal > 0 ? 'VÍ KHÁCH HÀNG' : null,
-    method: 'VÍ KHÁCH HÀNG',
-    phone: document.getElementById('cuph').value || '',
-    voucherUsed: _giftVoucherKey ? (Object.values(cart).find(c=>c._vKey===_giftVoucherKey)?._giftLabel || _giftVoucherKey) : (_appliedDiscountId ? (_discountCache[_appliedDiscountId]?.label || _appliedDiscountId) : null),
-    cashGiven: total,
-    cashChange: 0,
-    createdAt: now.toISOString(),
-    isToGo: isToGo,
-    discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0) ? (togoDiscountAmt + dgDiscountAmt) : null,
-    dgDiscount:    dgDiscountAmt > 0 ? dgDiscountAmt : null,
-    dgItemIds:     dgDiscountAmt > 0 ? (dgSettings.items || []).map(i => i.id) : null,
-    dgFixedPrice:  dgDiscountAmt > 0 ? (dgSettings.fixedPrice  || null) : null,
-    dgFixedPriceL: dgDiscountAmt > 0 ? (dgSettings.fixedPriceL || null) : null,
-    walletTxId: _walCurrentTxId
-  };
+    db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
+      orders.unshift({ id: ref.key, ...order, items: itemsArray });
+      const loyPhone = document.getElementById('cuph').value.trim();
+      if (loyPhone) loyaltyProcessAfterPay(loyPhone, total, items.reduce((s,c)=>s+c.qty,0), true);
+      _finalizeDiscountAfterPay().then(() => {
+        cart = {}; togoDiscountAmt = 0; dgDiscountAmt = 0;
+        _walCurrentTxId = null; _walCurrentLevel = null; _walCurrentDeduct = null;
+        resetPayMethod(); resetDiscountState(); resetTogoToggle();
+        document.getElementById('cuph').value = ''; clearCustomer(); selectedVoucher = null;
+        syncDisplay('done', { total, method: 'VÍ VIP' });
+        setTimeout(() => resetDisplay(), 5000);
+        renderMenu(); renderCartDrawer();
+        toast('✅ Thanh toán ví VIP thành công!');
+        showScreen('sm');
+      });
+    }).catch(err => toast('❌ Lỗi: ' + err.message));
 
-  db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
-    orders.unshift({ id: ref.key, ...order, items: itemsArray });
+  } else {
+    // ── Cơ bản: inject giảm 50% vào bill, ở lại màn hình thanh toán ──
+    // walDeduct = số tiền đã trừ ví (50% làm tròn 1.000)
+    // Inject vào togoDiscountAmt để getFinalTotal() tự tính phần còn lại
+    togoDiscountAmt = walDeduct;
+    _walLevel1Applied = true; // flag để confirmPay biết đây là split bill
 
-    // Loyalty
-    const loyPhone = document.getElementById('cuph').value.trim();
-    if (loyPhone) {
-      const drinkCount = items.reduce((s, c) => s + c.qty, 0);
-      loyaltyProcessAfterPay(loyPhone, total, drinkCount, true);
-    }
+    // Lưu thông tin ví để ghi vào bill khi hoàn tất
+    _walLevel1Phone  = phone;
+    _walLevel1Deduct = walDeduct;
+    _walLevel1TxId   = _walCurrentTxId;
+    _walLevel1FullAmount = fullAmount;
 
-    // Reset
-    _finalizeDiscountAfterPay().then(() => {
-    cart = {};
-    togoDiscountAmt = 0;
-    dgDiscountAmt = 0;
-    _walCurrentTxId = null;
+    // Reset payment method selection, ở lại màn hình
     resetPayMethod();
-    resetDiscountState();
-    resetTogoToggle();
-    document.getElementById('cuph').value = '';
-    clearCustomer();
-    selectedVoucher = null;
-    syncDisplay('done', { total: getFinalTotal(), method: 'VÍ' });
-    setTimeout(() => resetDisplay(), 5000);
-    renderMenu();
+
+    // Cập nhật display
     renderCartDrawer();
-    toast('✅ Thanh toán ví thành công!');
-    showScreen('sm');
-    }); // end _finalizeDiscountAfterPay().then
-  }).catch(err => toast('❌ Lỗi: ' + err.message));
+    const remaining = getFinalTotal();
+    toast('🪙 Ví cơ bản đã trừ ' + fmt(walDeduct) + '. Còn ' + fmt(remaining) + ' — chọn hình thức thanh toán tiếp!');
+  }
 }
 
 function resetPayMethod() {
@@ -6228,42 +6253,69 @@ function approveConvertRequest(reqKey, phone, points, name) {
   const custRef = fstore.collection('customers').doc(phone);
   const walRef  = fstore.collection('wallets_xolifa').doc(phone);
 
-  // Guard double-approve từ RTDB trước
+  // Guard double-approve
   db.ref('point_convert_requests/' + reqKey).once('value').then(function(reqSnap) {
     if (!reqSnap.exists() || reqSnap.val().status !== 'pending') {
       toast('⚠ Yêu cầu này đã được xử lý rồi!'); return;
     }
 
-    // Firestore transaction: kiểm tra điểm + trừ điểm + cộng ví + ghi lịch sử
-    return fstore.runTransaction(function(tx) {
-      return Promise.all([tx.get(custRef), tx.get(walRef)]).then(function(results) {
-        var custDoc = results[0], walDoc = results[1];
-        var curPoints = custDoc.exists ? (custDoc.data().total_points || 0) : 0;
+    return walRef.get().then(function(walDoc) {
+      var walExists = walDoc.exists && walDoc.data().is_active;
 
-        if (curPoints < points) throw new Error('Điểm không đủ! Khách chỉ có ' + curPoints.toLocaleString('vi-VN') + ' điểm');
+      if (walExists) {
+        // Ví đã active → transaction trừ điểm + cộng ví bình thường
+        return fstore.runTransaction(function(tx) {
+          return Promise.all([tx.get(custRef), tx.get(walRef)]).then(function(res) {
+            var curPoints = res[0].exists ? (res[0].data().total_points || 0) : 0;
+            if (curPoints < points) throw new Error('Điểm không đủ! Khách chỉ có ' + curPoints.toLocaleString('vi-VN') + ' điểm');
 
-        // Trừ điểm
-        tx.update(custRef, { total_points: firebase.firestore.FieldValue.increment(-points) });
-
-        // Cộng ví (kích hoạt nếu chưa có)
-        if (!walDoc.exists || !walDoc.data().is_active) {
-          tx.set(walRef, { phone: phone, name: name, is_active: true, balance_main: points, balance_bonus: 0, created_at: now, updated_at: now, activated_by: 'pos_convert' }, { merge: true });
-        } else {
-          tx.update(walRef, { balance_main: firebase.firestore.FieldValue.increment(points), updated_at: now });
-        }
-
-        // Lịch sử giao dịch
-        tx.set(fstore.collection('wallet_transactions_xolifa').doc(), {
-          wallet_id: phone, type: 'point_convert', amount_main: points,
-          description: 'Quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm → X point',
-          created_at: now, approved_by: 'pos'
+            tx.update(custRef, { total_points: firebase.firestore.FieldValue.increment(-points) });
+            tx.update(walRef, { balance_main: firebase.firestore.FieldValue.increment(points), updated_at: now });
+            tx.set(fstore.collection('wallet_transactions_xolifa').doc(), {
+              wallet_id: phone, type: 'point_convert', amount_main: points,
+              description: 'Quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm → X point',
+              created_at: now, approved_by: 'pos'
+            });
+          });
+        }).then(function() {
+          return db.ref('point_convert_requests/' + reqKey).update({ status: 'approved', approved_at: Date.now() });
+        }).then(function() {
+          toast('✅ Đã quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm cho ' + name + '!');
         });
-      });
+
+      } else {
+        // Ví chưa tồn tại hoặc chưa active → tạo ví pending + sinh temp_pin
+        // Trừ điểm trước (Firestore transaction riêng)
+        return fstore.runTransaction(function(tx) {
+          return tx.get(custRef).then(function(custDoc) {
+            var curPoints = custDoc.exists ? (custDoc.data().total_points || 0) : 0;
+            if (curPoints < points) throw new Error('Điểm không đủ! Khách chỉ có ' + curPoints.toLocaleString('vi-VN') + ' điểm');
+            tx.update(custRef, { total_points: firebase.firestore.FieldValue.increment(-points) });
+          });
+        }).then(function() {
+          // Sinh mã PIN 4 số + hash
+          var pin = String(Math.floor(1000 + Math.random() * 9000));
+          var salt = dcodeIO.bcrypt.genSaltSync(10);
+          var pinHash = dcodeIO.bcrypt.hashSync(pin, salt);
+
+          // Tạo ví pending với balance sẵn, khách sẽ tự kích hoạt bằng temp_pin
+          return fstore.collection('wallets_xolifa').doc(phone).set({
+            user_id: phone, name: name,
+            balance_main: points, balance_bonus: 0,
+            pin_hash: '', temp_pin: pinHash,
+            is_active: false, status: 'pending',
+            created_at: now, updated_at: now,
+            activated_by: 'pos_convert'
+          }, { merge: false }).then(function() {
+            return db.ref('point_convert_requests/' + reqKey).update({ status: 'approved', approved_at: Date.now() });
+          }).then(function() {
+            // Hiển thị mã PIN cho thu ngân đọc cho khách
+            toast('✅ Đã tạo ví & quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm!');
+            alert('📋 Mã kích hoạt ví của ' + name + ':\n\n' + pin.split('').join('  ') + '\n\nĐọc mã này cho khách. Khách vào app → Tab Ví → nhập mã → tạo PIN để sử dụng.');
+          });
+        });
+      }
     });
-  }).then(function() {
-    return db.ref('point_convert_requests/' + reqKey).update({ status: 'approved', approved_at: Date.now() });
-  }).then(function() {
-    toast('✅ Đã quy đổi ' + Number(points).toLocaleString('vi-VN') + ' điểm cho ' + name + '!');
   }).catch(function(err) {
     toast('❌ ' + err.message);
   });
