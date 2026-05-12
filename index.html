@@ -960,38 +960,50 @@
       <p style="font-size:11px;color:#9ca3af;font-weight:600;margin-bottom:20px;">1.000 điểm = 1.000 X point · Chỉ sử dụng tại XOLIFA · Không quy đổi thành tiền mặt</p>
 
       <!-- Điểm hiện có -->
-      <div style="background:#006241;border-radius:18px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="background:#006241;border-radius:18px;padding:16px 20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
         <div>
           <p style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.6);letter-spacing:0.1em;text-transform:uppercase;margin:0 0 4px;">Điểm tích lũy của bạn</p>
           <p style="font-size:36px;font-weight:900;color:#fff;margin:0;font-family:'League Spartan',sans-serif;line-height:1;"><span id="conv-points-display">0</span> <span style="font-size:16px;font-weight:600;opacity:0.7;">điểm</span></p>
+          <p id="conv-points-avail" style="font-size:10px;color:rgba(255,255,255,0.5);margin:4px 0 0;font-weight:600;"></p>
         </div>
         <div style="width:44px;height:44px;background:rgba(255,255,255,0.15);border-radius:14px;display:flex;align-items:center;justify-content:center;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </div>
       </div>
 
+      <!-- Cảnh báo không đủ điểm tối thiểu -->
+      <div id="conv-warn-min" style="display:none;background:#fee2e2;border-radius:12px;padding:10px 14px;margin-bottom:12px;align-items:center;gap:8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p style="font-size:11px;color:#dc2626;font-weight:700;margin:0;">Cần tối thiểu 1.000 điểm để quy đổi</p>
+      </div>
+
       <!-- Số điểm muốn đổi -->
-      <div style="background:#fff;border-radius:18px;padding:18px 20px;margin-bottom:16px;">
-        <p style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 12px;">Số điểm muốn đổi</p>
+      <div style="background:#fff;border-radius:18px;padding:18px 20px;margin-bottom:12px;">
+        <p style="font-size:11px;font-weight:800;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px;">Số điểm muốn đổi</p>
+        <p style="font-size:10px;color:#10b981;font-weight:700;margin:0 0 12px;">Chỉ nhận bội số 1.000 (VD: 1.000 · 2.000 · 5.000...)</p>
 
         <!-- Thanh kéo -->
-        <input type="range" id="conv-slider" min="0" max="1000" value="0" step="100"
+        <input type="range" id="conv-slider" min="1000" max="10000" value="0" step="1000"
           oninput="onConvSliderChange(this.value)"
           style="width:100%;height:6px;accent-color:#006241;cursor:pointer;margin-bottom:14px;">
 
-        <!-- Hiển thị giá trị + nút nhập tay -->
-        <div style="display:flex;align-items:center;gap:10px;">
-          <div style="flex:1;background:#f3f4f6;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:8px;">
-            <input type="tel" id="conv-input" inputmode="numeric" placeholder="Hoặc nhập số điểm..."
-              style="flex:1;border:none;outline:none;background:transparent;font-size:20px;font-weight:800;color:#1e3932;font-family:'League Spartan',sans-serif;width:100%;"
-              oninput="onConvInputChange(this.value)">
-            <span style="font-size:13px;font-weight:600;color:#9ca3af;">điểm</span>
-          </div>
+        <!-- Ô nhập tay -->
+        <div style="background:#f3f4f6;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:8px;">
+          <input type="tel" id="conv-input" inputmode="numeric" placeholder="Nhập số điểm (bội số 1.000)..."
+            style="flex:1;border:none;outline:none;background:transparent;font-size:20px;font-weight:800;color:#1e3932;font-family:'League Spartan',sans-serif;width:100%;"
+            oninput="onConvInputChange(this.value)">
+          <span style="font-size:13px;font-weight:600;color:#9ca3af;white-space:nowrap;">điểm</span>
+        </div>
+
+        <!-- Cảnh báo làm tròn -->
+        <div id="conv-warn-round" style="display:none;background:#fef3c7;border-radius:10px;padding:8px 12px;margin-top:8px;align-items:center;gap:6px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <p style="font-size:10px;color:#d97706;font-weight:700;margin:0;">Số điểm đã được làm tròn xuống bội số 1.000 gần nhất</p>
         </div>
 
         <!-- Preview X point -->
         <div style="margin-top:12px;background:#ecfdf5;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
-          <span style="font-size:12px;font-weight:700;color:#065f46;">Nhận được</span>
+          <span style="font-size:12px;font-weight:700;color:#065f46;">Bạn sẽ nhận được</span>
           <span style="font-size:18px;font-weight:900;color:#006241;font-family:'League Spartan',sans-serif;"><span id="conv-xpoint-preview">0</span> X point</span>
         </div>
       </div>
@@ -999,13 +1011,13 @@
       <!-- Ghi chú -->
       <div style="background:#fffbe8;border-radius:12px;padding:10px 14px;margin-bottom:20px;display:flex;align-items:flex-start;gap:8px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <p style="font-size:11px;color:#92400e;font-weight:600;margin:0;line-height:1.5;">Điểm quy đổi không thể hoàn lại. Yêu cầu sẽ được gửi đến thu ngân và xử lý ngay tại quầy.</p>
+        <p style="font-size:11px;color:#92400e;font-weight:600;margin:0;line-height:1.5;">Điểm quy đổi không thể hoàn lại. Mỗi lần chỉ được gửi 1 lệnh. Yêu cầu sẽ bị khoá cho đến khi thu ngân xác nhận.</p>
       </div>
 
       <!-- Nút -->
       <div style="display:flex;gap:10px;">
         <button onclick="closeConvertPointsPopup()" style="flex:1;padding:15px;background:#e5e7eb;color:#6b7280;border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Hủy bỏ</button>
-        <button onclick="submitConvertPoints()" style="flex:2;padding:15px;background:#006241;color:#fff;border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <button id="conv-confirm-btn" onclick="submitConvertPoints()" style="flex:2;padding:15px;background:#006241;color:#fff;border:none;border-radius:14px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
           Xác nhận đổi
         </button>
@@ -1498,6 +1510,9 @@ function showDashboard(phone) {
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
     document.getElementById('nav-bar').classList.remove('hidden');
+
+    // Khởi động lắng nghe trạng thái quy đổi điểm
+    initConvertPointsListener();
 
     // Lắng nghe dữ liệu realtime từ Firestore
     if (window._customerUnsub) window._customerUnsub(); // hủy listener cũ nếu có
@@ -4712,60 +4727,172 @@ function walListenPaymentResult(guardTimer) {
 // ════════════════════════════════════════════════
 // CHUYỂN ĐIỂM SANG VÍ
 // ════════════════════════════════════════════════
+var _convPendingListener = null;
+var _convPendingKey = null;
+
+// Khi mở app: lắng nghe nếu đang có lệnh pending
+function initConvertPointsListener() {
+  if (!curPhone) return;
+  db.ref('point_convert_requests').orderByChild('phone').equalTo(curPhone).limitToLast(5).on('value', function(snap) {
+    var pending = null;
+    snap.forEach(function(child) {
+      if (child.val().status === 'pending') pending = { key: child.key, val: child.val() };
+    });
+    _convPendingKey = pending ? pending.key : null;
+    // Cập nhật nút mở popup nếu đang hiển thị
+    _updateConvBtn();
+  });
+}
+
+function _updateConvBtn() {
+  var btn = document.getElementById('btn-convert-points');
+  if (!btn) return;
+  if (_convPendingKey) {
+    btn.style.opacity = '0.6';
+    btn.style.pointerEvents = 'none';
+    var titleEl = btn.querySelector('p:first-child');
+    if (titleEl) titleEl.textContent = '⏳ Đang chờ thu ngân xác nhận...';
+  } else {
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+    var titleEl2 = btn.querySelector('p:first-child');
+    if (titleEl2) titleEl2.textContent = 'Chuyển đổi điểm sang Ví';
+  }
+}
+
 function openConvertPointsPopup() {
   if (!curPhone) { showModal('Thông báo', 'Bạn cần đăng nhập trước!'); return; }
-  var pts = parseInt((document.getElementById('user-points') || {}).textContent || '0') || 0;
-  document.getElementById('conv-points-display').textContent = pts.toLocaleString('vi-VN');
-  var slider = document.getElementById('conv-slider');
-  slider.max = Math.floor(pts / 100) * 100 || 0;
-  slider.value = 0;
-  document.getElementById('conv-input').value = '';
-  document.getElementById('conv-xpoint-preview').textContent = '0';
-  var popup = document.getElementById('convert-points-popup');
-  popup.style.display = 'flex';
+
+  // Kiểm tra có lệnh pending chưa
+  if (_convPendingKey) {
+    showModal('Đang chờ xử lý ⏳', 'Bạn đang có 1 lệnh quy đổi chưa được xử lý. Vui lòng chờ thu ngân xác nhận trước khi gửi thêm!');
+    return;
+  }
+
+  // Lấy điểm từ Firestore customers
+  document.getElementById('loading-overlay').classList.remove('hidden');
+  fstore.collection('customers').doc(curPhone).get().then(function(doc) {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    var pts = doc.exists ? (doc.data().total_points || 0) : 0;
+    var memberName = doc.exists ? (doc.data().name || doc.data().nickname || '') : '';
+
+    // Làm tròn xuống bội số 1.000
+    var maxConvert = Math.floor(pts / 1000) * 1000;
+
+    document.getElementById('conv-points-display').textContent = pts.toLocaleString('vi-VN');
+    document.getElementById('conv-points-avail').textContent = 'Có thể đổi tối đa: ' + maxConvert.toLocaleString('vi-VN') + ' điểm (bội số 1.000)';
+
+    var slider = document.getElementById('conv-slider');
+    slider.min = 1000;
+    slider.max = maxConvert > 0 ? maxConvert : 1000;
+    slider.step = 1000;
+    slider.value = 0;
+    slider.disabled = maxConvert < 1000;
+
+    document.getElementById('conv-input').value = '';
+    document.getElementById('conv-xpoint-preview').textContent = '0';
+
+    // Hiện/ẩn cảnh báo không đủ điểm
+    var warnEl = document.getElementById('conv-warn-min');
+    if (warnEl) warnEl.style.display = maxConvert < 1000 ? 'flex' : 'none';
+
+    var confirmBtn = document.getElementById('conv-confirm-btn');
+    if (confirmBtn) confirmBtn.disabled = maxConvert < 1000;
+
+    // Ghi tạm tên để dùng khi submit
+    window._convMemberName = memberName;
+    window._convMaxPoints = maxConvert;
+    window._convRealPoints = pts;
+
+    document.getElementById('convert-points-popup').style.display = 'flex';
+  }).catch(function(err) {
+    document.getElementById('loading-overlay').classList.add('hidden');
+    showModal('Lỗi', 'Không đọc được điểm: ' + err.message);
+  });
 }
 
 function closeConvertPointsPopup() {
   document.getElementById('convert-points-popup').style.display = 'none';
 }
 
+function _snapConvToThousand(num) {
+  return Math.floor(num / 1000) * 1000;
+}
+
 function onConvSliderChange(val) {
-  document.getElementById('conv-input').value = val > 0 ? Number(val).toLocaleString('vi-VN') : '';
-  document.getElementById('conv-xpoint-preview').textContent = Number(val).toLocaleString('vi-VN');
+  var snapped = _snapConvToThousand(parseInt(val) || 0);
+  document.getElementById('conv-input').value = snapped > 0 ? snapped.toLocaleString('vi-VN') : '';
+  document.getElementById('conv-xpoint-preview').textContent = snapped.toLocaleString('vi-VN');
 }
 
 function onConvInputChange(val) {
   var clean = val.replace(/[^0-9]/g, '');
-  var pts = parseInt((document.getElementById('user-points') || {}).textContent || '0') || 0;
-  var num = Math.min(parseInt(clean) || 0, pts);
+  var raw = parseInt(clean) || 0;
+  var max = window._convMaxPoints || 0;
+  var capped = Math.min(raw, max);
+  var snapped = _snapConvToThousand(capped);
+
   var slider = document.getElementById('conv-slider');
-  slider.value = num;
-  document.getElementById('conv-xpoint-preview').textContent = num.toLocaleString('vi-VN');
+  slider.value = snapped;
+  document.getElementById('conv-xpoint-preview').textContent = snapped.toLocaleString('vi-VN');
+
+  // Cảnh báo nếu nhập số không phải bội số 1.000
+  var warnRound = document.getElementById('conv-warn-round');
+  if (warnRound) warnRound.style.display = (raw > 0 && raw !== snapped) ? 'flex' : 'none';
 }
 
 function submitConvertPoints() {
-  var inputVal = document.getElementById('conv-input').value.replace(/[^0-9]/g, '');
-  var amount = parseInt(inputVal) || 0;
-  if (amount <= 0) { showModal('Thông báo', 'Vui lòng nhập số điểm muốn đổi!'); return; }
-  var pts = parseInt((document.getElementById('user-points') || {}).textContent || '0') || 0;
-  if (amount > pts) { showModal('Thông báo', 'Số điểm đổi vượt quá điểm hiện có!'); return; }
+  var inputVal = document.getElementById('conv-input').value.replace(/[^0-9,\.]/g, '').replace(/[,\.]/g, '');
+  var amount = _snapConvToThousand(parseInt(inputVal) || 0);
 
+  if (amount < 1000) {
+    showModal('Không hợp lệ', 'Số điểm tối thiểu là 1.000 điểm và phải là bội số của 1.000!'); return;
+  }
+  var max = window._convMaxPoints || 0;
+  if (amount > max) {
+    showModal('Không đủ điểm', 'Bạn chỉ có thể đổi tối đa ' + max.toLocaleString('vi-VN') + ' điểm!'); return;
+  }
+  if (_convPendingKey) {
+    showModal('Đang chờ xử lý', 'Bạn đã có lệnh quy đổi đang chờ. Không thể gửi thêm!'); return;
+  }
+
+  // Double-check Firebase trước khi ghi (chống race condition)
   document.getElementById('loading-overlay').classList.remove('hidden');
-  var reqKey = db.ref('point_convert_requests').push().key;
-  var reqData = {
-    phone: curPhone,
-    name: (document.getElementById('user-name-display') || {}).textContent || '',
-    points: amount,
-    xpoint: amount,
-    status: 'pending',
-    created_at: Date.now()
-  };
-  db.ref('point_convert_requests/' + reqKey).set(reqData).then(function() {
-    document.getElementById('loading-overlay').classList.add('hidden');
-    closeConvertPointsPopup();
-    showModal('Đã gửi yêu cầu ✅', 'Yêu cầu đổi ' + amount.toLocaleString('vi-VN') + ' điểm sang ' + amount.toLocaleString('vi-VN') + ' X point đã được gửi đến thu ngân. Vui lòng chờ xác nhận!');
-    // Lắng nghe kết quả
-    listenConvertResult(reqKey, amount);
+
+  db.ref('point_convert_requests').orderByChild('phone').equalTo(curPhone).once('value').then(function(snap) {
+    var hasPending = false;
+    snap.forEach(function(child) { if (child.val().status === 'pending') hasPending = true; });
+    if (hasPending) {
+      document.getElementById('loading-overlay').classList.add('hidden');
+      showModal('Đang chờ xử lý', 'Bạn đã có lệnh quy đổi đang chờ. Vui lòng chờ thu ngân xử lý trước!');
+      return;
+    }
+
+    // Kiểm tra điểm thực tế lần nữa từ Firestore
+    return fstore.collection('customers').doc(curPhone).get().then(function(doc) {
+      var realPts = doc.exists ? (doc.data().total_points || 0) : 0;
+      if (amount > Math.floor(realPts / 1000) * 1000) {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        showModal('Không đủ điểm', 'Điểm thực tế không đủ. Vui lòng thử lại!'); return;
+      }
+
+      var reqData = {
+        phone: curPhone,
+        name: window._convMemberName || '',
+        points: amount,
+        xpoint: amount,
+        status: 'pending',
+        created_at: Date.now()
+      };
+      return db.ref('point_convert_requests').push(reqData).then(function(ref) {
+        document.getElementById('loading-overlay').classList.add('hidden');
+        closeConvertPointsPopup();
+        showModal('Đã gửi yêu cầu ✅', 'Yêu cầu đổi ' + amount.toLocaleString('vi-VN') + ' điểm → ' + amount.toLocaleString('vi-VN') + ' X point đã gửi đến thu ngân.\n\nĐiểm sẽ được trừ và ví sẽ được cộng sau khi thu ngân xác nhận. Nút đổi sẽ bị khoá cho đến khi xử lý xong.');
+        _convPendingKey = ref.key;
+        _updateConvBtn();
+        listenConvertResult(ref.key, amount);
+      });
+    });
   }).catch(function(err) {
     document.getElementById('loading-overlay').classList.add('hidden');
     showModal('Lỗi', 'Không gửi được yêu cầu: ' + err.message);
@@ -4774,18 +4901,19 @@ function submitConvertPoints() {
 
 function listenConvertResult(reqKey, amount) {
   var ref = db.ref('point_convert_requests/' + reqKey + '/status');
-  var timeout = setTimeout(function() { ref.off('value'); }, 120000);
+  var timeout = setTimeout(function() { ref.off('value'); }, 300000); // 5 phút
   ref.on('value', function(snap) {
     var status = snap.val();
     if (!status || status === 'pending') return;
     ref.off('value'); clearTimeout(timeout);
+    _convPendingKey = null;
+    _updateConvBtn();
     if (status === 'approved') {
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      // Cập nhật điểm local
-      loadUserData && loadUserData();
-      showModal('Thành công 🎉', 'Ví của bạn đã được kích hoạt và ' + amount.toLocaleString('vi-VN') + ' X point đã được cộng vào ví!');
+      if (navigator.vibrate) navigator.vibrate([100, 50, 200]);
+      // onSnapshot đang lắng nghe customers realtime → UI tự cập nhật điểm
+      showModal('Thành công 🎉', amount.toLocaleString('vi-VN') + ' điểm đã được quy đổi thành ' + amount.toLocaleString('vi-VN') + ' X point trong ví của bạn!');
     } else if (status === 'rejected') {
-      showModal('Bị từ chối', 'Yêu cầu quy đổi điểm của bạn đã bị từ chối. Liên hệ thu ngân để biết thêm chi tiết.');
+      showModal('Bị từ chối ❌', 'Yêu cầu quy đổi ' + amount.toLocaleString('vi-VN') + ' điểm đã bị từ chối. Liên hệ thu ngân để biết thêm chi tiết.');
     }
   });
 }
