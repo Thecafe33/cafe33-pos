@@ -432,6 +432,11 @@
 }
 #tab-wallet .pay-pin-digit-xo.active-cursor {
   border-color: #006241; background: #fff;
+  animation: blink-border 1s step-end infinite;
+}
+@keyframes blink-border {
+  0%, 100% { border-color: #006241; box-shadow: 0 0 0 2px rgba(0,98,65,0.18); }
+  50% { border-color: rgba(0,98,65,0.3); box-shadow: none; }
 }
 @keyframes slideUpConv {
   from { opacity: 0; transform: translateY(60px); }
@@ -453,7 +458,7 @@
     <div class="w-full h-full flex items-center justify-center overflow-auto"><img id="zoomed-img" src="" class="max-w-full max-h-full object-contain shadow-2xl transition-transform" onclick="event.stopPropagation()"></div>
   </div>
 
-  <div id="modal-overlay" class="fixed inset-0 bg-black/40 z-[100] hidden flex items-center justify-center p-6 backdrop-blur-sm">
+  <div id="modal-overlay" class="fixed inset-0 bg-black/40 z-[5000] hidden flex items-center justify-center p-6 backdrop-blur-sm">
     <div id="custom-modal" class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center modal-enter">
       <div id="modal-icon" class="text-5xl mb-4">☕</div>
       <h3 id="modal-title" class="brand-font text-2xl text-[#006241] mb-3">Thông báo</h3>
@@ -4602,10 +4607,22 @@ function walRenderPinBoxes(prefix, val) {
   for (var i = 0; i < 4; i++) {
     var el = document.getElementById(prefix + '-' + i);
     if (!el) continue;
-    el.textContent = val.length > i ? '●' : '';
     var cls = 'pay-pin-digit-xo';
-    if (val.length > i) cls += ' filled';
-    if (val.length === i) cls += ' active-cursor';
+    if (val.length > i) {
+      cls += ' filled';
+      el.textContent = '●';
+      el.style.color = '#006241';
+      el.style.fontSize = '22px';
+    } else if (val.length === i) {
+      cls += ' active-cursor';
+      el.textContent = '·';
+      el.style.color = '#006241';
+      el.style.fontSize = '36px';
+    } else {
+      el.textContent = '·';
+      el.style.color = '#d1d5db';
+      el.style.fontSize = '36px';
+    }
     el.className = cls;
   }
 }
