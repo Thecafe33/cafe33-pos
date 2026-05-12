@@ -847,21 +847,42 @@
         </div>
       </div>
 
-      <!-- STATE: Activation Flow -->
-      <div id="wallet-activation-view" style="display:none;">
-        <div class="wallet-inactive-xo">
-          <h2 class="brand-font text-xl text-[#1e3932] mb-2" id="wal-act-title">Nhập mã kích hoạt</h2>
-          <p style="font-size:13px;color:#9ca3af;margin-bottom:4px;" id="wal-act-sub">Mã này được cung cấp bởi nhân viên tại quầy</p>
+      <!-- STATE: Activation Flow — rendered as overlay popup, không dùng native keyboard -->
+      <div id="wallet-activation-view" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;align-items:flex-end;justify-content:center;backdrop-filter:blur(10px);">
+        <div style="background:#f8f9fa;border-radius:2rem 2rem 0 0;padding:28px 22px 40px;width:100%;max-width:430px;animation:slideUpConv .3s cubic-bezier(.34,1.2,.64,1);">
+
+          <!-- Header -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <div class="brand-font" style="font-size:18px;font-weight:900;color:#1e3932;" id="wal-act-title">Nhập mã kích hoạt</div>
+            <button onclick="cancelWalletActivation()" style="background:#e5e7eb;border:none;border-radius:50%;width:34px;height:34px;font-size:15px;color:#6b7280;display:flex;align-items:center;justify-content:center;cursor:pointer;">✕</button>
+          </div>
+          <p style="font-size:12px;color:#9ca3af;font-weight:600;margin-bottom:20px;" id="wal-act-sub">Mã này được cung cấp bởi nhân viên tại quầy</p>
+
+          <!-- Dots hiển thị PIN -->
           <div class="pin-input-group-xo" id="wal-act-pin-group">
             <div class="pin-digit-xo active"></div>
             <div class="pin-digit-xo"></div>
             <div class="pin-digit-xo"></div>
             <div class="pin-digit-xo"></div>
           </div>
-          <div style="position:fixed;bottom:-200px;left:0;opacity:0;">
-            <input type="tel" id="wal-act-input" maxlength="4" oninput="walHandlePinInput(this)" autofocus>
+
+          <!-- Custom numpad -->
+          <div id="wal-act-numpad" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+            <button onclick="walActNumpad('1')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">1</button>
+            <button onclick="walActNumpad('2')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">2</button>
+            <button onclick="walActNumpad('3')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">3</button>
+            <button onclick="walActNumpad('4')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">4</button>
+            <button onclick="walActNumpad('5')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">5</button>
+            <button onclick="walActNumpad('6')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">6</button>
+            <button onclick="walActNumpad('7')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">7</button>
+            <button onclick="walActNumpad('8')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">8</button>
+            <button onclick="walActNumpad('9')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">9</button>
+            <button onclick="walActNumpadClear()" style="padding:16px;background:#fee2e2;border:none;border-radius:16px;font-size:13px;font-weight:700;color:#dc2626;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">Xóa</button>
+            <button onclick="walActNumpad('0')" style="padding:16px;background:#fff;border:none;border-radius:16px;font-size:22px;font-weight:700;color:#1e3932;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">0</button>
+            <button onclick="walActNumpadBack()" style="padding:16px;background:#f3f4f6;border:none;border-radius:16px;font-size:20px;color:#6b7280;box-shadow:0 2px 8px rgba(0,0,0,.07);cursor:pointer;">⌫</button>
           </div>
-          <button class="wallet-btn-xo secondary" onclick="cancelWalletActivation()">Hủy</button>
+
+          <button onclick="cancelWalletActivation()" style="width:100%;padding:14px;background:#e5e7eb;color:#6b7280;border:none;border-radius:16px;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Hủy</button>
         </div>
       </div>
 
@@ -4364,56 +4385,66 @@ function loadWalletData() {
 function showWalletState(state) {
   var el = function(id) { return document.getElementById(id); };
   if (el('wallet-inactive-view'))   el('wallet-inactive-view').style.display   = state === 'inactive'   ? 'block' : 'none';
-  if (el('wallet-activation-view')) el('wallet-activation-view').style.display = state === 'activation' ? 'block' : 'none';
+  if (el('wallet-activation-view')) el('wallet-activation-view').style.display = state === 'activation' ? 'flex'  : 'none';
   if (el('wallet-active-view'))     el('wallet-active-view').style.display     = state === 'active'     ? 'block' : 'none';
 }
 
-// ── Activation ──────────────────────────────────
-var walActStep = 1;
-var walTempPin = '';
-var walNewPin  = '';
+// ── Activation — custom numpad, không native keyboard ────────
+var walActStep  = 1;
+var walTempPin  = '';
+var walNewPin   = '';
+var _walActBuf  = '';  // buffer nhập từ numpad
 
 function showWalletActivation() {
   if (walletData && walletData.status === 'pending') {
-    walActStep = 1; walTempPin = ''; walNewPin = '';
-    walUpdatePinUI();
+    walActStep = 1; walTempPin = ''; walNewPin = ''; _walActBuf = '';
     document.getElementById('wal-act-title').textContent = 'Nhập mã kích hoạt';
-    document.getElementById('wal-act-sub').textContent = 'Mã này được nhân viên thu ngân cung cấp';
+    document.getElementById('wal-act-sub').textContent   = 'Mã này được nhân viên thu ngân cung cấp';
+    _walActRenderDots();
     showWalletState('activation');
-    setTimeout(function() {
-      var inp = document.getElementById('wal-act-input');
-      if (inp) { inp.value = ''; inp.focus(); }
-    }, 100);
   } else {
     walShowMsg('Thông báo', 'Bạn cần liên hệ thu ngân để mở ví trước khi kích hoạt.');
   }
 }
 
-function cancelWalletActivation() { showWalletState('inactive'); }
+function cancelWalletActivation() {
+  _walActBuf = ''; walActStep = 1; walTempPin = ''; walNewPin = '';
+  showWalletState('inactive');
+}
 
-function walUpdatePinUI() {
-  var input = document.getElementById('wal-act-input');
-  if (!input) return;
-  var val = input.value;
-  var digits = document.getElementById('wal-act-pin-group').querySelectorAll('.pin-digit-xo');
+function _walActRenderDots() {
+  var dots = document.getElementById('wal-act-pin-group').querySelectorAll('.pin-digit-xo');
   for (var i = 0; i < 4; i++) {
-    if (i < val.length) { digits[i].textContent = '•'; digits[i].classList.remove('active'); }
-    else if (i === val.length) { digits[i].textContent = ''; digits[i].classList.add('active'); }
-    else { digits[i].textContent = ''; digits[i].classList.remove('active'); }
-  }
-  if (val.length === 4) {
-    input.blur();
-    setTimeout(function() { walProcessPinStep(val); }, 200);
+    dots[i].textContent = i < _walActBuf.length ? '•' : '';
+    dots[i].classList.toggle('active', i === _walActBuf.length);
   }
 }
 
-function walHandlePinInput(el) {
-  el.value = el.value.replace(/[^0-9]/g, '');
-  walUpdatePinUI();
+function walActNumpad(digit) {
+  if (_walActBuf.length >= 4) return;
+  _walActBuf += digit;
+  _walActRenderDots();
+  if (_walActBuf.length === 4) setTimeout(function() { walProcessPinStep(_walActBuf); }, 180);
+}
+
+function walActNumpadBack() {
+  _walActBuf = _walActBuf.slice(0, -1);
+  _walActRenderDots();
+}
+
+function walActNumpadClear() {
+  _walActBuf = '';
+  _walActRenderDots();
+}
+
+function _walActReset(title, sub) {
+  _walActBuf = '';
+  document.getElementById('wal-act-title').textContent = title;
+  document.getElementById('wal-act-sub').textContent   = sub;
+  _walActRenderDots();
 }
 
 function walProcessPinStep(pin) {
-  var input = document.getElementById('wal-act-input');
   if (walActStep === 1) {
     document.getElementById('loading-overlay').classList.remove('hidden');
     setTimeout(function() {
@@ -4422,37 +4453,28 @@ function walProcessPinStep(pin) {
         document.getElementById('loading-overlay').classList.add('hidden');
         if (isValid) {
           walActStep = 2; walTempPin = pin;
-          input.value = ''; walUpdatePinUI();
-          document.getElementById('wal-act-title').textContent = 'Tạo mã PIN mới';
-          document.getElementById('wal-act-sub').textContent = 'Mã PIN gồm 4 số để thanh toán';
-          setTimeout(function() { input.focus(); }, 100);
+          _walActReset('Tạo mã PIN mới', 'Mã PIN gồm 4 số để thanh toán');
         } else {
-          walShowMsg('Lỗi', 'Mã kích hoạt không đúng!');
-          input.value = ''; walUpdatePinUI();
-          setTimeout(function() { input.focus(); }, 100);
+          document.getElementById('loading-overlay').classList.add('hidden');
+          walShowMsg('Lỗi', 'Mã kích hoạt không đúng! Vui lòng thử lại.');
+          _walActBuf = ''; _walActRenderDots();
         }
       } catch(e) {
         document.getElementById('loading-overlay').classList.add('hidden');
         walShowMsg('Lỗi', 'Có lỗi xảy ra. Vui lòng thử lại.');
-        input.value = ''; walUpdatePinUI();
+        _walActBuf = ''; _walActRenderDots();
       }
     }, 50);
   } else if (walActStep === 2) {
     walActStep = 3; walNewPin = pin;
-    input.value = ''; walUpdatePinUI();
-    document.getElementById('wal-act-title').textContent = 'Nhập lại mã PIN mới';
-    document.getElementById('wal-act-sub').textContent = 'Xác nhận mã PIN của bạn';
-    setTimeout(function() { input.focus(); }, 100);
+    _walActReset('Nhập lại mã PIN', 'Xác nhận mã PIN của bạn');
   } else if (walActStep === 3) {
     if (pin === walNewPin) {
       walFinalizeActivation(walNewPin);
     } else {
-      walShowMsg('Lỗi', 'Mã PIN không khớp. Vui lòng thử lại!');
+      walShowMsg('Không khớp', 'Mã PIN không khớp! Vui lòng tạo lại.');
       walActStep = 2; walNewPin = '';
-      input.value = ''; walUpdatePinUI();
-      document.getElementById('wal-act-title').textContent = 'Tạo mã PIN mới';
-      document.getElementById('wal-act-sub').textContent = 'Mã PIN gồm 4 số để thanh toán';
-      setTimeout(function() { input.focus(); }, 100);
+      _walActReset('Tạo mã PIN mới', 'Nhập lại mã PIN mới');
     }
   }
 }
