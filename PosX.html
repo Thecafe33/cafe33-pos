@@ -5939,7 +5939,11 @@ function walletCreatePaymentQR() {
     }
     return Promise.all(cleanupJobs);
   }).then(() => {
-    // Ghi song song: node chính + index cố định 'current'
+    // Tính Flow_V1 (50% làm tròn xuống 1.000) và Flow_V2 (100%)
+    const flow_v1_required = Math.floor(total * 0.5 / 1000) * 1000; // ⌊T × 0.5⌋ làm tròn 1k
+    const flow_v2_required = total;                                   // T đầy đủ
+
+    // Ghi song song: node chính + index cố định 'current' + cả hai Flow signals
     const updates = {};
     updates['wallet_payment_xolifa/' + txId] = {
       pin_code: pin4,
@@ -5948,9 +5952,20 @@ function walletCreatePaymentQR() {
       wallet_id: '',
       items_summary: itemsSummary,
       expire_time: expireTime,
-      created_at: Date.now()
+      created_at: Date.now(),
+      // Nhúng cả hai signal vào transaction node để Index tự chọn
+      flow_v1: { type: 'basic',   required: flow_v1_required, pct: 50  },
+      flow_v2: { type: 'premium', required: flow_v2_required, pct: 100 }
     };
-    updates['wallet_pin_index/current'] = { txId: txId, expireTime: expireTime, pin: pin4 };
+    // Index cố định: bổ sung flow_v1_required & flow_v2_required để Index đọc nhanh
+    updates['wallet_pin_index/current'] = {
+      txId: txId,
+      expireTime: expireTime,
+      pin: pin4,
+      flow_v1_required: flow_v1_required,
+      flow_v2_required: flow_v2_required,
+      total: total
+    };
     return db.ref().update(updates);
   }).then(() => {
     _walCurrentTxId = txId;
@@ -6029,10 +6044,14 @@ function walletListenPayment(txId) {
     const walLevel = wal.wallet_level || 1;
     const fullAmount = tx.amount; // getFinalTotal() tại thời điểm tạo mã
 
-    // Tính số tiền ví sẽ thực sự trừ
+    // ── Đọc Flow signal đã push sẵn — ưu tiên giá trị từ RT ──
+    // Flow_V2 (Level 2 — Premium): required = T đầy đủ
+    // Flow_V1 (Level 1 — Basic):   required = ⌊T × 0.5⌋ làm tròn xuống 1.000
+    const flow_v2 = tx.flow_v2 || {};
+    const flow_v1 = tx.flow_v1 || {};
     const walDeduct = walLevel >= 2
-      ? fullAmount                                          // VIP: trả toàn bộ
-      : Math.floor(fullAmount * 0.5 / 1000) * 1000;       // Cơ bản: 50%, làm tròn xuống 1.000
+      ? (flow_v2.required !== undefined ? flow_v2.required : fullAmount)
+      : (flow_v1.required !== undefined ? flow_v1.required : Math.floor(fullAmount * 0.5 / 1000) * 1000);
 
     const totalBalance = (wal.balance_main || 0) + (wal.balance_bonus || 0);
     if (totalBalance < walDeduct) {
@@ -6057,9 +6076,10 @@ function walletListenPayment(txId) {
         amount_main:  -deductMain,
         amount_bonus: -deductBonus,
         wallet_level: walLevel,
+        flow_used: walLevel >= 2 ? 'flow_v2' : 'flow_v1',
         description: walLevel >= 2
-          ? (tx.items_summary || 'Thanh toán hoá đơn')
-          : (tx.items_summary || 'Thanh toán hoá đơn') + ' [Ví cơ bản −50%]',
+          ? (tx.items_summary || 'Thanh toán hoá đơn') + ' [Flow_V2 — Ví Premium 100%]'
+          : (tx.items_summary || 'Thanh toán hoá đơn') + ' [Flow_V1 — Ví Cơ Bản −50%]',
         created_at: new Date().toISOString()
       });
 
