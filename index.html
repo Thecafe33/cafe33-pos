@@ -925,6 +925,8 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5"/></svg>
             Thanh toán bằng ví
           </button>
+          <!-- Chú thích cấp ví — hiển thị động bởi updateWalletLevelNotice() -->
+          <div id="wallet-level-notice" style="display:none;margin-top:10px;border-radius:14px;padding:11px 14px;font-size:11px;line-height:1.6;font-weight:600;"></div>
         </div>
 
         <h4 class="font-bold text-[10px] uppercase text-gray-400 ml-2 tracking-widest mb-3">Lịch sử giao dịch</h4>
@@ -4356,6 +4358,32 @@ function renderToGoStamps(count, freeDrinks) {
 ════════════════════════════════════════════════ */
 var walletData = null;
 
+// ── Hiển thị chú thích cấp ví bên dưới nút Thanh toán ──────────
+function updateWalletLevelNotice() {
+  var notice = document.getElementById('wallet-level-notice');
+  if (!notice || !walletData) return;
+  var level = walletData.wallet_level || 1;
+  if (level >= 2) {
+    // Ví VIP — hiển thị badge xanh nhỏ gọn
+    notice.style.display = 'block';
+    notice.style.background = '#ecfdf5';
+    notice.style.border = '1px solid #bbf7d0';
+    notice.style.color = '#065f46';
+    notice.innerHTML = '✅ <b>Ví VIP</b> · Bạn có thể thanh toán <b>100% bill</b> bằng ví.';
+  } else {
+    // Ví cơ bản (cấp 1) — hiển thị chú thích vàng với hướng dẫn nâng cấp
+    notice.style.display = 'block';
+    notice.style.background = '#fffbeb';
+    notice.style.border = '1px dashed #fcd34d';
+    notice.style.color = '#92400e';
+    notice.innerHTML =
+      '⚠️ <b>Ví cơ bản</b> · Chỉ thanh toán được tối đa <b>50% bill</b> (làm tròn xuống), phần còn lại cần thanh toán thêm bằng hình thức khác.<br>'
+      + '<span style="color:#b45309;margin-top:4px;display:inline-block;">'
+      + '👑 Muốn thanh toán <b>100% bill</b>? Nâng lên <b>Ví VIP</b> bằng cách mua hoặc nạp tối thiểu <b>100.000 X point</b> vào ví.'
+      + '</span>';
+  }
+}
+
 // Helper: hiển thị modal dùng hệ thống của The cafe 33
 function walShowMsg(title, msg, cb) {
   showAppModal(title, msg, '💳', cb || null, false);
@@ -4386,6 +4414,7 @@ function loadWalletData() {
       if (mainEl) mainEl.textContent = Number(bMain).toLocaleString('vi-VN');
       if (bonusEl) bonusEl.textContent = Number(bBonus).toLocaleString('vi-VN');
       if (cardEl) cardEl.textContent = curPhone ? '****' + curPhone.slice(-4) : '********';
+      updateWalletLevelNotice();
       loadWalletHistory();
     } else {
       showWalletState('inactive');
@@ -4566,6 +4595,8 @@ showTab = function(t) {
 // ── Payment Code Popup ────────────────────────────
 var _payTxId = null;
 var _payAmount = 0;
+var _payRequiredAmount = 0;  // số tiền ví sẽ thực sự trừ (theo Flow level)
+var _payFlowUsed = null;     // 'flow_v1' | 'flow_v2'
 var _txCodeEntered = '';
 var _walPinEntered = '';
 
@@ -4573,7 +4604,7 @@ function openPaymentCodePopup() {
   if (!walletData || !walletData.is_active) {
     walShowMsg('Thông báo', 'Ví chưa kích hoạt!'); return;
   }
-  _payTxId = null; _payAmount = 0;
+  _payTxId = null; _payAmount = 0; _payRequiredAmount = 0; _payFlowUsed = null;
   _txCodeEntered = ''; _walPinEntered = '';
   walRenderPinBoxes('txd', '');
   walRenderPinBoxes('wpd', '');
@@ -4589,7 +4620,7 @@ function openPaymentCodePopup() {
 
 function closePaymentCodePopup() {
   document.getElementById('payment-code-popup').style.display = 'none';
-  _payTxId = null;
+  _payTxId = null; _payFlowUsed = null; _payRequiredAmount = 0;
 }
 
 function backToTxCode() {
@@ -4672,9 +4703,48 @@ function submitTxCode() {
       if (!txSnap.exists()) { walShowMsg('Lỗi', 'Không tìm thấy giao dịch!'); return; }
       var tx = txSnap.val();
       if (tx.status !== 'pending') { walShowMsg('Lỗi', 'Giao dịch này đã thanh toán rồi!'); return; }
-      _payTxId = cur.txId; _payAmount = tx.amount;
+
+      // ── Detect Wallet Level → fetch correct Flow signal ──────────────────
+      var walLevel = (walletData && walletData.wallet_level) ? walletData.wallet_level : 1;
+      var flowKey, flowSignal, requiredAmt;
+
+      if (walLevel >= 2) {
+        // Flow_V2 — Premium: trả 100% T
+        flowKey    = 'flow_v2';
+        flowSignal = tx.flow_v2 || {};
+        requiredAmt = flowSignal.required !== undefined ? flowSignal.required : tx.amount;
+      } else {
+        // Flow_V1 — Basic: trả 50% T (làm tròn xuống 1.000)
+        flowKey    = 'flow_v1';
+        flowSignal = tx.flow_v1 || {};
+        requiredAmt = flowSignal.required !== undefined
+          ? flowSignal.required
+          : Math.floor(tx.amount * 0.5 / 1000) * 1000;
+      }
+
+      // ── Pre-validate: kiểm tra số dư ngay tại Index ──────────────────────
+      var totalBal = (walletData.balance_main || 0) + (walletData.balance_bonus || 0);
+      if (totalBal < requiredAmt) {
+        var flowLabel = walLevel >= 2 ? 'Ví Premium (100%)' : 'Ví Cơ Bản (50%)';
+        walShowMsg('Không đủ số dư 💸',
+          flowLabel + ' yêu cầu tối thiểu ' + requiredAmt.toLocaleString('vi-VN') + 'đ.\n' +
+          'Số dư hiện tại: ' + totalBal.toLocaleString('vi-VN') + 'đ.');
+        return;
+      }
+
+      _payTxId          = cur.txId;
+      _payAmount        = tx.amount;        // T (tổng bill gốc)
+      _payRequiredAmount = requiredAmt;     // số tiền ví thực sự trừ
+      _payFlowUsed      = flowKey;
+
       var amtEl = document.getElementById('pay-amount-display');
-      if (amtEl) amtEl.textContent = Number(_payAmount).toLocaleString('vi-VN') + 'đ';
+      if (amtEl) {
+        // Hiển thị số tiền ví sẽ trừ (không phải T đầy đủ với Level 1)
+        var flowLabel2 = walLevel >= 2
+          ? requiredAmt.toLocaleString('vi-VN') + 'đ (Ví Premium — 100%)'
+          : requiredAmt.toLocaleString('vi-VN') + 'đ (Ví Cơ Bản — 50% hóa đơn)';
+        amtEl.textContent = flowLabel2;
+      }
       document.getElementById('pay-step-txcode').style.display = 'none';
       document.getElementById('pay-step-pin').style.display = 'block';
       setTimeout(function() {
@@ -4758,9 +4828,14 @@ function walListenPaymentResult(guardTimer) {
       if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
       closePaymentCodePopup();
       loadWalletData();
-      walShowMsg('Thành công ✅', 'Đã thanh toán ' + Number(_payAmount).toLocaleString('vi-VN') + ' X point!\nĐiểm tích lũy đã được cộng vào tài khoản của bạn.');
+      var deducted = _payRequiredAmount || _payAmount;
+      var flowLabel = _payFlowUsed === 'flow_v2'
+        ? 'Ví Premium — thanh toán 100% hóa đơn'
+        : 'Ví Cơ Bản — đã trừ 50% (' + deducted.toLocaleString('vi-VN') + 'đ), vui lòng thanh toán phần còn lại tại quầy';
+      walShowMsg('Thành công ✅',
+        'Đã trừ ví: ' + deducted.toLocaleString('vi-VN') + 'đ\n' + flowLabel + '.');
     } else if (result === 'insufficient') {
-      walShowMsg('Không đủ X point 💸', 'Số dư ví không đủ để thanh toán ' + Number(_payAmount).toLocaleString('vi-VN') + ' X point!');
+      walShowMsg('Không đủ số dư 💸', 'Số dư ví không đủ để thực hiện thanh toán ' + (_payRequiredAmount || _payAmount).toLocaleString('vi-VN') + 'đ!');
     } else if (result === 'expired') {
       walShowMsg('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo mã mới!');
     } else {
