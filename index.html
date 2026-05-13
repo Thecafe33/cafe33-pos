@@ -4693,6 +4693,11 @@ function submitTxCode() {
     if (!cur.txId || cur.expireTime < Date.now()) {
       walShowMsg('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo lại!'); return;
     }
+    // ── Check hết hạn từ cur (đã có sẵn, không cần round-trip thêm) ──
+    if (cur.expireTime < Date.now()) {
+      walShowMsg('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo lại!'); return;
+    }
+
     document.getElementById('loading-overlay').classList.remove('hidden');
     var _guard2 = setTimeout(function() {
       document.getElementById('loading-overlay').classList.add('hidden');
@@ -4702,7 +4707,10 @@ function submitTxCode() {
       clearTimeout(_guard2); document.getElementById('loading-overlay').classList.add('hidden');
       if (!txSnap.exists()) { walShowMsg('Lỗi', 'Không tìm thấy giao dịch!'); return; }
       var tx = txSnap.val();
-      if (tx.status !== 'pending') { walShowMsg('Lỗi', 'Giao dịch này đã thanh toán rồi!'); return; }
+      // Chấp nhận 'pending' (chưa ai auth) hoặc 'authorized_v1' (không dùng ở đây)
+      // Chỉ từ chối nếu đã 'completed' hoặc 'expired'
+      if (tx.status === 'completed') { walShowMsg('Lỗi', 'Giao dịch này đã thanh toán rồi!'); return; }
+      if (tx.status === 'expired')   { walShowMsg('Hết hạn', 'Mã giao dịch đã hết hạn. Yêu cầu thu ngân tạo lại!'); return; }
 
       // ── Detect Wallet Level → fetch correct Flow signal ──────────────────
       var walLevel = (walletData && walletData.wallet_level) ? walletData.wallet_level : 1;
