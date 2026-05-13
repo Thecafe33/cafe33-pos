@@ -4085,13 +4085,52 @@ function confirmPay(cashGiven, cashChange) {
   db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
     orders.unshift({ id: ref.key, ...order, items: itemsArray });
 
+    // ── Flow_V1: deduct Firestore đúng lúc — sau khi order đã lưu thành công ──
+    const walLevel1DeductPromise = isSplitWallet && _walLevel1Phone
+      ? (async () => {
+          try {
+            const snap = await fstore.collection('wallets_xolifa').doc(_walLevel1Phone).get();
+            if (snap.exists) {
+              const w = snap.data();
+              const db_ = Math.min(w.balance_bonus || 0, _walLevel1Deduct);
+              const dm_ = _walLevel1Deduct - db_;
+              await fstore.collection('wallets_xolifa').doc(_walLevel1Phone).update({
+                balance_main:  (w.balance_main  || 0) - dm_,
+                balance_bonus: (w.balance_bonus || 0) - db_,
+                updated_at: new Date().toISOString()
+              });
+              await fstore.collection('wallet_transactions_xolifa').add({
+                pos_tx_id:    _walLevel1TxId,
+                order_id:     ref.key,
+                wallet_id:    _walLevel1Phone,
+                type:         'payment',
+                amount_main:  -dm_,
+                amount_bonus: -db_,
+                wallet_level: 1,
+                flow_used:    'flow_v1',
+                description:  (order.items || 'Thanh toán hoá đơn') + ' [Flow_V1 — Ví Cơ Bản −50%]',
+                created_at:   new Date().toISOString()
+              });
+              // Cập nhật trạng thái tx từ 'authorized_v1' → 'completed'
+              if (_walLevel1TxId) {
+                await db.ref('wallet_payment_xolifa/' + _walLevel1TxId).update({
+                  status: 'completed',
+                  completed_at: Date.now(),
+                  order_id: ref.key
+                }).catch(() => {});
+              }
+            }
+          } catch(e) { console.warn('[Flow_V1 deduct]', e); }
+        })()
+      : Promise.resolve();
+
     const loyPhone = document.getElementById('cuph').value.trim();
     if (loyPhone) {
       const drinkCount = items.reduce((s, c) => s + c.qty, 0);
       loyaltyProcessAfterPay(loyPhone, total, drinkCount, false);
     }
 
-    _finalizeDiscountAfterPay().then(() => {
+    walLevel1DeductPromise.then(() => _finalizeDiscountAfterPay()).then(() => {
       cart = {};
       dgDiscountAmt = 0;
       togoDiscountAmt = 0;
@@ -4099,6 +4138,7 @@ function confirmPay(cashGiven, cashChange) {
       _walLevel1Applied = false; _walLevel1Phone = null;
       _walLevel1Deduct = 0; _walLevel1TxId = null; _walLevel1FullAmount = 0;
       _walCurrentTxId = null; _walCurrentLevel = null; _walCurrentDeduct = null;
+      var l1b = document.getElementById('wal-level1-badge'); if (l1b) l1b.remove();
       resetPayMethod();
       resetDiscountState();
       resetTogoToggle();
@@ -6032,7 +6072,8 @@ function walletListenPayment(txId) {
 
     const txSnap = await db.ref('wallet_payment_xolifa/' + txId).once('value');
     const tx = txSnap.val();
-    if (!tx || tx.status !== 'pending' || tx.expire_time < Date.now()) {
+    // Từ chối nếu đã completed/expired, KHÔNG từ chối authorized_v1
+    if (!tx || tx.status === 'completed' || tx.status === 'expired' || tx.expire_time < Date.now()) {
       await db.ref('wallet_pin_index/current/result').set('expired'); return;
     }
 
@@ -6058,47 +6099,63 @@ function walletListenPayment(txId) {
       await db.ref('wallet_pin_index/current/result').set('insufficient'); return;
     }
 
-    // Trừ ví (bonus trước, main sau)
-    const deductBonus = Math.min(wal.balance_bonus || 0, walDeduct);
-    const deductMain  = walDeduct - deductBonus;
-
     try {
-      await fstore.collection('wallets_xolifa').doc(phone).update({
-        balance_main:  (wal.balance_main  || 0) - deductMain,
-        balance_bonus: (wal.balance_bonus || 0) - deductBonus,
-        updated_at: new Date().toISOString()
-      });
+      if (walLevel >= 2) {
+        // ── Flow_V2 (Premium): deduct NGAY — bill đóng luôn ──────────────
+        const deductBonus = Math.min(wal.balance_bonus || 0, walDeduct);
+        const deductMain  = walDeduct - deductBonus;
 
-      await fstore.collection('wallet_transactions_xolifa').add({
-        pos_tx_id: txId,
-        wallet_id: phone,
-        type: 'payment',
-        amount_main:  -deductMain,
-        amount_bonus: -deductBonus,
-        wallet_level: walLevel,
-        flow_used: walLevel >= 2 ? 'flow_v2' : 'flow_v1',
-        description: walLevel >= 2
-          ? (tx.items_summary || 'Thanh toán hoá đơn') + ' [Flow_V2 — Ví Premium 100%]'
-          : (tx.items_summary || 'Thanh toán hoá đơn') + ' [Flow_V1 — Ví Cơ Bản −50%]',
-        created_at: new Date().toISOString()
-      });
+        await fstore.collection('wallets_xolifa').doc(phone).update({
+          balance_main:  (wal.balance_main  || 0) - deductMain,
+          balance_bonus: (wal.balance_bonus || 0) - deductBonus,
+          updated_at: new Date().toISOString()
+        });
 
-      await db.ref('wallet_payment_xolifa/' + txId).update({
-        status: 'completed',
-        wallet_id: phone,
-        wallet_level: walLevel,
-        wallet_deduct: walDeduct,
-        completed_at: Date.now()
-      });
+        await fstore.collection('wallet_transactions_xolifa').add({
+          pos_tx_id: txId,
+          wallet_id: phone,
+          type: 'payment',
+          amount_main:  -deductMain,
+          amount_bonus: -deductBonus,
+          wallet_level: walLevel,
+          flow_used: 'flow_v2',
+          description: (tx.items_summary || 'Thanh toán hoá đơn') + ' [Flow_V2 — Ví Premium 100%]',
+          created_at: new Date().toISOString()
+        });
 
-      await db.ref('wallet_pin_index/current/result').set('success');
-      setTimeout(() => db.ref('wallet_pin_index/current').remove().catch(() => {}), 3000);
+        await db.ref('wallet_payment_xolifa/' + txId).update({
+          status: 'completed',
+          wallet_id: phone,
+          wallet_level: walLevel,
+          wallet_deduct: walDeduct,
+          completed_at: Date.now()
+        });
+
+        await db.ref('wallet_pin_index/current/result').set('success');
+        setTimeout(() => db.ref('wallet_pin_index/current').remove().catch(() => {}), 3000);
+
+      } else {
+        // ── Flow_V1 (Basic): CHỈ authorize — CHƯA deduct Firestore ─────────
+        // Deduct thực sự chỉ xảy ra khi cashier xác nhận phần còn lại (confirmPayWallet)
+        await db.ref('wallet_payment_xolifa/' + txId).update({
+          status: 'authorized_v1',   // trạng thái trung gian: đã xác thực, chờ hoàn tất
+          wallet_id: phone,
+          wallet_level: walLevel,
+          wallet_deduct: walDeduct,
+          authorized_at: Date.now()
+        });
+
+        await db.ref('wallet_pin_index/current/result').set('success');
+        setTimeout(() => db.ref('wallet_pin_index/current').remove().catch(() => {}), 3000);
+      }
 
       // Lưu vào biến global để confirmPayWallet dùng
       _walCurrentLevel  = walLevel;
       _walCurrentDeduct = walDeduct;
 
-      document.getElementById('walQrStatus').innerHTML = '✅ Thanh toán thành công!';
+      document.getElementById('walQrStatus').innerHTML = walLevel >= 2
+        ? '✅ Thanh toán thành công!'
+        : '✅ Ví cơ bản xác thực OK! Chờ hoàn tất tại quầy…';
       document.getElementById('walQrStatus').style.color = '#1e6b3c';
       document.getElementById('walQrTimer').textContent = '✓';
 
@@ -6188,25 +6245,39 @@ function confirmPayWallet(phone, walDeduct, walLevel, fullAmount) {
     }).catch(err => toast('❌ Lỗi: ' + err.message));
 
   } else {
-    // ── Cơ bản: inject giảm 50% vào bill, ở lại màn hình thanh toán ──
-    // walDeduct = số tiền đã trừ ví (50% làm tròn 1.000)
-    // Inject vào togoDiscountAmt để getFinalTotal() tự tính phần còn lại
+    // ── Flow_V1 (Basic): inject giảm 50% vào bill, ở lại màn hình thanh toán ──
     togoDiscountAmt = walDeduct;
-    _walLevel1Applied = true; // flag để confirmPay biết đây là split bill
-
-    // Lưu thông tin ví để ghi vào bill khi hoàn tất
-    _walLevel1Phone  = phone;
-    _walLevel1Deduct = walDeduct;
-    _walLevel1TxId   = _walCurrentTxId;
+    _walLevel1Applied    = true;
+    _walLevel1Phone      = phone;
+    _walLevel1Deduct     = walDeduct;
+    _walLevel1TxId       = _walCurrentTxId;
     _walLevel1FullAmount = fullAmount;
 
-    // Reset payment method selection, ở lại màn hình
-    resetPayMethod();
+    // Đảm bảo cashier đang ở màn thanh toán sc (không phải sm)
+    showScreen('sc');
 
-    // Cập nhật display
-    renderCartDrawer();
-    const remaining = getFinalTotal();
-    toast('🪙 Ví cơ bản đã trừ ' + fmt(walDeduct) + '. Còn ' + fmt(remaining) + ' — chọn hình thức thanh toán tiếp!');
+    // Cập nhật TẤT CẢ các vùng hiển thị tổng tiền ngay lập tức
+    updCoTotal();
+    syncDisplay('ordering', { walLevel1: true, walDeduct: walDeduct });
+
+    // Inject badge ví vào mini-cart (renderScCartPreview không có slot này — thêm vào footer)
+    const scCartEl = document.getElementById('sc-cart-lines');
+    if (scCartEl) {
+      const badge = document.createElement('div');
+      badge.id = 'wal-level1-badge';
+      badge.style.cssText = 'margin-top:8px;padding:8px 12px;background:#e8f5ee;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;';
+      badge.innerHTML =
+        '<span style="font-size:12px;font-weight:700;color:#1e6b3c;">🪙 Ví Cơ Bản (-50%)</span>' +
+        '<span style="font-size:13px;font-weight:800;color:#1e6b3c;">-' + fmt(walDeduct) + '</span>';
+      // Xóa badge cũ nếu có rồi append
+      var old = document.getElementById('wal-level1-badge');
+      if (old) old.remove();
+      scCartEl.appendChild(badge);
+    }
+
+    resetPayMethod();
+    toast('🪙 Ví cơ bản xác thực ' + fmt(walDeduct) + '. Còn ' + fmt(getFinalTotal()) + ' — chọn hình thức thanh toán tiếp!');
+  }
   }
 }
 
