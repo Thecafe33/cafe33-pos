@@ -3101,24 +3101,31 @@ function renderCustomerInfo(totalPoints, stampCount) {
   const available = Object.entries(gifts).filter(([, g]) => !g.used);
 
   const vList = document.getElementById('voucherList');
-  let vHtml = '';
-  
   const freeDrinkData = loyaltyCustomer ? (loyaltyCustomer.free_drink_available || 0) : 0;
+
+  // ── Phần 1: Ly To-Go Miễn Phí (stamp đặc biệt) — LUÔN HIỆN ĐỘC LẬP, không bị cuộn ──
+  let stampHtml = '';
   if (freeDrinkData > 0) {
-    vHtml += `
-      <div class="voucher-item" style="border-color:#34d399; background:#ecfdf5; margin-bottom: 8px;">
-        <span class="voucher-name" style="color:#065f46; font-weight: 700;">🎁 Còn ${freeDrinkData} ly To-Go Miễn Phí</span>
-        <button class="voucher-btn" style="background:#10b981; border:none; color:#fff;" onclick="consumeFreeToGoDrink('${curCustomer.phone}')">Đổi quà ngay</button>
+    stampHtml = `
+      <div style="border:2px solid #34d399;background:#ecfdf5;border-radius:10px;padding:10px 14px;
+                  display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#065f46;">☕ ${freeDrinkData} Ly To-Go Miễn Phí</div>
+          <div style="font-size:10px;color:#059669;font-weight:600;margin-top:2px;">Tích đủ 6 Stamp • Chọn món rồi bấm đổi</div>
+        </div>
+        <button style="background:#10b981;border:none;color:#fff;border-radius:8px;padding:6px 12px;
+                       font-family:'Google Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;"
+                onclick="consumeFreeToGoDrink('${curCustomer.phone}')">Đổi ngay</button>
       </div>`;
   }
 
+  // ── Phần 2: Các mã giảm giá khác từ myGifts — có scroll nếu nhiều ──
+  let giftsHtml = '';
   if (available.length > 0) {
-    vHtml += available.map(([key, g]) => {
+    giftsHtml = available.map(([key, g]) => {
       const safeName = (g.name || key).replace(/&/g,'&amp;').replace(/</g,'&lt;');
       const safeCode = (g.code || '').replace(/&/g,'&amp;');
-      const dName = (g.name || key).replace(/'/g, "\'");
-      const dCode = (g.code || '');
-      const dRewKey = (g.rewardKey || '');
+      const dRewKey  = (g.rewardKey || '');
       const gScp = g.scope || 'cafe33';
       const scopeTag = gScp === 'both'
         ? `<span style="font-size:9px;color:#166534;font-weight:800;background:#DCFCE7;padding:1px 6px;border-radius:999px;">🟢 Cả 2 quán</span>`
@@ -3134,18 +3141,29 @@ function renderCustomerInfo(totalPoints, stampCount) {
     }).join('');
   }
 
-  if (!vHtml) {
+  // ── Render: stamp pin trên cùng, mã khác scroll bên dưới ──
+  if (!stampHtml && !giftsHtml) {
     vList.innerHTML = `<div style="font-size:12px;color:#bbb;text-align:center;padding:4px">Không có voucher khả dụng</div>`;
   } else {
-    vList.innerHTML = vHtml;
-    // Gán sự kiện click cho các nút voucher (tránh dùng inline onclick để không bị lỗi escape)
+    // Header "Mã giảm giá" chỉ hiện nếu có cả 2 loại
+    const giftHeader = (stampHtml && giftsHtml)
+      ? `<div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.6px;margin:6px 0 4px;">Mã giảm giá khác</div>`
+      : '';
+
+    // Khung scroll chỉ bọc phần myGifts, tối đa ~2 item hiển thị
+    const scrollWrap = giftsHtml
+      ? `<div style="max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;
+                     padding-right:2px;scrollbar-width:thin;scrollbar-color:#d1d5db transparent;">
+           ${giftsHtml}
+         </div>`
+      : '';
+
+    vList.innerHTML = stampHtml + giftHeader + scrollWrap;
+
+    // Gán sự kiện click cho các nút voucher (tránh dùng inline onclick)
     vList.querySelectorAll('.voucher-btn[data-key]').forEach(btn => {
       btn.addEventListener('click', function() {
-        const k = this.dataset.key;
-        const n = this.dataset.name;
-        const c = this.dataset.code;
-        const r = this.dataset.rewkey;
-        applyVoucher(k, n, r, c);
+        applyVoucher(this.dataset.key, this.dataset.name, this.dataset.rewkey, this.dataset.code);
       });
     });
   }
