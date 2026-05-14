@@ -3095,31 +3095,26 @@ function renderCustomerInfo(totalPoints, stampCount) {
   document.getElementById('custPts').textContent = ptsHtml;
   document.getElementById('custNote').textContent = curCustomer.note;
 
-  // Lọc Voucher chưa dùng (used !== true) — hiển thị tất cả, không filter scope
-  // vì gift đã được cấp đích danh cho khách này
+  // Lọc Voucher chưa dùng (used !== true)
   const gifts = curCustomer.myGifts || {};
   const available = Object.entries(gifts).filter(([, g]) => !g.used);
 
   const vList = document.getElementById('voucherList');
   const freeDrinkData = loyaltyCustomer ? (loyaltyCustomer.free_drink_available || 0) : 0;
 
-  // ── Phần 1: Ly To-Go Miễn Phí (stamp đặc biệt) — LUÔN HIỆN ĐỘC LẬP, không bị cuộn ──
+  // ── Phần 1: Ly To-Go Miễn Phí — PIN cố định trên cùng, KHÔNG bị scroll ẩn ──
   let stampHtml = '';
   if (freeDrinkData > 0) {
-    stampHtml = `
-      <div style="border:2px solid #34d399;background:#ecfdf5;border-radius:10px;padding:10px 14px;
-                  display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-        <div>
-          <div style="font-size:13px;font-weight:800;color:#065f46;">☕ ${freeDrinkData} Ly To-Go Miễn Phí</div>
-          <div style="font-size:10px;color:#059669;font-weight:600;margin-top:2px;">Tích đủ 6 Stamp • Chọn món rồi bấm đổi</div>
-        </div>
-        <button style="background:#10b981;border:none;color:#fff;border-radius:8px;padding:6px 12px;
-                       font-family:'Google Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;"
-                onclick="consumeFreeToGoDrink('${curCustomer.phone}')">Đổi ngay</button>
-      </div>`;
+    stampHtml = `<div style="border:2px solid #34d399;background:#ecfdf5;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div>
+        <div style="font-size:13px;font-weight:800;color:#065f46;">☕ ${freeDrinkData} Ly To-Go Miễn Phí</div>
+        <div style="font-size:10px;color:#059669;font-weight:600;margin-top:2px;">Tích đủ 6 Stamp • Thêm món vào giỏ rồi bấm Đổi ngay</div>
+      </div>
+      <button style="background:#10b981;border:none;color:#fff;border-radius:8px;padding:6px 12px;font-family:'Google Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;" onclick="consumeFreeToGoDrink('${curCustomer.phone}')">Đổi ngay</button>
+    </div>`;
   }
 
-  // ── Phần 2: Các mã giảm giá khác từ myGifts — có scroll nếu nhiều ──
+  // ── Phần 2: Các mã giảm giá myGifts — scroll nếu có nhiều ──
   let giftsHtml = '';
   if (available.length > 0) {
     giftsHtml = available.map(([key, g]) => {
@@ -3141,26 +3136,17 @@ function renderCustomerInfo(totalPoints, stampCount) {
     }).join('');
   }
 
-  // ── Render: stamp pin trên cùng, mã khác scroll bên dưới ──
+  // ── Render: stamp luôn trên, mã giảm cuộn bên dưới ──
   if (!stampHtml && !giftsHtml) {
     vList.innerHTML = `<div style="font-size:12px;color:#bbb;text-align:center;padding:4px">Không có voucher khả dụng</div>`;
   } else {
-    // Header "Mã giảm giá" chỉ hiện nếu có cả 2 loại
     const giftHeader = (stampHtml && giftsHtml)
       ? `<div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.6px;margin:6px 0 4px;">Mã giảm giá khác</div>`
       : '';
-
-    // Khung scroll chỉ bọc phần myGifts, tối đa ~2 item hiển thị
     const scrollWrap = giftsHtml
-      ? `<div style="max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;
-                     padding-right:2px;scrollbar-width:thin;scrollbar-color:#d1d5db transparent;">
-           ${giftsHtml}
-         </div>`
+      ? `<div style="max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px;">${giftsHtml}</div>`
       : '';
-
     vList.innerHTML = stampHtml + giftHeader + scrollWrap;
-
-    // Gán sự kiện click cho các nút voucher (tránh dùng inline onclick)
     vList.querySelectorAll('.voucher-btn[data-key]').forEach(btn => {
       btn.addEventListener('click', function() {
         applyVoucher(this.dataset.key, this.dataset.name, this.dataset.rewkey, this.dataset.code);
@@ -3754,57 +3740,42 @@ function _finalizeDiscountAfterPay() {
 }
 
 function consumeFreeToGoDrink(phone) {
-  // Bước 1: Kiểm tra giỏ có món chưa
+  // Bước 1: Giỏ phải có món trước
   const cartItems = Object.entries(cart).filter(([, ci]) => !ci._vKey && !ci._discountId);
-
   if (!cartItems.length) {
-    // Giỏ trống → hướng dẫn nhân viên thêm món trước, KHÔNG trừ DB, KHÔNG mất trạng thái
-    toast('🛒 Chưa có món trong giỏ!\nHãy thêm món khách muốn uống trước, rồi bấm "Đổi quà ngay".');
+    toast('🛒 Chưa có món trong giỏ!\nThêm món khách muốn uống trước, rồi bấm "Đổi ngay".');
     return;
   }
 
-  // Bước 2: Kiểm tra DB còn ly miễn phí không
+  // Bước 2: Kiểm tra Firebase còn ly không
   fstore.collection('customers').doc(phone).get().then(snap => {
     if (!snap.exists) { toast('❌ Không tìm thấy khách hàng!'); return; }
     const data = snap.data();
     const curFree = data.free_drink_available || 0;
+    if (curFree <= 0) { toast('❌ Khách không còn ly miễn phí nào.'); return; }
 
-    if (curFree <= 0) {
-      toast('❌ Khách không còn ly miễn phí nào.');
-      return;
-    }
-
-    // Bước 3: Mở modal chọn món trong giỏ để áp miễn phí 100%
+    // Bước 3: Mở modal chọn món → áp 100% miễn phí
     const tempVKey = '__free_stamp__' + Date.now();
     _giftVoucherKey   = tempVKey;
     _giftVoucherPhone = phone;
-
     openPickCartModal(
       { type: 'item_free', label: '🎁 Ly miễn phí (6 Stamp)' },
       tempVKey,
       'Ly miễn phí (6 Stamp)'
     );
 
-    // Sau khi modal đóng: kiểm tra có món được chọn không → mới trừ DB
+    // Chỉ trừ DB sau khi nhân viên đã chọn món trong modal
     const modal = document.getElementById('xl-pick-modal');
     const observer = new MutationObserver(() => {
       if (modal.style.display === 'none') {
         observer.disconnect();
         const applied = Object.values(cart).some(ci => ci._vKey === tempVKey);
         if (applied) {
-          // Nhân viên đã chọn món → trừ Firebase
-          snap.ref.update({
-            free_drink_available: firebase.firestore.FieldValue.increment(-1)
-          }).then(() => {
-            toast('✅ Đã áp 1 ly miễn phí vào đơn!');
-            renderCartDrawer();
-            updFooter();
-          }).catch(err => {
-            toast('⚠️ Áp vào giỏ OK nhưng lỗi cập nhật DB: ' + err.message);
-          });
+          snap.ref.update({ free_drink_available: firebase.firestore.FieldValue.increment(-1) })
+            .then(() => { toast('✅ Đã áp 1 ly miễn phí vào đơn!'); renderCartDrawer(); updFooter(); })
+            .catch(err => toast('⚠️ Lỗi cập nhật DB: ' + err.message));
         } else {
-          // Nhân viên đóng modal mà không chọn → hủy, không trừ DB
-          _giftVoucherKey   = null;
+          _giftVoucherKey = null;
           _giftVoucherPhone = null;
           toast('ℹ️ Chưa chọn món — ly miễn phí chưa được đổi.');
         }
@@ -3812,10 +3783,7 @@ function consumeFreeToGoDrink(phone) {
     });
     observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
 
-  }).catch(err => {
-    console.error('Lỗi đổi quà:', err);
-    toast('❌ Có lỗi xảy ra: ' + err.message);
-  });
+  }).catch(err => toast('❌ Có lỗi xảy ra: ' + err.message));
 }
 
 // ============================================================
