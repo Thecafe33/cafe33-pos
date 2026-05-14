@@ -3736,54 +3736,67 @@ function _finalizeDiscountAfterPay() {
 }
 
 function consumeFreeToGoDrink(phone) {
-  if (!confirm('Xác nhận đổi 1 ly miễn phí To-Go cho khách hàng này?')) return;
-  
-  fstore.collection('customers').doc(phone).get().then(snap => {
-    if (!snap.exists) return;
-    const data = snap.data();
-    const curFree = data.free_drink_available || 0;
-    
-    if (curFree <= 0) {
-      toast('Lỗi: Thuê bao không còn ly miễn phí.');
-      return;
-    }
-    
-    return snap.ref.update({
-      free_drink_available: curFree - 1
-    }).then(() => {
-      toast('✅ Đã xác nhận đổi 1 ly miễn phí thành công!');
-      // Refresh dữ liệu khách hàng luôn
-      lookupCustomer();
-    });
-  }).catch(err => {
-    console.error('Lỗi đổi quà:', err);
-    toast('❌ Có lỗi xảy ra, không thể đổi quà!');
-  });
-}
+  // Bước 1: Kiểm tra giỏ có món chưa
+  const cartItems = Object.entries(cart).filter(([, ci]) => !ci._vKey && !ci._discountId);
 
-function consumeFreeToGoDrink(phone) {
-  if (!confirm('Xác nhận đổi 1 ly miễn phí To-Go cho khách hàng này?')) return;
-  
+  if (!cartItems.length) {
+    // Giỏ trống → hướng dẫn nhân viên thêm món trước, KHÔNG trừ DB, KHÔNG mất trạng thái
+    toast('🛒 Chưa có món trong giỏ!\nHãy thêm món khách muốn uống trước, rồi bấm "Đổi quà ngay".');
+    return;
+  }
+
+  // Bước 2: Kiểm tra DB còn ly miễn phí không
   fstore.collection('customers').doc(phone).get().then(snap => {
-    if (!snap.exists) return;
+    if (!snap.exists) { toast('❌ Không tìm thấy khách hàng!'); return; }
     const data = snap.data();
     const curFree = data.free_drink_available || 0;
-    
+
     if (curFree <= 0) {
-      toast('Lỗi: Thuê bao không còn ly miễn phí.');
+      toast('❌ Khách không còn ly miễn phí nào.');
       return;
     }
-    
-    return snap.ref.update({
-      free_drink_available: curFree - 1
-    }).then(() => {
-      toast('✅ Đã xác nhận đổi 1 ly miễn phí thành công!');
-      // Refresh dữ liệu khách hàng luôn
-      lookupCustomer();
+
+    // Bước 3: Mở modal chọn món trong giỏ để áp miễn phí 100%
+    const tempVKey = '__free_stamp__' + Date.now();
+    _giftVoucherKey   = tempVKey;
+    _giftVoucherPhone = phone;
+
+    openPickCartModal(
+      { type: 'item_free', label: '🎁 Ly miễn phí (6 Stamp)' },
+      tempVKey,
+      'Ly miễn phí (6 Stamp)'
+    );
+
+    // Sau khi modal đóng: kiểm tra có món được chọn không → mới trừ DB
+    const modal = document.getElementById('xl-pick-modal');
+    const observer = new MutationObserver(() => {
+      if (modal.style.display === 'none') {
+        observer.disconnect();
+        const applied = Object.values(cart).some(ci => ci._vKey === tempVKey);
+        if (applied) {
+          // Nhân viên đã chọn món → trừ Firebase
+          snap.ref.update({
+            free_drink_available: firebase.firestore.FieldValue.increment(-1)
+          }).then(() => {
+            toast('✅ Đã áp 1 ly miễn phí vào đơn!');
+            renderCartDrawer();
+            updFooter();
+          }).catch(err => {
+            toast('⚠️ Áp vào giỏ OK nhưng lỗi cập nhật DB: ' + err.message);
+          });
+        } else {
+          // Nhân viên đóng modal mà không chọn → hủy, không trừ DB
+          _giftVoucherKey   = null;
+          _giftVoucherPhone = null;
+          toast('ℹ️ Chưa chọn món — ly miễn phí chưa được đổi.');
+        }
+      }
     });
+    observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
+
   }).catch(err => {
     console.error('Lỗi đổi quà:', err);
-    toast('❌ Có lỗi xảy ra, không thể đổi quà!');
+    toast('❌ Có lỗi xảy ra: ' + err.message);
   });
 }
 
