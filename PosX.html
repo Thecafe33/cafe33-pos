@@ -597,6 +597,9 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <button class="bic" onclick="openDatePicker()" title="Chọn khoảng ngày">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       </button>
+      <button class="bic" onclick="openItemRanking()" title="Xếp hạng món" id="btn-item-ranking" style="background:#fff8e1;border-color:#ffd54f;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z" fill="#f59e0b" stroke="#f59e0b" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      </button>
       <button class="btn-close-screen" onclick="showScreen('sm')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
       </button>
@@ -670,6 +673,29 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ITEM RANKING SCREEN -->
+<div id="rv-items" class="screen">
+  <div class="rvh">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z" fill="#f59e0b" stroke="#f59e0b" stroke-width="1.2" stroke-linejoin="round"/></svg>
+      <span class="rvt" style="font-size:20px;">DOANH THU THEO MÓN</span>
+    </div>
+    <button class="btn-close-screen" onclick="showScreen('rv')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div id="rv-items-date-label" style="font-size:12px;font-weight:600;color:var(--gm);padding:0 20px 12px;"></div>
+  <div class="rvtabs" id="rv-items-tabs">
+    <button class="tbb active" onclick="setItemTab(this,'today')">HÔM NAY</button>
+    <button class="tbb" onclick="setItemTab(this,'week')">TUẦN</button>
+    <button class="tbb" onclick="setItemTab(this,'month')">THÁNG</button>
+    <button class="tbb" onclick="setItemTab(this,'year')">NĂM</button>
+  </div>
+  <div id="rv-items-list" style="overflow-y:auto;flex:1;padding:0 16px 32px;display:flex;flex-direction:column;gap:10px;">
+    <div style="text-align:center;padding:40px;color:#bbb;">Đang tải...</div>
   </div>
 </div>
 
@@ -2348,17 +2374,54 @@ function loadMenu() {
   loadRecentOrders(); // load 3 ngày gần nhất từ RT
 }
 
+// ─── Real-time listeners cho 3 ngày gần nhất ───────────────────────────────
+// Mỗi ref được giữ để có thể off() khi cần (ví dụ qua ngày mới)
+const _rtListeners = {}; // key: 'month/day' → ref đang listen
+
+function _attachRtListener(month, day) {
+  const path = 'orders_xolifa/' + month + '/' + day;
+  if (_rtListeners[path]) return; // đã listen rồi, bỏ qua
+  const ref = db.ref(path);
+  _rtListeners[path] = ref;
+  ref.on('child_added', snap => {
+    const key = snap.key;
+    const o = snap.val();
+    if (!o || orders.find(x => x.id === key)) return; // đã có rồi
+    orders.unshift({ id: key, ...o, items: o.itemsArray || [] });
+    orders.sort((a, b) => b.createdAt > a.createdAt ? 1 : -1);
+    // Cập nhật UI nếu đang mở đúng màn hình
+    const todayFiltered = orders.filter(o => o.date === todayKey());
+    if (typeof updRv === 'function') updRv(todayFiltered);
+    if (typeof drawChart === 'function') drawChart('today', todayFiltered);
+    if (typeof renderH === 'function') renderH();
+  });
+}
+
+function _refreshRtListeners() {
+  // Gắn listener cho hôm nay + 2 ngày trước (tổng 3 ngày)
+  const now = new Date();
+  for (let i = 0; i <= 2; i++) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    _attachRtListener(MONTH_KEYS[d.getMonth()], String(d.getDate()).padStart(2, '0'));
+  }
+}
+
 function loadRecentOrders() {
-  // Load hôm nay + 2 ngày trước từ RT (3 ngày gần nhất còn trong RT)
+  // Gắn listener real-time (nếu chưa có); trả về Promise khi data ban đầu đã load xong
   const now = new Date();
   const jobs = [];
   for (let i = 0; i <= 2; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
+    const d = new Date(now); d.setDate(d.getDate() - i);
     const month = MONTH_KEYS[d.getMonth()];
     const day = String(d.getDate()).padStart(2, '0');
+    const path = 'orders_xolifa/' + month + '/' + day;
+
+    // Gắn real-time listener (idempotent)
+    _attachRtListener(month, day);
+
+    // Vẫn cần once() để biết khi nào initial load hoàn tất (Promise)
     jobs.push(
-      db.ref('orders_xolifa/' + month + '/' + day).once('value').then(snap => {
+      db.ref(path).once('value').then(snap => {
         const data = snap.val();
         if (!data) return;
         Object.entries(data).forEach(([key, o]) => {
@@ -2370,13 +2433,22 @@ function loadRecentOrders() {
   }
   return Promise.all(jobs).then(() => {
     orders.sort((a, b) => b.createdAt > a.createdAt ? 1 : -1);
-    // Re-render UI sau khi load xong — để B/C/D thấy doanh thu ngay khi mở
     const todayFiltered = orders.filter(o => o.date === todayKey());
     if (typeof updRv === 'function') updRv(todayFiltered);
     if (typeof drawChart === 'function') drawChart('today', todayFiltered);
     if (typeof renderH === 'function') renderH();
   });
 }
+
+// Tự động gắn lại listener khi qua ngày mới (check mỗi phút)
+let _lastListenerDay = new Date().getDate();
+setInterval(() => {
+  const today = new Date().getDate();
+  if (today !== _lastListenerDay) {
+    _lastListenerDay = today;
+    _refreshRtListeners(); // gắn thêm listener cho ngày mới
+  }
+}, 60000);
 
 // Load dữ liệu từ Firestore Archive cho các ngày cũ hơn 3 ngày
 // dateList: mảng { month:'apr', day:'09', year:2026 }
@@ -3100,18 +3172,21 @@ function renderCustomerInfo(totalPoints, stampCount) {
   const available = Object.entries(gifts).filter(([, g]) => !g.used);
 
   const vList = document.getElementById('voucherList');
-  const freeDrinkData = loyaltyCustomer ? (loyaltyCustomer.free_drink_available || 0) : 0;
+  const _dbFree  = loyaltyCustomer ? (loyaltyCustomer.free_drink_available || 0) : 0;
+  const _dbStamp = loyaltyCustomer ? (loyaltyCustomer.stamp_count || 0) : 0;
+  // Tính tổng ly miễn phí: DB + stamp chưa convert (tránh trường hợp DB chưa cập nhật)
+  const effectiveFree = _dbFree + Math.floor(_dbStamp / 6);
 
-  // ── Phần 1: Ly To-Go Miễn Phí — PIN cố định trên cùng, KHÔNG bị scroll ẩn ──
+  // Phần 1: Ly To-Go Miễn Phí — PIN trên cùng, không bị scroll ẩn
   let stampHtml = '';
-  if (freeDrinkData > 0) {
-    stampHtml = `<div style="border:2px solid #34d399;background:#ecfdf5;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div>
-        <div style="font-size:13px;font-weight:800;color:#065f46;">☕ ${freeDrinkData} Ly To-Go Miễn Phí</div>
-        <div style="font-size:10px;color:#059669;font-weight:600;margin-top:2px;">Tích đủ 6 Stamp • Thêm món vào giỏ rồi bấm Đổi ngay</div>
-      </div>
-      <button style="background:#10b981;border:none;color:#fff;border-radius:8px;padding:6px 12px;font-family:'Google Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;" onclick="consumeFreeToGoDrink('${curCustomer.phone}')">Đổi ngay</button>
-    </div>`;
+  if (effectiveFree > 0) {
+    stampHtml = '<div style="border:2px solid #34d399;background:#ecfdf5;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+      + '<div>'
+      + '<div style="font-size:13px;font-weight:800;color:#065f46;">\u2615 ' + effectiveFree + ' Ly To-Go Mi\u1ec5n Ph\u00ed</div>'
+      + '<div style="font-size:10px;color:#059669;font-weight:600;margin-top:2px;">T\u00edch \u0111\u1ee7 6 Stamp \u2022 Th\u00eam m\u00f3n v\u00e0o gi\u1ecf r\u1ed3i b\u1ea5m \u0110\u1ed5i ngay</div>'
+      + '</div>'
+      + '<button style="background:#10b981;border:none;color:#fff;border-radius:8px;padding:6px 12px;font-family:\'Google Sans\',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;" onclick="consumeFreeToGoDrink(\'' + curCustomer.phone + '\')">\u0110\u1ed5i ngay</button>'
+      + '</div>';
   }
 
   // ── Phần 2: Các mã giảm giá myGifts — scroll nếu có nhiều ──
@@ -3715,6 +3790,10 @@ function resetDiscountState() {
   _pendingVoucherArgs = null;
   _pendingVoucherFn = null;
   selectedVoucher = null;
+  // Reset stamp free intent
+  _stampFreePhone = null;
+  _stampFreeNeedConvert = false;
+  _stampFreeOriginalStamp = 0;
 }
 
 function _finalizeDiscountAfterPay() {
@@ -3739,6 +3818,12 @@ function _finalizeDiscountAfterPay() {
   return Promise.all(jobs);
 }
 
+// _stampFreePhone: phone cần trừ free_drink_available sau khi order hoàn thành
+// _stampFreeNeedConvert: true nếu cần convert stamp_count → free_drink_available
+let _stampFreePhone = null;
+let _stampFreeNeedConvert = false;
+let _stampFreeOriginalStamp = 0;
+
 function consumeFreeToGoDrink(phone) {
   // Bước 1: Giỏ phải có món trước
   const cartItems = Object.entries(cart).filter(([, ci]) => !ci._vKey && !ci._discountId);
@@ -3751,10 +3836,13 @@ function consumeFreeToGoDrink(phone) {
   fstore.collection('customers').doc(phone).get().then(snap => {
     if (!snap.exists) { toast('❌ Không tìm thấy khách hàng!'); return; }
     const data = snap.data();
-    const curFree = data.free_drink_available || 0;
-    if (curFree <= 0) { toast('❌ Khách không còn ly miễn phí nào.'); return; }
+    const curFree  = data.free_drink_available || 0;
+    const curStamp = data.stamp_count || 0;
+    const effectiveFree = curFree + Math.floor(curStamp / 6);
 
-    // Bước 3: Mở modal chọn món → áp 100% miễn phí
+    if (effectiveFree <= 0) { toast('❌ Khách không còn ly miễn phí nào.'); return; }
+
+    // Bước 3: Mở modal chọn món → áp 100% miễn phí (KHÔNG ghi DB ở đây)
     const tempVKey = '__free_stamp__' + Date.now();
     _giftVoucherKey   = tempVKey;
     _giftVoucherPhone = phone;
@@ -3764,19 +3852,24 @@ function consumeFreeToGoDrink(phone) {
       'Ly miễn phí (6 Stamp)'
     );
 
-    // Chỉ trừ DB sau khi nhân viên đã chọn món trong modal
+    // Sau khi nhân viên chọn món trong modal → lưu intent, CHƯA ghi DB
     const modal = document.getElementById('xl-pick-modal');
     const observer = new MutationObserver(() => {
       if (modal.style.display === 'none') {
         observer.disconnect();
         const applied = Object.values(cart).some(ci => ci._vKey === tempVKey);
         if (applied) {
-          snap.ref.update({ free_drink_available: firebase.firestore.FieldValue.increment(-1) })
-            .then(() => { toast('✅ Đã áp 1 ly miễn phí vào đơn!'); renderCartDrawer(); updFooter(); })
-            .catch(err => toast('⚠️ Lỗi cập nhật DB: ' + err.message));
+          // Lưu lại để _finalizeStampFreeAfterPay() ghi DB khi order xong
+          _stampFreePhone = phone;
+          _stampFreeNeedConvert = (curFree <= 0 && curStamp >= 6);
+          _stampFreeOriginalStamp = curStamp;
+          toast('✅ Đã chọn ly miễn phí — sẽ trừ stamp sau khi thanh toán xong!');
+          renderCartDrawer();
+          updFooter();
         } else {
-          _giftVoucherKey = null;
+          _giftVoucherKey   = null;
           _giftVoucherPhone = null;
+          _stampFreePhone   = null;
           toast('ℹ️ Chưa chọn món — ly miễn phí chưa được đổi.');
         }
       }
@@ -3784,6 +3877,35 @@ function consumeFreeToGoDrink(phone) {
     observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
 
   }).catch(err => toast('❌ Có lỗi xảy ra: ' + err.message));
+}
+
+// Gọi sau khi order lưu thành công — ghi DB trừ stamp/free_drink
+async function _finalizeStampFreeAfterPay() {
+  if (!_stampFreePhone) return;
+  const phone = _stampFreePhone;
+  _stampFreePhone = null;
+  try {
+    const snap = await fstore.collection('customers').doc(phone).get();
+    if (!snap.exists) return;
+    const data = snap.data();
+    const curFree  = data.free_drink_available || 0;
+    const curStamp = data.stamp_count || 0;
+
+    if (curFree > 0) {
+      // Trường hợp thường: trừ 1 ly có sẵn
+      await snap.ref.update({ free_drink_available: firebase.firestore.FieldValue.increment(-1) });
+    } else if (curStamp >= 6) {
+      // Trường hợp stamp chưa convert: convert rồi trừ luôn
+      const bonus = Math.floor(curStamp / 6);
+      const remainStamp = curStamp % 6;
+      await snap.ref.update({
+        free_drink_available: bonus - 1,   // convert rồi dùng 1 ly ngay
+        stamp_count: remainStamp
+      });
+    }
+  } catch(e) {
+    console.warn('[_finalizeStampFreeAfterPay]', e);
+  }
 }
 
 // ============================================================
@@ -4128,6 +4250,8 @@ function confirmPay(cashGiven, cashChange) {
       const drinkCount = items.reduce((s, c) => s + c.qty, 0);
       loyaltyProcessAfterPay(loyPhone, total, drinkCount, false);
     }
+    // Ghi trừ stamp miễn phí SAU KHI order lưu thành công
+    _finalizeStampFreeAfterPay();
 
     walLevel1DeductPromise.then(() => _finalizeDiscountAfterPay()).then(() => {
       cart = {};
@@ -4318,6 +4442,109 @@ function setTab(btn, period) {
     loadArchiveDates(archiveDatesInRange(from, now)).then(render);
   }
 }
+// ============================================================
+// ITEM RANKING
+// ============================================================
+function openItemRanking() {
+  showScreen('rv-items');
+  const activeTab = document.querySelector('#rv .tbb.active');
+  let period = 'today';
+  if (activeTab) {
+    const txt = activeTab.textContent.trim();
+    if (txt === 'TUẦN') period = 'week';
+    else if (txt === 'THÁNG') period = 'month';
+    else if (txt === 'NĂM') period = 'year';
+  }
+  document.querySelectorAll('#rv-items-tabs .tbb').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick').includes("'" + period + "'"));
+  });
+  renderItemRanking(period);
+}
+
+function setItemTab(btn, period) {
+  document.querySelectorAll('#rv-items-tabs .tbb').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderItemRanking(period);
+}
+
+function renderItemRanking(period) {
+  const now = new Date();
+  const p2 = x => String(x).padStart(2,'0');
+  const lbl = document.getElementById('rv-items-date-label');
+  const doLoad = (from, labelTxt, filterFn) => {
+    lbl.textContent = labelTxt;
+    const doRender = () => _doRenderItemRanking(orders.filter(filterFn));
+    if (period === 'today') { doRender(); }
+    else {
+      document.getElementById('rv-items-list').innerHTML = '<div style="text-align:center;padding:40px;color:#bbb;">Đang tải...</div>';
+      loadArchiveDates(archiveDatesInRange(from, now)).then(doRender);
+    }
+  };
+
+  if (period === 'today') {
+    doLoad(null, 'Hôm nay: ' + p2(now.getDate()) + '/' + p2(now.getMonth()+1) + '/' + now.getFullYear(),
+      o => o.date === todayKey());
+  } else if (period === 'week') {
+    const from = new Date(now); from.setDate(from.getDate() - 6); from.setHours(0,0,0,0);
+    doLoad(from, '7 ngày: ' + p2(from.getDate()) + '/' + p2(from.getMonth()+1) + ' – ' + p2(now.getDate()) + '/' + p2(now.getMonth()+1),
+      o => { const [d,m,y]=o.date.split('/'); return new Date(+y,+m-1,+d) >= from; });
+  } else if (period === 'month') {
+    const mm = String(now.getMonth()+1).padStart(2,'0'), yyyy = now.getFullYear();
+    const from = new Date(yyyy, now.getMonth(), 1);
+    doLoad(from, 'Tháng ' + (now.getMonth()+1) + '/' + yyyy,
+      o => o.date.slice(3,10) === mm + '/' + yyyy);
+  } else {
+    const yyyy = String(now.getFullYear());
+    const from = new Date(now.getFullYear(), 0, 1);
+    doLoad(from, 'Năm ' + yyyy, o => o.date.endsWith(yyyy));
+  }
+}
+
+function _doRenderItemRanking(filteredOrders) {
+  const container = document.getElementById('rv-items-list');
+  const map = {};
+  filteredOrders.forEach(o => {
+    (o.items || []).forEach(it => {
+      if (!it || !it.name) return;
+      const key = it.name + (it.size ? '|' + it.size : '');
+      if (!map[key]) map[key] = { name: it.name, size: it.size || '', qty: 0, total: 0 };
+      const toppingSum = (it.toppings || []).reduce((s, t) => s + (t.price || 0), 0);
+      map[key].qty += (it.qty || 1);
+      map[key].total += (it.price + toppingSum) * (it.qty || 1);
+    });
+  });
+
+  const ranked = Object.values(map).sort((a, b) => b.total - a.total);
+  if (!ranked.length) {
+    container.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#bbb;font-size:14px;font-weight:600;">Không có dữ liệu trong khoảng thời gian này</div>';
+    return;
+  }
+
+  const maxTotal = ranked[0].total;
+  const medals = ['🥇','🥈','🥉'];
+  container.innerHTML = ranked.map((item, i) => {
+    const pct = maxTotal > 0 ? (item.total / maxTotal * 100) : 0;
+    const badge = i < 3
+      ? '<span style="font-size:22px;line-height:1;flex-shrink:0;">' + medals[i] + '</span>'
+      : '<span style="width:28px;height:28px;background:#f0f0f0;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#999;flex-shrink:0;">' + (i+1) + '</span>';
+    const sizeTag = item.size
+      ? '<span style="font-size:10px;background:var(--gl);color:var(--gd);border-radius:6px;padding:2px 7px;font-weight:700;margin-left:6px;">' + item.size + '</span>'
+      : '';
+    const barColor = i === 0 ? 'var(--gm)' : i === 1 ? '#60b07a' : '#9ecfad';
+    return '<div style="background:#fff;border-radius:18px;padding:16px 18px;">'
+      + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
+      + badge
+      + '<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:700;color:var(--td);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + item.name + sizeTag + '</div></div>'
+      + '<div style="text-align:right;flex-shrink:0;">'
+      + '<div style="font-size:15px;font-weight:700;color:var(--gd);">' + item.total.toLocaleString('vi-VN') + ' đ</div>'
+      + '<div style="font-size:11px;color:var(--gt);font-weight:600;">× ' + item.qty + ' phần</div>'
+      + '</div></div>'
+      + '<div style="background:#f0f0f0;border-radius:99px;height:5px;overflow:hidden;">'
+      + '<div style="width:' + pct.toFixed(1) + '%;height:100%;background:' + barColor + ';border-radius:99px;"></div>'
+      + '</div></div>';
+  }).join('');
+}
+
 function drawChart(period, filteredOrders) {
   const _orders = filteredOrders || orders;
   const canvas = document.getElementById('rvc2'); if (!canvas) return;
@@ -6230,6 +6457,7 @@ function confirmPayWallet(phone, walDeduct, walLevel, fullAmount) {
       orders.unshift({ id: ref.key, ...order, items: itemsArray });
       const loyPhone = document.getElementById('cuph').value.trim();
       if (loyPhone) loyaltyProcessAfterPay(loyPhone, total, items.reduce((s,c)=>s+c.qty,0), true);
+      _finalizeStampFreeAfterPay();
       _finalizeDiscountAfterPay().then(() => {
         cart = {}; togoDiscountAmt = 0; dgDiscountAmt = 0;
         _walCurrentTxId = null; _walCurrentLevel = null; _walCurrentDeduct = null;
