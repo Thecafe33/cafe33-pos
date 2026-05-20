@@ -4247,7 +4247,7 @@ function confirmPay(cashGiven, cashChange) {
 
     const loyPhone = document.getElementById('cuph').value.trim();
     if (loyPhone) {
-      const drinkCount = items.reduce((s, c) => s + c.qty, 0);
+      const drinkCount = items.reduce((s, c) => s + (!c.isFree && !c._vKey ? c.qty : 0), 0);
       loyaltyProcessAfterPay(loyPhone, total, drinkCount, false);
     }
     // Ghi trừ stamp miễn phí SAU KHI order lưu thành công
@@ -6502,7 +6502,7 @@ function confirmPayWallet(phone, walDeduct, walLevel, fullAmount) {
     db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
       orders.unshift({ id: ref.key, ...order, items: itemsArray });
       const loyPhone = document.getElementById('cuph').value.trim();
-      if (loyPhone) loyaltyProcessAfterPay(loyPhone, total, items.reduce((s,c)=>s+c.qty,0), true);
+      if (loyPhone) loyaltyProcessAfterPay(loyPhone, total, items.reduce((s,c)=>s+(!c.isFree&&!c._vKey?c.qty:0),0), true);
       _finalizeStampFreeAfterPay();
       _finalizeDiscountAfterPay().then(() => {
         cart = {}; togoDiscountAmt = 0; dgDiscountAmt = 0;
