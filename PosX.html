@@ -700,15 +700,29 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 </div>
 
 <!-- CUSTOMER LIST SCREEN -->
-<div id="customers" class="screen">
-  <div class="rvh">
+<div id="customers" class="screen" style="display:none;flex-direction:column;">
+  <!-- Header -->
+  <div class="rvh" style="flex-shrink:0;">
     <span class="rvt">KHÁCH HÀNG</span>
     <button class="btn-close-screen" onclick="showScreen('sm')">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
     </button>
   </div>
-  <div style="padding: 20px 16px; overflow-y: auto; flex:1;" id="customer-list-container">
-    <div style="text-align: center; color: #999; margin-top: 50px;">Đang tải danh sách...</div>
+  <!-- Search bar -->
+  <div style="padding:10px 16px 8px;flex-shrink:0;background:var(--bg);">
+    <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:10px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.07);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input id="cust-search-input" type="tel" inputmode="numeric" placeholder="Tìm theo số điện thoại..."
+        style="flex:1;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:15px;font-weight:600;color:var(--td);background:transparent;"
+        oninput="onCustSearchInput(this.value)">
+      <button id="cust-search-clear" onclick="clearCustSearch()" style="display:none;background:none;border:none;cursor:pointer;color:#bbb;font-size:18px;line-height:1;padding:0;">✕</button>
+    </div>
+    <div id="cust-count-label" style="font-size:11px;color:var(--gt);font-weight:600;margin-top:6px;padding-left:4px;"></div>
+  </div>
+  <!-- List -->
+  <div style="overflow-y:auto;flex:1;padding:0 16px;" id="customer-list-container"
+       onscroll="onCustListScroll(this)">
+    <div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Đang tải danh sách...</div>
   </div>
 </div>
 
@@ -5981,45 +5995,169 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
-// CUSTOMER LIST TAB
+// CUSTOMER LIST TAB — Infinite scroll + Search by phone
 // ============================================================
+const CUST_PAGE_SIZE = 50;
+let _custAllDocs = [];        // toàn bộ docs đã fetch (cache)
+let _custFiltered = [];       // danh sách sau filter
+let _custRenderedCount = 0;   // số item đã render
+let _custLoaded = false;      // đã fetch Firestore lần đầu chưa
+let _custSearchTimer = null;
+
 function loadCustomerList() {
   const container = document.getElementById('customer-list-container');
   if (!container) return;
-  container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Đang cập nhật danh sách...</div>';
-  
-  fstore.collection('customers').orderBy('total_points', 'desc').limit(50).get().then(snap => {
-    if (snap.empty) {
-      container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Chưa có khách hàng nào</div>';
-      return;
+
+  // Reset state
+  _custAllDocs = [];
+  _custFiltered = [];
+  _custRenderedCount = 0;
+  _custLoaded = false;
+
+  const searchInput = document.getElementById('cust-search-input');
+  if (searchInput) searchInput.value = '';
+  const clearBtn = document.getElementById('cust-search-clear');
+  if (clearBtn) clearBtn.style.display = 'none';
+  _updateCustCountLabel(null);
+
+  container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Đang tải danh sách...</div>';
+
+  // Fetch toàn bộ từ Firestore (Firestore giới hạn 1 request, dùng getAll theo trang)
+  _custFetchAll();
+}
+
+function _custFetchAll(lastDoc) {
+  let q = fstore.collection('customers').orderBy('total_points', 'desc').limit(200);
+  if (lastDoc) q = q.startAfter(lastDoc);
+
+  q.get().then(snap => {
+    snap.forEach(doc => _custAllDocs.push(doc));
+
+    if (snap.size === 200) {
+      // Còn dữ liệu, fetch trang tiếp
+      _custFetchAll(snap.docs[snap.docs.length - 1]);
+    } else {
+      // Đã fetch xong tất cả
+      _custLoaded = true;
+      _custFiltered = [..._custAllDocs];
+      _custRenderedCount = 0;
+      _updateCustCountLabel(_custFiltered.length);
+      _custRenderNextPage(true);
     }
-    let html = '<div style="display:flex;flex-direction:column;gap:12px;padding-bottom:120px;">';
-    snap.forEach(doc => {
-      const d = doc.data();
-      const phone = doc.id;
-      const nick = d.nickname || 'Khách hàng';
-      const pts = Number(d.total_points || 0).toLocaleString('vi-VN');
-      const stamps = Number(d.stamp_count || 0);
-      const free = Number(d.free_drink_available || 0);
-      
-      html += `
-        <div style="background:#fff;border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.03);">
-          <div>
-            <div style="font-size:16px;font-weight:700;color:var(--td);margin-bottom:4px;">${nick}</div>
-            <div style="font-size:13px;color:var(--gt);font-weight:600;">${phone}</div>
-          </div>
-          <div style="text-align:right;">
-            <div style="font-size:14px;font-weight:700;color:var(--gm);margin-bottom:4px;">⭐ ${pts} Point</div>
-            <div style="font-size:12px;font-weight:700;color:#c8820a;">☕ ${stamps}/6 Stamp ${free > 0 ? `| 🎁 ${free}` : ''}</div>
-          </div>
-        </div>
-      `;
-    });
-    html += '</div>';
-    container.innerHTML = html;
   }).catch(err => {
-    container.innerHTML = `<div style="text-align:center;color:#e74c3c;margin-top:50px;">Lỗi tải dữ liệu: ${err.message}</div>`;
+    const container = document.getElementById('customer-list-container');
+    if (container) container.innerHTML = `<div style="text-align:center;color:#e74c3c;margin-top:50px;">Lỗi tải dữ liệu: ${err.message}</div>`;
   });
+}
+
+function _custRenderNextPage(reset) {
+  const container = document.getElementById('customer-list-container');
+  if (!container) return;
+
+  if (reset) {
+    container.innerHTML = '';
+    _custRenderedCount = 0;
+  }
+
+  if (!_custFiltered.length) {
+    container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Không tìm thấy khách hàng nào</div>';
+    return;
+  }
+
+  const slice = _custFiltered.slice(_custRenderedCount, _custRenderedCount + CUST_PAGE_SIZE);
+  if (!slice.length) return; // hết rồi
+
+  // Xóa sentinel cũ nếu có
+  const oldSentinel = document.getElementById('cust-scroll-sentinel');
+  if (oldSentinel) oldSentinel.remove();
+
+  slice.forEach(doc => {
+    const d = doc.data();
+    const phone = doc.id;
+    const nick = d.nickname || d.name || 'Khách hàng';
+    const pts = Number(d.total_points || 0).toLocaleString('vi-VN');
+    const stamps = Number(d.stamp_count || 0);
+    const free = Number(d.free_drink_available || 0);
+    const lastVisit = d.lastVisit ? new Date(d.lastVisit).toLocaleDateString('vi-VN') : '';
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.03);margin-bottom:10px;';
+    card.innerHTML = `
+      <div style="min-width:0;flex:1;margin-right:10px;">
+        <div style="font-size:16px;font-weight:700;color:var(--td);margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nick}</div>
+        <div style="font-size:13px;color:var(--gt);font-weight:600;">${phone}</div>
+        ${lastVisit ? `<div style="font-size:11px;color:#bbb;margin-top:2px;">Lần cuối: ${lastVisit}</div>` : ''}
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:14px;font-weight:700;color:var(--gm);margin-bottom:4px;">⭐ ${pts}</div>
+        <div style="font-size:12px;font-weight:700;color:#c8820a;">☕ ${stamps}/6${free > 0 ? ` · 🎁 ${free}` : ''}</div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  _custRenderedCount += slice.length;
+
+  // Thêm sentinel để detect infinite scroll (nếu còn item chưa render)
+  if (_custRenderedCount < _custFiltered.length) {
+    const sentinel = document.createElement('div');
+    sentinel.id = 'cust-scroll-sentinel';
+    sentinel.style.cssText = 'text-align:center;padding:16px 0 8px;color:#bbb;font-size:13px;font-weight:600;';
+    sentinel.textContent = `Đang tải thêm... (${_custRenderedCount}/${_custFiltered.length})`;
+    container.appendChild(sentinel);
+  } else {
+    // Đã render hết
+    const end = document.createElement('div');
+    end.style.cssText = 'text-align:center;padding:20px 0 100px;color:#ddd;font-size:12px;';
+    end.textContent = `— Đã hiển thị tất cả ${_custFiltered.length} khách hàng —`;
+    container.appendChild(end);
+  }
+}
+
+function onCustListScroll(el) {
+  if (!_custLoaded) return;
+  if (_custRenderedCount >= _custFiltered.length) return;
+  // Load thêm khi còn 150px tới cuối
+  const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  if (distFromBottom < 150) {
+    _custRenderNextPage(false);
+  }
+}
+
+function onCustSearchInput(val) {
+  // Debounce 250ms
+  clearTimeout(_custSearchTimer);
+  const clearBtn = document.getElementById('cust-search-clear');
+  if (clearBtn) clearBtn.style.display = val ? 'block' : 'none';
+  _custSearchTimer = setTimeout(() => _custApplySearch(val), 250);
+}
+
+function _custApplySearch(val) {
+  if (!_custLoaded) return;
+  const q = val.trim().replace(/[^0-9]/g, '');
+  if (!q) {
+    _custFiltered = [..._custAllDocs];
+  } else {
+    _custFiltered = _custAllDocs.filter(doc => doc.id.includes(q));
+  }
+  _custRenderedCount = 0;
+  _updateCustCountLabel(_custFiltered.length);
+  _custRenderNextPage(true);
+}
+
+function clearCustSearch() {
+  const input = document.getElementById('cust-search-input');
+  if (input) { input.value = ''; input.focus(); }
+  const clearBtn = document.getElementById('cust-search-clear');
+  if (clearBtn) clearBtn.style.display = 'none';
+  _custApplySearch('');
+}
+
+function _updateCustCountLabel(count) {
+  const el = document.getElementById('cust-count-label');
+  if (!el) return;
+  if (count === null) { el.textContent = ''; return; }
+  el.textContent = count > 0 ? `${count.toLocaleString('vi-VN')} khách hàng` : 'Không tìm thấy';
 }
 
 // ============================================================
