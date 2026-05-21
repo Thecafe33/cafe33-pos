@@ -2316,11 +2316,23 @@ function handleBooking() {
                         createdAt: new Date().toISOString()
                     };
                     if (finalPreferredBed > 0) {
-                        bookingData.preferredBed    = finalPreferredBed;
-                        bookingData.preferBedFee    = finalPreferBedFee;
+                        bookingData.preferredBed = finalPreferredBed;
+                        bookingData.preferBedFee = finalPreferBedFee;
                     }
                     if (_pendingBonus) {
                         bookingData.bookingBonus = _pendingBonus;
+                    }
+                    // Nhúng preorder thẳng vào booking để POS đọc được ngay lập tức
+                    if (_poPendingPreorder && _poPendingPreorder.items && _poPendingPreorder.items.length) {
+                        bookingData.preorder = {
+                            items    : _poPendingPreorder.items,
+                            savedAt  : new Date().toISOString(),
+                            bookingDate : dateStr,
+                            bookingStart: startVal,
+                            bookingEnd  : endVal,
+                            voucher  : _poPendingPreorder.voucher || null,
+                            status   : 'pending'
+                        };
                     }
 
                     if (loadingText) loadingText.textContent = 'Đang xác nhận đặt chỗ...';
@@ -2353,11 +2365,8 @@ function handleBooking() {
                             document.getElementById('bed-pick-chevron').style.transform = 'rotate(0deg)';
                             updateBedPickToggle();
 
-                            // Ghi pre-order lên RT (dưới đúng key thực của booking)
-                            if (_poPendingPreorder && _poPendingPreorder.items && _poPendingPreorder.items.length) {
-                                _poFlushToRT(realKey, dateStr);
-                            }
-                            // Reset inline pre-order card
+                            // pre-order đã được nhúng vào bookingData cùng lúc push
+                            // _poFlushToRT không cần gọi riêng nữa
                             _poPendingPreorder = null;
                             _poItems = [];
                             _pendingBonus = null;
