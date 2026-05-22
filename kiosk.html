@@ -873,7 +873,25 @@ function renderSession(sessionId, data) {
       var price = Number(it.price || 0);
       var toppingSum = Number(it.toppingSum || 0);
       var lineTotal = (price + toppingSum) * qty;
-      var priceHtml = '<div class="cart-item-price">' + (lineTotal > 0 ? fmtP(lineTotal) : '') + '</div>';
+
+      // FIX: Hiển thị giá đồng giá + gạch giá gốc nếu item có flag isDg
+      var isDg = !!it.isDg;
+      var originalPrice = it.originalPrice != null ? Number(it.originalPrice) : null;
+      var priceHtml;
+      if (isDg && originalPrice != null && originalPrice > price) {
+        var origLineTotal = (originalPrice + toppingSum) * qty;
+        priceHtml = '<div class="cart-item-price" style="text-align:right;">'
+          + '<span style="font-size:9px;color:#bbb;text-decoration:line-through;display:block;line-height:1.2;">' + fmtP(origLineTotal) + '</span>'
+          + '<span style="color:var(--green);">' + fmtP(lineTotal) + '</span>'
+          + '</div>';
+      } else {
+        priceHtml = '<div class="cart-item-price">' + (lineTotal > 0 ? fmtP(lineTotal) : '') + '</div>';
+      }
+
+      // FIX: Badge ĐG hiển thị sau tên size
+      var dgBadge = isDg
+        ? '<span style="display:inline-block;font-size:8px;font-weight:700;background:#e8f5ee;color:#2e7d32;border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle;">Đồng giá</span>'
+        : '';
 
       // Build topping HTML
       var toppings = it.toppings;
@@ -895,7 +913,7 @@ function renderSession(sessionId, data) {
         '<div class="cart-qty-badge">' + qty + '</div>' +
         '<div class="cart-item-info">' +
           '<div class="cart-item-name">' + name + '</div>' +
-          (size ? '<div class="cart-item-meta">Size ' + size + '</div>' : '') +
+          (size ? '<div class="cart-item-meta">Size ' + size + dgBadge + '</div>' : (isDg ? '<div class="cart-item-meta">' + dgBadge + '</div>' : '')) +
           toppingHtml +
         '</div>' +
         priceHtml;
