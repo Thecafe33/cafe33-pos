@@ -583,6 +583,19 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
         <div id="pmapp-switch" class="togo-switch"></div>
       </div>
     </div>
+    <!-- Ship button — chỉ hiện khi To Go đang bật -->
+    <div onclick="toggleShipMode()" id="pmship" style="display:none;background:#fff;border-radius:22px;padding:20px 16px;align-items:center;gap:14px;cursor:pointer;transition:all .15s;">
+      <div id="pmship-icon" style="width:60px;height:60px;border-radius:16px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s;">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="11" width="14" height="10" rx="2" stroke="#d97706" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="21" r="1" fill="#d97706"/><circle cx="20" cy="21" r="1" fill="#d97706"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div id="pmship-title" style="font-size:16px;font-weight:700;color:#b45309;">Ship</div>
+        <div style="font-size:12px;color:#aaa;margin-top:2px;">Giao hàng — lưu nhãn ship vào đơn</div>
+      </div>
+      <div id="pmship-toggle-wrap" class="togo-toggle-wrap" style="margin-left:auto;pointer-events:none;">
+        <div id="pmship-switch" class="togo-switch"></div>
+      </div>
+    </div>
     <div id="bank-confirm-area" style="display:none;">
       <!-- Tự động xử lý qua Firebase listener — không cần bấm tay -->
     </div>
@@ -674,6 +687,41 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       </div>
     </div>
   </div>
+  <!-- Thống kê đơn Ship -->
+  <div id="rv-ship-section" style="margin:0 16px 32px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="11" width="14" height="10" rx="2" stroke="#d97706" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="21" r="1" fill="#d97706"/><circle cx="20" cy="21" r="1" fill="#d97706"/></svg>
+        <span style="font-size:13px;font-weight:700;color:#b45309;text-transform:uppercase;letter-spacing:.6px;">Đơn Ship</span>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.4px;">Tháng này</div>
+        <div id="rv-ship-month-revenue" style="font-size:16px;font-weight:700;color:#b45309;">0đ</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+      <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:12px 8px;text-align:center;">
+        <div style="font-size:9px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">HÔM NAY</div>
+        <div id="rv-ship-today" style="font-size:24px;font-weight:800;color:#d97706;line-height:1;">0</div>
+        <div style="font-size:10px;color:#b45309;font-weight:600;margin-top:2px;">đơn</div>
+      </div>
+      <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:12px 8px;text-align:center;">
+        <div style="font-size:9px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">HÔM QUA</div>
+        <div id="rv-ship-yesterday" style="font-size:24px;font-weight:800;color:#d97706;line-height:1;">0</div>
+        <div style="font-size:10px;color:#b45309;font-weight:600;margin-top:2px;">đơn</div>
+      </div>
+      <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:12px 8px;text-align:center;">
+        <div style="font-size:9px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">TUẦN NÀY</div>
+        <div id="rv-ship-week" style="font-size:24px;font-weight:800;color:#d97706;line-height:1;">0</div>
+        <div style="font-size:10px;color:#b45309;font-weight:600;margin-top:2px;">đơn</div>
+      </div>
+      <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:12px 8px;text-align:center;">
+        <div style="font-size:9px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">THÁNG NÀY</div>
+        <div id="rv-ship-month" style="font-size:24px;font-weight:800;color:#d97706;line-height:1;">0</div>
+        <div style="font-size:10px;color:#b45309;font-weight:600;margin-top:2px;">đơn</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ITEM RANKING SCREEN -->
@@ -700,8 +748,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 </div>
 
 <!-- CUSTOMER LIST SCREEN -->
-<div id="customers" class="screen" style="display:none;flex-direction:column;">
-  <!-- Header -->
+<div id="customers" class="screen">
   <div class="rvh" style="flex-shrink:0;">
     <span class="rvt">KHÁCH HÀNG</span>
     <button class="btn-close-screen" onclick="showScreen('sm')">
@@ -709,7 +756,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
     </button>
   </div>
   <!-- Search bar -->
-  <div style="padding:10px 16px 8px;flex-shrink:0;background:var(--bg);">
+  <div style="padding:10px 16px 8px;flex-shrink:0;">
     <div style="display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:10px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.07);">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#bbb" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
       <input id="cust-search-input" type="tel" inputmode="numeric" placeholder="Tìm theo số điện thoại..."
@@ -1605,6 +1652,7 @@ let togoGiftSelected = null; // selected gift item in popup
 // ============================================================
 let appSaleSettings = { feePct: 10 }; // % phí sàn mặc định 10%
 let isAppSale = false; // trạng thái nút "Bán qua App"
+let isShip = false;    // trạng thái nút "Ship"
 
 // ============================================================
 // ĐỒNG GIÁ — State & Settings
@@ -1672,6 +1720,9 @@ function toggleTogo() {
   curFilter = 'all';
   buildFilterBar();
   renderMenu();
+  // Hiện/ẩn nút Ship theo trạng thái ToGo
+  _syncShipBtnVisibility();
+  if (!isToGo && isShip) { isShip = false; renderShipBtn(); }
   // Báo kiosk chuyển menu
   db.ref('session_display_xolifa/isToGo').set(isToGo).catch(() => {});
 }
@@ -1690,6 +1741,10 @@ function resetTogoToggle() {
   // Reset App Sale
   isAppSale = false;
   renderAppSaleBtn();
+  // Reset Ship
+  isShip = false;
+  renderShipBtn();
+  _syncShipBtnVisibility();
 }
 
 function loadTogoSettings() {
@@ -1756,6 +1811,32 @@ function getAppSaleDiscount() {
   const base = getCartTotal();
   const pct = appSaleSettings.feePct || 10;
   return Math.round(base * pct / 100);
+}
+
+// ============================================================
+// SHIP MODE — Toggle & Render
+// ============================================================
+function toggleShipMode() {
+  isShip = !isShip;
+  renderShipBtn();
+}
+
+function renderShipBtn() {
+  const btn  = document.getElementById('pmship');
+  const wrap = document.getElementById('pmship-toggle-wrap');
+  const icon = document.getElementById('pmship-icon');
+  const title = document.getElementById('pmship-title');
+  if (!btn) return;
+  wrap.classList.toggle('active', isShip);
+  btn.style.background  = isShip ? '#fffde7' : '#fff';
+  icon.style.background = isShip ? '#fde68a' : '#fffbeb';
+  if (title) title.style.color = isShip ? '#92400e' : '#b45309';
+}
+
+function _syncShipBtnVisibility() {
+  const btn = document.getElementById('pmship');
+  if (!btn) return;
+  btn.style.display = isToGo ? 'flex' : 'none';
 }
 
 // Làm tròn tiền mặt theo quy tắc:
@@ -2391,6 +2472,8 @@ function loadMenu() {
 // ─── Real-time listeners cho 3 ngày gần nhất ───────────────────────────────
 // Mỗi ref được giữ để có thể off() khi cần (ví dụ qua ngày mới)
 const _rtListeners = {}; // key: 'month/day' → ref đang listen
+// Set track order IDs đã có trong RAM — guard O(1) chống clone bill
+const _ordersInRam = new Set();
 
 function _attachRtListener(month, day) {
   const path = 'orders_xolifa/' + month + '/' + day;
@@ -2400,7 +2483,8 @@ function _attachRtListener(month, day) {
   ref.on('child_added', snap => {
     const key = snap.key;
     const o = snap.val();
-    if (!o || orders.find(x => x.id === key)) return; // đã có rồi
+    if (!o || _ordersInRam.has(key)) return;
+    _ordersInRam.add(key);
     orders.unshift({ id: key, ...o, items: o.itemsArray || [] });
     orders.sort((a, b) => b.createdAt > a.createdAt ? 1 : -1);
     // Cập nhật UI nếu đang mở đúng màn hình
@@ -2439,8 +2523,10 @@ function loadRecentOrders() {
         const data = snap.val();
         if (!data) return;
         Object.entries(data).forEach(([key, o]) => {
-          if (!orders.find(x => x.id === key))
+          if (!_ordersInRam.has(key)) {
+            _ordersInRam.add(key);
             orders.push({ id: key, ...o, items: o.itemsArray || [] });
+          }
         });
       }).catch(() => {})
     );
@@ -2486,8 +2572,10 @@ function loadArchiveDates(dateList) {
         if (!doc.exists) return;
         const data = doc.data().orders || {};
         Object.entries(data).forEach(([key, o]) => {
-          if (!orders.find(x => x.id === key))
+          if (!_ordersInRam.has(key)) {
+            _ordersInRam.add(key);
             orders.push({ id: key, ...o, items: o.itemsArray || [] });
+          }
         });
       }).catch(() => {});
   });
@@ -2568,6 +2656,7 @@ function showScreen(id) {
     loadArchiveDates(archiveDatesInRange(from, now)).then(() => renderH());
     return;
   }
+  if (id === 'sc') { _syncShipBtnVisibility(); }
   if (id === 'rv') {
     _rvFrom = null; _rvTo = null;
     document.getElementById('rv-date-label').textContent = '';
@@ -4201,6 +4290,7 @@ function confirmPay(cashGiven, cashChange) {
     cashChange: cashChange !== null && cashChange !== undefined ? cashChange : 0,
     createdAt: now.toISOString(),
     isToGo: isToGo,
+    isShip: isShip ? true : null,
     isAppSale: isAppSale,
     appFeePct: isAppSale ? (appSaleSettings.feePct || 10) : null,
     discountAmt: (togoDiscountAmt > 0 || dgDiscountAmt > 0 || getAppSaleDiscount() > 0)
@@ -4218,7 +4308,7 @@ function confirmPay(cashGiven, cashChange) {
   };
 
   db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
-    orders.unshift({ id: ref.key, ...order, items: itemsArray });
+    // KHÔNG thêm thủ công vào orders[] — RT listener child_added tự xử lý (có guard duplicate).
 
     // ── Flow_V1: deduct Firestore đúng lúc — sau khi order đã lưu thành công ──
     const walLevel1DeductPromise = isSplitWallet && _walLevel1Phone
@@ -4278,6 +4368,7 @@ function confirmPay(cashGiven, cashChange) {
       var l1b = document.getElementById('wal-level1-badge'); if (l1b) l1b.remove();
       resetPayMethod();
       resetDiscountState();
+      isShip = false; renderShipBtn();
       resetTogoToggle();
       document.getElementById('cuph').value = '';
       clearCustomer();
@@ -4413,7 +4504,39 @@ function updRv(filtered) {
     document.getElementById('rv-food-bank').textContent  = foodBank.toLocaleString('vi-VN');
     foodSec.style.display = foodTotal > 0 ? 'block' : 'none';
   }
+  _updShipStats();
 }
+
+function _updShipStats() {
+  const now = new Date();
+  const p2 = x => String(x).padStart(2,'0');
+  const todayKey_  = `${p2(now.getDate())}/${p2(now.getMonth()+1)}/${now.getFullYear()}`;
+  const yd = new Date(now); yd.setDate(yd.getDate()-1);
+  const yestKey = `${p2(yd.getDate())}/${p2(yd.getMonth()+1)}/${yd.getFullYear()}`;
+  const weekMon = weekStart ? weekStart() : new Date(now.setDate(now.getDate() - now.getDay() + 1));
+  const now2 = new Date();
+  const mm = p2(now2.getMonth()+1), yyyy = String(now2.getFullYear());
+  const shipOrders = orders.filter(o => o.isShip === true);
+  const todayCnt = shipOrders.filter(o => o.date === todayKey_).length;
+  const yesterdayCnt = shipOrders.filter(o => o.date === yestKey).length;
+  const weekCnt = shipOrders.filter(o => {
+    const [d,m,y] = o.date.split('/');
+    return new Date(+y,+m-1,+d) >= weekMon;
+  }).length;
+  const monthOrders = shipOrders.filter(o => {
+    const parts = o.date.split('/');
+    return parts[1] === mm && parts[2] === yyyy;
+  });
+  const monthCnt = monthOrders.length;
+  const monthRevenue = monthOrders.reduce((s,o) => s + (o.total||0), 0);
+  const el = id => document.getElementById(id);
+  if (el('rv-ship-today'))         el('rv-ship-today').textContent = todayCnt;
+  if (el('rv-ship-yesterday'))     el('rv-ship-yesterday').textContent = yesterdayCnt;
+  if (el('rv-ship-week'))          el('rv-ship-week').textContent = weekCnt;
+  if (el('rv-ship-month'))         el('rv-ship-month').textContent = monthCnt;
+  if (el('rv-ship-month-revenue')) el('rv-ship-month-revenue').textContent = fmt(monthRevenue);
+}
+
 function setTab(btn, period) {
   document.querySelectorAll('.tbb').forEach(b => b.classList.remove('active')); btn.classList.add('active');
   _rvFrom = null; _rvTo = null;
@@ -4683,12 +4806,14 @@ function renderH(f = '') {
   list.innerHTML = Object.keys(grp).map(d =>
     `<div class="hdg"><div class="hdl">${d}</div>${grp[d].map(o => {
       const isToGoOrder = o.isToGo === true;
+      const isShipOrder = o.isShip === true;
       const isDgOrder   = !!(o.dgDiscount && o.dgDiscount > 0);
       const isAppOrder  = o.isAppSale === true;
       const togoClass   = isToGoOrder ? ' togo-order' : '';
       const dgClass     = (!isToGoOrder && isDgOrder && !isAppOrder) ? ' dg-order' : '';
       const appClass    = isAppOrder ? ' app-order' : '';
       const togoBadge   = isToGoOrder ? '<span style="background:#fbbf24;color:#92400e;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">TO GO</span>' : '';
+      const shipBadge   = isShipOrder ? '<span style="background:#f59e0b;color:#78350f;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">🚚 SHIP</span>' : '';
       const dgBadge     = isDgOrder   ? '<span style="background:#2563eb;color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">ĐỒNG GIÁ</span>' : '';
       const appBadge    = isAppOrder  ? '<span style="background:#16a34a;color:#fff;font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;margin-left:4px;">📱 APP</span>' : '';
       const iconStroke  = isAppOrder ? '#16a34a' : (isToGoOrder ? '#d97706' : (isDgOrder ? '#2563eb' : '#1e6b3c'));
@@ -4698,7 +4823,7 @@ function renderH(f = '') {
         : `<div class="hip">${o.total.toLocaleString('vi-VN')}<sup>đ</sup></div>`;
       return `<div class="hit${togoClass}${dgClass}${appClass}" onclick="showDet('${o.id}')">
         <div class="hii"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${iconStroke}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg></div>
-        <div class="hin"><div class="hitime">${o.time}${togoBadge}${dgBadge}${appBadge}</div><div class="himeta">${o.phone||'Khách vãng lai'}</div></div>
+        <div class="hin"><div class="hitime">${o.time}${togoBadge}${shipBadge}${dgBadge}${appBadge}</div><div class="himeta">${o.phone||'Khách vãng lai'}</div></div>
         <div style="text-align:right;flex-shrink:0;min-width:110px;">${priceHtml}<div class="him">${o.method}</div></div>
       </div>`;
     }).join('')}</div>`).join('');
@@ -4903,7 +5028,8 @@ function delOrderConfirm() {
   // Xoá trên Realtime Database
   db.ref(rtPath).remove()
     .then(() => {
-      // Xoá khỏi RAM
+      // Xoá khỏi RAM và _ordersInRam Set
+      _ordersInRam.delete(curOid);
       orders = orders.filter(x => x.id !== curOid);
       toast('🗑 Đã xoá đơn hàng');
       showScreen('hi');
@@ -5708,7 +5834,8 @@ function finalizeSplitPay() {
     voucherUsed: _giftVoucherKey ? (Object.values(cart).find(c=>c._vKey===_giftVoucherKey)?._giftLabel || _giftVoucherKey) : (_appliedDiscountId ? (_discountCache[_appliedDiscountId]?.label || _appliedDiscountId) : null),
     cashGiven: total, cashChange: 0,
     createdAt: now.toISOString(),
-    isToGo: isToGo
+    isToGo: isToGo,
+    isShip: isShip ? true : null
   };
   db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
     orders.unshift({ id: ref.key, ...order, items: itemsArray });
@@ -5998,46 +6125,36 @@ document.addEventListener('click', (e) => {
 // CUSTOMER LIST TAB — Infinite scroll + Search by phone
 // ============================================================
 const CUST_PAGE_SIZE = 50;
-let _custAllDocs = [];        // toàn bộ docs đã fetch (cache)
-let _custFiltered = [];       // danh sách sau filter
-let _custRenderedCount = 0;   // số item đã render
-let _custLoaded = false;      // đã fetch Firestore lần đầu chưa
+let _custAllDocs = [];
+let _custFiltered = [];
+let _custRenderedCount = 0;
+let _custLoaded = false;
 let _custSearchTimer = null;
 
 function loadCustomerList() {
   const container = document.getElementById('customer-list-container');
   if (!container) return;
-
-  // Reset state
   _custAllDocs = [];
   _custFiltered = [];
   _custRenderedCount = 0;
   _custLoaded = false;
-
   const searchInput = document.getElementById('cust-search-input');
   if (searchInput) searchInput.value = '';
   const clearBtn = document.getElementById('cust-search-clear');
   if (clearBtn) clearBtn.style.display = 'none';
   _updateCustCountLabel(null);
-
   container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Đang tải danh sách...</div>';
-
-  // Fetch toàn bộ từ Firestore (Firestore giới hạn 1 request, dùng getAll theo trang)
   _custFetchAll();
 }
 
 function _custFetchAll(lastDoc) {
   let q = fstore.collection('customers').orderBy('total_points', 'desc').limit(200);
   if (lastDoc) q = q.startAfter(lastDoc);
-
   q.get().then(snap => {
     snap.forEach(doc => _custAllDocs.push(doc));
-
     if (snap.size === 200) {
-      // Còn dữ liệu, fetch trang tiếp
       _custFetchAll(snap.docs[snap.docs.length - 1]);
     } else {
-      // Đã fetch xong tất cả
       _custLoaded = true;
       _custFiltered = [..._custAllDocs];
       _custRenderedCount = 0;
@@ -6053,24 +6170,17 @@ function _custFetchAll(lastDoc) {
 function _custRenderNextPage(reset) {
   const container = document.getElementById('customer-list-container');
   if (!container) return;
-
-  if (reset) {
-    container.innerHTML = '';
-    _custRenderedCount = 0;
-  }
-
+  if (reset) { container.innerHTML = ''; _custRenderedCount = 0; }
   if (!_custFiltered.length) {
     container.innerHTML = '<div style="text-align:center;color:#bbb;margin-top:50px;font-size:14px;font-weight:600;">Không tìm thấy khách hàng nào</div>';
     return;
   }
-
   const slice = _custFiltered.slice(_custRenderedCount, _custRenderedCount + CUST_PAGE_SIZE);
-  if (!slice.length) return; // hết rồi
-
-  // Xóa sentinel cũ nếu có
+  if (!slice.length) return;
   const oldSentinel = document.getElementById('cust-scroll-sentinel');
   if (oldSentinel) oldSentinel.remove();
-
+  const oldEnd = document.getElementById('cust-list-end');
+  if (oldEnd) oldEnd.remove();
   slice.forEach(doc => {
     const d = doc.data();
     const phone = doc.id;
@@ -6079,7 +6189,6 @@ function _custRenderNextPage(reset) {
     const stamps = Number(d.stamp_count || 0);
     const free = Number(d.free_drink_available || 0);
     const lastVisit = d.lastVisit ? new Date(d.lastVisit).toLocaleDateString('vi-VN') : '';
-
     const card = document.createElement('div');
     card.style.cssText = 'background:#fff;border-radius:18px;padding:16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.03);margin-bottom:10px;';
     card.innerHTML = `
@@ -6091,14 +6200,10 @@ function _custRenderNextPage(reset) {
       <div style="text-align:right;flex-shrink:0;">
         <div style="font-size:14px;font-weight:700;color:var(--gm);margin-bottom:4px;">⭐ ${pts}</div>
         <div style="font-size:12px;font-weight:700;color:#c8820a;">☕ ${stamps}/6${free > 0 ? ` · 🎁 ${free}` : ''}</div>
-      </div>
-    `;
+      </div>`;
     container.appendChild(card);
   });
-
   _custRenderedCount += slice.length;
-
-  // Thêm sentinel để detect infinite scroll (nếu còn item chưa render)
   if (_custRenderedCount < _custFiltered.length) {
     const sentinel = document.createElement('div');
     sentinel.id = 'cust-scroll-sentinel';
@@ -6106,8 +6211,8 @@ function _custRenderNextPage(reset) {
     sentinel.textContent = `Đang tải thêm... (${_custRenderedCount}/${_custFiltered.length})`;
     container.appendChild(sentinel);
   } else {
-    // Đã render hết
     const end = document.createElement('div');
+    end.id = 'cust-list-end';
     end.style.cssText = 'text-align:center;padding:20px 0 100px;color:#ddd;font-size:12px;';
     end.textContent = `— Đã hiển thị tất cả ${_custFiltered.length} khách hàng —`;
     container.appendChild(end);
@@ -6115,17 +6220,11 @@ function _custRenderNextPage(reset) {
 }
 
 function onCustListScroll(el) {
-  if (!_custLoaded) return;
-  if (_custRenderedCount >= _custFiltered.length) return;
-  // Load thêm khi còn 150px tới cuối
-  const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-  if (distFromBottom < 150) {
-    _custRenderNextPage(false);
-  }
+  if (!_custLoaded || _custRenderedCount >= _custFiltered.length) return;
+  if (el.scrollHeight - el.scrollTop - el.clientHeight < 150) _custRenderNextPage(false);
 }
 
 function onCustSearchInput(val) {
-  // Debounce 250ms
   clearTimeout(_custSearchTimer);
   const clearBtn = document.getElementById('cust-search-clear');
   if (clearBtn) clearBtn.style.display = val ? 'block' : 'none';
@@ -6135,11 +6234,7 @@ function onCustSearchInput(val) {
 function _custApplySearch(val) {
   if (!_custLoaded) return;
   const q = val.trim().replace(/[^0-9]/g, '');
-  if (!q) {
-    _custFiltered = [..._custAllDocs];
-  } else {
-    _custFiltered = _custAllDocs.filter(doc => doc.id.includes(q));
-  }
+  _custFiltered = q ? _custAllDocs.filter(doc => doc.id.includes(q)) : [..._custAllDocs];
   _custRenderedCount = 0;
   _updateCustCountLabel(_custFiltered.length);
   _custRenderNextPage(true);
@@ -6156,8 +6251,7 @@ function clearCustSearch() {
 function _updateCustCountLabel(count) {
   const el = document.getElementById('cust-count-label');
   if (!el) return;
-  if (count === null) { el.textContent = ''; return; }
-  el.textContent = count > 0 ? `${count.toLocaleString('vi-VN')} khách hàng` : 'Không tìm thấy';
+  el.textContent = count === null ? '' : count > 0 ? `${count.toLocaleString('vi-VN')} khách hàng` : 'Không tìm thấy';
 }
 
 // ============================================================
@@ -6638,7 +6732,7 @@ function confirmPayWallet(phone, walDeduct, walLevel, fullAmount) {
     };
 
     db.ref('orders_xolifa/' + month + '/' + day).push(order).then(ref => {
-      orders.unshift({ id: ref.key, ...order, items: itemsArray });
+      // KHÔNG thêm thủ công vào orders[] — RT listener child_added tự xử lý.
       const loyPhone = document.getElementById('cuph').value.trim();
       if (loyPhone) loyaltyProcessAfterPay(loyPhone, total, items.reduce((s,c)=>s+(!c.isFree&&!c._vKey?c.qty:0),0), true);
       _finalizeStampFreeAfterPay();
