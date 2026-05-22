@@ -2969,17 +2969,21 @@ function syncDisplay(state, extra) {
         dgPrice = dgFixedP;
       }
     }
-    return {
+    const item = {
       name: c.name,
       size: c.size,
       price: isDgItem ? dgPrice : c.price,
-      originalPrice: isDgItem ? c.price : undefined,  // FIX: truyền giá gốc để kiosk hiện gạch
-      isDg: isDgItem ? true : undefined,               // FIX: flag để kiosk hiện badge ĐG
       qty: c.qty,
       itemId: c.itemId || '',
       toppings: (c.toppings || []).map(t => ({ name: t.name, price: t.price || 0 })),
       toppingSum
     };
+    // FIX: chỉ thêm field khi isDgItem để tránh undefined → Firebase throw
+    if (isDgItem) {
+      item.isDg = true;
+      item.originalPrice = c.price;
+    }
+    return item;
   });
 
   const total = cartArr.reduce((a, c) => a + (c.price + (c.toppingSum || 0)) * c.qty, 0);
