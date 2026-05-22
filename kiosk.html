@@ -82,6 +82,11 @@
     left: 50%; transform: translateX(-50%);
     display: flex; gap: 5px; z-index: 10;
   }
+  /* Đảm bảo gradient overlay chỉ phủ vùng slideshow */
+  #panel-left::after {
+    height: 60px;
+    top: auto; /* override lại để chắc chắn bottom-only */
+  }
 
   .dot {
     width: 5px; height: 5px; border-radius: 50%;
@@ -101,6 +106,48 @@
   .slide-placeholder span {
     font-size: 11px; letter-spacing: 1.5px;
     text-transform: uppercase;
+  }
+
+  /* ══ LEFT TOP: FOOD MENU — 44% height, tĩnh không chuyển cảnh ══ */
+  #food-panel {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 44%;
+    overflow: hidden;
+    background: #f0f0f0;
+    border-bottom: 1px solid var(--border);
+    z-index: 2;
+  }
+
+  #food-panel img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    object-position: top center;
+    display: block;
+  }
+
+  #food-panel-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 10px; color: var(--text3);
+    background: var(--surface2);
+  }
+  #food-panel-placeholder span {
+    font-size: 10px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  /* ══ LEFT BOTTOM: SLIDESHOW — 56% height ══ */
+  /* slide-container fill đúng vùng bottom 56% — inset overridden bởi JS khi cần */
+  #slide-container {
+    position: absolute;
+    top: 44%; left: 0; right: 0; bottom: 0;
+  }
+
+  /* slide dots nằm trong vùng slideshow (bottom 56%) */
+  #slide-dots {
+    bottom: 14px;
   }
 
   /* ══ MID: MENU 50% — full height, no topbar ══ */
@@ -535,8 +582,20 @@
 <body>
 <div id="app">
 
-  <!-- LEFT: SLIDESHOW -->
+  <!-- LEFT: FOOD MENU (top 44%) + SLIDESHOW (bottom 56%) -->
   <div id="panel-left">
+
+    <!-- TOP: Food menu tĩnh, không chuyển cảnh -->
+    <div id="food-panel">
+      <div id="food-panel-placeholder">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+          <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+        </svg>
+        <span>Đồ ăn</span>
+      </div>
+    </div>
+
+    <!-- BOTTOM: Slideshow -->
     <div id="slide-container">
       <div class="slide-placeholder" id="slide-placeholder">
         <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -547,6 +606,7 @@
       </div>
     </div>
     <div id="slide-dots"></div>
+
   </div>
 
   <!-- MID: MENU ONLY (no topbar) -->
@@ -666,6 +726,7 @@ var auth = firebase.auth();
 
 /* ── SLIDESHOW ── */
 var slides = [], cur = 0, slideTimer = null;
+var normalSlideItems = [], normalSlideDur = 6000; // backup slides gốc để restore sau DG
 
 function buildSlides(items, dur) {
   var c = document.getElementById('slide-container');
@@ -958,6 +1019,22 @@ function isDgNowActive(cfg) {
   return inTime && inDay;
 }
 
+function buildFoodPanel(imgUrl) {
+  var panel = document.getElementById('food-panel');
+  if (!panel) return;
+  if (!imgUrl) {
+    // Hiện placeholder nếu chưa có ảnh
+    panel.innerHTML = '<div id="food-panel-placeholder">'
+      + '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>'
+      + '<span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#a89e90;">Đồ ăn</span>'
+      + '</div>';
+    return;
+  }
+  // Hiện ảnh — object-fit:contain để không bị cắt xén
+  panel.innerHTML = '<img src="' + imgUrl + '" alt="Menu đồ ăn"'
+    + ' style="width:100%;height:100%;object-fit:contain;object-position:top center;display:block;">';
+}
+
 function buildDgPromoSlide(cfg) {
   var panelLeft = document.getElementById('panel-left');
 
@@ -971,33 +1048,10 @@ function buildDgPromoSlide(cfg) {
   var old = document.getElementById('dg-promo-wrapper');
   if (old) old.remove();
 
-  // Shrink slide-container to 40% (top)
+  // Ẩn slide-container, hiện promo trong vùng 56% bottom
+  // (food-panel vẫn hiện ở 44% top — không thay đổi)
   var slideContainer = document.getElementById('slide-container');
-  slideContainer.style.cssText = 'position:absolute;top:0;left:0;right:0;height:40%;';
-
-  // Use dgSlides if configured, otherwise fall back to normal slides
-  var dgSlideItems = (cfg.dgSlides && cfg.dgSlides.length) ? cfg.dgSlides : null;
-  if (dgSlideItems) {
-    buildSlides(dgSlideItems, 6000);
-  } else if (slides.length > 0) {
-    // Restart normal slides in the 40% area
-    slides[0].classList.add('active');
-    var fv = slides[0].querySelector('video');
-    if (fv) { fv.play().catch(function(){}); }
-    else {
-      slideTimer = setTimeout(function advSlide() {
-        if (!dgPromoActive) return;
-        var dots = document.getElementById('slide-dots');
-        var dotEls = dots ? dots.querySelectorAll('.dot') : [];
-        if (dotEls[cur]) dotEls[cur].classList.remove('active');
-        slides[cur].classList.remove('active');
-        cur = (cur + 1) % slides.length;
-        slides[cur].classList.add('active');
-        if (dotEls[cur]) dotEls[cur].classList.add('active');
-        slideTimer = setTimeout(advSlide, 6000);
-      }, 6000);
-    }
-  }
+  slideContainer.style.display = 'none';
 
   var fmtNum = function(p) { return new Intl.NumberFormat('vi-VN').format(p); };
 
@@ -1014,10 +1068,10 @@ function buildDgPromoSlide(cfg) {
   var priceLabel = fmtNum(cfg.fixedPrice||0) + 'đ';
   var priceLLabel = (cfg.fixedPriceL && cfg.fixedPriceL > 0) ? ' · L: ' + fmtNum(cfg.fixedPriceL) + 'đ' : '';
 
-  // Build 60% promo panel
+  // Build 56% promo panel
   var promo = document.createElement('div');
   promo.id = 'dg-promo-wrapper';
-  promo.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:60%;overflow:hidden;';
+  promo.style.cssText = 'position:absolute;top:44%;left:0;right:0;bottom:0;overflow:hidden;';
 
   // Background: image fills fully, dark overlay for readability
   var bgHtml = '';
@@ -1042,15 +1096,15 @@ function buildDgPromoSlide(cfg) {
 
   panelLeft.appendChild(promo);
 
-  // Divider line between 40% and 60%
+  // Divider line between 44% and 56%
   var divider = document.createElement('div');
   divider.id = 'dg-divider';
-  divider.style.cssText = 'position:absolute;top:40%;left:0;right:0;height:1px;background:rgba(0,0,0,0.15);z-index:10;';
+  divider.style.cssText = 'display:none;'; // đường kẻ đã có ở border-bottom của #food-panel
   panelLeft.appendChild(divider);
 
-  // Move dots above divider
+  // Dots ẩn theo slide-container khi DG active
   var dots = document.getElementById('slide-dots');
-  if (dots) dots.style.bottom = '62%';
+  if (dots) dots.style.display = 'none';
 
   dgPromoActive = true;
 }
@@ -1062,22 +1116,17 @@ function removeDgPromoSlide() {
   if (divider) divider.remove();
   dgPromoActive = false;
 
-  // Restore slide-container to full height
+  // Restore slide-container về vùng 56% bottom (CSS rule đã định nghĩa top:44%)
   var slideContainer = document.getElementById('slide-container');
-  slideContainer.style.cssText = '';
+  slideContainer.style.display = '';  // bỏ display:none — CSS rule tự fill lại
 
-  // Restore dots position
+  // Restore dots
   var dots = document.getElementById('slide-dots');
-  if (dots) dots.style.bottom = '';
+  if (dots) dots.style.display = '';
 
-  // Restart normal slideshow if we have slides
-  if (slides.length > 0 && dgConfig) {
-    buildSlides(slides.map(function(s) {
-      var img = s.querySelector('img');
-      var vid = s.querySelector('video');
-      if (vid) return { type: 'video', url: vid.src };
-      return { type: 'image', url: img ? img.src : '' };
-    }).filter(function(x) { return x.url; }), 6000);
+  // Restart normal slideshow từ bản backup slides gốc (không dùng slides[] vì có thể đã bị ghi đè bởi dgSlides)
+  if (normalSlideItems.length > 0) {
+    buildSlides(normalSlideItems, normalSlideDur);
   }
 }
 
@@ -1188,8 +1237,13 @@ function startListeners() {
     }
     if (!kc) return;
     kioskConfig = kc; // cache để applyMenuMode dùng
-    if (kc.slides && kc.slides.length)
-      buildSlides(kc.slides, (kc.slideDuration || 6) * 1000);
+    if (kc.slides && kc.slides.length) {
+      normalSlideItems = kc.slides; // lưu slides gốc để restore sau DG
+      normalSlideDur   = (kc.slideDuration || 6) * 1000;
+      buildSlides(normalSlideItems, normalSlideDur);
+    }
+    // Load food menu image (top 44% panel)
+    buildFoodPanel(kc.foodImg || null);
     // Menu: load theo trạng thái isToGo hiện tại
     db.ref('session_display_xolifa/isToGo').once('value').then(function(s) {
       applyMenuMode(s.val() === true);
