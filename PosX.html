@@ -2959,36 +2959,38 @@ function syncDisplay(state, extra) {
   }
   const applyDg = dgActive && dgItemIds.length > 0 && totalBillQtySync >= dgMinQty;
 
-  const cartArr = Object.values(cart).map(c => {
-    const isDgItem = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
-    const toppingSum = (c.toppings || []).reduce((s, t) => s + (t.price || 0), 0);
-    // FIX: tính đúng giá theo size (M dùng fixedPrice, L dùng fixedPriceL nếu có)
-    let dgPrice = c.price;
-    if (isDgItem) {
-      const isL = (c.size || '').toUpperCase() === 'L';
-      if (isL) {
-        dgPrice = (dgSettings.fixedPriceL != null && dgSettings.fixedPriceL > 0)
-                  ? dgSettings.fixedPriceL : c.price;
-      } else {
-        dgPrice = dgFixedP;
+  // Lọc bỏ các row discount/voucher (không phải món thật) trước khi đẩy lên kiosk
+  const cartArr = Object.values(cart)
+    .filter(c => !c._discountId && !c._vKey && c.itemId)
+    .map(c => {
+      const isDgItem = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
+      const toppingSum = (c.toppings || []).reduce((s, t) => s + (t.price || 0), 0);
+      let dgPrice = c.price;
+      if (isDgItem) {
+        const isL = (c.size || '').toUpperCase() === 'L';
+        if (isL) {
+          dgPrice = (dgSettings.fixedPriceL != null && dgSettings.fixedPriceL > 0)
+                    ? dgSettings.fixedPriceL : c.price;
+        } else {
+          dgPrice = dgFixedP;
+        }
       }
-    }
-    const item = {
-      name: c.name,
-      size: c.size,
-      price: isDgItem ? dgPrice : c.price,
-      qty: c.qty,
-      itemId: c.itemId || '',
-      toppings: (c.toppings || []).map(t => ({ name: t.name, price: t.price || 0 })),
-      toppingSum
-    };
-    // FIX: chỉ thêm field khi isDgItem để tránh undefined → Firebase throw
-    if (isDgItem) {
-      item.isDg = true;
-      item.originalPrice = c.price;
-    }
-    return item;
-  });
+      const item = {
+        name: c.name,
+        size: c.size || null,
+        price: isDgItem ? dgPrice : c.price,
+        qty: c.qty,
+        itemId: c.itemId,
+        toppings: (c.toppings || []).filter(Boolean).map(t => ({ name: t.name || '', price: t.price || 0 })),
+        toppingSum
+      };
+      if (isDgItem) {
+        item.isDg = true;
+        item.originalPrice = c.price;
+      }
+      if (c.isFree) item.isFree = true;
+      return item;
+    });
 
   const total = cartArr.reduce((a, c) => a + (c.price + (c.toppingSum || 0)) * c.qty, 0);
   const payload = { state, cart: cartArr, total, isToGo: !!isToGo, updatedAt: Date.now(), ...extra };
