@@ -2836,7 +2836,17 @@ function renderCartDrawer() {
     // Item miễn phí hoặc giảm giá theo món
     const isGiftItem = !!c._vKey;
     const isDgItem   = applyDg && !c.isFree && !isGiftItem && dgItemIds.includes(c.itemId);
-    const dispPrice  = isDgItem ? dgFixedP : c.price;
+    // FIX: tính đúng giá theo size (M → fixedPrice, L → fixedPriceL nếu có)
+    let dispPrice = c.price;
+    if (isDgItem) {
+      const isL = (c.size || '').toUpperCase() === 'L';
+      if (isL) {
+        dispPrice = (dgSettings.fixedPriceL != null && dgSettings.fixedPriceL > 0)
+                    ? dgSettings.fixedPriceL : c.price;
+      } else {
+        dispPrice = dgFixedP;
+      }
+    }
     const toppings = c.toppings || [];
     const toppingSum = toppings.reduce((s, t) => s + t.price, 0);
     const lineTotalWithToppings = (dispPrice + toppingSum) * c.qty;
@@ -2948,10 +2958,23 @@ function syncDisplay(state, extra) {
   const cartArr = Object.values(cart).map(c => {
     const isDgItem = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
     const toppingSum = (c.toppings || []).reduce((s, t) => s + (t.price || 0), 0);
+    // FIX: tính đúng giá theo size (M dùng fixedPrice, L dùng fixedPriceL nếu có)
+    let dgPrice = c.price;
+    if (isDgItem) {
+      const isL = (c.size || '').toUpperCase() === 'L';
+      if (isL) {
+        dgPrice = (dgSettings.fixedPriceL != null && dgSettings.fixedPriceL > 0)
+                  ? dgSettings.fixedPriceL : c.price;
+      } else {
+        dgPrice = dgFixedP;
+      }
+    }
     return {
       name: c.name,
       size: c.size,
-      price: isDgItem ? dgFixedP : c.price,
+      price: isDgItem ? dgPrice : c.price,
+      originalPrice: isDgItem ? c.price : undefined,  // FIX: truyền giá gốc để kiosk hiện gạch
+      isDg: isDgItem ? true : undefined,               // FIX: flag để kiosk hiện badge ĐG
       qty: c.qty,
       itemId: c.itemId || '',
       toppings: (c.toppings || []).map(t => ({ name: t.name, price: t.price || 0 })),
