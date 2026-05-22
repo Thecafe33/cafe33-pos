@@ -424,7 +424,10 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
 <!-- SIZE POPUP -->
 <div class="po" id="po" onclick="closePO(event)">
   <div class="sp">
-    <div class="spn" id="spn"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <div class="spn" id="spn" style="margin-bottom:0;text-align:left;"></div>
+      <button onclick="closePO()" style="background:#e4e4e4;border:none;border-radius:50%;width:34px;height:34px;cursor:pointer;font-size:16px;color:#666;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
+    </div>
     <div class="sps">VUI LÒNG CHỌN KÍCH CỠ</div>
     <div class="so" id="so"></div>
   </div>
@@ -2812,11 +2815,11 @@ function renderCartDrawer() {
   const dgItemIds = dgActive ? (dgSettings.items || []).map(i => i.id) : [];
   const dgMinQty  = dgSettings.minQty || 2;
   const dgFixedP  = dgSettings.fixedPrice || 0;
-  let eligibleQty = 0;
+  let totalBillQtyCart = 0;
   if (dgActive && dgItemIds.length) {
-    Object.values(cart).forEach(c => { if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty; });
+    Object.values(cart).forEach(c => { if (!c.isFree) totalBillQtyCart += c.qty; });
   }
-  const applyDg = dgActive && eligibleQty >= dgMinQty;
+  const applyDg = dgActive && dgItemIds.length > 0 && totalBillQtyCart >= dgMinQty;
 
   body.innerHTML = items.map(([k, c]) => {
     // Item giảm giá (discount code hoặc gift voucher toàn đơn)
@@ -2921,10 +2924,11 @@ function openPO(itemId) {
   }).join('');
   document.getElementById('po').classList.add('show');
 }
-function closePO(e) { if (e.target === document.getElementById('po')) document.getElementById('po').classList.remove('show'); }
+function closePO(e) { if (!e || e.target === document.getElementById('po')) document.getElementById('po').classList.remove('show'); }
 function onSize(id, label) {
+  document.getElementById('po').classList.remove('show');
   const m = getActiveMenu().find(x => x.id === id);
-  if (m) { const s = m.sizes.find(x => x.label === label); if (s) { addCart(m, s); document.getElementById('po').classList.remove('show'); } }
+  if (m) { const s = m.sizes.find(x => x.label === label); if (s) addCart(m, s); }
 }
 
 function cupSVG(sc) {
@@ -2943,17 +2947,17 @@ function addCart(item, size) {
 // SESSION DISPLAY — Đẩy realtime lên session_display_xolifa
 // ============================================================
 function syncDisplay(state, extra) {
-  const dgDisc    = getDgDiscountAmt();
-  const dgItemIds = dgDisc > 0 ? (dgSettings.items || []).map(i => i.id) : [];
+  const dgActive  = isDgActive();
+  const dgItemIds = dgActive ? (dgSettings.items || []).map(i => i.id) : [];
   const dgMinQty  = dgSettings.minQty || 2;
   const dgFixedP  = dgSettings.fixedPrice || 0;
 
-  // Đếm eligible qty để biết có đủ điều kiện không
-  let eligibleQty = 0;
-  if (dgItemIds.length) {
-    Object.values(cart).forEach(c => { if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty; });
+  // Dùng totalBillQty (giống applyDgDiscount) để nhất quán
+  let totalBillQtySync = 0;
+  if (dgActive && dgItemIds.length) {
+    Object.values(cart).forEach(c => { if (!c.isFree) totalBillQtySync += c.qty; });
   }
-  const applyDg = eligibleQty >= dgMinQty && dgItemIds.length > 0;
+  const applyDg = dgActive && dgItemIds.length > 0 && totalBillQtySync >= dgMinQty;
 
   const cartArr = Object.values(cart).map(c => {
     const isDgItem = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
@@ -3063,17 +3067,23 @@ function renderScCartPreview() {
   console.log('[renderScCartPreview] cart keys:', Object.keys(cart), '| items count:', items.length);
   if (!items.length) { el.innerHTML = '<div style="font-size:12px;color:#bbb;">Giỏ trống</div>'; return; }
 
-  const dgDisc    = getDgDiscountAmt();
-  const dgItemIds = dgDisc > 0 ? (dgSettings.items || []).map(i => i.id) : [];
+  const dgActive2 = isDgActive();
+  const dgItemIds = dgActive2 ? (dgSettings.items || []).map(i => i.id) : [];
   const dgMinQty  = dgSettings.minQty || 2;
   const dgFixedP  = dgSettings.fixedPrice || 0;
-  let eligibleQty = 0;
-  if (dgItemIds.length) items.forEach(c => { if (!c.isFree && dgItemIds.includes(c.itemId)) eligibleQty += c.qty; });
-  const applyDg = eligibleQty >= dgMinQty && dgItemIds.length > 0;
+  let totalBillQtyPreview = 0;
+  if (dgActive2 && dgItemIds.length) items.forEach(c => { if (!c.isFree) totalBillQtyPreview += c.qty; });
+  const applyDg = dgActive2 && dgItemIds.length > 0 && totalBillQtyPreview >= dgMinQty;
 
   el.innerHTML = items.map(c => {
     const isDgItem  = applyDg && !c.isFree && dgItemIds.includes(c.itemId);
-    const dispPrice = isDgItem ? dgFixedP : c.price;
+    let dispPrice = c.price;
+    if (isDgItem) {
+      const isL = (c.size || '').toUpperCase() === 'L';
+      dispPrice = isL
+        ? ((dgSettings.fixedPriceL != null && dgSettings.fixedPriceL > 0) ? dgSettings.fixedPriceL : c.price)
+        : dgFixedP;
+    }
     const lineTotal = dispPrice * c.qty;
     const isGifted  = !!c._vKey;
     const isFreeItem = c.isFree || (isGifted && c._giftType === 'item_free');
@@ -5678,16 +5688,21 @@ function openSplitPay() {
   const _dgItemIds   = _dgActive ? (dgSettings.items || []).map(x => x.id) : [];
   const _dgMinQty    = dgSettings.minQty || 2;
   const _dgFixedP    = dgSettings.fixedPrice || 0;
-  const _eligibleQty = _dgActive
-    ? Object.values(cart).reduce((s, c) => s + (!c.isFree && _dgItemIds.includes(c.itemId) ? c.qty : 0), 0)
+  const _totalBillQty = _dgActive
+    ? Object.values(cart).reduce((s, c) => s + (!c.isFree ? c.qty : 0), 0)
     : 0;
-  const _applyDg = _dgActive && _eligibleQty >= _dgMinQty && _dgItemIds.length > 0;
+  const _applyDg = _dgActive && _totalBillQty >= _dgMinQty && _dgItemIds.length > 0;
   // Tách cart thành từng unit riêng lẻ
   spItems = [];
   Object.values(cart).forEach(c => {
     const isDgItem  = _applyDg && !c.isFree && _dgItemIds.includes(c.itemId);
     const toppingSum = (c.toppings || []).reduce((s, t) => s + t.price, 0);
-    const unitPrice = (isDgItem ? _dgFixedP : c.price) + toppingSum;
+    let _dgPrice = _dgFixedP;
+    if (isDgItem) {
+      const _isL = (c.size || '').toUpperCase() === 'L';
+      if (_isL) _dgPrice = (dgSettings.fixedPriceL != null && dgSettings.fixedPriceL > 0) ? dgSettings.fixedPriceL : c.price;
+    }
+    const unitPrice = (isDgItem ? _dgPrice : c.price) + toppingSum;
     const toppingLabel = (c.toppings || []).map(t => t.name).join(', ');
     for (let i = 0; i < c.qty; i++) {
       spItems.push({ name: c.name + (toppingLabel ? ' (+' + toppingLabel + ')' : ''), size: c.size, price: unitPrice, paid: false });
