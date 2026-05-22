@@ -1206,6 +1206,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
     <!-- Tabs -->
     <div style="display:flex;background:#e2e2e2;border-radius:28px;margin:0 16px 20px;padding:4px;gap:2px;">
       <button class="tbb active" id="kc-tab-slide" onclick="kcSetTab('slide',this)">Slideshow</button>
+      <button class="tbb" id="kc-tab-food" onclick="kcSetTab('food',this)">Đồ ăn</button>
       <button class="tbb" id="kc-tab-menu" onclick="kcSetTab('menu',this)">Menu ảnh</button>
     </div>
 
@@ -1240,6 +1241,52 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
               oninput="document.getElementById('kc-dur-val').textContent=this.value+'s'"
               style="flex:1;height:4px;accent-color:var(--gm);">
             <span id="kc-dur-val" style="font-size:22px;font-weight:700;color:var(--gm);min-width:40px;text-align:right;">6s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: ẢNH ĐỒ ĂN (40% trên) -->
+    <div id="kc-page-food" style="display:none;">
+      <div style="padding:0 16px 6px;"><div style="font-size:11px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.7px;padding:10px 4px;">Ảnh đồ ăn — vùng 40% trên</div></div>
+      <div class="tg-section">
+        <p style="font-size:12px;color:var(--gt);margin-bottom:14px;line-height:1.7;">Ảnh tĩnh hiển thị ở <strong style="color:var(--gd);">40% phía trên</strong> màn kiosk (menu đồ ăn, combo, v.v.). Nên dùng ảnh dọc hoặc vuông tỉ lệ <strong>2:1</strong> đến <strong>1:1</strong>.</p>
+
+        <!-- Preview -->
+        <div id="kc-food-preview" style="display:none;margin-bottom:12px;border-radius:14px;overflow:hidden;border:1px solid #eee;">
+          <img id="kc-food-img-el" src="" alt="Food panel" style="width:100%;max-height:220px;object-fit:contain;object-position:top center;background:#f5f5f5;display:block;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f9f9f9;">
+            <span id="kc-food-img-name" style="font-size:11px;color:var(--gt);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;"></span>
+            <button onclick="kcRemoveFoodImg()" style="background:#fee2e2;border:none;border-radius:8px;padding:5px 10px;font-size:12px;color:#e74c3c;font-weight:700;cursor:pointer;flex-shrink:0;margin-left:8px;">Xoá</button>
+          </div>
+        </div>
+
+        <!-- Upload zone -->
+        <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#f5f5f5;border-radius:14px;padding:24px 16px;cursor:pointer;border:2px dashed #ddd;margin-bottom:12px;position:relative;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gm)" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span style="font-size:14px;font-weight:600;color:var(--gm);">Chọn ảnh đồ ăn</span>
+          <span style="font-size:11px;color:#aaa;">PNG · JPG · WebP</span>
+          <input type="file" id="kc-food-input" accept="image/*" onchange="kcUploadFoodImg(this)" style="position:absolute;inset:0;opacity:0;cursor:pointer;">
+        </label>
+
+        <!-- Progress -->
+        <div id="kc-food-prog" style="display:none;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--gt);margin-bottom:4px;">
+            <span id="kc-food-prog-name">Đang tải...</span>
+            <span id="kc-food-prog-pct">0%</span>
+          </div>
+          <div style="height:3px;background:#e0e0e0;border-radius:2px;overflow:hidden;">
+            <div id="kc-food-prog-fill" style="height:100%;background:var(--gm);border-radius:2px;width:0%;transition:width .15s;"></div>
+          </div>
+        </div>
+
+        <!-- Hoặc nhập URL -->
+        <button onclick="document.getElementById('kc-food-url-row').style.display=document.getElementById('kc-food-url-row').style.display==='none'?'block':'none'" style="background:none;border:none;font-size:12px;color:#aaa;cursor:pointer;font-family:'Google Sans',sans-serif;">Hoặc nhập URL ảnh</button>
+        <div id="kc-food-url-row" style="display:none;margin-top:8px;background:#fff;border-radius:14px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:700;color:var(--gt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">URL ảnh</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input id="kc-food-url-input" type="url" placeholder="https://..." style="flex:1;border:none;outline:none;font-family:'Google Sans',sans-serif;font-size:13px;color:var(--td);background:transparent;">
+            <button onclick="kcSetFoodImgFromUrl()" style="background:var(--gd);color:#fff;border:none;border-radius:10px;padding:7px 14px;font-family:'Google Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Dùng URL</button>
           </div>
         </div>
       </div>
@@ -5902,11 +5949,13 @@ function finalizeSplitPay() {
 // MÀN HÌNH PHỤ (KIOSK CONFIG)
 // ============================================================
 let kcSlides = [], kcMenuPages = [], kcTogoMenuPages = [];
+let kcFoodImg = null; // { url, name }
 
 function kcSetTab(tab, btn) {
   document.querySelectorAll('#kc .tbb').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('kc-page-slide').style.display = tab === 'slide' ? 'block' : 'none';
+  document.getElementById('kc-page-food').style.display  = tab === 'food'  ? 'block' : 'none';
   document.getElementById('kc-page-menu').style.display  = tab === 'menu'  ? 'block' : 'none';
 }
 
@@ -5917,6 +5966,7 @@ function kcLoadFromFirebase() {
     if (kc.slides)        { kcSlides        = kc.slides;        kcRenderSlides(); }
     if (kc.menuPages)     { kcMenuPages     = kc.menuPages;     kcRenderMenuPages(); }
     if (kc.togoMenuPages) { kcTogoMenuPages = kc.togoMenuPages; kcRenderTogoMenuPages(); }
+    if (kc.foodImg)       { kcFoodImg = kc.foodImg;             kcRenderFoodImg(); }
     if (kc.slideDuration) {
       const el = document.getElementById('kc-slide-dur');
       if (el) { el.value = kc.slideDuration; document.getElementById('kc-dur-val').textContent = kc.slideDuration + 's'; }
@@ -5931,6 +5981,7 @@ function kcSaveAndApply() {
     slides:         kcSlides         || [],
     menuPages:      kcMenuPages      || [],
     togoMenuPages:  kcTogoMenuPages  || [],
+    foodImg:        kcFoodImg        || null,
   }).then(() => {
     toast('✅ Đã lưu & đồng bộ màn hình phụ');
   }).catch(err => toast('❌ Lỗi: ' + err.message));
@@ -6021,6 +6072,51 @@ function kcUploadTogoMenu(input) {
       .catch(err => { toast('❌ ' + err.message); next(); });
   };
   next();
+}
+
+function kcUploadFoodImg(input) {
+  const f = input.files[0]; if (!f) return;
+  document.getElementById('kc-food-prog').style.display = 'block';
+  kcDoUpload(f, 'kiosk/food/' + Date.now() + '_' + f.name,
+    'kc-food-prog-fill', 'kc-food-prog-pct', 'kc-food-prog-name')
+    .then(url => {
+      kcFoodImg = { url, name: f.name };
+      kcRenderFoodImg();
+      document.getElementById('kc-food-prog').style.display = 'none';
+      input.value = '';
+      toast('✓ ' + f.name);
+    })
+    .catch(err => { toast('❌ ' + err.message); document.getElementById('kc-food-prog').style.display = 'none'; });
+}
+
+function kcSetFoodImgFromUrl() {
+  const url = document.getElementById('kc-food-url-input').value.trim();
+  if (!url) return;
+  kcFoodImg = { url, name: url.split('/').pop().split('?')[0] || 'Ảnh từ URL' };
+  kcRenderFoodImg();
+  document.getElementById('kc-food-url-row').style.display = 'none';
+  document.getElementById('kc-food-url-input').value = '';
+  toast('✓ Đã đặt ảnh đồ ăn từ URL');
+}
+
+function kcRemoveFoodImg() {
+  kcFoodImg = null;
+  kcRenderFoodImg();
+}
+
+function kcRenderFoodImg() {
+  const preview = document.getElementById('kc-food-preview');
+  const imgEl   = document.getElementById('kc-food-img-el');
+  const nameEl  = document.getElementById('kc-food-img-name');
+  if (!preview) return;
+  if (kcFoodImg && kcFoodImg.url) {
+    imgEl.src = kcFoodImg.url;
+    nameEl.textContent = kcFoodImg.name || 'Ảnh đồ ăn';
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+    imgEl.src = '';
+  }
 }
 
 // ── Render lists ──
