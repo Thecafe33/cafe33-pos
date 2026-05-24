@@ -3,613 +3,245 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bảng Lương — Xolifa</title>
+<title>Lương — Xolifa</title>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 :root {
   --green: #1a4a2e;
   --green-mid: #2d7a4f;
-  --green-light: #e8f5ee;
-  --green-xlight: #f0faf4;
-  --amber: #b45309;
-  --amber-light: #fef3c7;
-  --blue: #185fa5;
-  --blue-light: #e6f1fb;
-  --coral: #993c1d;
-  --coral-light: #faece7;
-  --bg: #f5f7f5;
+  --accent: #34c759;
+  --bg: #f5f5f7;
   --card: #ffffff;
-  --border: rgba(0,0,0,0.07);
-  --text: #141a14;
-  --muted: #6b7a6e;
-  --radius-xl: 28px;
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --shadow-card: 0 2px 16px rgba(26,74,46,0.08), 0 0 0 1px rgba(26,74,46,0.04);
+  --card2: #f5f5f7;
+  --border: rgba(0,0,0,0.08);
+  --text: #1d1d1f;
+  --text2: #6e6e73;
+  --text3: #aeaeb2;
+  --amber: #ff9f0a;
+  --purple: #bf5af2;
+  --blue: #0071e3;
+  --red: #ff3b30;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 22px;
+  --r-xl: 28px;
 }
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  background: var(--bg);
-  min-height: 100vh;
-  color: var(--text);
-  -webkit-font-smoothing: antialiased;
-}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
 
 /* ── LOGIN ── */
-#login-screen {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: linear-gradient(160deg, #f0faf4 0%, #f5f7f5 50%, #fef9f0 100%);
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);}
+.login-wrap{width:100%;max-width:360px;}
+.login-logo{width:64px;height:64px;background:var(--green);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 28px;font-size:28px;}
+.login-title{font-size:28px;font-weight:600;text-align:center;letter-spacing:-0.5px;margin-bottom:6px;}
+.login-sub{font-size:14px;color:var(--text2);text-align:center;margin-bottom:36px;}
+.field{margin-bottom:14px;}
+.field input{
+  width:100%;padding:14px 16px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--r-md);
+  font-family:inherit;font-size:15px;color:var(--text);
+  outline:none;transition:border-color .2s;
 }
-
-.login-card {
-  background: var(--card);
-  border-radius: var(--radius-xl);
-  padding: 48px 40px 40px;
-  width: 100%;
-  max-width: 400px;
-  box-shadow: var(--shadow-card);
-  animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+.field input:focus{border-color:rgba(0,0,0,0.25);}
+.field input::placeholder{color:var(--text3);}
+.btn-login{
+  width:100%;padding:15px;margin-top:6px;
+  background:var(--green);color:#fff;border:none;
+  border-radius:var(--r-md);
+  font-family:inherit;font-size:15px;font-weight:600;
+  cursor:pointer;transition:opacity .15s;
+  letter-spacing:-0.1px;
 }
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.login-logo {
-  width: 56px; height: 56px;
-  background: var(--green);
-  border-radius: 18px;
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 24px;
-  font-size: 26px;
-}
-
-.login-title {
-  font-size: 26px;
-  font-weight: 800;
-  color: var(--green);
-  margin-bottom: 4px;
-  letter-spacing: -0.5px;
-}
-
-.login-sub {
-  font-size: 14px;
-  color: var(--muted);
-  margin-bottom: 36px;
-}
-
-.field-label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 8px;
-  display: block;
-}
-
-.field-input {
-  width: 100%;
-  padding: 14px 16px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-md);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text);
-  background: #fafafa;
-  outline: none;
-  transition: border-color 0.2s, background 0.2s;
-  margin-bottom: 16px;
-}
-
-.field-input:focus {
-  border-color: var(--green-mid);
-  background: #fff;
-}
-
-.btn-login {
-  width: 100%;
-  padding: 16px;
-  background: var(--green);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-md);
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  margin-top: 8px;
-  transition: opacity 0.15s, transform 0.15s;
-  letter-spacing: 0.02em;
-}
-
-.btn-login:hover { opacity: 0.9; }
-.btn-login:active { transform: scale(0.98); }
-.btn-login:disabled { opacity: 0.4; cursor: not-allowed; }
-
-.login-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  margin-top: 12px;
-  display: none;
+.btn-login:hover{opacity:.88;}
+.btn-login:disabled{opacity:.4;cursor:not-allowed;}
+.login-err{
+  margin-top:12px;padding:12px 14px;
+  background:#fff0f0;border:1px solid rgba(255,59,48,.2);
+  border-radius:var(--r-sm);
+  font-size:13px;color:var(--red);text-align:center;
+  display:none;
 }
 
 /* ── DASHBOARD ── */
-#dashboard-screen { display: none; min-height: 100vh; }
-
-.top-bar {
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  padding: 0 24px;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+#dashboard-screen{display:none;min-height:100vh;}
+.topbar{
+  height:52px;padding:0 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,.8);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
 }
-
-.topbar-left { display: flex; align-items: center; gap: 12px; }
-
-.topbar-logo {
-  width: 36px; height: 36px;
-  background: var(--green);
-  border-radius: 11px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
+.tb-left{display:flex;align-items:center;gap:10px;}
+.tb-logo{width:30px;height:30px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.tb-title{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-0.2px;}
+.tb-right{display:flex;align-items:center;gap:10px;}
+.user-pill{
+  display:flex;align-items:center;gap:8px;
+  background:var(--card2);border-radius:100px;
+  padding:5px 12px 5px 5px;
 }
-
-.topbar-title {
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--green);
-  letter-spacing: -0.3px;
+.user-av{
+  width:24px;height:24px;border-radius:50%;
+  background:var(--green);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;
 }
-
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-
-.user-chip {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--green-xlight);
-  padding: 6px 14px 6px 8px;
-  border-radius: 100px;
+.user-name{font-size:13px;font-weight:500;color:var(--text);}
+.btn-out{
+  padding:6px 14px;background:transparent;
+  border:1px solid var(--border);border-radius:100px;
+  font-family:inherit;font-size:12px;font-weight:500;
+  color:var(--text2);cursor:pointer;transition:all .15s;
 }
+.btn-out:hover{border-color:rgba(0,0,0,.2);color:var(--text);}
 
-.user-avatar {
-  width: 28px; height: 28px;
-  background: var(--green);
-  border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 800; color: #fff;
+.body{max-width:680px;margin:0 auto;padding:28px 20px 80px;}
+
+/* ── PERIOD CONTROL ── */
+.period-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.period-title{font-size:22px;font-weight:600;letter-spacing:-0.5px;}
+.period-sub{font-size:13px;color:var(--text2);margin-top:2px;}
+.controls-row{display:flex;align-items:center;gap:8px;}
+.seg{display:flex;background:var(--card2);border-radius:100px;padding:3px;gap:2px;}
+.seg-btn{
+  padding:6px 16px;border-radius:100px;border:none;
+  font-family:inherit;font-size:13px;font-weight:500;
+  cursor:pointer;background:transparent;color:var(--text2);
+  transition:all .18s;
 }
-
-.user-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--green);
+.seg-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.nav-row{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:100px;padding:4px 6px;}
+.nav-btn{
+  width:28px;height:28px;border-radius:50%;border:none;
+  background:transparent;cursor:pointer;color:var(--text2);
+  font-size:15px;display:flex;align-items:center;justify-content:center;
+  transition:background .15s;
 }
+.nav-btn:hover{background:var(--card2);}
+.nav-label{font-size:13px;font-weight:500;min-width:96px;text-align:center;}
 
-.btn-logout {
-  padding: 7px 14px;
-  background: transparent;
-  border: 1.5px solid var(--border);
-  border-radius: 100px;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.15s;
-}
+/* ── CARDS ── */
+.card{background:var(--card);border-radius:var(--r-xl);border:1px solid var(--border);overflow:hidden;margin-bottom:12px;}
+.card-section{padding:20px 22px;}
+.card-section+.card-section{border-top:1px solid var(--border);}
 
-.btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
+/* ── HERO TOTAL ── */
+.hero{padding:28px 24px 24px;text-align:center;}
+.hero-label{font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;}
+.hero-amount{font-size:48px;font-weight:300;letter-spacing:-2px;color:var(--text);line-height:1;}
+.hero-amount span{font-size:24px;font-weight:400;vertical-align:super;letter-spacing:0;margin-right:2px;}
+.hero-sub{font-size:13px;color:var(--text2);margin-top:8px;}
 
-.dashboard-body {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 32px 24px 80px;
-}
+/* ── STAT GRID ── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
+.stat-cell{background:var(--card);padding:18px 20px;}
+.stat-label{font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);margin-bottom:6px;}
+.stat-value{font-size:20px;font-weight:500;letter-spacing:-0.5px;color:var(--text);}
+.stat-value.accent-green{color:var(--green-mid);}
+.stat-value.accent-amber{color:var(--amber);}
+.stat-value.accent-purple{color:var(--purple);}
+.stat-sub{font-size:12px;color:var(--text3);margin-top:3px;}
 
-/* Period selector */
-.period-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
-  gap: 16px;
-}
+/* ── KPI BAR ── */
+.kpi-wrap{padding:20px 22px;}
+.kpi-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+.kpi-title{font-size:13px;font-weight:500;color:var(--text);}
+.kpi-pct{font-size:13px;font-weight:600;color:var(--green-mid);}
+.kpi-track{height:6px;background:var(--card2);border-radius:100px;overflow:hidden;}
+.kpi-fill{height:100%;border-radius:100px;background:var(--green);transition:width .8s cubic-bezier(.16,1,.3,1);}
+.kpi-nums{display:flex;justify-content:space-between;margin-top:7px;font-size:12px;color:var(--text3);}
 
-.period-title {
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: -0.5px;
-}
+/* ── BREAKDOWN ROWS ── */
+.bk-row{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--border);}
+.bk-row:first-child{border-top:none;}
+.bk-left{display:flex;align-items:center;gap:11px;}
+.bk-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.bk-name{font-size:14px;font-weight:500;}
+.bk-desc{font-size:12px;color:var(--text2);margin-top:1px;}
+.bk-amount{font-size:15px;font-weight:600;letter-spacing:-0.3px;}
 
-.period-sub {
-  font-size: 13px;
-  color: var(--muted);
-  font-weight: 500;
-  margin-top: 2px;
-}
+/* ── YEAR TABLE ── */
+.yt-wrap{overflow-x:auto;}
+table.yt{width:100%;border-collapse:collapse;font-size:13px;}
+table.yt th{padding:11px 16px;text-align:right;font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);background:#fafafa;border-bottom:1px solid var(--border);}
+table.yt th:first-child{text-align:left;}
+table.yt td{padding:13px 16px;border-bottom:1px solid var(--border);text-align:right;font-weight:500;color:var(--text);}
+table.yt td:first-child{text-align:left;color:var(--text2);}
+table.yt tr:last-child td{border-bottom:none;}
+table.yt tr:hover td{background:var(--card2);}
+.tag-ship{background:#f3e8ff;color:#7c3aed;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;margin-right:4px;}
 
-.period-controls { display: flex; align-items: center; gap: 10px; }
-
-.tab-group {
-  display: flex;
-  background: #ebebeb;
-  border-radius: 100px;
-  padding: 3px;
-  gap: 2px;
-}
-
-.tab-btn {
-  padding: 7px 18px;
-  border-radius: 100px;
-  border: none;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  background: transparent;
-  color: var(--muted);
-  transition: all 0.2s;
-}
-
-.tab-btn.active {
-  background: var(--card);
-  color: var(--green);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.1);
-}
-
-.month-nav {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--card);
-  border-radius: 100px;
-  padding: 6px 8px;
-  border: 1.5px solid var(--border);
-}
-
-.nav-btn {
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 16px;
-  color: var(--muted);
-  transition: background 0.15s;
-}
-
-.nav-btn:hover { background: var(--green-xlight); color: var(--green); }
-
-.month-label {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  min-width: 100px;
-  text-align: center;
-}
-
-/* Stat cards grid */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  background: var(--card);
-  border-radius: var(--radius-xl);
-  padding: 24px 22px;
-  border: 1.5px solid var(--border);
-  transition: transform 0.15s, box-shadow 0.15s;
-  position: relative;
-  overflow: hidden;
-  animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(26,74,46,0.1);
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  border-radius: 3px 3px 0 0;
-}
-
-.stat-card.c-kpi::before { background: var(--blue); }
-.stat-card.c-salary::before { background: var(--green); }
-.stat-card.c-bonus-kpi::before { background: var(--amber); }
-.stat-card.c-bonus-ship::before { background: #7c3aed; }
-.stat-card.c-total::before { background: var(--green-mid); }
-
-.stat-card:nth-child(1) { animation-delay: 0.05s; }
-.stat-card:nth-child(2) { animation-delay: 0.1s; }
-.stat-card:nth-child(3) { animation-delay: 0.15s; }
-.stat-card:nth-child(4) { animation-delay: 0.2s; }
-.stat-card:nth-child(5) { animation-delay: 0.25s; }
-
-.stat-icon-wrap {
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 18px;
-  margin-bottom: 16px;
-}
-
-.c-kpi .stat-icon-wrap { background: var(--blue-light); }
-.c-salary .stat-icon-wrap { background: var(--green-light); }
-.c-bonus-kpi .stat-icon-wrap { background: var(--amber-light); }
-.c-bonus-ship .stat-icon-wrap { background: #f3e8ff; }
-.c-total .stat-icon-wrap { background: var(--green-light); }
-
-.stat-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-
-.stat-value {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
-}
-
-.c-kpi .stat-value { color: var(--blue); }
-.c-salary .stat-value { color: var(--green); }
-.c-bonus-kpi .stat-value { color: var(--amber); }
-.c-bonus-ship .stat-value { color: #7c3aed; }
-.c-total .stat-value { color: var(--green); }
-
-.stat-sub {
-  font-size: 12px;
-  color: var(--muted);
-  font-weight: 500;
-  margin-top: 6px;
-}
-
-/* KPI progress bar */
-.kpi-bar-wrap {
-  margin-top: 12px;
-}
-
-.kpi-bar-bg {
-  height: 6px;
-  background: #e8edf0;
-  border-radius: 100px;
-  overflow: hidden;
-}
-
-.kpi-bar-fill {
-  height: 100%;
-  border-radius: 100px;
-  background: var(--blue);
-  transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
-}
-
-/* Total card — bigger */
-.stat-card.c-total {
-  background: var(--green);
-  border-color: transparent;
-}
-
-.c-total .stat-label { color: rgba(255,255,255,0.65); }
-.c-total .stat-value { color: #fff; font-size: 28px; }
-.c-total .stat-sub { color: rgba(255,255,255,0.6); }
-.c-total .stat-icon-wrap { background: rgba(255,255,255,0.15); }
-
-/* Year table */
-.year-table-card {
-  background: var(--card);
-  border-radius: var(--radius-xl);
-  border: 1.5px solid var(--border);
-  overflow: hidden;
-  margin-top: 4px;
-}
-
-.year-table-head {
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; gap: 10px;
-}
-
-.year-table-title {
-  font-size: 15px;
-  font-weight: 800;
-  color: var(--text);
-}
-
-table.yt {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-table.yt thead th {
-  padding: 12px 16px;
-  text-align: right;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  background: #fafafa;
-  border-bottom: 1px solid var(--border);
-}
-
-table.yt thead th:first-child { text-align: left; }
-
-table.yt tbody td {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  text-align: right;
-  font-weight: 600;
-  color: var(--text);
-}
-
-table.yt tbody td:first-child {
-  text-align: left;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-table.yt tbody tr:last-child td { border-bottom: none; }
-
-table.yt tbody tr:hover td { background: var(--green-xlight); }
-
-.tag-ship {
-  display: inline-block;
-  background: #f3e8ff;
-  color: #7c3aed;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-/* Loading */
-.loading-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.spinner {
-  width: 32px; height: 32px;
-  border: 3px solid var(--green-light);
-  border-top-color: var(--green);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  margin: 0 auto 16px;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Info row */
-.info-row {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.info-chip {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--card);
-  border: 1.5px solid var(--border);
-  border-radius: 100px;
-  padding: 8px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.info-chip span { color: var(--muted); font-weight: 500; }
+/* ── LOADING ── */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:14px;color:var(--text2);font-size:14px;}
+.spin{width:26px;height:26px;border:2.5px solid rgba(0,0,0,.08);border-top-color:var(--green);border-radius:50%;animation:spin .65s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+.fade-up{animation:fadeUp .35s cubic-bezier(.16,1,.3,1) both;}
 </style>
 </head>
 <body>
 
-<!-- ══ LOGIN ══════════════════════════════════════════════════ -->
+<!-- LOGIN -->
 <div id="login-screen">
-  <div class="login-card">
+  <div class="login-wrap">
     <div class="login-logo">🌿</div>
     <div class="login-title">Bảng lương</div>
-    <div class="login-sub">Đăng nhập để xem thông tin lương của bạn</div>
-
-    <label class="field-label">Tài khoản</label>
-    <input class="field-input" type="text" id="inp-user" placeholder="Nhập tên đăng nhập" autocomplete="username">
-
-    <label class="field-label">Mật khẩu</label>
-    <input class="field-input" type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password"
-      onkeydown="if(event.key==='Enter')doLogin()">
-
+    <div class="login-sub">Đăng nhập để xem thông tin lương</div>
+    <div class="field"><input type="text" id="inp-user" placeholder="Tên đăng nhập" autocomplete="username"></div>
+    <div class="field"><input type="password" id="inp-pass" placeholder="Mật khẩu" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
     <button class="btn-login" id="btn-login" onclick="doLogin()">Đăng nhập</button>
-    <div class="login-error" id="login-error">Tài khoản hoặc mật khẩu không đúng.</div>
+    <div class="login-err" id="login-error">Tài khoản hoặc mật khẩu không đúng.</div>
   </div>
 </div>
 
-<!-- ══ DASHBOARD ══════════════════════════════════════════════ -->
+<!-- DASHBOARD -->
 <div id="dashboard-screen">
-  <div class="top-bar">
-    <div class="topbar-left">
-      <div class="topbar-logo">🌿</div>
-      <div class="topbar-title">Xolifa · Lương</div>
+  <div class="topbar">
+    <div class="tb-left">
+      <div class="tb-logo">🌿</div>
+      <div class="tb-title">Xolifa · Lương</div>
     </div>
-    <div class="topbar-right">
-      <div class="user-chip">
-        <div class="user-avatar" id="user-avatar">?</div>
-        <div class="user-name" id="user-display-name">--</div>
+    <div class="tb-right">
+      <div class="user-pill">
+        <div class="user-av" id="user-av">?</div>
+        <div class="user-name" id="user-name">--</div>
       </div>
-      <button class="btn-logout" onclick="doLogout()">Đăng xuất</button>
+      <button class="btn-out" onclick="doLogout()">Đăng xuất</button>
     </div>
   </div>
 
-  <div class="dashboard-body">
-    <div class="period-header">
+  <div class="body">
+    <div class="period-row">
       <div>
-        <div class="period-title" id="period-heading">Tháng này</div>
-        <div class="period-sub" id="period-sub">Dữ liệu đang tải...</div>
+        <div class="period-title" id="period-title">Tháng này</div>
+        <div class="period-sub" id="period-sub">--</div>
       </div>
-      <div class="period-controls">
-        <div class="tab-group">
-          <button class="tab-btn active" id="tab-month" onclick="switchTab('month')">Tháng</button>
-          <button class="tab-btn" id="tab-year" onclick="switchTab('year')">Năm</button>
+      <div class="controls-row">
+        <div class="seg">
+          <button class="seg-btn active" id="tab-month" onclick="switchTab('month')">Tháng</button>
+          <button class="seg-btn" id="tab-year" onclick="switchTab('year')">Năm</button>
         </div>
-        <div class="month-nav" id="month-nav">
+        <div class="nav-row" id="nav-row">
           <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
-          <div class="month-label" id="month-label">--</div>
+          <div class="nav-label" id="nav-label">--</div>
           <button class="nav-btn" onclick="changeMonth(1)">›</button>
         </div>
       </div>
     </div>
 
     <div id="content-area">
-      <div class="loading-state">
-        <div class="spinner"></div>
-        Đang tải dữ liệu...
-      </div>
+      <div class="loading"><div class="spin"></div>Đang tải...</div>
     </div>
   </div>
 </div>
 
 <script>
-// ── Firebase ──────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey:      "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
   authDomain:  "the-cafe-33.firebaseapp.com",
@@ -620,34 +252,29 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const fstore = firebase.firestore();
 const rtdb   = firebase.database();
 
-// ── State ─────────────────────────────────────────────────────────
-let currentUser = null;   // { username, hoTen, luongCung, thuongShip }
+let currentUser = null;
 let currentTab  = 'month';
 let viewYear    = new Date().getFullYear();
-let viewMonth   = new Date().getMonth() + 1; // 1-12
+let viewMonth   = new Date().getMonth() + 1;
 
-const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-const MONTH_NAMES = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
-                     'Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+const MONTH_KEYS  = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MONTH_NAMES = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 
-const fmt = n => Number(Math.round(n)).toLocaleString('vi-VN') + 'đ';
+const fmt    = n => Number(Math.round(n)).toLocaleString('vi-VN') + 'đ';
 const fmtNum = n => Number(Math.round(n)).toLocaleString('vi-VN');
 
-// ── Session ───────────────────────────────────────────────────────
 function saveSession(u) { sessionStorage.setItem('xl_user', JSON.stringify(u)); }
 function loadSession()  { const r = sessionStorage.getItem('xl_user'); return r ? JSON.parse(r) : null; }
 function clearSession() { sessionStorage.removeItem('xl_user'); }
 
-// ── Login ─────────────────────────────────────────────────────────
 async function doLogin() {
-  const user = document.getElementById('inp-user').value.trim();
-  const pass = document.getElementById('inp-pass').value;
+  const user  = document.getElementById('inp-user').value.trim();
+  const pass  = document.getElementById('inp-pass').value;
   const errEl = document.getElementById('login-error');
   const btn   = document.getElementById('btn-login');
   errEl.style.display = 'none';
-  if (!user || !pass) { errEl.textContent = 'Vui lòng nhập đầy đủ thông tin.'; errEl.style.display = 'block'; return; }
-  btn.disabled = true;
-  btn.textContent = 'Đang đăng nhập...';
+  if (!user || !pass) { errEl.textContent = 'Vui lòng nhập đầy đủ.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
   try {
     const doc = await fstore.collection('xolifa_luong').doc('accounts').get();
     if (!doc.exists) throw new Error('no_accounts');
@@ -658,31 +285,28 @@ async function doLogin() {
     saveSession(match);
     showDashboard();
   } catch(e) {
-    errEl.textContent = e.message === 'wrong' || e.message === 'no_accounts'
+    errEl.textContent = (e.message === 'wrong' || e.message === 'no_accounts')
       ? 'Tài khoản hoặc mật khẩu không đúng.' : 'Lỗi kết nối. Thử lại sau.';
     errEl.style.display = 'block';
   }
-  btn.disabled = false;
-  btn.textContent = 'Đăng nhập';
+  btn.disabled = false; btn.textContent = 'Đăng nhập';
 }
 
 function doLogout() {
-  clearSession();
-  currentUser = null;
+  clearSession(); currentUser = null;
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('dashboard-screen').style.display = 'none';
   document.getElementById('inp-user').value = '';
   document.getElementById('inp-pass').value = '';
 }
 
-// ── Show dashboard ────────────────────────────────────────────────
 function showDashboard() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('dashboard-screen').style.display = 'block';
-  const initials = (currentUser.hoTen || currentUser.username).charAt(0).toUpperCase();
-  document.getElementById('user-avatar').textContent = initials;
-  document.getElementById('user-display-name').textContent = currentUser.hoTen || currentUser.username;
-  updateMonthLabel();
+  const init = (currentUser.hoTen || currentUser.username).charAt(0).toUpperCase();
+  document.getElementById('user-av').textContent   = init;
+  document.getElementById('user-name').textContent = currentUser.hoTen || currentUser.username;
+  updateNavLabel();
   loadAndRender();
 }
 
@@ -690,8 +314,8 @@ function switchTab(tab) {
   currentTab = tab;
   document.getElementById('tab-month').classList.toggle('active', tab === 'month');
   document.getElementById('tab-year').classList.toggle('active', tab === 'year');
-  document.getElementById('month-nav').style.display = tab === 'month' ? 'flex' : 'none';
-  updateMonthLabel();
+  document.getElementById('nav-row').style.display = tab === 'month' ? 'flex' : 'none';
+  updateNavLabel();
   loadAndRender();
 }
 
@@ -699,289 +323,261 @@ function changeMonth(dir) {
   viewMonth += dir;
   if (viewMonth > 12) { viewMonth = 1; viewYear++; }
   if (viewMonth < 1)  { viewMonth = 12; viewYear--; }
-  updateMonthLabel();
+  updateNavLabel();
   loadAndRender();
 }
 
-function updateMonthLabel() {
-  document.getElementById('month-label').textContent =
+function updateNavLabel() {
+  document.getElementById('nav-label').textContent =
     currentTab === 'month' ? `${MONTH_NAMES[viewMonth-1]} ${viewYear}` : String(viewYear);
+  document.getElementById('period-title').textContent =
+    currentTab === 'month' ? MONTH_NAMES[viewMonth-1] : `Năm ${viewYear}`;
+  document.getElementById('period-sub').textContent =
+    currentTab === 'month' ? `${viewYear}` : 'Tổng hợp 12 tháng';
 }
 
-// ── Data loading ───────────────────────────────────────────────────
 async function loadAndRender() {
   document.getElementById('content-area').innerHTML =
-    `<div class="loading-state"><div class="spinner"></div>Đang tải dữ liệu...</div>`;
-
+    '<div class="loading"><div class="spin"></div>Đang tải dữ liệu...</div>';
   try {
-    // Load config for this period
     const cfgDoc = await fstore.collection('xolifa_luong').doc('config').get();
     const cfg = cfgDoc.exists ? cfgDoc.data() : {};
-    console.log('[DEBUG] config raw:', JSON.stringify(cfg));
-
-    if (currentTab === 'month') {
-      await renderMonth(cfg, viewYear, viewMonth);
-    } else {
-      await renderYear(cfg, viewYear);
-    }
+    if (currentTab === 'month') await renderMonth(cfg, viewYear, viewMonth);
+    else await renderYear(cfg, viewYear);
   } catch(e) {
     document.getElementById('content-area').innerHTML =
-      `<div class="loading-state" style="color:#991b1b;">Lỗi tải dữ liệu: ${e.message}</div>`;
+      `<div class="loading" style="color:var(--red)">Lỗi: ${e.message}</div>`;
   }
 }
 
-// ── Fetch revenue + ship count for a month ────────────────────────
 async function fetchMonthData(year, month) {
   const monthKey = MONTH_KEYS[month - 1];
   const now = new Date();
   const isCurrentMonth = (year === now.getFullYear() && month === now.getMonth() + 1);
-  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 2); cutoff.setHours(0,0,0,0);
-
-  let revenue = 0;
-  let shipCount = 0;
-
+  let revenue = 0, shipCount = 0;
   const daysInMonth = new Date(year, month, 0).getDate();
-
   for (let d = 1; d <= daysInMonth; d++) {
     const dateObj = new Date(year, month - 1, d);
     if (isCurrentMonth && dateObj > now) break;
-
     const dayStr = String(d).padStart(2, '0');
-
     try {
-      // Đọc cả RT lẫn Archive rồi merge — tránh bỏ sót khi PosX đang archive dở
-      let orders = {};
-      const [rtSnap, fsDoc] = await Promise.all([
-        rtdb.ref(`orders_xolifa/${monthKey}/${dayStr}`).once('value'),
-        fstore.collection('orders_xolifa_archive').doc(`${monthKey}_${dayStr}_${year}`).get()
-      ]);
+      const rtSnap = await rtdb.ref(`orders_xolifa/${monthKey}/${dayStr}`).once('value');
       const rtData = rtSnap.val() || {};
-      const fsData = fsDoc.exists ? (fsDoc.data().orders || {}) : {};
-      orders = { ...fsData, ...rtData }; // RT ghi đè nếu trùng key
-
+      let fsData = {};
+      try {
+        const fsDoc = await fstore.collection('orders_xolifa_archive').doc(`${monthKey}_${dayStr}_${year}`).get();
+        fsData = fsDoc.exists ? (fsDoc.data().orders || {}) : {};
+      } catch(_) {}
+      const orders = { ...fsData, ...rtData };
       Object.values(orders).forEach(o => {
-        // Revenue (trừ food)
         revenue += (o.total || 0) - (o.foodTotal || 0);
-        // Ship count
         if (o.isShip === true) shipCount++;
       });
     } catch(_) {}
   }
-
   return { revenue, shipCount };
 }
 
-// ── Render month view ─────────────────────────────────────────────
 async function renderMonth(cfg, year, month) {
-  const monthKey = `${year}-${String(month).padStart(2,'0')}`;
-  const monthCfg = (cfg.months || {})[monthKey] || {};
-
-  const kpiTarget    = monthCfg.kpiTarget    || 0;
-  const bonusPct     = monthCfg.bonusPct     || 0;   // % thưởng KPI
-  const thuongShip   = currentUser.thuongShip  || 0;
-  const luongCung    = currentUser.luongCung   || 0;
-
-  // Update headings
-  document.getElementById('period-heading').textContent = MONTH_NAMES[month-1];
-  document.getElementById('period-sub').textContent = `Năm ${year} · Đang tính toán...`;
+  const monthKey   = `${year}-${String(month).padStart(2,'0')}`;
+  const monthCfg   = (cfg.months || {})[monthKey] || {};
+  const kpiTarget  = monthCfg.kpiTarget  || 0;
+  const bonusPct   = monthCfg.bonusPct   || 0;
+  const thuongShip = currentUser.thuongShip || 0;
+  const luongCung  = currentUser.luongCung  || 0;
 
   const { revenue, shipCount } = await fetchMonthData(year, month);
-
-  const phanDu      = Math.max(0, revenue - kpiTarget);
-  const thuongKpi   = phanDu * (bonusPct / 100);
+  const phanDu     = Math.max(0, revenue - kpiTarget);
+  const thuongKpi  = phanDu * (bonusPct / 100);
   const thuongShipTotal = shipCount * thuongShip;
-  const tongDuTinh  = luongCung + thuongKpi + thuongShipTotal;
-  const kpiPct      = kpiTarget > 0 ? Math.min(100, (revenue / kpiTarget) * 100) : 0;
-
-  document.getElementById('period-sub').textContent =
-    `${year} · Cập nhật tới hôm nay`;
+  const tongDuTinh = luongCung + thuongKpi + thuongShipTotal;
+  const kpiPct     = kpiTarget > 0 ? Math.min(100, (revenue / kpiTarget) * 100) : 0;
 
   document.getElementById('content-area').innerHTML = `
-    <div class="info-row">
-      <div class="info-chip">💰 <span>Lương cứng:</span> ${fmt(luongCung)}</div>
-      <div class="info-chip">🎯 <span>KPI mục tiêu:</span> ${kpiTarget > 0 ? fmt(kpiTarget) : 'Chưa cấu hình'}</div>
-      <div class="info-chip">📦 <span>Thưởng/đơn ship:</span> ${fmt(thuongShip)}</div>
-    </div>
+    <div class="fade-up">
 
-    <div class="stats-grid">
-      <div class="stat-card c-kpi">
-        <div class="stat-icon-wrap">📊</div>
-        <div class="stat-label">KPI Doanh thu</div>
-        <div class="stat-value">${kpiPct.toFixed(1)}%</div>
-        <div class="stat-sub">${fmtNum(revenue)}đ / ${kpiTarget > 0 ? fmtNum(kpiTarget) + 'đ' : '?'}</div>
-        <div class="kpi-bar-wrap">
-          <div class="kpi-bar-bg">
-            <div class="kpi-bar-fill" id="kpi-fill" style="width:0%"></div>
+      <!-- Hero total -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="hero">
+          <div class="hero-label">Tổng dự tính nhận</div>
+          <div class="hero-amount"><span>₫</span>${fmtNum(tongDuTinh)}</div>
+          <div class="hero-sub">Lương cứng + Thưởng KPI + Thưởng ship</div>
+        </div>
+
+        <!-- KPI bar -->
+        <div class="kpi-wrap" style="border-top:1px solid var(--border)">
+          <div class="kpi-header">
+            <div class="kpi-title">KPI Doanh thu</div>
+            <div class="kpi-pct">${kpiPct.toFixed(1)}%</div>
+          </div>
+          <div class="kpi-track"><div class="kpi-fill" id="kpi-fill" style="width:0%"></div></div>
+          <div class="kpi-nums">
+            <span>${fmtNum(revenue)}đ</span>
+            <span>${kpiTarget > 0 ? fmtNum(kpiTarget) + 'đ' : 'Chưa cấu hình'}</span>
           </div>
         </div>
       </div>
 
-      <div class="stat-card c-salary">
-        <div class="stat-icon-wrap">💵</div>
-        <div class="stat-label">Lương cứng</div>
-        <div class="stat-value">${fmt(luongCung)}</div>
-        <div class="stat-sub">Cố định hàng tháng</div>
-      </div>
-
-      <div class="stat-card c-bonus-kpi">
-        <div class="stat-icon-wrap">🏆</div>
-        <div class="stat-label">Thưởng KPI</div>
-        <div class="stat-value">${fmt(thuongKpi)}</div>
-        <div class="stat-sub">
-          ${phanDu > 0
-            ? `Vượt ${fmtNum(phanDu)}đ × ${bonusPct}%`
-            : kpiTarget > 0 ? 'Chưa đạt KPI' : 'Chưa cấu hình'}
+      <!-- Stat grid -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="stat-grid">
+          <div class="stat-cell">
+            <div class="stat-label">Lương cứng</div>
+            <div class="stat-value accent-green">${fmt(luongCung)}</div>
+            <div class="stat-sub">Cố định hàng tháng</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Doanh thu thực</div>
+            <div class="stat-value">${fmt(revenue)}</div>
+            <div class="stat-sub">Tháng ${month}/${year}</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Thưởng KPI</div>
+            <div class="stat-value accent-amber">${fmt(thuongKpi)}</div>
+            <div class="stat-sub">${phanDu > 0 ? `Vượt ${fmtNum(phanDu)}đ × ${bonusPct}%` : kpiTarget > 0 ? 'Chưa đạt KPI' : 'Chưa cấu hình'}</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Thưởng ship</div>
+            <div class="stat-value accent-purple">${fmt(thuongShipTotal)}</div>
+            <div class="stat-sub">${shipCount} đơn × ${fmt(thuongShip)}</div>
+          </div>
         </div>
       </div>
 
-      <div class="stat-card c-bonus-ship">
-        <div class="stat-icon-wrap">🚚</div>
-        <div class="stat-label">Thưởng đơn ship</div>
-        <div class="stat-value">${fmt(thuongShipTotal)}</div>
-        <div class="stat-sub">${fmtNum(shipCount)} đơn × ${fmt(thuongShip)}</div>
-      </div>
-
-      <div class="stat-card c-total">
-        <div class="stat-icon-wrap">✨</div>
-        <div class="stat-label">Tổng dự tính nhận</div>
-        <div class="stat-value">${fmt(tongDuTinh)}</div>
-        <div class="stat-sub">Lương + Thưởng KPI + Ship</div>
+      <!-- Breakdown -->
+      <div class="card">
+        <div class="bk-row">
+          <div class="bk-left">
+            <div class="bk-icon" style="background:#e8f5ee">💵</div>
+            <div>
+              <div class="bk-name">Lương cứng</div>
+              <div class="bk-desc">Cố định hàng tháng</div>
+            </div>
+          </div>
+          <div class="bk-amount" style="color:var(--green-mid)">${fmt(luongCung)}</div>
+        </div>
+        <div class="bk-row">
+          <div class="bk-left">
+            <div class="bk-icon" style="background:#fff8e7">🏆</div>
+            <div>
+              <div class="bk-name">Thưởng KPI</div>
+              <div class="bk-desc">Phần dư × ${bonusPct}%</div>
+            </div>
+          </div>
+          <div class="bk-amount" style="color:var(--amber)">${fmt(thuongKpi)}</div>
+        </div>
+        <div class="bk-row">
+          <div class="bk-left">
+            <div class="bk-icon" style="background:#f3e8ff">🚚</div>
+            <div>
+              <div class="bk-name">Thưởng ship</div>
+              <div class="bk-desc">${shipCount} đơn × ${fmt(thuongShip)}</div>
+            </div>
+          </div>
+          <div class="bk-amount" style="color:var(--purple)">${fmt(thuongShipTotal)}</div>
+        </div>
+        <div class="bk-row" style="background:var(--card2)">
+          <div class="bk-left">
+            <div class="bk-icon" style="background:var(--green)">✨</div>
+            <div>
+              <div class="bk-name" style="font-weight:600">Tổng nhận</div>
+              <div class="bk-desc">Dự tính tháng này</div>
+            </div>
+          </div>
+          <div class="bk-amount" style="color:var(--green);font-size:17px">${fmt(tongDuTinh)}</div>
+        </div>
       </div>
     </div>
   `;
-
-  // Animate KPI bar
   setTimeout(() => {
-    const fill = document.getElementById('kpi-fill');
-    if (fill) fill.style.width = kpiPct.toFixed(1) + '%';
-  }, 100);
+    const el = document.getElementById('kpi-fill');
+    if (el) el.style.width = kpiPct.toFixed(1) + '%';
+  }, 80);
 }
 
-// ── Render year view ──────────────────────────────────────────────
 async function renderYear(cfg, year) {
-  document.getElementById('period-heading').textContent = `Năm ${year}`;
-  document.getElementById('period-sub').textContent = 'Đang tổng hợp 12 tháng...';
+  document.getElementById('content-area').innerHTML =
+    '<div class="loading"><div class="spin"></div>Đang tổng hợp 12 tháng...</div>';
 
+  const luongCung = currentUser.luongCung || 0;
+  const thuongShipPer = currentUser.thuongShip || 0;
   const rows = [];
   let totalLuong = 0, totalKpi = 0, totalShip = 0, totalTong = 0;
+  const now = new Date();
 
   for (let m = 1; m <= 12; m++) {
-    const now = new Date();
     if (year > now.getFullYear() || (year === now.getFullYear() && m > now.getMonth() + 1)) {
-      rows.push({ month: m, revenue: null, shipCount: null, thuongKpi: null, thuongShip: null, tong: null });
-      continue;
+      rows.push({ month: m, empty: true }); continue;
     }
-
     const monthKey = `${year}-${String(m).padStart(2,'0')}`;
     const monthCfg = (cfg.months || {})[monthKey] || {};
-    const kpiTarget  = monthCfg.kpiTarget  || 0;
-    const bonusPct   = monthCfg.bonusPct   || 0;
-    const luongCung  = currentUser.luongCung  || 0;
-    const thuongShipPer = currentUser.thuongShip || 0;
-
+    const kpiTarget = monthCfg.kpiTarget || 0;
+    const bonusPct  = monthCfg.bonusPct  || 0;
     const { revenue, shipCount } = await fetchMonthData(year, m);
     const phanDu   = Math.max(0, revenue - kpiTarget);
     const bonusKpi = phanDu * (bonusPct / 100);
     const bonusShip = shipCount * thuongShipPer;
-    const tong     = luongCung + bonusKpi + bonusShip;
-
-    totalLuong += luongCung;
-    totalKpi   += bonusKpi;
-    totalShip  += bonusShip;
-    totalTong  += tong;
-
-    rows.push({ month: m, revenue, shipCount, thuongKpi: bonusKpi, thuongShipTotal: bonusShip, tong });
+    const tong = luongCung + bonusKpi + bonusShip;
+    totalLuong += luongCung; totalKpi += bonusKpi; totalShip += bonusShip; totalTong += tong;
+    rows.push({ month: m, revenue, shipCount, bonusKpi, bonusShip, tong });
   }
 
-  document.getElementById('period-sub').textContent = `Tổng hợp năm ${year}`;
-
-  const luongCung = currentUser.luongCung || 0;
-
-  let tbodyHTML = rows.map(r => {
-    if (r.revenue === null) {
-      return `<tr>
-        <td>${MONTH_NAMES[r.month-1]}</td>
-        <td style="color:var(--muted)">—</td>
-        <td style="color:var(--muted)">—</td>
-        <td style="color:var(--muted)">—</td>
-        <td style="color:var(--muted)">—</td>
-        <td style="color:var(--muted)">—</td>
-      </tr>`;
-    }
+  const tbodyHTML = rows.map(r => {
+    if (r.empty) return `<tr><td>${MONTH_NAMES[r.month-1]}</td><td colspan="4" style="color:var(--text3)">—</td></tr>`;
     return `<tr>
       <td>${MONTH_NAMES[r.month-1]}</td>
       <td>${fmtNum(r.revenue)}đ</td>
-      <td>${fmtNum(luongCung)}đ</td>
-      <td style="color:var(--amber)">${fmtNum(r.thuongKpi)}đ</td>
-      <td><span class="tag-ship">${r.shipCount} đơn</span> ${fmtNum(r.thuongShipTotal)}đ</td>
-      <td style="color:var(--green);font-weight:800">${fmtNum(r.tong)}đ</td>
+      <td style="color:var(--amber)">${fmtNum(r.bonusKpi)}đ</td>
+      <td><span class="tag-ship">${r.shipCount}</span>${fmtNum(r.bonusShip)}đ</td>
+      <td style="color:var(--green-mid);font-weight:600">${fmtNum(r.tong)}đ</td>
     </tr>`;
   }).join('');
 
   document.getElementById('content-area').innerHTML = `
-    <div class="info-row">
-      <div class="info-chip">💰 <span>Lương cứng/tháng:</span> ${fmt(luongCung)}</div>
-      <div class="info-chip">📦 <span>Thưởng/đơn ship:</span> ${fmt(currentUser.thuongShip || 0)}</div>
-    </div>
-
-    <div class="stats-grid" style="margin-bottom:24px">
-      <div class="stat-card c-salary">
-        <div class="stat-icon-wrap">💵</div>
-        <div class="stat-label">Tổng lương cứng</div>
-        <div class="stat-value">${fmt(totalLuong)}</div>
-        <div class="stat-sub">Cả năm ${year}</div>
+    <div class="fade-up">
+      <div class="card" style="margin-bottom:12px">
+        <div class="stat-grid">
+          <div class="stat-cell">
+            <div class="stat-label">Tổng lương cứng</div>
+            <div class="stat-value accent-green">${fmt(totalLuong)}</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Tổng thưởng KPI</div>
+            <div class="stat-value accent-amber">${fmt(totalKpi)}</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Tổng thưởng ship</div>
+            <div class="stat-value accent-purple">${fmt(totalShip)}</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-label">Tổng nhận cả năm</div>
+            <div class="stat-value" style="color:var(--green)">${fmt(totalTong)}</div>
+          </div>
+        </div>
       </div>
-      <div class="stat-card c-bonus-kpi">
-        <div class="stat-icon-wrap">🏆</div>
-        <div class="stat-label">Tổng thưởng KPI</div>
-        <div class="stat-value">${fmt(totalKpi)}</div>
-        <div class="stat-sub">Cả năm ${year}</div>
-      </div>
-      <div class="stat-card c-bonus-ship">
-        <div class="stat-icon-wrap">🚚</div>
-        <div class="stat-label">Tổng thưởng ship</div>
-        <div class="stat-value">${fmt(totalShip)}</div>
-        <div class="stat-sub">Cả năm ${year}</div>
-      </div>
-      <div class="stat-card c-total">
-        <div class="stat-icon-wrap">✨</div>
-        <div class="stat-label">Tổng nhận cả năm</div>
-        <div class="stat-value">${fmt(totalTong)}</div>
-        <div class="stat-sub">Năm ${year}</div>
-      </div>
-    </div>
-
-    <div class="year-table-card">
-      <div class="year-table-head">
-        <div class="year-table-title">📅 Chi tiết từng tháng — Năm ${year}</div>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="yt">
-          <thead>
-            <tr>
-              <th>Tháng</th>
-              <th>Doanh thu</th>
-              <th>Lương cứng</th>
-              <th>Thưởng KPI</th>
-              <th>Thưởng ship</th>
-              <th>Tổng nhận</th>
-            </tr>
-          </thead>
-          <tbody>${tbodyHTML}</tbody>
-        </table>
+      <div class="card">
+        <div class="yt-wrap">
+          <table class="yt">
+            <thead>
+              <tr>
+                <th>Tháng</th>
+                <th>Doanh thu</th>
+                <th>Thưởng KPI</th>
+                <th>Thưởng ship</th>
+                <th>Tổng nhận</th>
+              </tr>
+            </thead>
+            <tbody>${tbodyHTML}</tbody>
+          </table>
+        </div>
       </div>
     </div>
   `;
 }
 
-// ── Init ──────────────────────────────────────────────────────────
 (function init() {
   const session = loadSession();
-  if (session) {
-    currentUser = session;
-    showDashboard();
-  }
-  document.getElementById('month-nav').style.display = 'flex';
+  if (session) { currentUser = session; showDashboard(); }
 })();
 </script>
 </body>
