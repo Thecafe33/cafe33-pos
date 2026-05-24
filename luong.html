@@ -717,6 +717,7 @@ async function loadAndRender() {
     // Load config for this period
     const cfgDoc = await fstore.collection('xolifa_luong').doc('config').get();
     const cfg = cfgDoc.exists ? cfgDoc.data() : {};
+    console.log('[DEBUG] config raw:', JSON.stringify(cfg));
 
     if (currentTab === 'month') {
       await renderMonth(cfg, viewYear, viewMonth);
@@ -748,22 +749,15 @@ async function fetchMonthData(year, month) {
     const dayStr = String(d).padStart(2, '0');
 
     try {
+      // Đọc cả RT lẫn Archive rồi merge — tránh bỏ sót khi PosX đang archive dở
       let orders = {};
-      if (dateObj >= cutoff) {
-        // Thử RT trước, nếu đã bị archive (rỗng) thì fallback Firestore
-        const snap = await rtdb.ref(`orders_xolifa/${monthKey}/${dayStr}`).once('value');
-        orders = snap.val() || {};
-        if (!Object.keys(orders).length) {
-          const docId = `${monthKey}_${dayStr}_${year}`;
-          const doc = await fstore.collection('orders_xolifa_archive').doc(docId).get();
-          orders = doc.exists ? (doc.data().orders || {}) : {};
-        }
-      } else {
-        // Firestore archive
-        const docId = `${monthKey}_${dayStr}_${year}`;
-        const doc = await fstore.collection('orders_xolifa_archive').doc(docId).get();
-        orders = doc.exists ? (doc.data().orders || {}) : {};
-      }
+      const [rtSnap, fsDoc] = await Promise.all([
+        rtdb.ref(`orders_xolifa/${monthKey}/${dayStr}`).once('value'),
+        fstore.collection('orders_xolifa_archive').doc(`${monthKey}_${dayStr}_${year}`).get()
+      ]);
+      const rtData = rtSnap.val() || {};
+      const fsData = fsDoc.exists ? (fsDoc.data().orders || {}) : {};
+      orders = { ...fsData, ...rtData }; // RT ghi đè nếu trùng key
 
       Object.values(orders).forEach(o => {
         // Revenue (trừ food)
