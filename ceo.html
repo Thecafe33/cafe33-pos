@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CEO · Cấu hình lương — Xolifa</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #1a4a2e;
+  --green-mid: #2d7a4f;
+  --green-light: #e8f5ee;
+  --green-xlight: #f0faf4;
+  --amber: #b45309;
+  --amber-light: #fef3c7;
+  --red: #991b1b;
+  --red-light: #fef2f2;
+  --blue: #185fa5;
+  --blue-light: #e6f1fb;
+  --purple: #7c3aed;
+  --purple-light: #f3e8ff;
+  --bg: #f5f7f5;
+  --card: #ffffff;
+  --border: rgba(0,0,0,0.07);
+  --text: #141a14;
+  --muted: #6b7a6e;
+  --radius-xl: 28px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --shadow-card: 0 2px 16px rgba(26,74,46,0.08), 0 0 0 1px rgba(26,74,46,0.04);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(24px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.btn-primary {
+  padding:14px 24px;
+  background:var(--green); color:#fff; border:none;
+  border-radius:var(--radius-md);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:14px; font-weight:700; cursor:pointer;
+  transition:opacity 0.15s, transform 0.15s;
+}
+.btn-primary:hover { opacity:0.88; }
+.btn-primary:active { transform:scale(0.98); }
+.btn-primary:disabled { opacity:0.4; cursor:not-allowed; }
+.btn-primary.full { width:100%; font-size:15px; padding:16px; margin-top:8px; }
+
+.btn-secondary {
+  padding:12px 20px;
+  background:transparent; color:var(--green);
+  border:1.5px solid var(--green);
+  border-radius:var(--radius-md);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px; font-weight:700; cursor:pointer;
+  transition:all 0.15s;
+}
+.btn-secondary:hover { background:var(--green-xlight); }
+
+.btn-danger {
+  padding:10px 18px;
+  background:transparent; color:var(--red);
+  border:1.5px solid rgba(153,27,27,0.25);
+  border-radius:var(--radius-md);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px; font-weight:700; cursor:pointer;
+  transition:all 0.15s;
+}
+.btn-danger:hover { background:var(--red-light); }
+
+/* ── MAIN ── */
+#main-screen { min-height:100vh; }
+
+.top-bar {
+  background:var(--card); border-bottom:1px solid var(--border);
+  padding:0 28px; height:64px;
+  display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+
+.topbar-left { display:flex; align-items:center; gap:12px; }
+.topbar-logo {
+  width:36px; height:36px; background:var(--green);
+  border-radius:11px; display:flex; align-items:center; justify-content:center;
+  font-size:16px;
+}
+.topbar-title { font-size:16px; font-weight:800; color:var(--green); letter-spacing:-0.3px; }
+.ceo-badge {
+  background:var(--amber-light); color:var(--amber);
+  border-radius:100px; padding:4px 12px;
+  font-size:11px; font-weight:800; letter-spacing:0.05em;
+}
+
+.main-body {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 36px 28px 80px;
+}
+
+/* Tabs */
+.section-tabs {
+  display:flex; gap:4px;
+  background:#ebebeb; border-radius:100px; padding:4px;
+  width:fit-content; margin-bottom:32px;
+}
+
+.stab {
+  padding:9px 22px; border-radius:100px; border:none;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:13px; font-weight:700; cursor:pointer;
+  background:transparent; color:var(--muted);
+  transition:all 0.2s;
+}
+.stab.active {
+  background:var(--card); color:var(--green);
+  box-shadow:0 1px 6px rgba(0,0,0,0.1);
+}
+
+/* Cards */
+.card {
+  background:var(--card);
+  border-radius:var(--radius-xl);
+  border:1.5px solid var(--border);
+  margin-bottom:20px;
+  overflow:hidden;
+  animation:fadeUp 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.card-head {
+  padding:20px 24px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px;
+}
+
+.card-title {
+  font-size:15px; font-weight:800; color:var(--text);
+}
+.card-sub {
+  font-size:12px; color:var(--muted); font-weight:500; margin-top:2px;
+}
+
+.card-body { padding:24px; }
+
+/* Month selector */
+.month-selector {
+  display:flex; align-items:center; gap:10px;
+  background:var(--bg); border-radius:100px;
+  border:1.5px solid var(--border); padding:6px 8px;
+}
+.mnav-btn {
+  width:30px; height:30px; border-radius:50%; border:none;
+  background:transparent; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; color:var(--muted); transition:background 0.15s;
+}
+.mnav-btn:hover { background:var(--green-xlight); color:var(--green); }
+.mnav-label {
+  font-size:14px; font-weight:700; color:var(--text);
+  min-width:120px; text-align:center;
+}
+
+/* Form grid */
+.form-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+  gap:16px;
+}
+
+.form-group { display:flex; flex-direction:column; gap:8px; }
+
+.form-label {
+  font-size:11px; font-weight:700; letter-spacing:0.07em;
+  text-transform:uppercase; color:var(--muted);
+}
+
+.form-input {
+  width:100%; padding:13px 16px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-md);
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:15px; font-weight:600; color:var(--text);
+  background:#fafafa; outline:none;
+  transition:border-color 0.2s, background 0.2s;
+}
+.form-input:focus { border-color:var(--green-mid); background:#fff; }
+
+.form-hint {
+  font-size:11px; color:var(--muted); font-weight:500;
+}
+
+/* Preview */
+.formula-preview {
+  background:var(--green-xlight);
+  border:1.5px solid var(--green-light);
+  border-radius:var(--radius-lg);
+  padding:18px 20px;
+  margin-top:16px;
+  display:flex; align-items:center; gap:16px;
+  flex-wrap:wrap;
+}
+
+.formula-item {
+  display:flex; flex-direction:column; gap:2px;
+}
+.formula-item-label {
+  font-size:10px; font-weight:700; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--green-mid);
+}
+.formula-item-value {
+  font-size:18px; font-weight:800; color:var(--green);
+}
+
+.formula-sep {
+  font-size:20px; color:var(--green-mid); font-weight:400; opacity:0.5;
+}
+
+/* Accounts table */
+.acc-table {
+  width:100%; border-collapse:collapse;
+}
+.acc-table th {
+  padding:12px 16px; text-align:left;
+  font-size:10px; font-weight:700; letter-spacing:0.08em;
+  text-transform:uppercase; color:var(--muted);
+  background:#fafafa; border-bottom:1px solid var(--border);
+}
+.acc-table td {
+  padding:14px 16px; border-bottom:1px solid var(--border);
+  font-size:13px; font-weight:600; color:var(--text);
+  vertical-align:middle;
+}
+.acc-table tr:last-child td { border-bottom:none; }
+.acc-table tr:hover td { background:var(--green-xlight); }
+
+.acc-avatar {
+  width:36px; height:36px; border-radius:50%;
+  background:var(--green); color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:800;
+}
+
+.acc-name-cell { display:flex; align-items:center; gap:12px; }
+.acc-username  { font-size:12px; color:var(--muted); font-weight:500; margin-top:1px; }
+
+/* Add account form */
+.add-acc-form {
+  background:var(--bg); border-radius:var(--radius-lg);
+  padding:20px; margin-top:20px;
+  border:1.5px dashed rgba(26,74,46,0.2);
+  display:none;
+}
+.add-acc-form.show { display:block; }
+.add-acc-title { font-size:14px; font-weight:800; color:var(--green); margin-bottom:16px; }
+
+/* Toast */
+.toast {
+  position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(100px);
+  background:var(--green); color:#fff;
+  border-radius:100px; padding:13px 24px;
+  font-size:14px; font-weight:700;
+  box-shadow:0 8px 32px rgba(0,0,0,0.2);
+  z-index:999; transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);
+  white-space:nowrap;
+}
+.toast.show { transform:translateX(-50%) translateY(0); }
+
+/* Save button area */
+.save-row {
+  display:flex; align-items:center; justify-content:flex-end;
+  gap:12px; margin-top:20px;
+}
+
+.saving-indicator {
+  font-size:13px; color:var(--muted); font-weight:600;
+  display:none; align-items:center; gap:8px;
+}
+.dot-spin {
+  width:14px; height:14px;
+  border:2px solid var(--green-light); border-top-color:var(--green);
+  border-radius:50%; animation:spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.section-view { display:none; }
+.section-view.active { display:block; }
+
+/* Responsive */
+@media(max-width:600px) {
+  .main-body { padding:20px 16px 80px; }
+  .top-bar { padding:0 16px; }
+  .card-body { padding:16px; }
+  .card-head { padding:16px; }
+}
+</style>
+</head>
+<body>
+
+<div id="main-screen">
+  <div class="top-bar">
+    <div class="topbar-left">
+      <div class="topbar-logo">🌿</div>
+      <div class="topbar-title">Xolifa · Lương</div>
+      <div class="ceo-badge">CEO</div>
+    </div>
+  </div>
+
+  <div class="main-body">
+    <div class="section-tabs">
+      <button class="stab active" onclick="switchSection('kpi',this)">🎯 Cấu hình KPI</button>
+      <button class="stab" onclick="switchSection('accounts',this)">👥 Tài khoản nhân viên</button>
+    </div>
+
+    <!-- ── SECTION: KPI ── -->
+    <div id="section-kpi" class="section-view active">
+
+      <!-- Month selector card -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Cấu hình theo tháng</div>
+            <div class="card-sub">Chọn tháng để nhập chỉ tiêu KPI và tỉ lệ thưởng</div>
+          </div>
+          <div class="month-selector">
+            <button class="mnav-btn" onclick="changeKpiMonth(-1)">‹</button>
+            <div class="mnav-label" id="kpi-month-label">--</div>
+            <button class="mnav-btn" onclick="changeKpiMonth(1)">›</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <div class="form-label">KPI Doanh thu mục tiêu (đ)</div>
+              <input class="form-input" type="text" id="inp-kpi-target"
+                placeholder="50.000.000" oninput="fmtThousands(this)" onblur="renderFormulaPreview()">
+              <div class="form-hint">Nhập số, dấu . tự động điền</div>
+            </div>
+            <div class="form-group">
+              <div class="form-label">Tỉ lệ thưởng KPI (%)</div>
+              <input class="form-input" type="number" id="inp-bonus-pct"
+                placeholder="10" min="0" max="100" step="0.1" oninput="renderFormulaPreview()">
+              <div class="form-hint">% trên phần doanh thu vượt KPI</div>
+            </div>
+          </div>
+
+          <div class="formula-preview" id="formula-preview">
+            <div class="formula-item">
+              <div class="formula-item-label">Doanh thu thực</div>
+              <div class="formula-item-value" id="fp-revenue">?đ</div>
+            </div>
+            <div class="formula-sep">−</div>
+            <div class="formula-item">
+              <div class="formula-item-label">KPI mục tiêu</div>
+              <div class="formula-item-value" id="fp-kpi">0đ</div>
+            </div>
+            <div class="formula-sep">=</div>
+            <div class="formula-item">
+              <div class="formula-item-label">Phần dư</div>
+              <div class="formula-item-value" id="fp-phanDu">?đ</div>
+            </div>
+            <div class="formula-sep">×</div>
+            <div class="formula-item">
+              <div class="formula-item-label">Tỉ lệ</div>
+              <div class="formula-item-value" id="fp-pct">0%</div>
+            </div>
+            <div class="formula-sep">=</div>
+            <div class="formula-item">
+              <div class="formula-item-label">Thưởng KPI</div>
+              <div class="formula-item-value" id="fp-bonus" style="color:var(--amber)">?đ</div>
+            </div>
+          </div>
+
+          <div class="save-row">
+            <div class="saving-indicator" id="kpi-saving">
+              <div class="dot-spin"></div> Đang lưu...
+            </div>
+            <button class="btn-primary" onclick="saveKpiConfig()">💾 Lưu cấu hình tháng này</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ship reward card -->
+      <div class="card" style="animation-delay:0.1s">
+        <div class="card-head">
+          <div>
+            <div class="card-title">🚚 Thưởng đơn Ship</div>
+            <div class="card-sub">Cài riêng từng nhân viên trong phần Tài khoản</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="background:var(--purple-light);border-radius:var(--radius-lg);padding:16px 20px;color:var(--purple);font-size:13px;font-weight:600;">
+            📦 Thưởng ship được cấu hình riêng cho mỗi nhân viên trong tab <strong>Tài khoản nhân viên</strong>. Mỗi người có thể có mức thưởng/đơn ship khác nhau.
+          </div>
+        </div>
+      </div>
+
+      <!-- Overview table -->
+      <div class="card" style="animation-delay:0.15s">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Tổng hợp lương tháng này</div>
+            <div class="card-sub" id="overview-month-label">--</div>
+          </div>
+          <button class="btn-secondary" onclick="loadOverview()" style="font-size:12px;padding:9px 16px;">🔄 Tải lại</button>
+        </div>
+        <div class="card-body" id="overview-body">
+          <div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;font-weight:600;">
+            Bấm "Tải lại" để xem dữ liệu
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── SECTION: ACCOUNTS ── -->
+    <div id="section-accounts" class="section-view">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Danh sách nhân viên</div>
+            <div class="card-sub" id="acc-count">Đang tải...</div>
+          </div>
+          <button class="btn-primary" onclick="toggleAddForm()" style="font-size:12px;padding:10px 18px;">
+            + Thêm nhân viên
+          </button>
+        </div>
+
+        <!-- Add form -->
+        <div id="add-acc-form" class="add-acc-form" style="margin:0 24px 0;border-radius:var(--radius-lg);padding:20px;margin-bottom:0;">
+          <div class="add-acc-title">Thêm tài khoản mới</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <div class="form-label">Họ tên</div>
+              <input class="form-input" type="text" id="new-hoten" placeholder="Nguyễn Văn A">
+            </div>
+            <div class="form-group">
+              <div class="form-label">Tên đăng nhập</div>
+              <input class="form-input" type="text" id="new-username" placeholder="vana">
+            </div>
+            <div class="form-group">
+              <div class="form-label">Mật khẩu</div>
+              <input class="form-input" type="text" id="new-password" placeholder="••••••">
+            </div>
+            <div class="form-group">
+              <div class="form-label">Lương cứng (đ)</div>
+              <input class="form-input" type="text" id="new-luong" placeholder="5.000.000" oninput="fmtThousands(this)">
+            </div>
+            <div class="form-group">
+              <div class="form-label">Thưởng/đơn ship (đ)</div>
+              <input class="form-input" type="text" id="new-ship" placeholder="1.000" oninput="fmtThousands(this)">
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
+            <button class="btn-secondary" onclick="toggleAddForm()">Huỷ</button>
+            <button class="btn-primary" onclick="addAccount()">✅ Thêm</button>
+          </div>
+        </div>
+
+        <div class="card-body" style="padding:0">
+          <div style="overflow-x:auto">
+            <table class="acc-table" id="acc-table">
+              <thead>
+                <tr>
+                  <th>Nhân viên</th>
+                  <th>Tên đăng nhập</th>
+                  <th>Mật khẩu</th>
+                  <th>Lương cứng</th>
+                  <th>Thưởng/đơn ship</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="acc-tbody">
+                <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted);">Đang tải...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Firebase ──────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:      "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain:  "the-cafe-33.firebaseapp.com",
+  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:   "the-cafe-33",
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const fstore = firebase.firestore();
+const rtdb   = firebase.database();
+
+const MONTH_KEYS  = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MONTH_NAMES = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
+                     'Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+
+let kpiYear = new Date().getFullYear();
+let kpiMonth = new Date().getMonth() + 1;
+let accounts = [];
+let configData = {};
+
+// ── Helpers ───────────────────────────────────────────────────────
+const fmt = n => Number(Math.round(n)).toLocaleString('vi-VN') + 'đ';
+const fmtNum = n => Number(Math.round(n)).toLocaleString('vi-VN');
+
+function fmtThousands(el) {
+  let raw = el.value.replace(/\./g, '').replace(/[^0-9]/g, '');
+  if (raw === '') { el.value = ''; return; }
+  el.value = Number(raw).toLocaleString('vi-VN').replace(/,/g, '.');
+}
+
+function parseThousands(str) {
+  return parseInt((str || '0').replace(/\./g, '').replace(/[^0-9]/g, '')) || 0;
+}
+
+function showToast(msg, duration = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+(function init() {
+  updateKpiMonthLabel();
+  loadConfig();
+  loadAccounts();
+})();
+
+// ── Section switch ────────────────────────────────────────────────
+function switchSection(name, btn) {
+  document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.stab').forEach(el => el.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── KPI Month nav ─────────────────────────────────────────────────
+function changeKpiMonth(dir) {
+  kpiMonth += dir;
+  if (kpiMonth > 12) { kpiMonth = 1; kpiYear++; }
+  if (kpiMonth < 1)  { kpiMonth = 12; kpiYear--; }
+  updateKpiMonthLabel();
+  fillKpiForm();
+}
+
+function updateKpiMonthLabel() {
+  const label = `${MONTH_NAMES[kpiMonth-1]} ${kpiYear}`;
+  document.getElementById('kpi-month-label').textContent = label;
+  document.getElementById('overview-month-label').textContent = label;
+}
+
+// ── Load config ───────────────────────────────────────────────────
+async function loadConfig() {
+  const doc = await fstore.collection('xolifa_luong').doc('config').get();
+  configData = doc.exists ? doc.data() : {};
+  fillKpiForm();
+}
+
+function fillKpiForm() {
+  const monthKey = `${kpiYear}-${String(kpiMonth).padStart(2,'0')}`;
+  const monthCfg = (configData.months || {})[monthKey] || {};
+  const kpiTarget = monthCfg.kpiTarget || 0;
+  const bonusPct  = monthCfg.bonusPct  || 0;
+
+  document.getElementById('inp-kpi-target').value =
+    kpiTarget > 0 ? Number(kpiTarget).toLocaleString('vi-VN').replace(/,/g,'.') : '';
+  document.getElementById('inp-bonus-pct').value = bonusPct || '';
+  renderFormulaPreview();
+}
+
+function renderFormulaPreview() {
+  const kpiTarget = parseThousands(document.getElementById('inp-kpi-target').value);
+  const bonusPct  = parseFloat(document.getElementById('inp-bonus-pct').value) || 0;
+
+  document.getElementById('fp-kpi').textContent = fmt(kpiTarget);
+  document.getElementById('fp-pct').textContent = bonusPct + '%';
+  document.getElementById('fp-phanDu').textContent = '?đ'; // sẽ thấy khi load thực
+  document.getElementById('fp-bonus').textContent = '?đ';
+}
+
+// ── Save KPI config ───────────────────────────────────────────────
+async function saveKpiConfig() {
+  const kpiTarget = parseThousands(document.getElementById('inp-kpi-target').value);
+  const bonusPct  = parseFloat(document.getElementById('inp-bonus-pct').value) || 0;
+
+  if (kpiTarget <= 0) { showToast('⚠ Vui lòng nhập KPI mục tiêu'); return; }
+
+  const savingEl = document.getElementById('kpi-saving');
+  savingEl.style.display = 'flex';
+
+  const monthKey = `${kpiYear}-${String(kpiMonth).padStart(2,'0')}`;
+
+  try {
+    await fstore.collection('xolifa_luong').doc('config').set({
+      [`months.${monthKey}`]: { kpiTarget, bonusPct }
+    }, { merge: true });
+
+    if (!configData.months) configData.months = {};
+    configData.months[monthKey] = { kpiTarget, bonusPct };
+
+    showToast('✅ Đã lưu cấu hình ' + MONTH_NAMES[kpiMonth-1]);
+  } catch(e) {
+    showToast('❌ Lỗi: ' + e.message);
+  }
+  savingEl.style.display = 'none';
+}
+
+// ── Load overview ─────────────────────────────────────────────────
+async function loadOverview() {
+  const overviewEl = document.getElementById('overview-body');
+  overviewEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;font-weight:600;"><div style="width:24px;height:24px;border:3px solid var(--green-light);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 12px;"></div>Đang tính lương...</div>';
+
+  const monthKey = `${kpiYear}-${String(kpiMonth).padStart(2,'0')}`;
+  const monthCfg = (configData.months || {})[monthKey] || {};
+  const kpiTarget = monthCfg.kpiTarget || 0;
+  const bonusPct  = monthCfg.bonusPct  || 0;
+
+  // Fetch revenue + ship for this month
+  const { revenue, shipCount } = await fetchMonthData(kpiYear, kpiMonth);
+  const phanDu = Math.max(0, revenue - kpiTarget);
+  const bonusKpi = phanDu * (bonusPct / 100);
+
+  // Update formula preview with real revenue
+  document.getElementById('fp-revenue').textContent = fmt(revenue);
+  document.getElementById('fp-phanDu').textContent  = phanDu >= 0 ? fmt(phanDu) : '-' + fmt(-phanDu);
+  document.getElementById('fp-bonus').textContent   = fmt(bonusKpi);
+
+  if (!accounts.length) {
+    overviewEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted);font-size:13px;">Chưa có nhân viên nào.</div>';
+    return;
+  }
+
+  let rows = accounts.map(acc => {
+    const ship = acc.thuongShip || 0;
+    const bonus_ship = shipCount * ship;
+    const tong = (acc.luongCung || 0) + bonusKpi + bonus_ship;
+    return `<tr>
+      <td>
+        <div class="acc-name-cell">
+          <div class="acc-avatar">${(acc.hoTen||acc.username).charAt(0).toUpperCase()}</div>
+          <div>
+            <div style="font-weight:700">${acc.hoTen || acc.username}</div>
+            <div class="acc-username">@${acc.username}</div>
+          </div>
+        </div>
+      </td>
+      <td>${fmtNum(acc.luongCung||0)}đ</td>
+      <td style="color:var(--amber)">${fmtNum(bonusKpi)}đ</td>
+      <td style="color:var(--purple)">${shipCount} đơn × ${fmtNum(ship)}đ = ${fmtNum(bonus_ship)}đ</td>
+      <td style="color:var(--green);font-weight:800;font-size:15px">${fmtNum(tong)}đ</td>
+    </tr>`;
+  }).join('');
+
+  overviewEl.innerHTML = `
+    <div style="overflow-x:auto">
+      <table class="acc-table">
+        <thead>
+          <tr>
+            <th>Nhân viên</th>
+            <th>Lương cứng</th>
+            <th>Thưởng KPI</th>
+            <th>Thưởng ship</th>
+            <th>Tổng dự tính</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="padding:16px 0 4px;font-size:12px;color:var(--muted);font-weight:600;text-align:right;">
+      Doanh thu tháng này: <strong style="color:var(--green)">${fmt(revenue)}</strong>
+      · Tổng đơn ship: <strong style="color:var(--purple)">${shipCount}</strong>
+    </div>
+  `;
+}
+
+// ── Fetch revenue + ship (same logic as luong.html) ───────────────
+async function fetchMonthData(year, month) {
+  const monthKey = MONTH_KEYS[month - 1];
+  const now = new Date();
+  const isCurrentMonth = (year === now.getFullYear() && month === now.getMonth() + 1);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-2); cutoff.setHours(0,0,0,0);
+
+  let revenue = 0, shipCount = 0;
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(year, month-1, d);
+    if (isCurrentMonth && dateObj > now) break;
+    const dayStr = String(d).padStart(2,'0');
+    try {
+      let orders = {};
+      if (dateObj >= cutoff) {
+        const snap = await rtdb.ref(`orders_xolifa/${monthKey}/${dayStr}`).once('value');
+        orders = snap.val() || {};
+      } else {
+        const docId = `${monthKey}_${dayStr}_${year}`;
+        const doc = await fstore.collection('orders_xolifa_archive').doc(docId).get();
+        orders = doc.exists ? (doc.data().orders || {}) : {};
+      }
+      Object.values(orders).forEach(o => {
+        if (o.netTotal != null) {
+          revenue += o.netTotal;
+        } else if (o.itemsArray && Array.isArray(o.itemsArray)) {
+          o.itemsArray.forEach(item => {
+            if (item.isFood !== true) revenue += (item.price||0) * (item.qty||1);
+          });
+        } else {
+          revenue += (o.total||0) - (o.foodTotal||0);
+        }
+        if (o.isShip === true) shipCount++;
+      });
+    } catch(_) {}
+  }
+  return { revenue, shipCount };
+}
+
+// ── Accounts ──────────────────────────────────────────────────────
+async function loadAccounts() {
+  try {
+    const doc = await fstore.collection('xolifa_luong').doc('accounts').get();
+    accounts = doc.exists ? (doc.data().list || []) : [];
+    renderAccounts();
+  } catch(e) {
+    document.getElementById('acc-tbody').innerHTML =
+      `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--red);">Lỗi: ${e.message}</td></tr>`;
+  }
+}
+
+function renderAccounts() {
+  const tbody = document.getElementById('acc-tbody');
+  document.getElementById('acc-count').textContent = `${accounts.length} nhân viên`;
+
+  if (!accounts.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted);">Chưa có tài khoản nào. Thêm nhân viên đầu tiên.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = accounts.map((acc, i) => `
+    <tr>
+      <td>
+        <div class="acc-name-cell">
+          <div class="acc-avatar">${(acc.hoTen||acc.username).charAt(0).toUpperCase()}</div>
+          <div>
+            <div style="font-weight:700">${acc.hoTen||'—'}</div>
+          </div>
+        </div>
+      </td>
+      <td style="font-family:monospace;font-size:13px">@${acc.username}</td>
+      <td style="font-family:monospace;font-size:13px">${acc.password}</td>
+      <td>${fmtNum(acc.luongCung||0)}đ</td>
+      <td>${fmtNum(acc.thuongShip||0)}đ / đơn</td>
+      <td>
+        <button class="btn-danger" onclick="deleteAccount(${i})" style="padding:7px 14px;font-size:12px;">Xoá</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function saveAccounts() {
+  await fstore.collection('xolifa_luong').doc('accounts').set({ list: accounts });
+}
+
+function toggleAddForm() {
+  const f = document.getElementById('add-acc-form');
+  f.classList.toggle('show');
+  if (f.classList.contains('show')) {
+    ['new-hoten','new-username','new-password','new-luong','new-ship'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+  }
+}
+
+async function addAccount() {
+  const hoTen    = document.getElementById('new-hoten').value.trim();
+  const username = document.getElementById('new-username').value.trim();
+  const password = document.getElementById('new-password').value.trim();
+  const luongCung = parseThousands(document.getElementById('new-luong').value);
+  const thuongShip = parseThousands(document.getElementById('new-ship').value);
+
+  if (!username || !password) { showToast('⚠ Vui lòng nhập tên đăng nhập và mật khẩu'); return; }
+  if (accounts.find(a => a.username === username)) { showToast('⚠ Tên đăng nhập đã tồn tại'); return; }
+
+  accounts.push({ hoTen, username, password, luongCung, thuongShip });
+  try {
+    await saveAccounts();
+    renderAccounts();
+    toggleAddForm();
+    showToast('✅ Đã thêm tài khoản @' + username);
+  } catch(e) {
+    accounts.pop();
+    showToast('❌ Lỗi lưu: ' + e.message);
+  }
+}
+
+async function deleteAccount(index) {
+  const acc = accounts[index];
+  if (!confirm(`Xoá tài khoản @${acc.username} (${acc.hoTen||''})?`)) return;
+  accounts.splice(index, 1);
+  try {
+    await saveAccounts();
+    renderAccounts();
+    showToast('🗑 Đã xoá @' + acc.username);
+  } catch(e) {
+    accounts.splice(index, 0, acc);
+    showToast('❌ Lỗi: ' + e.message);
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+(function init() {
+  updateKpiMonthLabel();
+  loadConfig();
+  loadAccounts();
+})();
+</script>
+</body>
+</html>
