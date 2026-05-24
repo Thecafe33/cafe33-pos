@@ -7,6 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -508,6 +509,7 @@ const firebaseConfig = {
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const fstore = firebase.firestore();
 const rtdb   = firebase.database();
+const auth   = firebase.auth();
 
 const MONTH_KEYS  = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 const MONTH_NAMES = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
@@ -540,8 +542,13 @@ function showToast(msg, duration = 2500) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────
-(function init() {
+(async function init() {
   updateKpiMonthLabel();
+  try {
+    await auth.signInWithEmailAndPassword('cafe33@xolifa.com', 'xolifaangiang');
+  } catch(e) {
+    console.warn('Firebase auth:', e.message);
+  }
   loadConfig();
   loadAccounts();
 })();
