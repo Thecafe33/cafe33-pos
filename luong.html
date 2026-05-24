@@ -750,9 +750,14 @@ async function fetchMonthData(year, month) {
     try {
       let orders = {};
       if (dateObj >= cutoff) {
-        // Realtime DB
+        // Thử RT trước, nếu đã bị archive (rỗng) thì fallback Firestore
         const snap = await rtdb.ref(`orders_xolifa/${monthKey}/${dayStr}`).once('value');
         orders = snap.val() || {};
+        if (!Object.keys(orders).length) {
+          const docId = `${monthKey}_${dayStr}_${year}`;
+          const doc = await fstore.collection('orders_xolifa_archive').doc(docId).get();
+          orders = doc.exists ? (doc.data().orders || {}) : {};
+        }
       } else {
         // Firestore archive
         const docId = `${monthKey}_${dayStr}_${year}`;
