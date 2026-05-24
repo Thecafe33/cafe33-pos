@@ -1,840 +1,997 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <title>Thành viên</title>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#006241">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bảng Lương — Xolifa</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green: #1a4a2e;
+  --green-mid: #2d7a4f;
+  --green-light: #e8f5ee;
+  --green-xlight: #f0faf4;
+  --amber: #b45309;
+  --amber-light: #fef3c7;
+  --blue: #185fa5;
+  --blue-light: #e6f1fb;
+  --coral: #993c1d;
+  --coral-light: #faece7;
+  --bg: #f5f7f5;
+  --card: #ffffff;
+  --border: rgba(0,0,0,0.07);
+  --text: #141a14;
+  --muted: #6b7a6e;
+  --radius-xl: 28px;
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --shadow-card: 0 2px 16px rgba(26,74,46,0.08), 0 0 0 1px rgba(26,74,46,0.04);
+}
 
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=League+Spartan:wght@700;800&display=swap" rel="stylesheet">
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
 
-  <style>
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-    html, body {
-      height: 100%;
-      width: 100%;
-      overscroll-behavior: none;
-      font-family: 'Inter', sans-serif;
-      background: #eef2ee;
-      color: #1e3932;
-      -webkit-font-smoothing: antialiased;
-    }
+/* ── LOGIN ── */
+#login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(160deg, #f0faf4 0%, #f5f7f5 50%, #fef9f0 100%);
+}
 
-    /* ────────────────────────────────────────
-       SCREEN SYSTEM
-    ──────────────────────────────────────── */
-    .screen { display: none; }
-    .screen.active { display: flex; }
+.login-card {
+  background: var(--card);
+  border-radius: var(--radius-xl);
+  padding: 48px 40px 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow-card);
+  animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
 
-    #login-screen, #register-screen {
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100dvh;
-      padding: 40px 28px;
-      background: #fff;
-      text-align: center;
-    }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
-    /* Main app fills entire viewport */
-    #main-app {
-      flex-direction: column;
-      width: 100%;
-      height: 100dvh;
-      overflow: hidden;
-      position: relative;
-    }
+.login-logo {
+  width: 56px; height: 56px;
+  background: var(--green);
+  border-radius: 18px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 24px;
+  font-size: 26px;
+}
 
-    /* Scrollable content sits above nav */
-    #scroll-area {
-      flex: 1;
-      overflow-y: auto;
-      overflow-x: hidden;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 104px;
-    }
-    #scroll-area::-webkit-scrollbar { display: none; }
-    #scroll-area { -ms-overflow-style: none; scrollbar-width: none; }
+.login-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--green);
+  margin-bottom: 4px;
+  letter-spacing: -0.5px;
+}
 
-    /* ────────────────────────────────────────
-       TAB PANELS
-    ──────────────────────────────────────── */
-    .tab-panel { display: none; padding: 20px 16px 8px; }
-    .tab-panel.active {
-      display: block;
-      animation: fadeUp .25s ease both;
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(10px); }
-      to   { opacity: 1; transform: translateY(0);    }
-    }
+.login-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 36px;
+}
 
-    /* ────────────────────────────────────────
-       CARDS
-    ──────────────────────────────────────── */
-    .card {
-      border-radius: 28px;
-      margin-bottom: 14px;
-      overflow: hidden;
-      position: relative;
-    }
-    .card-green {
-      background: linear-gradient(145deg, #003d28 0%, #006241 55%, #00804f 100%);
-      padding: 28px 24px 28px;
-      color: #fff;
-    }
-    .card-white {
-      background: #fff;
-      border: 1px solid #e4ede5;
-      padding: 22px 20px 20px;
-    }
+.field-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: block;
+}
 
-    /* blobs */
-    .blob {
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(255,255,255,.05);
-      pointer-events: none;
-    }
+.field-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  background: #fafafa;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  margin-bottom: 16px;
+}
 
-    /* ────────────────────────────────────────
-       STAMP GRID
-    ──────────────────────────────────────── */
-    .stamp-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 8px;
-      margin: 12px 0;
-    }
-    .stamp-cell {
-      aspect-ratio: 1;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid #e5e7eb;
-      background: #f3f4f6;
-      animation: stampPop .4s cubic-bezier(.34,1.5,.64,1) both;
-    }
-    .stamp-cell.on {
-      background: linear-gradient(135deg, #006241, #00a36c);
-      border-color: #00a36c;
-      box-shadow: 0 3px 10px rgba(0,98,65,.3);
-    }
-    .stamp-cell:nth-child(1){animation-delay:.04s}
-    .stamp-cell:nth-child(2){animation-delay:.08s}
-    .stamp-cell:nth-child(3){animation-delay:.12s}
-    .stamp-cell:nth-child(4){animation-delay:.16s}
-    .stamp-cell:nth-child(5){animation-delay:.20s}
-    .stamp-cell:nth-child(6){animation-delay:.24s}
-    @keyframes stampPop {
-      0%  { transform: scale(.5); opacity: 0; }
-      70% { transform: scale(1.18); }
-      100%{ transform: scale(1);  opacity: 1; }
-    }
+.field-input:focus {
+  border-color: var(--green-mid);
+  background: #fff;
+}
 
-    /* ────────────────────────────────────────
-       BOTTOM NAV — centered, floating pill
-    ──────────────────────────────────────── */
-    #nav-bar {
-      position: fixed;
-      bottom: 16px;
-      /* center trick that never overflows */
-      left: 50%;
-      transform: translateX(-50%);
-      width: calc(100vw - 32px);
-      max-width: 420px;
-      height: 68px;
+.btn-login {
+  width: 100%;
+  padding: 16px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.15s, transform 0.15s;
+  letter-spacing: 0.02em;
+}
 
-      background: rgba(255,255,255,.92);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 34px;
-      border: 1px solid rgba(255,255,255,.7);
-      box-shadow: 0 10px 40px rgba(0,0,0,.13), 0 2px 8px rgba(0,0,0,.06);
+.btn-login:hover { opacity: 0.9; }
+.btn-login:active { transform: scale(0.98); }
+.btn-login:disabled { opacity: 0.4; cursor: not-allowed; }
 
-      display: none;       /* hidden until logged in */
-      align-items: center;
-      justify-content: space-around;
-      padding: 6px 10px;
-      z-index: 200;
-    }
-    #nav-bar.show { display: flex; }
+.login-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 12px;
+  display: none;
+}
 
-    .nav-btn {
-      flex: 1;
-      height: 56px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 26px;
-      cursor: pointer;
-      color: #9ca3af;
-      font-family: 'Inter', sans-serif;
-      transition: all .28s cubic-bezier(.4,0,.2,1);
-    }
-    .nav-btn svg {
-      stroke: currentColor;
-      fill: none;
-      transition: stroke .28s;
-    }
-    .nav-btn span {
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-    }
-    .nav-btn.active {
-      background: #fff;
-      color: #006241;
-      transform: translateY(-4px);
-      border-color: rgba(240,242,240,.9);
-      box-shadow: 0 4px 16px rgba(0,0,0,.1), inset 0 1px 2px rgba(255,255,255,1);
-    }
-    .nav-btn.active svg  { stroke: #006241; filter: drop-shadow(0 2px 2px rgba(0,98,65,.2)); }
-    .nav-btn.active span { color: #006241; font-weight: 800; }
+/* ── DASHBOARD ── */
+#dashboard-screen { display: none; min-height: 100vh; }
 
-    /* ────────────────────────────────────────
-       FORM / INPUTS
-    ──────────────────────────────────────── */
-    .isl {
-      background: #f3f4f6;
-      border-radius: 99px;
-      padding: 12px 22px;
-      border: 2px solid transparent;
-      display: flex;
-      flex-direction: column;
-      margin-bottom: 14px;
-      text-align: left;
-      transition: all .25s;
-    }
-    .isl:focus-within {
-      background: #fff;
-      border-color: #006241;
-      box-shadow: 0 4px 20px -4px rgba(0,98,65,.2);
-    }
-    .isl-lbl {
-      font-size: 11px; font-weight: 800; color: #9ca3af;
-      text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px;
-    }
-    .isl-inp {
-      background: transparent; border: none; outline: none;
-      font-size: 16px; font-weight: 700; color: #1f2937;
-      width: 100%; font-family: 'Inter', sans-serif;
-    }
-    .isl-inp::placeholder { color: #d1d5db; font-weight: 500; }
+.top-bar {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
 
-    /* ────────────────────────────────────────
-       BUTTONS
-    ──────────────────────────────────────── */
-    .btn-g {
-      width: 100%; padding: 16px; border-radius: 22px;
-      background: #006241; color: #fff; border: none; cursor: pointer;
-      font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .08em;
-      box-shadow: 0 4px 20px rgba(0,98,65,.25);
-      transition: transform .15s, opacity .15s;
-    }
-    .btn-g:active { transform: scale(.97); opacity: .9; }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
 
-    .btn-og {
-      width: 100%; padding: 15px; border-radius: 20px;
-      background: transparent; color: #006241;
-      border: 2px solid #006241; cursor: pointer;
-      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .08em;
-      transition: background .15s;
-    }
-    .btn-og:active { background: #f0fdf4; }
+.topbar-logo {
+  width: 36px; height: 36px;
+  background: var(--green);
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
 
-    .btn-r {
-      width: 100%; padding: 15px; border-radius: 20px;
-      background: #fff1f2; color: #ef4444;
-      border: 1px solid #fecdd3; cursor: pointer;
-      font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700;
-      text-transform: uppercase; letter-spacing: .06em;
-      transition: background .15s;
-    }
-    .btn-r:active { background: #fee2e2; }
+.topbar-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: -0.3px;
+}
 
-    /* ────────────────────────────────────────
-       MISC
-    ──────────────────────────────────────── */
-    .brand  { font-family: 'League Spartan', sans-serif; font-weight: 800; letter-spacing: -.01em; }
-    .lbl-xs { font-size: 10px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: .08em; }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
 
-    .prog-track { width: 100%; height: 5px; background: #f0f0f0; border-radius: 99px; overflow: hidden; }
-    .prog-fill  { height: 100%; border-radius: 99px; background: linear-gradient(90deg, #006241, #00a36c); transition: width .7s ease; }
+.user-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--green-xlight);
+  padding: 6px 14px 6px 8px;
+  border-radius: 100px;
+}
 
-    /* loading */
-    #loading-overlay {
-      position: fixed; inset: 0;
-      background: rgba(255,255,255,.94);
-      z-index: 9999; display: none;
-      flex-direction: column;
-      align-items: center; justify-content: center;
-    }
-    #loading-overlay.show { display: flex; }
-    .spin {
-      width: 48px; height: 48px;
-      border: 4px solid #e8f5ee;
-      border-top-color: #006241;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      margin-bottom: 14px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+.user-avatar {
+  width: 28px; height: 28px;
+  background: var(--green);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: #fff;
+}
 
-    /* modal */
-    #modal-bg {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.42);
-      z-index: 500; display: none;
-      align-items: center; justify-content: center;
-      padding: 24px;
-      backdrop-filter: blur(4px);
-    }
-    #modal-bg.show { display: flex; }
-    #modal-box {
-      background: #fff; border-radius: 32px;
-      padding: 36px 28px; width: 100%; max-width: 340px;
-      text-align: center;
-      animation: popIn .22s ease;
-    }
-    @keyframes popIn { from { transform: scale(.88); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  </style>
+.user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+.btn-logout {
+  padding: 7px 14px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 100px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
+
+.dashboard-body {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+/* Period selector */
+.period-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.period-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.period-sub {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.period-controls { display: flex; align-items: center; gap: 10px; }
+
+.tab-group {
+  display: flex;
+  background: #ebebeb;
+  border-radius: 100px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.tab-btn {
+  padding: 7px 18px;
+  border-radius: 100px;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: var(--card);
+  color: var(--green);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+}
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border-radius: 100px;
+  padding: 6px 8px;
+  border: 1.5px solid var(--border);
+}
+
+.nav-btn {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  color: var(--muted);
+  transition: background 0.15s;
+}
+
+.nav-btn:hover { background: var(--green-xlight); color: var(--green); }
+
+.month-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 100px;
+  text-align: center;
+}
+
+/* Stat cards grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--card);
+  border-radius: var(--radius-xl);
+  padding: 24px 22px;
+  border: 1.5px solid var(--border);
+  transition: transform 0.15s, box-shadow 0.15s;
+  position: relative;
+  overflow: hidden;
+  animation: fadeUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(26,74,46,0.1);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+
+.stat-card.c-kpi::before { background: var(--blue); }
+.stat-card.c-salary::before { background: var(--green); }
+.stat-card.c-bonus-kpi::before { background: var(--amber); }
+.stat-card.c-bonus-ship::before { background: #7c3aed; }
+.stat-card.c-total::before { background: var(--green-mid); }
+
+.stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stat-card:nth-child(2) { animation-delay: 0.1s; }
+.stat-card:nth-child(3) { animation-delay: 0.15s; }
+.stat-card:nth-child(4) { animation-delay: 0.2s; }
+.stat-card:nth-child(5) { animation-delay: 0.25s; }
+
+.stat-icon-wrap {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.c-kpi .stat-icon-wrap { background: var(--blue-light); }
+.c-salary .stat-icon-wrap { background: var(--green-light); }
+.c-bonus-kpi .stat-icon-wrap { background: var(--amber-light); }
+.c-bonus-ship .stat-icon-wrap { background: #f3e8ff; }
+.c-total .stat-icon-wrap { background: var(--green-light); }
+
+.stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.c-kpi .stat-value { color: var(--blue); }
+.c-salary .stat-value { color: var(--green); }
+.c-bonus-kpi .stat-value { color: var(--amber); }
+.c-bonus-ship .stat-value { color: #7c3aed; }
+.c-total .stat-value { color: var(--green); }
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 6px;
+}
+
+/* KPI progress bar */
+.kpi-bar-wrap {
+  margin-top: 12px;
+}
+
+.kpi-bar-bg {
+  height: 6px;
+  background: #e8edf0;
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.kpi-bar-fill {
+  height: 100%;
+  border-radius: 100px;
+  background: var(--blue);
+  transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+}
+
+/* Total card — bigger */
+.stat-card.c-total {
+  background: var(--green);
+  border-color: transparent;
+}
+
+.c-total .stat-label { color: rgba(255,255,255,0.65); }
+.c-total .stat-value { color: #fff; font-size: 28px; }
+.c-total .stat-sub { color: rgba(255,255,255,0.6); }
+.c-total .stat-icon-wrap { background: rgba(255,255,255,0.15); }
+
+/* Year table */
+.year-table-card {
+  background: var(--card);
+  border-radius: var(--radius-xl);
+  border: 1.5px solid var(--border);
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.year-table-head {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+
+.year-table-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+table.yt {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.yt thead th {
+  padding: 12px 16px;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: #fafafa;
+  border-bottom: 1px solid var(--border);
+}
+
+table.yt thead th:first-child { text-align: left; }
+
+table.yt tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  text-align: right;
+  font-weight: 600;
+  color: var(--text);
+}
+
+table.yt tbody td:first-child {
+  text-align: left;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+table.yt tbody tr:last-child td { border-bottom: none; }
+
+table.yt tbody tr:hover td { background: var(--green-xlight); }
+
+.tag-ship {
+  display: inline-block;
+  background: #f3e8ff;
+  color: #7c3aed;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Loading */
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--green-light);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Info row */
+.info-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.info-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 100px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.info-chip span { color: var(--muted); font-weight: 500; }
+</style>
 </head>
 <body>
 
-<!-- LOADING -->
-<div id="loading-overlay">
-  <div class="spin"></div>
-  <p class="brand" style="color:#006241;font-size:16px;">Đang tải...</p>
-</div>
+<!-- ══ LOGIN ══════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">🌿</div>
+    <div class="login-title">Bảng lương</div>
+    <div class="login-sub">Đăng nhập để xem thông tin lương của bạn</div>
 
-<!-- MODAL -->
-<div id="modal-bg">
-  <div id="modal-box">
-    <div id="m-icon" style="font-size:44px;margin-bottom:12px;">☕</div>
-    <h3 id="m-title" class="brand" style="font-size:22px;color:#006241;margin-bottom:10px;"></h3>
-    <p  id="m-msg"  style="font-size:14px;font-weight:600;color:#374151;margin-bottom:24px;line-height:1.5;"></p>
-    <button id="m-btn" class="btn-g" style="font-size:13px;">Đồng ý</button>
+    <label class="field-label">Tài khoản</label>
+    <input class="field-input" type="text" id="inp-user" placeholder="Nhập tên đăng nhập" autocomplete="username">
+
+    <label class="field-label">Mật khẩu</label>
+    <input class="field-input" type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doLogin()">
+
+    <button class="btn-login" id="btn-login" onclick="doLogin()">Đăng nhập</button>
+    <div class="login-error" id="login-error">Tài khoản hoặc mật khẩu không đúng.</div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     LOGIN
-══════════════════════════════════════════ -->
-<div id="login-screen" class="screen active">
-  <div style="width:60px;height:60px;background:#006241;border-radius:20px;
-    display:flex;align-items:center;justify-content:center;margin-bottom:20px;
-    box-shadow:0 8px 24px rgba(0,98,65,.3);">
-    <span style="font-size:28px;">☕</span>
+<!-- ══ DASHBOARD ══════════════════════════════════════════════ -->
+<div id="dashboard-screen">
+  <div class="top-bar">
+    <div class="topbar-left">
+      <div class="topbar-logo">🌿</div>
+      <div class="topbar-title">Xolifa · Lương</div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-name" id="user-display-name">--</div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Đăng xuất</button>
+    </div>
   </div>
 
-  <h1 class="brand" style="font-size:36px;color:#006241;margin-bottom:6px;">Xin chào!</h1>
-  <p class="lbl-xs" style="margin-bottom:36px;">Tích điểm · Nhận đặc quyền</p>
-
-  <input type="tel" id="login-sdt" inputmode="numeric"
-    placeholder="Số điện thoại của bạn..."
-    style="width:100%;padding:18px 20px;border-radius:24px;background:#f3f4f6;
-    border:2px solid transparent;outline:none;font-size:16px;font-weight:700;
-    text-align:center;color:#1f2937;font-family:'Inter',sans-serif;margin-bottom:12px;
-    transition:border-color .2s;"
-    onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
-
-  <button onclick="doLogin()" class="btn-g" style="margin-bottom:20px;">Đăng nhập</button>
-
-  <p style="font-size:13px;color:#9ca3af;margin-bottom:6px;">Chưa có tài khoản?</p>
-  <button onclick="goRegister()"
-    style="background:none;border:none;color:#006241;font-weight:800;font-size:13px;
-    text-transform:uppercase;letter-spacing:.08em;cursor:pointer;padding:8px;">
-    Đăng ký thành viên mới
-  </button>
-</div>
-
-<!-- ══════════════════════════════════════════
-     REGISTER
-══════════════════════════════════════════ -->
-<div id="register-screen" class="screen" style="justify-content:flex-start;padding-top:56px;">
-  <div style="width:100%;max-width:400px;">
-    <button onclick="goLogin()"
-      style="background:none;border:none;color:#9ca3af;font-size:26px;cursor:pointer;
-      margin-bottom:20px;display:block;line-height:1;font-family:'Inter',sans-serif;">
-      ‹ Quay lại
-    </button>
-
-    <h2 class="brand" style="font-size:30px;color:#006241;margin-bottom:6px;text-align:left;">Tạo tài khoản</h2>
-    <p style="font-size:13px;color:#9ca3af;font-weight:500;margin-bottom:28px;text-align:left;">
-      Nhập thông tin để tích điểm ngay.
-    </p>
-
-    <div class="isl">
-      <label class="isl-lbl">Nickname</label>
-      <input type="text" id="reg-nickname" class="isl-inp" placeholder="Ví dụ: Tuấn dễ cọc">
-    </div>
-    <div class="isl">
-      <label class="isl-lbl">Số điện thoại</label>
-      <input type="tel" id="reg-phone" class="isl-inp" placeholder="090..." inputmode="numeric">
+  <div class="dashboard-body">
+    <div class="period-header">
+      <div>
+        <div class="period-title" id="period-heading">Tháng này</div>
+        <div class="period-sub" id="period-sub">Dữ liệu đang tải...</div>
+      </div>
+      <div class="period-controls">
+        <div class="tab-group">
+          <button class="tab-btn active" id="tab-month" onclick="switchTab('month')">Tháng</button>
+          <button class="tab-btn" id="tab-year" onclick="switchTab('year')">Năm</button>
+        </div>
+        <div class="month-nav" id="month-nav">
+          <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+          <div class="month-label" id="month-label">--</div>
+          <button class="nav-btn" onclick="changeMonth(1)">›</button>
+        </div>
+      </div>
     </div>
 
-    <button id="btn-reg" onclick="doRegister()" class="btn-g" style="margin-top:8px;">
-      Xác nhận đăng ký
-    </button>
-    <p class="lbl-xs" style="text-align:center;margin-top:16px;">Tặng ngay 333 điểm khi tham gia</p>
+    <div id="content-area">
+      <div class="loading-state">
+        <div class="spinner"></div>
+        Đang tải dữ liệu...
+      </div>
+    </div>
   </div>
 </div>
-
-<!-- ══════════════════════════════════════════
-     MAIN APP
-══════════════════════════════════════════ -->
-<div id="main-app" class="screen">
-
-  <!-- Scrollable content -->
-  <div id="scroll-area">
-
-    <!-- ─── TAB: TÍCH ĐIỂM ─── -->
-    <div id="tab-points" class="tab-panel active">
-
-      <!-- Card 1: Tại quán -->
-      <div class="card card-green">
-        <div class="blob" style="width:180px;height:180px;bottom:-60px;right:-40px;"></div>
-        <div class="blob" style="width:100px;height:100px;top:-20px;right:60px;opacity:.03;"></div>
-
-        <p class="lbl-xs" style="color:rgba(255,255,255,.55);margin-bottom:2px;">Tại quán · Tích điểm</p>
-        <p id="user-rank" style="font-size:10px;font-weight:700;color:#fbbf24;
-          text-transform:uppercase;letter-spacing:.08em;margin-bottom:16px;min-height:14px;"></p>
-
-        <p id="user-name-display" style="font-size:22px;font-weight:900;color:#fff;
-          text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;
-          word-break:break-word;min-height:28px;"></p>
-
-        <p class="lbl-xs" style="color:rgba(255,255,255,.5);margin-bottom:4px;">Điểm tích lũy</p>
-        <div style="display:flex;align-items:baseline;gap:8px;">
-          <span id="user-points" style="font-size:50px;font-weight:900;color:#fff;line-height:1;">0</span>
-          <span style="font-size:13px;color:rgba(255,255,255,.5);font-weight:600;">Point</span>
-        </div>
-      </div>
-
-      <!-- Card 2: Mang về (Stamps) -->
-      <div class="card card-white">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <div>
-            <p class="lbl-xs" style="margin-bottom:3px;">Mang về · Stamp</p>
-            <p style="font-size:15px;font-weight:900;color:#1e3932;">Thẻ To-Go ☕</p>
-          </div>
-          <div style="display:flex;align-items:baseline;gap:3px;background:#f0fdf4;
-            border:1.5px solid #bbf7d0;border-radius:16px;padding:6px 12px;">
-            <span id="stamp-count-num" style="font-size:20px;font-weight:900;color:#006241;">0</span>
-            <span style="font-size:11px;font-weight:700;color:#15803d;">&thinsp;/ 6</span>
-          </div>
-        </div>
-
-        <div class="stamp-grid" id="stamp-grid"></div>
-
-        <div class="prog-track" style="margin-bottom:8px;">
-          <div class="prog-fill" id="stamp-bar" style="width:0%;"></div>
-        </div>
-
-        <p class="lbl-xs" style="text-align:center;line-height:1.6;">
-          1 ly = 1 Stamp · Tối đa 2 Stamp/ngày · Đủ 6 = 1 ly miễn phí 🎁
-        </p>
-
-        <div id="stamp-done" style="display:none;margin-top:12px;border-radius:18px;padding:14px;
-          text-align:center;background:linear-gradient(135deg,#006241,#005235);">
-          <p class="brand" style="color:#fff;font-size:15px;">🎉 Đủ 6 Stamp rồi!</p>
-          <p style="color:rgba(255,255,255,.8);font-size:12px;font-weight:600;margin-top:4px;">
-            Xuất trình app để nhận 1 ly miễn phí nhé
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ─── TAB: ĐỔI QUÀ ─── -->
-    <div id="tab-rewards" class="tab-panel">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
-        min-height:65vh;text-align:center;gap:16px;padding:20px;">
-        <div style="width:72px;height:72px;border-radius:24px;
-          background:linear-gradient(135deg,#006241,#00a36c);
-          display:flex;align-items:center;justify-content:center;
-          box-shadow:0 8px 24px rgba(0,98,65,.28);">
-          <span style="font-size:32px;">🛠️</span>
-        </div>
-        <p class="brand" style="font-size:22px;color:#1e3932;">Tính năng đang phát triển</p>
-        <p style="font-size:13px;color:#9ca3af;font-weight:600;line-height:1.6;max-width:220px;">
-          Tính năng đổi quà sẽ sớm ra mắt.<br>Cảm ơn bạn đã kiên nhẫn!
-        </p>
-      </div>
-    </div>
-
-    <!-- ─── TAB: TÔI ─── -->
-    <div id="tab-profile" class="tab-panel">
-
-      <!-- Hồ sơ -->
-      <div class="card card-white" style="padding:24px 20px;">
-        <p class="lbl-xs" style="margin-bottom:18px;">Hồ sơ của bạn</p>
-
-        <p class="lbl-xs" style="margin-bottom:6px;">Nickname</p>
-        <input type="text" id="edit-nickname"
-          style="width:100%;padding:14px 16px;background:#f3f4f6;border-radius:16px;
-          border:2px solid transparent;outline:none;font-size:15px;font-weight:700;
-          color:#1f2937;font-family:'Inter',sans-serif;margin-bottom:16px;
-          transition:border-color .2s;"
-          onfocus="this.style.borderColor='#006241'" onblur="this.style.borderColor='transparent'">
-
-        <p class="lbl-xs" style="margin-bottom:6px;">Số điện thoại</p>
-        <input type="tel" id="edit-sdt" readonly
-          style="width:100%;padding:14px 16px;background:#f3f4f6;border-radius:16px;
-          border:none;outline:none;font-size:15px;font-weight:700;color:#9ca3af;
-          font-family:'Inter',sans-serif;margin-bottom:20px;">
-
-        <button onclick="handleUpdate()" class="btn-og">Lưu thay đổi</button>
-      </div>
-
-      <!-- Logout -->
-      <div class="card card-white" style="padding:20px;text-align:center;">
-        <button onclick="handleLogout()" class="btn-r">Đăng xuất tài khoản</button>
-        <p class="lbl-xs" style="margin-top:16px;color:#d1d5db;">Thành viên App · V2026</p>
-      </div>
-    </div>
-
-  </div><!-- end #scroll-area -->
-
-  <!-- BOTTOM NAV -->
-  <nav id="nav-bar">
-
-    <button class="nav-btn active" id="nav-points" onclick="showTab('points')">
-      <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-      </svg>
-      <span>Tích điểm</span>
-    </button>
-
-    <button class="nav-btn" id="nav-rewards" onclick="showTab('rewards')">
-      <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/>
-        <path d="M12 22V7"/>
-        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
-        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
-      </svg>
-      <span>Đổi quà</span>
-    </button>
-
-    <button class="nav-btn" id="nav-profile" onclick="showTab('profile')">
-      <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-      <span>Tôi</span>
-    </button>
-
-  </nav>
-</div><!-- end #main-app -->
-
 
 <script>
-/* ════════════════════════════════════════════════
-   FIREBASE
-════════════════════════════════════════════════ */
-var firebaseConfig = {
-  apiKey:            "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
-  authDomain:        "the-cafe-33.firebaseapp.com",
-  projectId:         "the-cafe-33",
-  storageBucket:     "the-cafe-33.appspot.com",
-  messagingSenderId: "...",
-  appId:             "..."
+// ── Firebase ──────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:      "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain:  "the-cafe-33.firebaseapp.com",
+  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:   "the-cafe-33",
 };
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-var db = firebase.firestore();
+const fstore = firebase.firestore();
+const rtdb   = firebase.database();
 
-/* ════════════════════════════════════════════════
-   STATE
-════════════════════════════════════════════════ */
-var curPhone = null;
-var userData = {};
+// ── State ─────────────────────────────────────────────────────────
+let currentUser = null;   // { username, hoTen, luongCung, thuongShip }
+let currentTab  = 'month';
+let viewYear    = new Date().getFullYear();
+let viewMonth   = new Date().getMonth() + 1; // 1-12
 
-/* ════════════════════════════════════════════════
-   UTILS
-════════════════════════════════════════════════ */
-function $id(id) { return document.getElementById(id); }
-function normalizePhone(p) { return String(p || '').replace(/\D/g, ''); }
+const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MONTH_NAMES = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6',
+                     'Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
 
-function showLoading(v) {
-  $id('loading-overlay').classList.toggle('show', !!v);
+const fmt = n => Number(Math.round(n)).toLocaleString('vi-VN') + 'đ';
+const fmtNum = n => Number(Math.round(n)).toLocaleString('vi-VN');
+
+// ── Session ───────────────────────────────────────────────────────
+function saveSession(u) { sessionStorage.setItem('xl_user', JSON.stringify(u)); }
+function loadSession()  { const r = sessionStorage.getItem('xl_user'); return r ? JSON.parse(r) : null; }
+function clearSession() { sessionStorage.removeItem('xl_user'); }
+
+// ── Login ─────────────────────────────────────────────────────────
+async function doLogin() {
+  const user = document.getElementById('inp-user').value.trim();
+  const pass = document.getElementById('inp-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('btn-login');
+  errEl.style.display = 'none';
+  if (!user || !pass) { errEl.textContent = 'Vui lòng nhập đầy đủ thông tin.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Đang đăng nhập...';
+  try {
+    const doc = await fstore.collection('xolifa_luong').doc('accounts').get();
+    if (!doc.exists) throw new Error('no_accounts');
+    const accounts = doc.data().list || [];
+    const match = accounts.find(a => a.username === user && a.password === pass);
+    if (!match) throw new Error('wrong');
+    currentUser = match;
+    saveSession(match);
+    showDashboard();
+  } catch(e) {
+    errEl.textContent = e.message === 'wrong' || e.message === 'no_accounts'
+      ? 'Tài khoản hoặc mật khẩu không đúng.' : 'Lỗi kết nối. Thử lại sau.';
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Đăng nhập';
 }
 
-function showModal(title, msg, icon, cb) {
-  $id('m-icon').textContent  = icon  || '☕';
-  $id('m-title').textContent = title || '';
-  $id('m-msg').textContent   = msg   || '';
-  $id('modal-bg').classList.add('show');
-  $id('m-btn').onclick = function() {
-    $id('modal-bg').classList.remove('show');
-    if (typeof cb === 'function') cb();
-  };
+function doLogout() {
+  clearSession();
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('dashboard-screen').style.display = 'none';
+  document.getElementById('inp-user').value = '';
+  document.getElementById('inp-pass').value = '';
 }
 
-function calcRank(pts) {
-  if (pts >= 55000) return "Thành viên 'Siêu thân'";
-  if (pts >= 33000) return "Thành viên 'Thân iu'";
-  if (pts >= 10000) return "Thành viên Bạc";
-  return "Thành viên";
+// ── Show dashboard ────────────────────────────────────────────────
+function showDashboard() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard-screen').style.display = 'block';
+  const initials = (currentUser.hoTen || currentUser.username).charAt(0).toUpperCase();
+  document.getElementById('user-avatar').textContent = initials;
+  document.getElementById('user-display-name').textContent = currentUser.hoTen || currentUser.username;
+  updateMonthLabel();
+  loadAndRender();
 }
 
-/* ════════════════════════════════════════════════
-   SCREEN ROUTING
-════════════════════════════════════════════════ */
-function goScreen(id) {
-  var screens = document.querySelectorAll('.screen');
-  for (var i = 0; i < screens.length; i++) screens[i].classList.remove('active');
-  $id(id).classList.add('active');
-}
-function goLogin()    { goScreen('login-screen'); }
-function goRegister() { goScreen('register-screen'); }
-
-/* ════════════════════════════════════════════════
-   TAB NAVIGATION
-════════════════════════════════════════════════ */
-function showTab(t) {
-  // Hide all panels
-  var panels = document.querySelectorAll('.tab-panel');
-  for (var i = 0; i < panels.length; i++) panels[i].classList.remove('active');
-
-  // Show selected panel
-  var target = $id('tab-' + t);
-  if (target) target.classList.add('active');
-
-  // Update nav buttons
-  var btns = document.querySelectorAll('.nav-btn');
-  for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
-  var activeBtn = $id('nav-' + t);
-  if (activeBtn) activeBtn.classList.add('active');
-
-  // Scroll to top
-  var sa = $id('scroll-area');
-  if (sa) sa.scrollTop = 0;
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-month').classList.toggle('active', tab === 'month');
+  document.getElementById('tab-year').classList.toggle('active', tab === 'year');
+  document.getElementById('month-nav').style.display = tab === 'month' ? 'flex' : 'none';
+  updateMonthLabel();
+  loadAndRender();
 }
 
-/* ════════════════════════════════════════════════
-   STAMP RENDERER
-════════════════════════════════════════════════ */
-function renderStamps(count) {
-  var n    = Math.min(Math.max(0, parseInt(count) || 0), 6);
-  var grid = $id('stamp-grid');
-  if (!grid) return;
+function changeMonth(dir) {
+  viewMonth += dir;
+  if (viewMonth > 12) { viewMonth = 1; viewYear++; }
+  if (viewMonth < 1)  { viewMonth = 12; viewYear--; }
+  updateMonthLabel();
+  loadAndRender();
+}
 
-  var html = '';
-  for (var i = 0; i < 6; i++) {
-    if (i < n) {
-      html += '<div class="stamp-cell on">'
-        + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none">'
-        + '<path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="2.8"'
-        + ' stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
+function updateMonthLabel() {
+  document.getElementById('month-label').textContent =
+    currentTab === 'month' ? `${MONTH_NAMES[viewMonth-1]} ${viewYear}` : String(viewYear);
+}
+
+// ── Data loading ───────────────────────────────────────────────────
+async function loadAndRender() {
+  document.getElementById('content-area').innerHTML =
+    `<div class="loading-state"><div class="spinner"></div>Đang tải dữ liệu...</div>`;
+
+  try {
+    // Load config for this period
+    const cfgDoc = await fstore.collection('xolifa_luong').doc('config').get();
+    const cfg = cfgDoc.exists ? cfgDoc.data() : {};
+
+    if (currentTab === 'month') {
+      await renderMonth(cfg, viewYear, viewMonth);
     } else {
-      html += '<div class="stamp-cell">'
-        + '<div style="width:7px;height:7px;border-radius:50%;background:#d1d5db;"></div></div>';
+      await renderYear(cfg, viewYear);
     }
-  }
-  grid.innerHTML = html;
-
-  var bar  = $id('stamp-bar');
-  var num  = $id('stamp-count-num');
-  var done = $id('stamp-done');
-  if (bar)  bar.style.width     = Math.round(n / 6 * 100) + '%';
-  if (num)  num.textContent     = n;
-  if (done) done.style.display  = n >= 6 ? 'block' : 'none';
-}
-
-/* ════════════════════════════════════════════════
-   LOAD LOYALTY DATA
-════════════════════════════════════════════════ */
-function loadLoyalty(phone) {
-  db.collection('customers_xolifa').doc(phone).get()
-    .then(function(snap) {
-      if (!snap.exists) { renderStamps(0); return; }
-      var d = snap.data();
-      userData = d;
-
-      var pts  = (d.total_points !== undefined ? d.total_points : (d.points || 0));
-      var nick = d.nickname || d.name || 'Khách hàng';
-
-      var nameEl = $id('user-name-display');
-      var ptsEl  = $id('user-points');
-      var rankEl = $id('user-rank');
-      var editN  = $id('edit-nickname');
-      var editS  = $id('edit-sdt');
-
-      if (nameEl) nameEl.textContent = nick;
-      if (ptsEl)  ptsEl.textContent  = Number(pts).toLocaleString('vi-VN');
-      if (rankEl) rankEl.textContent = calcRank(pts);
-      if (editN)  editN.value        = nick;
-      if (editS)  editS.value        = phone;
-
-      renderStamps(d.stamp_count || 0);
-    })
-    .catch(function(err) {
-      console.error('[loadLoyalty]', err);
-      renderStamps(0);
-    });
-}
-
-/* ════════════════════════════════════════════════
-   SHOW DASHBOARD
-════════════════════════════════════════════════ */
-function showDashboard(phone) {
-  curPhone = phone;
-  goScreen('main-app');
-  $id('nav-bar').classList.add('show');
-  loadLoyalty(phone);
-  showTab('points');
-}
-
-/* ════════════════════════════════════════════════
-   AUTO-LOGIN
-════════════════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', function() {
-  var saved = localStorage.getItem('member_phone');
-  if (!saved) return;
-
-  showLoading(true);
-  db.collection('customers_xolifa').doc(saved).get()
-    .then(function(snap) {
-      showLoading(false);
-      if (snap.exists) {
-        showDashboard(saved);
-      } else {
-        localStorage.removeItem('member_phone');
-      }
-    })
-    .catch(function() {
-      showLoading(false);
-      showDashboard(saved); // offline fallback
-    });
-});
-
-/* ════════════════════════════════════════════════
-   LOGIN
-════════════════════════════════════════════════ */
-function doLogin() {
-  var phone = normalizePhone($id('login-sdt').value);
-  if (phone.length < 9) { alert('Số điện thoại không hợp lệ!'); return; }
-
-  showLoading(true);
-  db.collection('customers_xolifa').doc(phone).get()
-    .then(function(snap) {
-      showLoading(false);
-      if (snap.exists) {
-        localStorage.setItem('member_phone', phone);
-        showDashboard(phone);
-      } else {
-        alert("SĐT chưa đăng ký!\nVui lòng nhấn 'Đăng ký thành viên mới'.");
-      }
-    })
-    .catch(function(err) {
-      showLoading(false);
-      alert('Lỗi kết nối: ' + err.message);
-    });
-}
-
-/* ════════════════════════════════════════════════
-   REGISTER
-════════════════════════════════════════════════ */
-function doRegister() {
-  var nickname = ($id('reg-nickname').value || '').trim();
-  var phone    = normalizePhone($id('reg-phone').value);
-  var btn      = $id('btn-reg');
-
-  if (nickname.length < 2) { alert('Vui lòng nhập Nickname (ít nhất 2 ký tự)!'); return; }
-  if (phone.length < 9)    { alert('Số điện thoại không hợp lệ!'); return; }
-
-  btn.textContent = 'Đang xử lý...';
-  btn.disabled    = true;
-
-  var docRef = db.collection('customers_xolifa').doc(phone);
-  docRef.get().then(function(snap) {
-    if (snap.exists) {
-      alert('SĐT này đã tồn tại! Vui lòng đăng nhập.');
-      btn.textContent = 'Xác nhận đăng ký';
-      btn.disabled    = false;
-      goLogin();
-      return;
-    }
-    return docRef.set({
-      nickname:     nickname,
-      name:         nickname,
-      phone:        phone,
-      total_points: 333,
-      points:       333,
-      stamp_count:  0,
-      joinDate:     new Date().toISOString(),
-      source:       'app_register',
-      lastVisit:    new Date().toISOString()
-    }).then(function() {
-      localStorage.setItem('member_phone', phone);
-      showDashboard(phone);
-    });
-  }).catch(function(err) {
-    alert('Lỗi: ' + err.message);
-    btn.textContent = 'Xác nhận đăng ký';
-    btn.disabled    = false;
-  });
-}
-
-/* ════════════════════════════════════════════════
-   UPDATE NICKNAME
-════════════════════════════════════════════════ */
-function handleUpdate() {
-  var newNick = ($id('edit-nickname').value || '').trim();
-  if (!newNick) { alert('Vui lòng nhập Nickname!'); return; }
-
-  showLoading(true);
-  var guard = setTimeout(function() { showLoading(false); }, 8000);
-
-  db.collection('customers_xolifa').doc(curPhone)
-    .update({ nickname: newNick, name: newNick })
-    .then(function() {
-      clearTimeout(guard);
-      showLoading(false);
-      userData.nickname = newNick;
-      userData.name     = newNick;
-      var el = $id('user-name-display');
-      if (el) el.textContent = newNick;
-      showModal('Thành công!', 'Đã cập nhật Nickname 🎉', '✅');
-    })
-    .catch(function(err) {
-      clearTimeout(guard);
-      showLoading(false);
-      alert('Lỗi: ' + err.message);
-    });
-}
-
-/* ════════════════════════════════════════════════
-   LOGOUT
-════════════════════════════════════════════════ */
-function handleLogout() {
-  if (confirm('Đăng xuất tài khoản?')) {
-    localStorage.removeItem('member_phone');
-    location.reload();
+  } catch(e) {
+    document.getElementById('content-area').innerHTML =
+      `<div class="loading-state" style="color:#991b1b;">Lỗi tải dữ liệu: ${e.message}</div>`;
   }
 }
+
+// ── Fetch revenue + ship count for a month ────────────────────────
+async function fetchMonthData(year, month) {
+  const monthKey = MONTH_KEYS[month - 1];
+  const now = new Date();
+  const isCurrentMonth = (year === now.getFullYear() && month === now.getMonth() + 1);
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 2); cutoff.setHours(0,0,0,0);
+
+  let revenue = 0;
+  let shipCount = 0;
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(year, month - 1, d);
+    if (isCurrentMonth && dateObj > now) break;
+
+    const dayStr = String(d).padStart(2, '0');
+
+    try {
+      let orders = {};
+      if (dateObj >= cutoff) {
+        // Realtime DB
+        const snap = await rtdb.ref(`orders_xolifa/${monthKey}/${dayStr}`).once('value');
+        orders = snap.val() || {};
+      } else {
+        // Firestore archive
+        const docId = `${monthKey}_${dayStr}_${year}`;
+        const doc = await fstore.collection('orders_xolifa_archive').doc(docId).get();
+        orders = doc.exists ? (doc.data().orders || {}) : {};
+      }
+
+      Object.values(orders).forEach(o => {
+        // Revenue (trừ food)
+        if (o.netTotal != null) {
+          revenue += o.netTotal;
+        } else if (o.itemsArray && Array.isArray(o.itemsArray)) {
+          o.itemsArray.forEach(item => {
+            if (item.isFood !== true) revenue += (item.price || 0) * (item.qty || 1);
+          });
+        } else {
+          revenue += (o.total || 0) - (o.foodTotal || 0);
+        }
+        // Ship count
+        if (o.isShip === true) shipCount++;
+      });
+    } catch(_) {}
+  }
+
+  return { revenue, shipCount };
+}
+
+// ── Render month view ─────────────────────────────────────────────
+async function renderMonth(cfg, year, month) {
+  const monthKey = `${year}-${String(month).padStart(2,'0')}`;
+  const monthCfg = (cfg.months || {})[monthKey] || {};
+
+  const kpiTarget    = monthCfg.kpiTarget    || 0;
+  const bonusPct     = monthCfg.bonusPct     || 0;   // % thưởng KPI
+  const thuongShip   = currentUser.thuongShip  || 0;
+  const luongCung    = currentUser.luongCung   || 0;
+
+  // Update headings
+  document.getElementById('period-heading').textContent = MONTH_NAMES[month-1];
+  document.getElementById('period-sub').textContent = `Năm ${year} · Đang tính toán...`;
+
+  const { revenue, shipCount } = await fetchMonthData(year, month);
+
+  const phanDu      = Math.max(0, revenue - kpiTarget);
+  const thuongKpi   = phanDu * (bonusPct / 100);
+  const thuongShipTotal = shipCount * thuongShip;
+  const tongDuTinh  = luongCung + thuongKpi + thuongShipTotal;
+  const kpiPct      = kpiTarget > 0 ? Math.min(100, (revenue / kpiTarget) * 100) : 0;
+
+  document.getElementById('period-sub').textContent =
+    `${year} · Cập nhật tới hôm nay`;
+
+  document.getElementById('content-area').innerHTML = `
+    <div class="info-row">
+      <div class="info-chip">💰 <span>Lương cứng:</span> ${fmt(luongCung)}</div>
+      <div class="info-chip">🎯 <span>KPI mục tiêu:</span> ${kpiTarget > 0 ? fmt(kpiTarget) : 'Chưa cấu hình'}</div>
+      <div class="info-chip">📦 <span>Thưởng/đơn ship:</span> ${fmt(thuongShip)}</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card c-kpi">
+        <div class="stat-icon-wrap">📊</div>
+        <div class="stat-label">KPI Doanh thu</div>
+        <div class="stat-value">${kpiPct.toFixed(1)}%</div>
+        <div class="stat-sub">${fmtNum(revenue)}đ / ${kpiTarget > 0 ? fmtNum(kpiTarget) + 'đ' : '?'}</div>
+        <div class="kpi-bar-wrap">
+          <div class="kpi-bar-bg">
+            <div class="kpi-bar-fill" id="kpi-fill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card c-salary">
+        <div class="stat-icon-wrap">💵</div>
+        <div class="stat-label">Lương cứng</div>
+        <div class="stat-value">${fmt(luongCung)}</div>
+        <div class="stat-sub">Cố định hàng tháng</div>
+      </div>
+
+      <div class="stat-card c-bonus-kpi">
+        <div class="stat-icon-wrap">🏆</div>
+        <div class="stat-label">Thưởng KPI</div>
+        <div class="stat-value">${fmt(thuongKpi)}</div>
+        <div class="stat-sub">
+          ${phanDu > 0
+            ? `Vượt ${fmtNum(phanDu)}đ × ${bonusPct}%`
+            : kpiTarget > 0 ? 'Chưa đạt KPI' : 'Chưa cấu hình'}
+        </div>
+      </div>
+
+      <div class="stat-card c-bonus-ship">
+        <div class="stat-icon-wrap">🚚</div>
+        <div class="stat-label">Thưởng đơn ship</div>
+        <div class="stat-value">${fmt(thuongShipTotal)}</div>
+        <div class="stat-sub">${fmtNum(shipCount)} đơn × ${fmt(thuongShip)}</div>
+      </div>
+
+      <div class="stat-card c-total">
+        <div class="stat-icon-wrap">✨</div>
+        <div class="stat-label">Tổng dự tính nhận</div>
+        <div class="stat-value">${fmt(tongDuTinh)}</div>
+        <div class="stat-sub">Lương + Thưởng KPI + Ship</div>
+      </div>
+    </div>
+  `;
+
+  // Animate KPI bar
+  setTimeout(() => {
+    const fill = document.getElementById('kpi-fill');
+    if (fill) fill.style.width = kpiPct.toFixed(1) + '%';
+  }, 100);
+}
+
+// ── Render year view ──────────────────────────────────────────────
+async function renderYear(cfg, year) {
+  document.getElementById('period-heading').textContent = `Năm ${year}`;
+  document.getElementById('period-sub').textContent = 'Đang tổng hợp 12 tháng...';
+
+  const rows = [];
+  let totalLuong = 0, totalKpi = 0, totalShip = 0, totalTong = 0;
+
+  for (let m = 1; m <= 12; m++) {
+    const now = new Date();
+    if (year > now.getFullYear() || (year === now.getFullYear() && m > now.getMonth() + 1)) {
+      rows.push({ month: m, revenue: null, shipCount: null, thuongKpi: null, thuongShip: null, tong: null });
+      continue;
+    }
+
+    const monthKey = `${year}-${String(m).padStart(2,'0')}`;
+    const monthCfg = (cfg.months || {})[monthKey] || {};
+    const kpiTarget  = monthCfg.kpiTarget  || 0;
+    const bonusPct   = monthCfg.bonusPct   || 0;
+    const luongCung  = currentUser.luongCung  || 0;
+    const thuongShipPer = currentUser.thuongShip || 0;
+
+    const { revenue, shipCount } = await fetchMonthData(year, m);
+    const phanDu   = Math.max(0, revenue - kpiTarget);
+    const bonusKpi = phanDu * (bonusPct / 100);
+    const bonusShip = shipCount * thuongShipPer;
+    const tong     = luongCung + bonusKpi + bonusShip;
+
+    totalLuong += luongCung;
+    totalKpi   += bonusKpi;
+    totalShip  += bonusShip;
+    totalTong  += tong;
+
+    rows.push({ month: m, revenue, shipCount, thuongKpi: bonusKpi, thuongShipTotal: bonusShip, tong });
+  }
+
+  document.getElementById('period-sub').textContent = `Tổng hợp năm ${year}`;
+
+  const luongCung = currentUser.luongCung || 0;
+
+  let tbodyHTML = rows.map(r => {
+    if (r.revenue === null) {
+      return `<tr>
+        <td>${MONTH_NAMES[r.month-1]}</td>
+        <td style="color:var(--muted)">—</td>
+        <td style="color:var(--muted)">—</td>
+        <td style="color:var(--muted)">—</td>
+        <td style="color:var(--muted)">—</td>
+        <td style="color:var(--muted)">—</td>
+      </tr>`;
+    }
+    return `<tr>
+      <td>${MONTH_NAMES[r.month-1]}</td>
+      <td>${fmtNum(r.revenue)}đ</td>
+      <td>${fmtNum(luongCung)}đ</td>
+      <td style="color:var(--amber)">${fmtNum(r.thuongKpi)}đ</td>
+      <td><span class="tag-ship">${r.shipCount} đơn</span> ${fmtNum(r.thuongShipTotal)}đ</td>
+      <td style="color:var(--green);font-weight:800">${fmtNum(r.tong)}đ</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('content-area').innerHTML = `
+    <div class="info-row">
+      <div class="info-chip">💰 <span>Lương cứng/tháng:</span> ${fmt(luongCung)}</div>
+      <div class="info-chip">📦 <span>Thưởng/đơn ship:</span> ${fmt(currentUser.thuongShip || 0)}</div>
+    </div>
+
+    <div class="stats-grid" style="margin-bottom:24px">
+      <div class="stat-card c-salary">
+        <div class="stat-icon-wrap">💵</div>
+        <div class="stat-label">Tổng lương cứng</div>
+        <div class="stat-value">${fmt(totalLuong)}</div>
+        <div class="stat-sub">Cả năm ${year}</div>
+      </div>
+      <div class="stat-card c-bonus-kpi">
+        <div class="stat-icon-wrap">🏆</div>
+        <div class="stat-label">Tổng thưởng KPI</div>
+        <div class="stat-value">${fmt(totalKpi)}</div>
+        <div class="stat-sub">Cả năm ${year}</div>
+      </div>
+      <div class="stat-card c-bonus-ship">
+        <div class="stat-icon-wrap">🚚</div>
+        <div class="stat-label">Tổng thưởng ship</div>
+        <div class="stat-value">${fmt(totalShip)}</div>
+        <div class="stat-sub">Cả năm ${year}</div>
+      </div>
+      <div class="stat-card c-total">
+        <div class="stat-icon-wrap">✨</div>
+        <div class="stat-label">Tổng nhận cả năm</div>
+        <div class="stat-value">${fmt(totalTong)}</div>
+        <div class="stat-sub">Năm ${year}</div>
+      </div>
+    </div>
+
+    <div class="year-table-card">
+      <div class="year-table-head">
+        <div class="year-table-title">📅 Chi tiết từng tháng — Năm ${year}</div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="yt">
+          <thead>
+            <tr>
+              <th>Tháng</th>
+              <th>Doanh thu</th>
+              <th>Lương cứng</th>
+              <th>Thưởng KPI</th>
+              <th>Thưởng ship</th>
+              <th>Tổng nhận</th>
+            </tr>
+          </thead>
+          <tbody>${tbodyHTML}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+(function init() {
+  const session = loadSession();
+  if (session) {
+    currentUser = session;
+    showDashboard();
+  }
+  document.getElementById('month-nav').style.display = 'flex';
+})();
 </script>
 </body>
 </html>
