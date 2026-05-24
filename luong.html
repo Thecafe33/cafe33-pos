@@ -8,576 +8,416 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-:root {
-  --green: #1a4a2e;
-  --green-mid: #2d7a4f;
-  --accent: #34c759;
-  --bg: #f5f5f7;
-  --card: #ffffff;
-  --card2: #f5f5f7;
-  --border: rgba(0,0,0,0.08);
-  --text: #1d1d1f;
-  --text2: #6e6e73;
-  --text3: #aeaeb2;
-  --amber: #ff9f0a;
-  --purple: #bf5af2;
-  --blue: #0071e3;
-  --red: #ff3b30;
-  --r-sm: 12px;
-  --r-md: 18px;
-  --r-lg: 22px;
-  --r-xl: 28px;
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600&display=swap');
+:root{
+  --g:#1a4a2e;--gm:#2d7a4f;
+  --bg:#f2f2f7;--card:#fff;--card2:#f2f2f7;
+  --b:rgba(0,0,0,.07);
+  --t:#1c1c1e;--t2:#6e6e73;--t3:#c7c7cc;
+  --amber:#f59e0b;--purple:#8b5cf6;--red:#ef4444;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'SF Pro Display',sans-serif;background:var(--bg);min-height:100vh;color:var(--text);}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--t);min-height:100vh;}
 
-/* ── LOGIN ── */
-#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);}
-.login-wrap{width:100%;max-width:360px;}
-.login-logo{width:64px;height:64px;background:var(--green);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 28px;font-size:28px;}
-.login-title{font-size:28px;font-weight:600;text-align:center;letter-spacing:-0.5px;margin-bottom:6px;}
-.login-sub{font-size:14px;color:var(--text2);text-align:center;margin-bottom:36px;}
-.field{margin-bottom:14px;}
-.field input{
-  width:100%;padding:14px 16px;
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:var(--r-md);
-  font-family:inherit;font-size:15px;color:var(--text);
-  outline:none;transition:border-color .2s;
-}
-.field input:focus{border-color:rgba(0,0,0,0.25);}
-.field input::placeholder{color:var(--text3);}
-.btn-login{
-  width:100%;padding:15px;margin-top:6px;
-  background:var(--green);color:#fff;border:none;
-  border-radius:var(--r-md);
-  font-family:inherit;font-size:15px;font-weight:600;
-  cursor:pointer;transition:opacity .15s;
-  letter-spacing:-0.1px;
-}
-.btn-login:hover{opacity:.88;}
-.btn-login:disabled{opacity:.4;cursor:not-allowed;}
-.login-err{
-  margin-top:12px;padding:12px 14px;
-  background:#fff0f0;border:1px solid rgba(255,59,48,.2);
-  border-radius:var(--r-sm);
-  font-size:13px;color:var(--red);text-align:center;
-  display:none;
-}
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.lc{width:100%;max-width:340px;}
+.lc-mark{width:52px;height:52px;background:var(--g);border-radius:14px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;}
+.lc h1{font-size:24px;font-weight:600;text-align:center;letter-spacing:-.4px;margin-bottom:4px;}
+.lc p{font-size:14px;color:var(--t2);text-align:center;margin-bottom:32px;}
+.lc input{display:block;width:100%;padding:13px 15px;margin-bottom:10px;background:var(--card);border:1px solid var(--b);border-radius:13px;font:500 15px/1 inherit;color:var(--t);outline:none;transition:border-color .15s;}
+.lc input:focus{border-color:rgba(0,0,0,.22);}
+.lc input::placeholder{color:var(--t3);font-weight:400;}
+.btn-lg{width:100%;padding:14px;margin-top:4px;background:var(--g);color:#fff;border:none;border-radius:13px;font:600 15px/1 inherit;cursor:pointer;letter-spacing:-.1px;transition:opacity .15s;}
+.btn-lg:hover{opacity:.87;}
+.btn-lg:disabled{opacity:.4;cursor:default;}
+.lerr{display:none;margin-top:10px;padding:11px 13px;background:#fef2f2;border:1px solid rgba(239,68,68,.18);border-radius:10px;font-size:13px;color:var(--red);text-align:center;}
 
-/* ── DASHBOARD ── */
-#dashboard-screen{display:none;min-height:100vh;}
-.topbar{
-  height:52px;padding:0 20px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:rgba(255,255,255,.8);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:100;
-}
-.tb-left{display:flex;align-items:center;gap:10px;}
-.tb-logo{width:30px;height:30px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;}
-.tb-title{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-0.2px;}
-.tb-right{display:flex;align-items:center;gap:10px;}
-.user-pill{
-  display:flex;align-items:center;gap:8px;
-  background:var(--card2);border-radius:100px;
-  padding:5px 12px 5px 5px;
-}
-.user-av{
-  width:24px;height:24px;border-radius:50%;
-  background:var(--green);color:#fff;
-  display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:600;
-}
-.user-name{font-size:13px;font-weight:500;color:var(--text);}
-.btn-out{
-  padding:6px 14px;background:transparent;
-  border:1px solid var(--border);border-radius:100px;
-  font-family:inherit;font-size:12px;font-weight:500;
-  color:var(--text2);cursor:pointer;transition:all .15s;
-}
-.btn-out:hover{border-color:rgba(0,0,0,.2);color:var(--text);}
+#app{display:none;min-height:100vh;}
+.bar{height:50px;padding:0 18px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.85);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-bottom:1px solid var(--b);position:sticky;top:0;z-index:50;}
+.bar-l{display:flex;align-items:center;gap:9px;}
+.bar-mark{width:28px;height:28px;background:var(--g);border-radius:7px;display:flex;align-items:center;justify-content:center;}
+.bar-title{font-size:14px;font-weight:600;letter-spacing:-.2px;}
+.bar-r{display:flex;align-items:center;gap:8px;}
+.av{width:26px;height:26px;border-radius:50%;background:var(--g);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;}
+.uname{font-size:13px;font-weight:500;}
+.btn-sm{padding:5px 12px;background:transparent;border:1px solid var(--b);border-radius:100px;font:500 12px/1 inherit;color:var(--t2);cursor:pointer;transition:all .15s;}
+.btn-sm:hover{border-color:rgba(0,0,0,.18);color:var(--t);}
 
-.body{max-width:680px;margin:0 auto;padding:28px 20px 80px;}
+.body{max-width:600px;margin:0 auto;padding:24px 16px 80px;}
 
-/* ── PERIOD CONTROL ── */
-.period-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
-.period-title{font-size:22px;font-weight:600;letter-spacing:-0.5px;}
-.period-sub{font-size:13px;color:var(--text2);margin-top:2px;}
-.controls-row{display:flex;align-items:center;gap:8px;}
-.seg{display:flex;background:var(--card2);border-radius:100px;padding:3px;gap:2px;}
-.seg-btn{
-  padding:6px 16px;border-radius:100px;border:none;
-  font-family:inherit;font-size:13px;font-weight:500;
-  cursor:pointer;background:transparent;color:var(--text2);
-  transition:all .18s;
-}
-.seg-btn.active{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1);}
-.nav-row{display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:100px;padding:4px 6px;}
-.nav-btn{
-  width:28px;height:28px;border-radius:50%;border:none;
-  background:transparent;cursor:pointer;color:var(--text2);
-  font-size:15px;display:flex;align-items:center;justify-content:center;
-  transition:background .15s;
-}
-.nav-btn:hover{background:var(--card2);}
-.nav-label{font-size:13px;font-weight:500;min-width:96px;text-align:center;}
+.top-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:12px;flex-wrap:wrap;}
+.top-row-r{display:flex;align-items:center;gap:7px;}
+.seg{display:flex;background:rgba(0,0,0,.06);border-radius:100px;padding:3px;gap:2px;}
+.st{padding:5px 14px;border-radius:100px;border:none;font:500 13px/1 inherit;cursor:pointer;background:transparent;color:var(--t2);transition:all .15s;}
+.st.on{background:var(--card);color:var(--t);box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.mnav{display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--b);border-radius:100px;padding:3px 5px;}
+.mn-btn{width:26px;height:26px;border-radius:50%;border:none;background:transparent;color:var(--t2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s;}
+.mn-btn:hover{background:var(--card2);}
+.mn-lbl{font-size:12px;font-weight:500;min-width:90px;text-align:center;letter-spacing:-.1px;}
 
-/* ── CARDS ── */
-.card{background:var(--card);border-radius:var(--r-xl);border:1px solid var(--border);overflow:hidden;margin-bottom:12px;}
-.card-section{padding:20px 22px;}
-.card-section+.card-section{border-top:1px solid var(--border);}
+.card{background:var(--card);border-radius:20px;border:1px solid var(--b);margin-bottom:10px;overflow:hidden;}
 
-/* ── HERO TOTAL ── */
-.hero{padding:28px 24px 24px;text-align:center;}
-.hero-label{font-size:12px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;}
-.hero-amount{font-size:48px;font-weight:300;letter-spacing:-2px;color:var(--text);line-height:1;}
-.hero-amount span{font-size:24px;font-weight:400;vertical-align:super;letter-spacing:0;margin-right:2px;}
-.hero-sub{font-size:13px;color:var(--text2);margin-top:8px;}
+/* Hero */
+.hero{padding:26px 22px 20px;}
+.hero-lbl{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--t2);margin-bottom:8px;}
+.hero-num{font-size:42px;font-weight:300;letter-spacing:-2px;color:var(--t);}
+.hero-num sup{font-size:18px;font-weight:400;letter-spacing:0;vertical-align:super;margin-right:1px;}
 
-/* ── STAT GRID ── */
-.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);}
-.stat-cell{background:var(--card);padding:18px 20px;}
-.stat-label{font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);margin-bottom:6px;}
-.stat-value{font-size:20px;font-weight:500;letter-spacing:-0.5px;color:var(--text);}
-.stat-value.accent-green{color:var(--green-mid);}
-.stat-value.accent-amber{color:var(--amber);}
-.stat-value.accent-purple{color:var(--purple);}
-.stat-sub{font-size:12px;color:var(--text3);margin-top:3px;}
+/* KPI */
+.kpi-row{padding:16px 22px;border-top:1px solid var(--b);}
+.kpi-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+.kpi-lbl{font-size:13px;font-weight:500;color:var(--t);}
+.kpi-pct{font-size:13px;font-weight:600;color:var(--gm);}
+.kpi-track{height:5px;background:var(--card2);border-radius:100px;overflow:hidden;}
+.kpi-fill{height:100%;border-radius:100px;background:var(--g);transition:width .75s cubic-bezier(.16,1,.3,1);}
+.kpi-range{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--t3);}
 
-/* ── KPI BAR ── */
-.kpi-wrap{padding:20px 22px;}
-.kpi-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
-.kpi-title{font-size:13px;font-weight:500;color:var(--text);}
-.kpi-pct{font-size:13px;font-weight:600;color:var(--green-mid);}
-.kpi-track{height:6px;background:var(--card2);border-radius:100px;overflow:hidden;}
-.kpi-fill{height:100%;border-radius:100px;background:var(--green);transition:width .8s cubic-bezier(.16,1,.3,1);}
-.kpi-nums{display:flex;justify-content:space-between;margin-top:7px;font-size:12px;color:var(--text3);}
+/* Rows */
+.row-list{}
+.row-item{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--b);}
+.row-item:first-child{border-top:none;}
+.row-l{display:flex;align-items:center;gap:12px;}
+.ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ic svg{width:16px;height:16px;}
+.row-name{font-size:14px;font-weight:500;}
+.row-desc{font-size:12px;color:var(--t2);margin-top:1px;}
+.row-val{font-size:15px;font-weight:600;letter-spacing:-.3px;}
+.row-total{background:var(--card2);}
+.row-total .row-name{font-weight:600;}
+.row-total .row-val{font-size:16px;}
 
-/* ── BREAKDOWN ROWS ── */
-.bk-row{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--border);}
-.bk-row:first-child{border-top:none;}
-.bk-left{display:flex;align-items:center;gap:11px;}
-.bk-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-.bk-name{font-size:14px;font-weight:500;}
-.bk-desc{font-size:12px;color:var(--text2);margin-top:1px;}
-.bk-amount{font-size:15px;font-weight:600;letter-spacing:-0.3px;}
+/* Year table */
+.tbl-wrap{overflow-x:auto;}
+table.t{width:100%;border-collapse:collapse;font-size:13px;}
+table.t th{padding:10px 16px;text-align:right;font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--t2);border-bottom:1px solid var(--b);}
+table.t th:first-child{text-align:left;}
+table.t td{padding:12px 16px;border-bottom:1px solid var(--b);text-align:right;font-weight:500;}
+table.t td:first-child{text-align:left;color:var(--t2);}
+table.t tr:last-child td{border-bottom:none;}
+table.t tr:hover td{background:var(--card2);}
 
-/* ── YEAR TABLE ── */
-.yt-wrap{overflow-x:auto;}
-table.yt{width:100%;border-collapse:collapse;font-size:13px;}
-table.yt th{padding:11px 16px;text-align:right;font-size:11px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);background:#fafafa;border-bottom:1px solid var(--border);}
-table.yt th:first-child{text-align:left;}
-table.yt td{padding:13px 16px;border-bottom:1px solid var(--border);text-align:right;font-weight:500;color:var(--text);}
-table.yt td:first-child{text-align:left;color:var(--text2);}
-table.yt tr:last-child td{border-bottom:none;}
-table.yt tr:hover td{background:var(--card2);}
-.tag-ship{background:#f3e8ff;color:#7c3aed;border-radius:5px;padding:2px 7px;font-size:11px;font-weight:600;margin-right:4px;}
-
-/* ── LOADING ── */
-.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;gap:14px;color:var(--text2);font-size:14px;}
-.spin{width:26px;height:26px;border:2.5px solid rgba(0,0,0,.08);border-top-color:var(--green);border-radius:50%;animation:spin .65s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
-.fade-up{animation:fadeUp .35s cubic-bezier(.16,1,.3,1) both;}
+.loading{display:flex;flex-direction:column;align-items:center;gap:12px;padding:56px 20px;color:var(--t2);font-size:14px;}
+.spin{width:24px;height:24px;border:2px solid var(--b);border-top-color:var(--g);border-radius:50%;animation:sp .6s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+@keyframes fu{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+.fu{animation:fu .3s cubic-bezier(.16,1,.3,1) both;}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-screen">
-  <div class="login-wrap">
-    <div class="login-logo">🌿</div>
-    <div class="login-title">Bảng lương</div>
-    <div class="login-sub">Đăng nhập để xem thông tin lương</div>
-    <div class="field"><input type="text" id="inp-user" placeholder="Tên đăng nhập" autocomplete="username"></div>
-    <div class="field"><input type="password" id="inp-pass" placeholder="Mật khẩu" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <button class="btn-login" id="btn-login" onclick="doLogin()">Đăng nhập</button>
-    <div class="login-err" id="login-error">Tài khoản hoặc mật khẩu không đúng.</div>
+  <div class="lc">
+    <div class="lc-mark">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <h1>Bảng lương</h1>
+    <p>Đăng nhập để xem thông tin lương</p>
+    <input type="text" id="inp-user" placeholder="Tên đăng nhập" autocomplete="username">
+    <input type="password" id="inp-pass" placeholder="Mật khẩu" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-lg" id="btn-login" onclick="doLogin()">Đăng nhập</button>
+    <div class="lerr" id="lerr"></div>
   </div>
 </div>
 
-<!-- DASHBOARD -->
-<div id="dashboard-screen">
-  <div class="topbar">
-    <div class="tb-left">
-      <div class="tb-logo">🌿</div>
-      <div class="tb-title">Xolifa · Lương</div>
-    </div>
-    <div class="tb-right">
-      <div class="user-pill">
-        <div class="user-av" id="user-av">?</div>
-        <div class="user-name" id="user-name">--</div>
+<div id="app">
+  <div class="bar">
+    <div class="bar-l">
+      <div class="bar-mark">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
       </div>
-      <button class="btn-out" onclick="doLogout()">Đăng xuất</button>
+      <div class="bar-title">Xolifa · Lương</div>
+    </div>
+    <div class="bar-r">
+      <div class="av" id="av">?</div>
+      <div class="uname" id="uname">--</div>
+      <button class="btn-sm" onclick="doLogout()">Đăng xuất</button>
     </div>
   </div>
 
   <div class="body">
-    <div class="period-row">
-      <div>
-        <div class="period-title" id="period-title">Tháng này</div>
-        <div class="period-sub" id="period-sub">--</div>
-      </div>
-      <div class="controls-row">
+    <div class="top-row">
+      <div id="period-lbl" style="font-size:20px;font-weight:600;letter-spacing:-.4px;"></div>
+      <div class="top-row-r">
         <div class="seg">
-          <button class="seg-btn active" id="tab-month" onclick="switchTab('month')">Tháng</button>
-          <button class="seg-btn" id="tab-year" onclick="switchTab('year')">Năm</button>
+          <button class="st on" id="t-month" onclick="switchTab('month')">Tháng</button>
+          <button class="st" id="t-year" onclick="switchTab('year')">Năm</button>
         </div>
-        <div class="nav-row" id="nav-row">
-          <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
-          <div class="nav-label" id="nav-label">--</div>
-          <button class="nav-btn" onclick="changeMonth(1)">›</button>
+        <div class="mnav" id="mnav">
+          <button class="mn-btn" onclick="changeMonth(-1)">‹</button>
+          <div class="mn-lbl" id="mn-lbl"></div>
+          <button class="mn-btn" onclick="changeMonth(1)">›</button>
         </div>
       </div>
     </div>
-
-    <div id="content-area">
-      <div class="loading"><div class="spin"></div>Đang tải...</div>
-    </div>
+    <div id="content"></div>
   </div>
 </div>
 
 <script>
-const firebaseConfig = {
-  apiKey:      "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
-  authDomain:  "the-cafe-33.firebaseapp.com",
-  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:   "the-cafe-33",
+const FC = {
+  apiKey:"AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain:"the-cafe-33.firebaseapp.com",
+  databaseURL:"https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"the-cafe-33"
 };
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-const fstore = firebase.firestore();
-const rtdb   = firebase.database();
+if(!firebase.apps.length) firebase.initializeApp(FC);
+const fstore=firebase.firestore(), rtdb=firebase.database();
 
-let currentUser = null;
-let currentTab  = 'month';
-let viewYear    = new Date().getFullYear();
-let viewMonth   = new Date().getMonth() + 1;
+const MK=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+const MN=['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+const fmt=n=>Math.round(n).toLocaleString('vi-VN')+'đ';
+const fmtN=n=>Math.round(n).toLocaleString('vi-VN');
 
-const MONTH_KEYS  = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
-const MONTH_NAMES = ['Tháng 1','Tháng 2','Tháng 3','Tháng 4','Tháng 5','Tháng 6','Tháng 7','Tháng 8','Tháng 9','Tháng 10','Tháng 11','Tháng 12'];
+let user=null, tab='month', yr=new Date().getFullYear(), mo=new Date().getMonth()+1;
 
-const fmt    = n => Number(Math.round(n)).toLocaleString('vi-VN') + 'đ';
-const fmtNum = n => Number(Math.round(n)).toLocaleString('vi-VN');
+function save(u){sessionStorage.setItem('xl',JSON.stringify(u));}
+function load(){const r=sessionStorage.getItem('xl');return r?JSON.parse(r):null;}
+function clear(){sessionStorage.removeItem('xl');}
 
-function saveSession(u) { sessionStorage.setItem('xl_user', JSON.stringify(u)); }
-function loadSession()  { const r = sessionStorage.getItem('xl_user'); return r ? JSON.parse(r) : null; }
-function clearSession() { sessionStorage.removeItem('xl_user'); }
-
-async function doLogin() {
-  const user  = document.getElementById('inp-user').value.trim();
-  const pass  = document.getElementById('inp-pass').value;
-  const errEl = document.getElementById('login-error');
-  const btn   = document.getElementById('btn-login');
-  errEl.style.display = 'none';
-  if (!user || !pass) { errEl.textContent = 'Vui lòng nhập đầy đủ.'; errEl.style.display = 'block'; return; }
-  btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
-  try {
-    const doc = await fstore.collection('xolifa_luong').doc('accounts').get();
-    if (!doc.exists) throw new Error('no_accounts');
-    const accounts = doc.data().list || [];
-    const match = accounts.find(a => a.username === user && a.password === pass);
-    if (!match) throw new Error('wrong');
-    currentUser = match;
-    saveSession(match);
-    showDashboard();
-  } catch(e) {
-    errEl.textContent = (e.message === 'wrong' || e.message === 'no_accounts')
-      ? 'Tài khoản hoặc mật khẩu không đúng.' : 'Lỗi kết nối. Thử lại sau.';
-    errEl.style.display = 'block';
+async function doLogin(){
+  const u=document.getElementById('inp-user').value.trim();
+  const p=document.getElementById('inp-pass').value;
+  const err=document.getElementById('lerr'), btn=document.getElementById('btn-login');
+  err.style.display='none';
+  if(!u||!p){err.textContent='Vui lòng nhập đầy đủ.';err.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Đang đăng nhập...';
+  try{
+    const doc=await fstore.collection('xolifa_luong').doc('accounts').get();
+    const accounts=doc.exists?(doc.data().list||[]):[];
+    const match=accounts.find(a=>a.username===u&&a.password===p);
+    if(!match) throw new Error('wrong');
+    user=match; save(match); showApp();
+  }catch(e){
+    err.textContent=e.message==='wrong'?'Tài khoản hoặc mật khẩu không đúng.':'Lỗi kết nối. Thử lại.';
+    err.style.display='block';
   }
-  btn.disabled = false; btn.textContent = 'Đăng nhập';
+  btn.disabled=false;btn.textContent='Đăng nhập';
 }
 
-function doLogout() {
-  clearSession(); currentUser = null;
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('dashboard-screen').style.display = 'none';
-  document.getElementById('inp-user').value = '';
-  document.getElementById('inp-pass').value = '';
+function doLogout(){
+  clear();user=null;
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('inp-user').value='';
+  document.getElementById('inp-pass').value='';
 }
 
-function showDashboard() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('dashboard-screen').style.display = 'block';
-  const init = (currentUser.hoTen || currentUser.username).charAt(0).toUpperCase();
-  document.getElementById('user-av').textContent   = init;
-  document.getElementById('user-name').textContent = currentUser.hoTen || currentUser.username;
-  updateNavLabel();
-  loadAndRender();
+function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  const init=(user.hoTen||user.username).charAt(0).toUpperCase();
+  document.getElementById('av').textContent=init;
+  document.getElementById('uname').textContent=user.hoTen||user.username;
+  updateLabels(); render();
 }
 
-function switchTab(tab) {
-  currentTab = tab;
-  document.getElementById('tab-month').classList.toggle('active', tab === 'month');
-  document.getElementById('tab-year').classList.toggle('active', tab === 'year');
-  document.getElementById('nav-row').style.display = tab === 'month' ? 'flex' : 'none';
-  updateNavLabel();
-  loadAndRender();
+function switchTab(t){
+  tab=t;
+  document.getElementById('t-month').classList.toggle('on',t==='month');
+  document.getElementById('t-year').classList.toggle('on',t==='year');
+  document.getElementById('mnav').style.display=t==='month'?'flex':'none';
+  updateLabels(); render();
 }
 
-function changeMonth(dir) {
-  viewMonth += dir;
-  if (viewMonth > 12) { viewMonth = 1; viewYear++; }
-  if (viewMonth < 1)  { viewMonth = 12; viewYear--; }
-  updateNavLabel();
-  loadAndRender();
+function changeMonth(d){
+  mo+=d;
+  if(mo>12){mo=1;yr++;}
+  if(mo<1){mo=12;yr--;}
+  updateLabels(); render();
 }
 
-function updateNavLabel() {
-  document.getElementById('nav-label').textContent =
-    currentTab === 'month' ? `${MONTH_NAMES[viewMonth-1]} ${viewYear}` : String(viewYear);
-  document.getElementById('period-title').textContent =
-    currentTab === 'month' ? MONTH_NAMES[viewMonth-1] : `Năm ${viewYear}`;
-  document.getElementById('period-sub').textContent =
-    currentTab === 'month' ? `${viewYear}` : 'Tổng hợp 12 tháng';
+function updateLabels(){
+  document.getElementById('mn-lbl').textContent=`${MN[mo-1]} ${yr}`;
+  document.getElementById('period-lbl').textContent=tab==='month'?`${MN[mo-1]} ${yr}`:`Năm ${yr}`;
 }
 
-async function loadAndRender() {
-  document.getElementById('content-area').innerHTML =
-    '<div class="loading"><div class="spin"></div>Đang tải dữ liệu...</div>';
-  try {
-    const cfgDoc = await fstore.collection('xolifa_luong').doc('config').get();
-    const cfg = cfgDoc.exists ? cfgDoc.data() : {};
-    if (currentTab === 'month') await renderMonth(cfg, viewYear, viewMonth);
-    else await renderYear(cfg, viewYear);
-  } catch(e) {
-    document.getElementById('content-area').innerHTML =
-      `<div class="loading" style="color:var(--red)">Lỗi: ${e.message}</div>`;
-  }
-}
-
-async function fetchMonthData(year, month) {
-  const monthKey = MONTH_KEYS[month - 1];
-  const now = new Date();
-  const isCurrentMonth = (year === now.getFullYear() && month === now.getMonth() + 1);
-  let revenue = 0, shipCount = 0;
-  const daysInMonth = new Date(year, month, 0).getDate();
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateObj = new Date(year, month - 1, d);
-    if (isCurrentMonth && dateObj > now) break;
-    const dayStr = String(d).padStart(2, '0');
-    try {
-      const rtSnap = await rtdb.ref(`orders_xolifa/${monthKey}/${dayStr}`).once('value');
-      const rtData = rtSnap.val() || {};
-      let fsData = {};
-      try {
-        const fsDoc = await fstore.collection('orders_xolifa_archive').doc(`${monthKey}_${dayStr}_${year}`).get();
-        fsData = fsDoc.exists ? (fsDoc.data().orders || {}) : {};
-      } catch(_) {}
-      const orders = { ...fsData, ...rtData };
-      Object.values(orders).forEach(o => {
-        revenue += (o.total || 0) - (o.foodTotal || 0);
-        if (o.isShip === true) shipCount++;
+async function fetchMonth(year,month){
+  const mk=MK[month-1], now=new Date();
+  const isNow=(year===now.getFullYear()&&month===now.getMonth()+1);
+  let rev=0, ships=0;
+  for(let d=1;d<=new Date(year,month,0).getDate();d++){
+    const dt=new Date(year,month-1,d);
+    if(isNow&&dt>now) break;
+    const ds=String(d).padStart(2,'0');
+    try{
+      const rtSnap=await rtdb.ref(`orders_xolifa/${mk}/${ds}`).once('value');
+      const rtData=rtSnap.val()||{};
+      let fsData={};
+      try{
+        const fsDoc=await fstore.collection('orders_xolifa_archive').doc(`${mk}_${ds}_${year}`).get();
+        fsData=fsDoc.exists?(fsDoc.data().orders||{}):{};
+      }catch(_){}
+      const orders={...fsData,...rtData};
+      Object.values(orders).forEach(o=>{
+        rev+=(o.total||0)-(o.foodTotal||0);
+        if(o.isShip===true) ships++;
       });
-    } catch(_) {}
+    }catch(_){}
   }
-  return { revenue, shipCount };
+  return{rev,ships};
 }
 
-async function renderMonth(cfg, year, month) {
-  const monthKey   = `${year}-${String(month).padStart(2,'0')}`;
-  const monthCfg   = (cfg.months || {})[monthKey] || {};
-  const kpiTarget  = monthCfg.kpiTarget  || 0;
-  const bonusPct   = monthCfg.bonusPct   || 0;
-  const thuongShip = currentUser.thuongShip || 0;
-  const luongCung  = currentUser.luongCung  || 0;
+async function render(){
+  document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div>Đang tải...</div>';
+  try{
+    const cfgDoc=await fstore.collection('xolifa_luong').doc('config').get();
+    const cfg=cfgDoc.exists?cfgDoc.data():{};
+    if(tab==='month') await renderMonth(cfg,yr,mo);
+    else await renderYear(cfg,yr);
+  }catch(e){
+    document.getElementById('content').innerHTML=`<div class="loading" style="color:var(--red)">Lỗi: ${e.message}</div>`;
+  }
+}
 
-  const { revenue, shipCount } = await fetchMonthData(year, month);
-  const phanDu     = Math.max(0, revenue - kpiTarget);
-  const thuongKpi  = phanDu * (bonusPct / 100);
-  const thuongShipTotal = shipCount * thuongShip;
-  const tongDuTinh = luongCung + thuongKpi + thuongShipTotal;
-  const kpiPct     = kpiTarget > 0 ? Math.min(100, (revenue / kpiTarget) * 100) : 0;
+const IC={
+  salary:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>`,
+  kpi:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  ship:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3"/><rect x="9" y="11" width="14" height="10" rx="1"/><circle cx="12" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>`,
+  total:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>`
+};
 
-  document.getElementById('content-area').innerHTML = `
-    <div class="fade-up">
+async function renderMonth(cfg,year,month){
+  const mk=`${year}-${String(month).padStart(2,'0')}`;
+  const mc=(cfg.months||{})[mk]||{};
+  const kpiTarget=mc.kpiTarget||0, bonusPct=mc.bonusPct||0;
+  const luong=user.luongCung||0, ship=user.thuongShip||0;
 
-      <!-- Hero total -->
-      <div class="card" style="margin-bottom:12px">
-        <div class="hero">
-          <div class="hero-label">Tổng dự tính nhận</div>
-          <div class="hero-amount"><span>₫</span>${fmtNum(tongDuTinh)}</div>
-          <div class="hero-sub">Lương cứng + Thưởng KPI + Thưởng ship</div>
+  const{rev,ships}=await fetchMonth(year,month);
+  const phanDu=Math.max(0,rev-kpiTarget);
+  const bKpi=phanDu*(bonusPct/100);
+  const bShip=ships*ship;
+  const tong=luong+bKpi+bShip;
+  const kpiPct=kpiTarget>0?Math.min(100,rev/kpiTarget*100):0;
+
+  document.getElementById('content').innerHTML=`<div class="fu">
+    <div class="card">
+      <div class="hero">
+        <div class="hero-lbl">Tổng dự tính nhận</div>
+        <div class="hero-num"><sup>₫</sup>${fmtN(tong)}</div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi-head">
+          <div class="kpi-lbl">Tiến độ KPI</div>
+          <div class="kpi-pct">${kpiPct.toFixed(1)}%</div>
         </div>
-
-        <!-- KPI bar -->
-        <div class="kpi-wrap" style="border-top:1px solid var(--border)">
-          <div class="kpi-header">
-            <div class="kpi-title">KPI Doanh thu</div>
-            <div class="kpi-pct">${kpiPct.toFixed(1)}%</div>
-          </div>
-          <div class="kpi-track"><div class="kpi-fill" id="kpi-fill" style="width:0%"></div></div>
-          <div class="kpi-nums">
-            <span>${fmtNum(revenue)}đ</span>
-            <span>${kpiTarget > 0 ? fmtNum(kpiTarget) + 'đ' : 'Chưa cấu hình'}</span>
-          </div>
+        <div class="kpi-track"><div class="kpi-fill" id="kf" style="width:0%"></div></div>
+        <div class="kpi-range">
+          <span>${fmtN(rev)}đ thực tế</span>
+          <span>Mục tiêu ${kpiTarget>0?fmtN(kpiTarget)+'đ':'chưa cấu hình'}</span>
         </div>
       </div>
-
-      <!-- Stat grid -->
-      <div class="card" style="margin-bottom:12px">
-        <div class="stat-grid">
-          <div class="stat-cell">
-            <div class="stat-label">Lương cứng</div>
-            <div class="stat-value accent-green">${fmt(luongCung)}</div>
-            <div class="stat-sub">Cố định hàng tháng</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-label">Doanh thu thực</div>
-            <div class="stat-value">${fmt(revenue)}</div>
-            <div class="stat-sub">Tháng ${month}/${year}</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-label">Thưởng KPI</div>
-            <div class="stat-value accent-amber">${fmt(thuongKpi)}</div>
-            <div class="stat-sub">${phanDu > 0 ? `Vượt ${fmtNum(phanDu)}đ × ${bonusPct}%` : kpiTarget > 0 ? 'Chưa đạt KPI' : 'Chưa cấu hình'}</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-label">Thưởng ship</div>
-            <div class="stat-value accent-purple">${fmt(thuongShipTotal)}</div>
-            <div class="stat-sub">${shipCount} đơn × ${fmt(thuongShip)}</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Breakdown -->
-      <div class="card">
-        <div class="bk-row">
-          <div class="bk-left">
-            <div class="bk-icon" style="background:#e8f5ee">💵</div>
+      <div class="row-list">
+        <div class="row-item">
+          <div class="row-l">
+            <div class="ic" style="background:#e8f5ee;color:var(--gm)">${IC.salary}</div>
             <div>
-              <div class="bk-name">Lương cứng</div>
-              <div class="bk-desc">Cố định hàng tháng</div>
+              <div class="row-name">Lương cứng</div>
+              <div class="row-desc">Cố định hàng tháng</div>
             </div>
           </div>
-          <div class="bk-amount" style="color:var(--green-mid)">${fmt(luongCung)}</div>
+          <div class="row-val" style="color:var(--gm)">${fmt(luong)}</div>
         </div>
-        <div class="bk-row">
-          <div class="bk-left">
-            <div class="bk-icon" style="background:#fff8e7">🏆</div>
+        <div class="row-item">
+          <div class="row-l">
+            <div class="ic" style="background:#fef3c7;color:#b45309">${IC.kpi}</div>
             <div>
-              <div class="bk-name">Thưởng KPI</div>
-              <div class="bk-desc">Phần dư × ${bonusPct}%</div>
+              <div class="row-name">Thưởng KPI</div>
+              <div class="row-desc">${phanDu>0?`Vượt ${fmtN(phanDu)}đ × ${bonusPct}%`:kpiTarget>0?'Chưa đạt KPI':'Chưa cấu hình'}</div>
             </div>
           </div>
-          <div class="bk-amount" style="color:var(--amber)">${fmt(thuongKpi)}</div>
+          <div class="row-val" style="color:var(--amber)">${fmt(bKpi)}</div>
         </div>
-        <div class="bk-row">
-          <div class="bk-left">
-            <div class="bk-icon" style="background:#f3e8ff">🚚</div>
+        <div class="row-item">
+          <div class="row-l">
+            <div class="ic" style="background:#f3e8ff;color:#7c3aed">${IC.ship}</div>
             <div>
-              <div class="bk-name">Thưởng ship</div>
-              <div class="bk-desc">${shipCount} đơn × ${fmt(thuongShip)}</div>
+              <div class="row-name">Thưởng ship</div>
+              <div class="row-desc">${ships} đơn × ${fmt(ship)}</div>
             </div>
           </div>
-          <div class="bk-amount" style="color:var(--purple)">${fmt(thuongShipTotal)}</div>
+          <div class="row-val" style="color:var(--purple)">${fmt(bShip)}</div>
         </div>
-        <div class="bk-row" style="background:var(--card2)">
-          <div class="bk-left">
-            <div class="bk-icon" style="background:var(--green)">✨</div>
-            <div>
-              <div class="bk-name" style="font-weight:600">Tổng nhận</div>
-              <div class="bk-desc">Dự tính tháng này</div>
-            </div>
+        <div class="row-item row-total">
+          <div class="row-l">
+            <div class="ic" style="background:var(--g);color:#fff">${IC.total}</div>
+            <div><div class="row-name">Tổng nhận</div></div>
           </div>
-          <div class="bk-amount" style="color:var(--green);font-size:17px">${fmt(tongDuTinh)}</div>
+          <div class="row-val" style="color:var(--g)">${fmt(tong)}</div>
         </div>
       </div>
     </div>
-  `;
-  setTimeout(() => {
-    const el = document.getElementById('kpi-fill');
-    if (el) el.style.width = kpiPct.toFixed(1) + '%';
-  }, 80);
+  </div>`;
+  setTimeout(()=>{const el=document.getElementById('kf');if(el)el.style.width=kpiPct.toFixed(1)+'%';},80);
 }
 
-async function renderYear(cfg, year) {
-  document.getElementById('content-area').innerHTML =
-    '<div class="loading"><div class="spin"></div>Đang tổng hợp 12 tháng...</div>';
+async function renderYear(cfg,year){
+  document.getElementById('content').innerHTML='<div class="loading"><div class="spin"></div>Đang tổng hợp 12 tháng...</div>';
+  const luong=user.luongCung||0, shipPer=user.thuongShip||0;
+  const now=new Date();
+  let tL=0,tK=0,tS=0,tT=0;
+  const rows=[];
 
-  const luongCung = currentUser.luongCung || 0;
-  const thuongShipPer = currentUser.thuongShip || 0;
-  const rows = [];
-  let totalLuong = 0, totalKpi = 0, totalShip = 0, totalTong = 0;
-  const now = new Date();
-
-  for (let m = 1; m <= 12; m++) {
-    if (year > now.getFullYear() || (year === now.getFullYear() && m > now.getMonth() + 1)) {
-      rows.push({ month: m, empty: true }); continue;
+  for(let m=1;m<=12;m++){
+    if(year>now.getFullYear()||(year===now.getFullYear()&&m>now.getMonth()+1)){
+      rows.push({m,empty:true});continue;
     }
-    const monthKey = `${year}-${String(m).padStart(2,'0')}`;
-    const monthCfg = (cfg.months || {})[monthKey] || {};
-    const kpiTarget = monthCfg.kpiTarget || 0;
-    const bonusPct  = monthCfg.bonusPct  || 0;
-    const { revenue, shipCount } = await fetchMonthData(year, m);
-    const phanDu   = Math.max(0, revenue - kpiTarget);
-    const bonusKpi = phanDu * (bonusPct / 100);
-    const bonusShip = shipCount * thuongShipPer;
-    const tong = luongCung + bonusKpi + bonusShip;
-    totalLuong += luongCung; totalKpi += bonusKpi; totalShip += bonusShip; totalTong += tong;
-    rows.push({ month: m, revenue, shipCount, bonusKpi, bonusShip, tong });
+    const mk=`${year}-${String(m).padStart(2,'0')}`;
+    const mc=(cfg.months||{})[mk]||{};
+    const kpiTarget=mc.kpiTarget||0, bonusPct=mc.bonusPct||0;
+    const{rev,ships}=await fetchMonth(year,m);
+    const bKpi=Math.max(0,rev-kpiTarget)*(bonusPct/100);
+    const bShip=ships*shipPer;
+    const tong=luong+bKpi+bShip;
+    tL+=luong;tK+=bKpi;tS+=bShip;tT+=tong;
+    rows.push({m,rev,bKpi,bShip,tong,ships});
   }
 
-  const tbodyHTML = rows.map(r => {
-    if (r.empty) return `<tr><td>${MONTH_NAMES[r.month-1]}</td><td colspan="4" style="color:var(--text3)">—</td></tr>`;
-    return `<tr>
-      <td>${MONTH_NAMES[r.month-1]}</td>
-      <td>${fmtNum(r.revenue)}đ</td>
-      <td style="color:var(--amber)">${fmtNum(r.bonusKpi)}đ</td>
-      <td><span class="tag-ship">${r.shipCount}</span>${fmtNum(r.bonusShip)}đ</td>
-      <td style="color:var(--green-mid);font-weight:600">${fmtNum(r.tong)}đ</td>
+  const tbody=rows.map(r=>{
+    if(r.empty) return `<tr><td>${MN[r.m-1]}</td><td colspan="3" style="color:var(--t3)">—</td></tr>`;
+    return`<tr>
+      <td>${MN[r.m-1]}</td>
+      <td>${fmtN(r.bKpi)}đ</td>
+      <td>${r.ships} đơn · ${fmtN(r.bShip)}đ</td>
+      <td style="color:var(--gm);font-weight:600">${fmtN(r.tong)}đ</td>
     </tr>`;
   }).join('');
 
-  document.getElementById('content-area').innerHTML = `
-    <div class="fade-up">
-      <div class="card" style="margin-bottom:12px">
-        <div class="stat-grid">
-          <div class="stat-cell">
-            <div class="stat-label">Tổng lương cứng</div>
-            <div class="stat-value accent-green">${fmt(totalLuong)}</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-label">Tổng thưởng KPI</div>
-            <div class="stat-value accent-amber">${fmt(totalKpi)}</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-label">Tổng thưởng ship</div>
-            <div class="stat-value accent-purple">${fmt(totalShip)}</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-label">Tổng nhận cả năm</div>
-            <div class="stat-value" style="color:var(--green)">${fmt(totalTong)}</div>
-          </div>
+  document.getElementById('content').innerHTML=`<div class="fu">
+    <div class="card" style="margin-bottom:10px">
+      <div class="row-list">
+        <div class="row-item">
+          <div class="row-l"><div class="ic" style="background:#e8f5ee;color:var(--gm)">${IC.salary}</div><div class="row-name">Tổng lương cứng</div></div>
+          <div class="row-val" style="color:var(--gm)">${fmt(tL)}</div>
         </div>
-      </div>
-      <div class="card">
-        <div class="yt-wrap">
-          <table class="yt">
-            <thead>
-              <tr>
-                <th>Tháng</th>
-                <th>Doanh thu</th>
-                <th>Thưởng KPI</th>
-                <th>Thưởng ship</th>
-                <th>Tổng nhận</th>
-              </tr>
-            </thead>
-            <tbody>${tbodyHTML}</tbody>
-          </table>
+        <div class="row-item">
+          <div class="row-l"><div class="ic" style="background:#fef3c7;color:#b45309">${IC.kpi}</div><div class="row-name">Tổng thưởng KPI</div></div>
+          <div class="row-val" style="color:var(--amber)">${fmt(tK)}</div>
+        </div>
+        <div class="row-item">
+          <div class="row-l"><div class="ic" style="background:#f3e8ff;color:#7c3aed">${IC.ship}</div><div class="row-name">Tổng thưởng ship</div></div>
+          <div class="row-val" style="color:var(--purple)">${fmt(tS)}</div>
+        </div>
+        <div class="row-item row-total">
+          <div class="row-l"><div class="ic" style="background:var(--g);color:#fff">${IC.total}</div><div class="row-name">Tổng cả năm ${year}</div></div>
+          <div class="row-val" style="color:var(--g)">${fmt(tT)}</div>
         </div>
       </div>
     </div>
-  `;
+    <div class="card">
+      <div class="tbl-wrap">
+        <table class="t">
+          <thead><tr><th>Tháng</th><th>Thưởng KPI</th><th>Thưởng ship</th><th>Tổng nhận</th></tr></thead>
+          <tbody>${tbody}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
 }
 
-(function init() {
-  const session = loadSession();
-  if (session) { currentUser = session; showDashboard(); }
+(function(){
+  const s=load();
+  if(s){user=s;showApp();}
+  updateLabels();
 })();
 </script>
 </body>
