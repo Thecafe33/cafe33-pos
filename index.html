@@ -225,124 +225,249 @@
 
 <style>
 /* ══════════════════════════════════════════
-   STAMP CARD TO GO — phong cách The cafe 33
+   STAMP CARD TO GO — Google I/O 2026 Aurora
+   Màu chủ đạo: xanh lá thương hiệu #006241
 ══════════════════════════════════════════ */
 .togo-stamp-card {
-  background: #ffffff;
-  border-radius: 2rem;
-  padding: 20px 20px 18px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  background: #04130d;
+  border-radius: 28px;
+  padding: 22px 20px 20px;
   margin-bottom: 20px;
-  border: 1px solid rgba(0,98,65,0.08);
   position: relative;
   overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(0,162,100,0.18),
+    0 24px 64px rgba(0,0,0,0.55),
+    0 4px 16px rgba(0,0,0,0.4);
 }
-.togo-stamp-card::before {
-  content: "";
+.togo-stamp-card::before { display: none; }
+
+/* ── Aurora blob wrapper (tách blur ra wrapper để GPU animate transform mượt) ── */
+.togo-aurora-blob {
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #006241, #00a36c);
-  border-radius: 2rem 2rem 0 0;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
 }
+.togo-aurora-blob-inner {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  filter: blur(40px);
+}
+
+/* Blob 1: xanh lá đậm → xanh lá sáng (brand hero) */
+.togo-aurora-blob-1 { width: 220px; height: 200px; top: -70px; left: -50px; opacity: 0.75; animation: togoblob1 7s ease-in-out infinite alternate; }
+.togo-aurora-blob-1 .togo-aurora-blob-inner { background: radial-gradient(circle at 40% 40%, #00e87a 0%, #006241 60%, transparent 100%); }
+
+/* Blob 2: xanh lam-lá (accent lạnh) */
+.togo-aurora-blob-2 { width: 180px; height: 170px; top: -50px; right: -40px; opacity: 0.6; animation: togoblob2 9s ease-in-out infinite alternate; }
+.togo-aurora-blob-2 .togo-aurora-blob-inner { background: radial-gradient(circle at 60% 40%, #00d4aa 0%, #007a62 60%, transparent 100%); }
+
+/* Blob 3: vàng-amber nhẹ ở góc dưới (tạo chiều sâu) */
+.togo-aurora-blob-3 { width: 150px; height: 130px; bottom: 10px; left: 10px; opacity: 0.28; animation: togoblob3 8s ease-in-out infinite alternate; }
+.togo-aurora-blob-3 .togo-aurora-blob-inner { background: radial-gradient(circle, #a8ff78 0%, #006241 70%, transparent 100%); }
+
+/* Blob 4: xanh lá nhạt góc phải */
+.togo-aurora-blob-4 { width: 120px; height: 110px; bottom: 0px; right: 0px; opacity: 0.32; animation: togoblob4 6s ease-in-out infinite alternate; }
+.togo-aurora-blob-4 .togo-aurora-blob-inner { background: radial-gradient(circle, #00ffa3 0%, #004d33 70%, transparent 100%); }
+
+@keyframes togoblob1 {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  33%  { transform: translate(40px, 15px) scale(1.1); }
+  66%  { transform: translate(20px, 35px) scale(0.95); }
+  100% { transform: translate(50px, 25px) scale(1.18); }
+}
+@keyframes togoblob2 {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  33%  { transform: translate(-25px, 30px) scale(1.08); }
+  66%  { transform: translate(-10px, 50px) scale(1.12); }
+  100% { transform: translate(-35px, 40px) scale(0.92); }
+}
+@keyframes togoblob3 {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  50%  { transform: translate(30px, -20px) scale(1.25); }
+  100% { transform: translate(15px, -35px) scale(1.1); }
+}
+@keyframes togoblob4 {
+  0%   { transform: translate(0px, 0px) scale(1); }
+  50%  { transform: translate(-20px, -15px) scale(1.15); }
+  100% { transform: translate(-30px, -25px) scale(0.88); }
+}
+
+/* Glass + noise overlay */
+.togo-glass-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4,19,13,0.38);
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+  pointer-events: none;
+}
+.togo-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  pointer-events: none;
+  border-radius: 28px;
+}
+
+/* Content layer */
+.togo-card-inner { position: relative; z-index: 2; }
+
+/* ── Header: 1 hàng — icon cốc + title + badge ── */
 .togo-stamp-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
+.togo-header-left {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.togo-header-icon {
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  background: rgba(0,200,100,0.15);
+  border: 1px solid rgba(0,200,100,0.25);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.togo-header-icon svg { width: 20px; height: 20px; color: #4dffa0; }
 .togo-stamp-title-main {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
-  color: #1e3932;
+  color: #ffffff;
   letter-spacing: -0.2px;
   font-family: 'League Spartan', sans-serif;
+  line-height: 1.1;
 }
 .togo-stamp-title-sub {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-top: 2px;
-  font-weight: 600;
+  font-size: 10px;
+  color: rgba(255,255,255,0.38);
+  margin-top: 3px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
 }
 .togo-stamp-count-badge {
-  font-size: 13px;
-  font-weight: 800;
-  color: #006241;
-  background: #ecfdf5;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  background: rgba(0,180,90,0.15);
   padding: 5px 12px;
-  border-radius: 20px;
-  letter-spacing: -0.3px;
-  border: 1px solid #d1fae5;
+  border-radius: 99px;
+  border: 1px solid rgba(0,210,100,0.25);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
+.togo-stamp-count-badge .togo-count-num {
+  background: linear-gradient(90deg, #4dffa0, #00e5cc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+  font-size: 14px;
+}
+
+/* ── Stamp grid ── */
 .togo-stamp-grid {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
-  gap: 4px;
+  margin-bottom: 12px;
+  gap: 6px;
 }
 .togo-stamp-cell {
   flex: 1;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: #f3f4f6;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
 }
-.togo-stamp-cell svg {
-  width: 48%; height: 48%;
-  color: #d1d5db;
-  transition: color 0.3s;
-}
+.togo-stamp-cell svg { width: 44%; height: 44%; color: rgba(255,255,255,0.18); transition: all 0.3s; }
 .togo-stamp-cell.on {
-  background: #006241;
-  box-shadow: 0 3px 10px rgba(0,98,65,0.28);
+  background: linear-gradient(135deg, rgba(0,160,80,0.55) 0%, rgba(0,100,60,0.55) 100%);
+  border: 1px solid rgba(77,255,160,0.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 0 18px rgba(0,200,100,0.35), 0 4px 12px rgba(0,0,0,0.35);
 }
-.togo-stamp-cell.on svg { color: #ffffff; }
-.togo-stamp-cell.gift {
-  background: #f3f4f6;
-  border: 1.5px dashed #d1d5db;
+.togo-stamp-cell.on::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.14) 0%, transparent 55%);
+  border-radius: 50%;
 }
-.togo-stamp-cell.gift svg { color: #d1d5db; }
+.togo-stamp-cell.on svg { color: #fff; filter: drop-shadow(0 0 5px rgba(100,255,170,0.7)); }
+.togo-stamp-cell.gift { background: rgba(255,255,255,0.03); border: 1.5px dashed rgba(255,255,255,0.18); }
+.togo-stamp-cell.gift svg { color: rgba(255,255,255,0.22); }
 .togo-stamp-cell.gift.unlocked {
-  background: #006241;
-  border: 2px solid #006241;
-  box-shadow: 0 4px 14px rgba(0,98,65,0.32);
+  background: linear-gradient(135deg, rgba(0,180,100,0.4) 0%, rgba(0,120,70,0.4) 100%);
+  border: 1.5px solid rgba(77,255,160,0.5);
+  box-shadow: 0 0 22px rgba(0,220,120,0.3), 0 4px 12px rgba(0,0,0,0.35);
 }
-.togo-stamp-cell.gift.unlocked svg { color: #ffffff; }
+.togo-stamp-cell.gift.unlocked svg { color: #4dffa0; filter: drop-shadow(0 0 6px rgba(77,255,160,0.65)); }
+
+/* ── Progress bar ── */
+.togo-progress-wrap {
+  background: rgba(255,255,255,0.07);
+  border-radius: 99px;
+  height: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.togo-progress-bar {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #006241, #00e87a, #00d4aa, #4dffa0);
+  background-size: 250% 100%;
+  animation: togoGradShift 3s linear infinite;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes togoGradShift {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
 .togo-stamp-hint {
   font-size: 11px;
-  color: #9ca3af;
+  color: rgba(255,255,255,0.3);
   text-align: center;
-  font-weight: 500;
+  font-weight: 400;
 }
+
+/* ── Footer ── */
+.togo-footer-glow {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,200,100,0.3), rgba(0,210,160,0.2), transparent);
+  margin: 14px 0 10px;
+}
+.togo-footer-row { display: flex; justify-content: space-between; align-items: center; }
+.togo-footer-brand { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.25); }
+.togo-footer-chip  { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; color: rgba(77,255,160,0.3); text-transform: uppercase; }
+
+/* ── Done / free drinks banners ── */
 .togo-stamp-done, .togo-free-drinks-badge {
   display: none;
   align-items: center;
   justify-content: space-between;
-  background: #ecfdf5;
-  border-radius: 14px;
-  padding: 14px 16px;
-  margin-top: 14px;
-  border: 1px solid #d1fae5;
+  background: rgba(0,180,100,0.12);
+  border-radius: 16px;
+  padding: 13px 16px;
+  margin-top: 12px;
+  border: 1px solid rgba(77,255,160,0.22);
+  gap: 12px;
 }
 .togo-stamp-done.show, .togo-free-drinks-badge.show { display: flex; }
-.togo-banner-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #006241;
-  margin-bottom: 2px;
-}
-.togo-banner-sub {
-  font-size: 12px;
-  color: #047857;
-}
-.togo-banner-icon svg {
-  width: 28px; height: 28px;
-  color: #006241;
-}
+.togo-banner-title { font-size: 13px; font-weight: 700; color: #4dffa0; margin-bottom: 2px; }
+.togo-banner-sub   { font-size: 11px; color: rgba(255,255,255,0.42); }
+.togo-banner-icon svg { width: 26px; height: 26px; color: #4dffa0; }
 
 /* ══════════════════════════════════════════
    VÍ XOLIFA — phong cách The cafe 33
@@ -455,22 +580,114 @@
     </div>
   </div>
 
-  <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen p-8 bg-white text-center">
-    <h1 class="text-5xl text-[#006241] mb-2 brand-font">The cafe 33</h1>
-    <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:14px;">
-      <div style="height:1px;width:28px;background:linear-gradient(to left,#d1d5db,transparent);"></div>
-      <span style="font-size:9px;font-weight:700;color:#9ca3af;letter-spacing:0.2em;text-transform:uppercase;">và</span>
-      <div style="height:1px;width:28px;background:linear-gradient(to right,#d1d5db,transparent);"></div>
+  <div id="login-screen" class="flex flex-col items-center justify-center min-h-screen text-center" style="background:#04130d;position:relative;overflow:hidden;padding:40px 32px;">
+
+    <!-- Aurora background blobs -->
+    <div style="position:absolute;width:280px;height:260px;top:-80px;left:-80px;border-radius:50%;will-change:transform;animation:lsblob1 9s ease-in-out infinite alternate;pointer-events:none;">
+      <div style="width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 40% 40%,#00e87a 0%,#006241 55%,transparent 100%);filter:blur(50px);opacity:0.65;"></div>
     </div>
-    <p style="font-size:26px;font-weight:900;color:#2d3a5a;font-family:'League Spartan',sans-serif;letter-spacing:2px;margin-bottom:4px;line-height:1;">XOLIFA</p>
-    <p style="font-size:9px;font-weight:500;color:#9ca3af;letter-spacing:4px;text-transform:uppercase;font-family:Georgia,serif;margin-bottom:20px;">COFFEE &amp; TEA</p>
-    <p class="text-[11px] font-bold text-gray-400 mb-12 uppercase tracking-widest">Tích điểm nhận đặc quyền</p>
-    <input type="tel" id="login-sdt" placeholder="Số điện thoại của bạn..." class="w-full p-5 rounded-3xl bg-gray-50 border border-gray-100 mb-4 text-center outline-none text-lg">
-    <button id="btn-login" onclick="login()" class="w-full p-5 rounded-3xl sb-green text-white font-bold shadow-md active:scale-95 transition-all uppercase text-lg">Đăng nhập</button>
-    <p class="mt-6 text-sm text-gray-400 font-medium">Chưa có tài khoản?</p>
-<button onclick="showRegister()" class="text-[#006241] font-bold text-sm uppercase tracking-widest hover:underline py-2">
-    Đăng ký thành viên mới
-</button>
+    <div style="position:absolute;width:240px;height:220px;top:-60px;right:-60px;border-radius:50%;will-change:transform;animation:lsblob2 11s ease-in-out infinite alternate;pointer-events:none;">
+      <div style="width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 60% 40%,#00d4aa 0%,#004d33 60%,transparent 100%);filter:blur(48px);opacity:0.55;"></div>
+    </div>
+    <div style="position:absolute;width:200px;height:180px;bottom:-40px;left:-30px;border-radius:50%;will-change:transform;animation:lsblob3 8s ease-in-out infinite alternate;pointer-events:none;">
+      <div style="width:100%;height:100%;border-radius:50%;background:radial-gradient(circle,#a8ff78 0%,#006241 65%,transparent 100%);filter:blur(44px);opacity:0.3;"></div>
+    </div>
+    <div style="position:absolute;width:180px;height:160px;bottom:-30px;right:-20px;border-radius:50%;will-change:transform;animation:lsblob4 7s ease-in-out infinite alternate;pointer-events:none;">
+      <div style="width:100%;height:100%;border-radius:50%;background:radial-gradient(circle,#00ffa3 0%,#003d28 70%,transparent 100%);filter:blur(42px);opacity:0.28;"></div>
+    </div>
+
+    <!-- Noise overlay -->
+    <div style="position:absolute;inset:0;opacity:0.04;background-image:url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\");background-size:200px 200px;pointer-events:none;"></div>
+
+    <!-- Glass overlay -->
+    <div style="position:absolute;inset:0;background:rgba(4,19,13,0.35);pointer-events:none;"></div>
+
+    <!-- Content -->
+    <div style="position:relative;z-index:2;width:100%;">
+
+      <!-- Logos side by side, cùng kích thước -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:28px;">
+        <!-- The cafe 33 -->
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+          <h1 style="font-family:'League Spartan',sans-serif;font-weight:900;font-size:26px;color:#ffffff;letter-spacing:-0.5px;margin:0 0 4px;line-height:1;text-shadow:0 0 24px rgba(0,232,122,0.6),0 0 48px rgba(0,200,100,0.3),0 0 80px rgba(0,160,80,0.2);">The cafe 33</h1>
+          <span style="font-size:8px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:rgba(77,255,160,0.45);">MEMBERSHIP</span>
+        </div>
+
+        <!-- Divider -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:0 14px;flex-shrink:0;">
+          <div style="width:1px;height:28px;background:linear-gradient(to bottom,transparent,rgba(0,232,122,0.3),transparent);"></div>
+          <span style="font-size:8px;font-weight:700;color:rgba(255,255,255,0.2);letter-spacing:0.1em;">&amp;</span>
+          <div style="width:1px;height:28px;background:linear-gradient(to bottom,transparent,rgba(0,232,122,0.3),transparent);"></div>
+        </div>
+
+        <!-- XOLIFA -->
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+          <h1 style="font-family:'League Spartan',sans-serif;font-weight:900;font-size:26px;color:#ffffff;letter-spacing:2px;margin:0 0 4px;line-height:1;text-shadow:0 0 24px rgba(0,232,122,0.6),0 0 48px rgba(0,200,100,0.3),0 0 80px rgba(0,160,80,0.2);">XOLIFA</h1>
+          <span style="font-size:8px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:rgba(77,255,160,0.45);">COFFEE &amp; TEA</span>
+        </div>
+      </div>
+
+      <!-- Tagline -->
+      <div style="margin-bottom:36px;">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,180,90,0.1);border:1px solid rgba(77,255,160,0.18);border-radius:99px;padding:7px 18px;">
+          <span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#4dffa0;box-shadow:0 0 6px #4dffa0;animation:lspulse 2s ease-in-out infinite;"></span>
+          <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.55);letter-spacing:0.18em;text-transform:uppercase;">Tích điểm nhận đặc quyền</span>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div style="position:relative;margin-bottom:14px;">
+        <input type="tel" id="login-sdt" placeholder="Số điện thoại của bạn..."
+          style="width:100%;padding:18px 24px;border-radius:18px;background:rgba(255,255,255,0.06);border:1px solid rgba(77,255,160,0.2);color:#ffffff;font-size:16px;font-weight:600;text-align:center;outline:none;box-sizing:border-box;font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent;"
+          onfocus="this.style.borderColor='rgba(77,255,160,0.5)';this.style.background='rgba(255,255,255,0.09)';"
+          onblur="this.style.borderColor='rgba(77,255,160,0.2)';this.style.background='rgba(255,255,255,0.06)';">
+        <div style="position:absolute;inset:0;border-radius:18px;pointer-events:none;background:linear-gradient(135deg,rgba(255,255,255,0.04) 0%,transparent 60%);"></div>
+      </div>
+
+      <!-- Login button -->
+      <button id="btn-login" onclick="login()"
+        style="width:100%;padding:18px 24px;border-radius:18px;background:linear-gradient(135deg,#006241 0%,#00a36c 100%);border:none;color:#ffffff;font-size:15px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;font-family:'Inter',sans-serif;box-shadow:0 0 32px rgba(0,180,100,0.35),0 4px 16px rgba(0,0,0,0.4);transition:all 0.2s;-webkit-tap-highlight-color:transparent;position:relative;overflow:hidden;"
+        ontouchstart="this.style.transform='scale(0.97)'" ontouchend="this.style.transform='scale(1)'">
+        <div style="position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.12) 0%,transparent 60%);pointer-events:none;"></div>
+        Đăng nhập
+      </button>
+
+      <!-- Register link -->
+      <p style="margin-top:24px;font-size:13px;color:rgba(255,255,255,0.3);font-weight:500;">Chưa có tài khoản?</p>
+      <button onclick="showRegister()" style="background:none;border:none;color:#4dffa0;font-size:12px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;cursor:pointer;padding:8px 0;font-family:'Inter',sans-serif;text-shadow:0 0 12px rgba(77,255,160,0.4);">
+        Đăng ký thành viên mới
+      </button>
+    </div>
+
+    <style>
+      @keyframes lsblob1 {
+        0%   { transform:translate(0,0) scale(1); }
+        33%  { transform:translate(50px,20px) scale(1.1); }
+        66%  { transform:translate(25px,45px) scale(0.95); }
+        100% { transform:translate(60px,30px) scale(1.18); }
+      }
+      @keyframes lsblob2 {
+        0%   { transform:translate(0,0) scale(1); }
+        33%  { transform:translate(-30px,35px) scale(1.08); }
+        66%  { transform:translate(-15px,55px) scale(1.12); }
+        100% { transform:translate(-40px,45px) scale(0.92); }
+      }
+      @keyframes lsblob3 {
+        0%   { transform:translate(0,0) scale(1); }
+        50%  { transform:translate(35px,-25px) scale(1.2); }
+        100% { transform:translate(20px,-40px) scale(1.08); }
+      }
+      @keyframes lsblob4 {
+        0%   { transform:translate(0,0) scale(1); }
+        50%  { transform:translate(-25px,-20px) scale(1.15); }
+        100% { transform:translate(-35px,-30px) scale(0.9); }
+      }
+      @keyframes lspulse {
+        0%,100% { opacity:1; transform:scale(1); }
+        50%      { opacity:0.4; transform:scale(0.7); }
+      }
+      #login-sdt::placeholder { color:rgba(255,255,255,0.25); }
+    </style>
   </div>
 <div id="register-screen" class="hidden flex-col min-h-screen p-8 bg-white text-center">
     <div class="pt-2 mb-6 text-left">
@@ -521,35 +738,67 @@
         <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
       </div>
 
-      <!-- ── STAMP CARD TO GO (từ Xolifa) ── -->
+      <!-- ── STAMP CARD TO GO — Google I/O 2026 Aurora ── -->
       <div class="togo-stamp-card mb-6">
-        <div class="togo-stamp-header">
-          <div>
-            <div class="togo-stamp-title-main">Thẻ tích dấu To Go</div>
-            <div class="togo-stamp-title-sub">1 ly mang về = 1 dấu · Tối đa 2/ngày</div>
+        <!-- Aurora blobs (wrapper animate transform, inner có filter:blur để GPU mượt) -->
+        <div class="togo-aurora-blob togo-aurora-blob-1"><div class="togo-aurora-blob-inner"></div></div>
+        <div class="togo-aurora-blob togo-aurora-blob-2"><div class="togo-aurora-blob-inner"></div></div>
+        <div class="togo-aurora-blob togo-aurora-blob-3"><div class="togo-aurora-blob-inner"></div></div>
+        <div class="togo-aurora-blob togo-aurora-blob-4"><div class="togo-aurora-blob-inner"></div></div>
+        <div class="togo-glass-overlay"></div>
+        <div class="togo-noise"></div>
+
+        <div class="togo-card-inner">
+          <!-- Header: icon + title bên trái, badge bên phải -->
+          <div class="togo-stamp-header">
+            <div class="togo-header-left">
+              <div class="togo-header-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 010 8h-1"/><path d="M3 8h14v9a4 4 0 01-4 4H7a4 4 0 01-4-4V8z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/></svg>
+              </div>
+              <div>
+                <div class="togo-stamp-title-main">Thẻ tích dấu To Go</div>
+                <div class="togo-stamp-title-sub">1 ly mang về = 1 dấu · Tối đa 2/ngày</div>
+              </div>
+            </div>
+            <div class="togo-stamp-count-badge">
+              <span class="togo-count-num" id="togo-stamp-count-num">0</span><span style="color:rgba(255,255,255,0.4)">/6</span>
+            </div>
           </div>
-          <div class="togo-stamp-count-badge">
-            <span id="togo-stamp-count-num">0</span> / 6
+
+          <!-- Stamps -->
+          <div class="togo-stamp-grid" id="togo-stamp-grid"></div>
+
+          <!-- Progress -->
+          <div class="togo-progress-wrap">
+            <div class="togo-progress-bar" id="togo-progress-bar" style="width:0%"></div>
           </div>
-        </div>
-        <div class="togo-stamp-grid" id="togo-stamp-grid"></div>
-        <p class="togo-stamp-hint">Tích đủ 6 dấu để đổi 1 ly miễn phí</p>
-        <div class="togo-stamp-done" id="togo-stamp-done">
-          <div style="flex:1;">
-            <div class="togo-banner-title">Đã đủ 6 dấu 🎉</div>
-            <div class="togo-banner-sub">Xuất trình để nhận 1 ly miễn phí</div>
+          <p class="togo-stamp-hint" id="togo-stamp-hint">Tích đủ 6 dấu để đổi 1 ly miễn phí</p>
+
+          <!-- Done banner -->
+          <div class="togo-stamp-done" id="togo-stamp-done">
+            <div style="flex:1;">
+              <div class="togo-banner-title">Đã đủ 6 dấu 🎉</div>
+              <div class="togo-banner-sub">Xuất trình để nhận 1 ly miễn phí</div>
+            </div>
+            <div class="togo-banner-icon">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            </div>
           </div>
-          <div class="togo-banner-icon">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          <div class="togo-free-drinks-badge" id="togo-free-drinks-badge">
+            <div style="flex:1;">
+              <div class="togo-banner-title" id="togo-free-drinks-text">Bạn có ly miễn phí</div>
+              <div class="togo-banner-sub">Hãy sử dụng ngay hôm nay</div>
+            </div>
+            <div class="togo-banner-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+            </div>
           </div>
-        </div>
-        <div class="togo-free-drinks-badge" id="togo-free-drinks-badge">
-          <div style="flex:1;">
-            <div class="togo-banner-title" id="togo-free-drinks-text">Bạn có ly miễn phí</div>
-            <div class="togo-banner-sub">Hãy sử dụng ngay hôm nay</div>
-          </div>
-          <div class="togo-banner-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
+
+          <!-- Footer -->
+          <div class="togo-footer-glow"></div>
+          <div class="togo-footer-row">
+            <span class="togo-footer-brand">The cafe 33</span>
+            <span class="togo-footer-chip">To Go Card</span>
           </div>
         </div>
       </div>
@@ -653,7 +902,9 @@
         </div>
       </div>
     </div>
-    <div id="tab-bed" class="p-6 pb-40 tab-content hidden" style="padding-top:72px;">
+    <div id="tab-bed" class="tab-content hidden" style="padding-top:0;">
+      <!-- VIEW 1: Đặt bed bình thường -->
+      <div id="bed-booking-view" class="p-6 pb-40" style="padding-top:72px;">
 
       <!-- ── BANNER CHÚ Ý ── -->
       <div style="background:linear-gradient(135deg,#1e3932 0%,#006241 60%,#00a36c 100%);border-radius:20px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 24px rgba(0,98,65,0.28),0 2px 8px rgba(0,0,0,0.08);position:relative;overflow:hidden;">
@@ -809,6 +1060,84 @@
 
         <button id="btn-booking" onclick="handleBooking()" class="w-full p-5 rounded-3xl sb-green text-white font-bold uppercase text-lg shadow-xl tracking-widest active:scale-95 transition-all">Xác nhận đặt chỗ</button>
       </div>
+      </div><!-- end bed-booking-view -->
+
+      <!-- VIEW 2: Đang sử dụng bed -->
+      <div id="bed-active-view" style="display:none;padding:72px 24px 160px;">
+        <!-- CARD CHÍNH -->
+        <div id="bav-card" style="background:#04130d;border-radius:28px;padding:24px 20px;position:relative;overflow:hidden;box-shadow:0 0 0 1px rgba(0,162,100,0.18),0 24px 64px rgba(0,0,0,0.45);">
+          <!-- Aurora blobs -->
+          <div style="position:absolute;width:200px;height:180px;top:-60px;left:-50px;border-radius:50%;will-change:transform;animation:togoblob1 7s ease-in-out infinite alternate;pointer-events:none;"><div style="width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 40% 40%,#00e87a 0%,#006241 55%,transparent 100%);filter:blur(40px);opacity:0.6;"></div></div>
+          <div style="position:absolute;width:160px;height:150px;top:-40px;right:-30px;border-radius:50%;will-change:transform;animation:togoblob2 9s ease-in-out infinite alternate;pointer-events:none;"><div style="width:100%;height:100%;border-radius:50%;background:radial-gradient(circle at 60% 40%,#00d4aa 0%,#007a62 60%,transparent 100%);filter:blur(36px);opacity:0.5;"></div></div>
+          <div style="position:absolute;inset:0;background:rgba(4,19,13,0.3);pointer-events:none;border-radius:28px;"></div>
+          <!-- Content -->
+          <div style="position:relative;z-index:2;">
+            <!-- Header row -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+              <div>
+                <p style="font-size:10px;font-weight:800;color:rgba(255,255,255,0.4);letter-spacing:0.15em;text-transform:uppercase;margin:0 0 4px;">ĐANG SỬ DỤNG</p>
+                <p id="bav-bed-label" style="font-size:22px;font-weight:900;color:#fff;margin:0;font-family:'League Spartan',sans-serif;letter-spacing:-0.01em;">BED —</p>
+              </div>
+              <div id="bav-status-badge" style="background:rgba(0,200,100,0.15);border:1px solid rgba(77,255,160,0.3);border-radius:99px;padding:6px 14px;">
+                <span style="font-size:10px;font-weight:900;color:#4dffa0;letter-spacing:0.08em;text-transform:uppercase;">● LIVE</span>
+              </div>
+            </div>
+            <!-- Countdown clock -->
+            <div style="text-align:center;margin-bottom:20px;">
+              <p id="bav-countdown-label" style="font-size:9px;font-weight:800;color:rgba(255,255,255,0.35);letter-spacing:0.18em;text-transform:uppercase;margin:0 0 6px;">THỜI GIAN CÒN LẠI</p>
+              <div id="bav-countdown" style="font-size:52px;font-weight:900;color:#4dffa0;font-family:'Inter',monospace;letter-spacing:-0.02em;line-height:1;transition:color 0.4s;">00:00:00</div>
+            </div>
+            <!-- Time info row -->
+            <div style="display:flex;gap:10px;margin-bottom:20px;">
+              <div style="flex:1;background:rgba(255,255,255,0.06);border-radius:16px;padding:12px;text-align:center;border:1px solid rgba(255,255,255,0.08);">
+                <p style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">Vào lúc</p>
+                <p id="bav-start-time" style="font-size:18px;font-weight:900;color:#fff;margin:0;font-family:'League Spartan',sans-serif;">--:--</p>
+              </div>
+              <div style="flex:1;background:rgba(255,255,255,0.06);border-radius:16px;padding:12px;text-align:center;border:1px solid rgba(255,255,255,0.08);">
+                <p style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.1em;margin:0 0 4px;">Kết thúc lúc</p>
+                <p id="bav-end-time" style="font-size:18px;font-weight:900;color:#fff;margin:0;font-family:'League Spartan',sans-serif;">--:--</p>
+              </div>
+            </div>
+            <!-- Violation / Good panel -->
+            <div id="bav-violation-panel" style="border-radius:18px;padding:14px 16px;border:1px solid rgba(77,255,160,0.25);background:rgba(0,180,100,0.1);">
+              <div id="bav-good-state" style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:12px;background:rgba(77,255,160,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4dffa0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div>
+                  <p style="font-size:13px;font-weight:900;color:#4dffa0;margin:0;font-family:'League Spartan',sans-serif;">Good 👍</p>
+                  <p style="font-size:10px;color:rgba(255,255,255,0.35);margin:2px 0 0;font-weight:600;">Không có ghi nhận vi phạm</p>
+                </div>
+              </div>
+              <div id="bav-warn-state" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div id="bav-warn-icon" style="width:36px;height:36px;border-radius:12px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div>
+                      <p id="bav-warn-title" style="font-size:12px;font-weight:900;color:#f59e0b;margin:0;font-family:'League Spartan',sans-serif;">Cảnh báo cấp 1</p>
+                      <p id="bav-warn-time" style="font-size:9px;color:rgba(255,255,255,0.35);margin:2px 0 0;font-weight:600;"></p>
+                    </div>
+                  </div>
+                  <div id="bav-warn-badge" style="background:#f59e0b;border-radius:99px;padding:4px 10px;">
+                    <span id="bav-warn-count" style="font-size:11px;font-weight:900;color:#fff;">1</span>
+                  </div>
+                </div>
+                <p id="bav-warn-msg" style="font-size:11px;color:rgba(255,255,255,0.5);margin:0;line-height:1.5;font-weight:600;"></p>
+              </div>
+            </div>
+            <!-- Footer line -->
+            <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(0,200,100,0.2),transparent);margin:18px 0 14px;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.2);">THE CAFE 33</span>
+              <span style="font-size:9px;font-weight:600;letter-spacing:0.1em;color:rgba(77,255,160,0.25);text-transform:uppercase;">CAFE IN BED</span>
+            </div>
+          </div>
+        </div>
+        <!-- Note -->
+        <p style="text-align:center;font-size:11px;color:#9ca3af;font-weight:600;margin-top:16px;">Thông tin đồng bộ trực tiếp từ POS · Tự cập nhật</p>
+      </div><!-- end bed-active-view -->
     </div>
 
     <div id="tab-rewards" class="p-6 tab-content hidden pb-40" style="padding-top:72px;"><h3 class="text-2xl text-[#006241] mb-6 brand-font text-left">Đổi quà tặng</h3><div id="rewards-list" class="grid grid-cols-1 gap-4"></div></div>
@@ -4165,8 +4494,12 @@ function renderToGoStamps(count, freeDrinks) {
 
   var numEl = document.getElementById('togo-stamp-count-num');
   var doneEl = document.getElementById('togo-stamp-done');
+  var hintEl = document.getElementById('togo-stamp-hint');
+  var progEl = document.getElementById('togo-progress-bar');
   if (numEl) numEl.textContent = n;
   if (doneEl) doneEl.classList.toggle('show', n >= 6);
+  if (hintEl) hintEl.style.display = (n >= 6) ? 'none' : 'block';
+  if (progEl) progEl.style.width = Math.round((n / 6) * 100) + '%';
 
   var badgeEl = document.getElementById('togo-free-drinks-badge');
   if (badgeEl) {
@@ -4584,6 +4917,231 @@ function walListenPaymentResult(guardTimer) {
     }
   });
 }
+
+// ════════════════════════════════════════════════════
+// BED ACTIVE VIEW — đồng hồ đếm ngược + vi phạm
+// Đồng bộ từ POS qua Firebase Realtime DB
+// ════════════════════════════════════════════════════
+var _bavTimer        = null;   // setInterval countdown
+var _bavWarnUnsub    = null;   // RTDB off() để unsubscribe warning listener
+var _bavBookingUnsub = null;   // RTDB off() để unsubscribe booking status listener
+var _bavCurrentKey   = null;   // bookingKey đang theo dõi
+
+// Hàm gọi khi showTab('bed') — kiểm tra có bed active không
+function _bedTabInit() {
+    if (!curPhone) return;
+    var phone = curPhone.replace(/[^0-9]/g, '');
+
+    // Lấy lịch hôm nay của user
+    var now = new Date();
+    var y = now.getFullYear();
+    var m = String(now.getMonth()+1).padStart(2,'0');
+    var d = String(now.getDate()).padStart(2,'0');
+
+    db.ref('bedBookings/' + y + '/' + m + '/' + d).once('value', function(snap) {
+        var active = null;
+        if (snap.val()) {
+            Object.entries(snap.val()).forEach(function(e) {
+                var v = e[1]; var k = e[0];
+                if (!v) return;
+                var phone2 = (v.phone || '').replace(/[^0-9]/g, '');
+                if (phone2 !== phone) return;
+                var st = (v.status || '').toLowerCase();
+                if (st === 'đã hủy' || st === 'đã xong') return;
+                // Bed active = có bedId cụ thể (không phải WAITING) và đã qua giờ bắt đầu
+                if (v.bedId && v.bedId !== 'WAITING') {
+                    var startMin = _bavTimeToMin(v.start);
+                    var nowMin   = now.getHours()*60 + now.getMinutes();
+                    if (nowMin >= startMin - 2) { // cho phép sớm 2 phút
+                        active = Object.assign({}, v, { key: k });
+                    }
+                }
+            });
+        }
+        if (active) {
+            _bavShow(active);
+        } else {
+            _bavHide();
+        }
+    });
+}
+
+function _bavTimeToMin(t) {
+    if (!t) return 9999;
+    var p = t.split(':');
+    return parseInt(p[0])*60 + parseInt(p[1]||0);
+}
+
+function _bavShow(booking) {
+    // Dừng timer cũ
+    _bavStop();
+    _bavCurrentKey = booking.key;
+
+    // Điền thông tin cơ bản
+    var bedNum = booking.bedId ? ('BED 0' + booking.bedId) : 'BED —';
+    document.getElementById('bav-bed-label').textContent = bedNum;
+    document.getElementById('bav-start-time').textContent = booking.start || '--:--';
+    document.getElementById('bav-end-time').textContent   = booking.end   || '--:--';
+
+    // Hiện active view, ẩn booking form
+    document.getElementById('bed-booking-view').style.display = 'none';
+    document.getElementById('bed-active-view').style.display  = 'block';
+
+    // Bắt đầu đồng hồ đếm ngược
+    _bavStartCountdown(booking.end);
+
+    // Lắng nghe vi phạm realtime
+    var warnKey = curPhone.replace(/[^0-9]/g, '');
+    var warnRef = db.ref('bedWarnings/' + warnKey + '/' + booking.key);
+    _bavWarnUnsub = warnRef;
+    warnRef.on('value', function(snap) {
+        var data = snap.val();
+        _bavRenderWarning(data);
+    });
+
+    // Lắng nghe trạng thái booking — khi POS checkout → ẩn active view
+    var _dp = _parseBedDateKey(booking.date);
+    if (!_dp) {
+        var _n = new Date();
+        _dp = { year: _n.getFullYear(), month: String(_n.getMonth()+1).padStart(2,'0'), day: String(_n.getDate()).padStart(2,'0') };
+    }
+    var statusRef = db.ref('bedBookings/' + _dp.year + '/' + _dp.month + '/' + _dp.day + '/' + booking.key + '/status');
+    _bavBookingUnsub = statusRef;
+    statusRef.on('value', function(snap) {
+        var st = (snap.val() || '').toLowerCase();
+        if (st === 'đã xong' || st === 'đã hủy') {
+            _bavStop();
+            _bavHide();
+        }
+    });
+}
+
+function _bavHide() {
+    document.getElementById('bed-booking-view').style.display = '';
+    document.getElementById('bed-active-view').style.display  = 'none';
+}
+
+function _bavStop() {
+    if (_bavTimer) { clearInterval(_bavTimer); _bavTimer = null; }
+    if (_bavWarnUnsub)    { _bavWarnUnsub.off('value');    _bavWarnUnsub    = null; }
+    if (_bavBookingUnsub) { _bavBookingUnsub.off('value'); _bavBookingUnsub = null; }
+    _bavCurrentKey = null;
+}
+
+function _bavStartCountdown(endTimeStr) {
+    var cdEl    = document.getElementById('bav-countdown');
+    var lblEl   = document.getElementById('bav-countdown-label');
+    var badgeEl = document.getElementById('bav-status-badge');
+
+    function tick() {
+        if (!endTimeStr) return;
+        var now  = new Date();
+        var end  = new Date();
+        var p    = endTimeStr.split(':');
+        end.setHours(parseInt(p[0]), parseInt(p[1]), 0, 0);
+        var diff    = end - now;
+        var isOver  = diff < 0;
+        diff = Math.abs(diff);
+
+        var h = Math.floor(diff / 3600000);
+        var m = Math.floor((diff % 3600000) / 60000);
+        var s = Math.floor((diff % 60000) / 1000);
+        var fmt = function(v){ return v < 10 ? '0'+v : ''+v; };
+
+        cdEl.textContent = (isOver ? '-' : '') + fmt(h) + ':' + fmt(m) + ':' + fmt(s);
+
+        if (isOver) {
+            // Quá giờ
+            cdEl.style.color = '#ef4444';
+            lblEl.textContent = 'QUÁ GIỜ';
+            lblEl.style.color = 'rgba(239,68,68,0.8)';
+            badgeEl.innerHTML = '<span style="font-size:10px;font-weight:900;color:#ef4444;letter-spacing:0.08em;text-transform:uppercase;animation:pulse 1s infinite;">⚠ QUÁ GIỜ</span>';
+            badgeEl.style.background  = 'rgba(239,68,68,0.15)';
+            badgeEl.style.borderColor = 'rgba(239,68,68,0.4)';
+        } else if (diff < 10 * 60000) {
+            // Dưới 10 phút → vàng cảnh báo
+            cdEl.style.color = '#fbbf24';
+            lblEl.textContent = 'CÒN LẠI';
+            lblEl.style.color = 'rgba(255,255,255,0.35)';
+            badgeEl.innerHTML = '<span style="font-size:10px;font-weight:900;color:#4dffa0;letter-spacing:0.08em;text-transform:uppercase;">● LIVE</span>';
+            badgeEl.style.background  = 'rgba(0,200,100,0.15)';
+            badgeEl.style.borderColor = 'rgba(77,255,160,0.3)';
+        } else {
+            // Bình thường
+            cdEl.style.color = '#4dffa0';
+            lblEl.textContent = 'THỜI GIAN CÒN LẠI';
+            lblEl.style.color = 'rgba(255,255,255,0.35)';
+            badgeEl.innerHTML = '<span style="font-size:10px;font-weight:900;color:#4dffa0;letter-spacing:0.08em;text-transform:uppercase;">● LIVE</span>';
+            badgeEl.style.background  = 'rgba(0,200,100,0.15)';
+            badgeEl.style.borderColor = 'rgba(77,255,160,0.3)';
+        }
+    }
+
+    tick();
+    _bavTimer = setInterval(tick, 1000);
+}
+
+function _bavRenderWarning(data) {
+    var goodEl = document.getElementById('bav-good-state');
+    var warnEl = document.getElementById('bav-warn-state');
+    var panelEl = document.getElementById('bav-violation-panel');
+
+    if (!data || !data.count || data.count === 0) {
+        // Good — không vi phạm
+        goodEl.style.display = 'flex';
+        warnEl.style.display = 'none';
+        panelEl.style.background   = 'rgba(0,180,100,0.1)';
+        panelEl.style.borderColor  = 'rgba(77,255,160,0.25)';
+        return;
+    }
+
+    var count = data.count;
+    // Màu theo cấp độ
+    var color, titleText, msgText;
+    if (count === 1) {
+        color = '#f59e0b'; // vàng
+        titleText = 'Cảnh báo cấp 1';
+        msgText = 'Quán ghi nhận hành vi gây ồn / có dấu hiệu vi phạm nội quy. Vui lòng sử dụng văn minh. Còn 2 lần trước khi bị buộc dừng.';
+    } else if (count === 2) {
+        color = '#f97316'; // cam
+        titleText = '⚠ Cảnh báo cấp 2';
+        msgText = 'Vi phạm lần 2. Còn 1 lần nữa — Bed sẽ bị buộc dừng ngay lập tức nếu tiếp tục vi phạm.';
+    } else {
+        color = '#dc2626'; // đỏ
+        titleText = '🚨 Vi phạm nghiêm trọng';
+        msgText = 'Hệ thống ghi nhận dấu hiệu bất thường. Vui lòng mở rèm trong 30 giây. Nếu không — điện khu vực Bed sẽ tự động tắt.';
+    }
+
+    // Cập nhật UI
+    goodEl.style.display = 'none';
+    warnEl.style.display = 'block';
+    panelEl.style.background  = 'rgba(' + (count >= 3 ? '220,38,38' : count === 2 ? '249,115,22' : '245,158,11') + ',0.1)';
+    panelEl.style.borderColor = color;
+
+    // Icon màu
+    var iconEl = document.getElementById('bav-warn-icon');
+    iconEl.style.background = 'rgba(' + (count >= 3 ? '220,38,38' : count === 2 ? '249,115,22' : '245,158,11') + ',0.15)';
+    iconEl.querySelector('svg').setAttribute('stroke', color);
+
+    document.getElementById('bav-warn-title').textContent = titleText;
+    document.getElementById('bav-warn-title').style.color = color;
+    document.getElementById('bav-warn-count').textContent = count;
+    document.getElementById('bav-warn-badge').style.background = color;
+    document.getElementById('bav-warn-msg').textContent = msgText;
+    document.getElementById('bav-warn-time').textContent = data.lastWarning ? ('Lần cuối: ' + data.lastWarning) : '';
+}
+
+// Hook showTab để trigger khi bấm tab bed
+var _origShowTab2 = showTab;
+showTab = function(t) {
+    _origShowTab2(t);
+    if (t === 'bed') {
+        // Dọn dẹp listener cũ mỗi khi mở tab
+        _bavStop();
+        _bedTabInit();
+    }
+};
+
 </script>
 
 </body>
