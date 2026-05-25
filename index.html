@@ -3097,29 +3097,46 @@ function openHistory() {
             const reschedMaxed = changeCount >= 2;
             const reschedDisabled = reschedLocked || reschedMaxed;
 
-            // Hủy: luôn hiện, style thay đổi khi ≤5 phút
+            // Đang sử dụng bed = bedId thật + đã qua giờ bắt đầu
+            const isBeingUsed = (h.bedId && h.bedId !== 'WAITING') && minsLeft <= 0;
+
             const cancelLocked = minsLeft <= 5;
 
-            // Build nút đổi giờ
+            // Build nút đổi giờ — lock thêm khi đang dùng
             let reschedLabel = "Đổi giờ";
             if (reschedMaxed) reschedLabel = "Đổi giờ (hết lượt)";
             else if (changeCount > 0) reschedLabel = "Đổi giờ (" + (2 - changeCount) + " còn lại)";
-            const reschedClass = reschedDisabled
+            const reschedFinalDisabled = reschedDisabled || isBeingUsed;
+            const reschedClass = reschedFinalDisabled
                 ? "flex-1 py-3 rounded-xl font-bold text-xs border bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60"
                 : "flex-1 py-3 rounded-xl font-bold text-xs border bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 active:scale-95 transition-all";
 
-            // Build nút hủy
-            const cancelLabel = cancelLocked ? "Hủy (có phí)" : "Hủy";
-            const cancelClass = cancelLocked
-                ? "flex-1 py-3 rounded-xl font-bold text-xs border bg-amber-50 text-amber-600 border-amber-200 active:scale-95 transition-all"
-                : "flex-1 py-3 rounded-xl font-bold text-xs border bg-red-50 text-red-600 border-red-100 hover:bg-red-100 active:scale-95 transition-all";
+            // Build nút hủy — vô hiệu hoá hoàn toàn khi đang dùng bed
+            let cancelLabel, cancelClass, cancelOnclick;
+            if (isBeingUsed) {
+                cancelLabel   = '🛏️ Đang sử dụng bed';
+                cancelClass   = 'flex-1 py-3 rounded-xl font-bold text-xs border bg-green-50 text-green-700 border-green-200 cursor-not-allowed opacity-80';
+                cancelOnclick = '';
+            } else if (cancelLocked) {
+                cancelLabel   = 'Hủy (có phí)';
+                cancelClass   = 'flex-1 py-3 rounded-xl font-bold text-xs border bg-amber-50 text-amber-600 border-amber-200 active:scale-95 transition-all';
+                cancelOnclick = 'onclick="cancelBooking(\'' + h.key + '\')"';
+            } else {
+                cancelLabel   = 'Hủy';
+                cancelClass   = 'flex-1 py-3 rounded-xl font-bold text-xs border bg-red-50 text-red-600 border-red-100 hover:bg-red-100 active:scale-95 transition-all';
+                cancelOnclick = 'onclick="cancelBooking(\'' + h.key + '\')"';
+            }
 
             const changeInfoHtml = changeCount > 0
                 ? '<p class="text-[10px] text-amber-600 font-bold mt-1">Đã đổi giờ: ' + changeCount + '/2 lần</p>'
                 : "";
 
-            activeContent = '<div id="active-card" class="bg-white rounded-2xl p-5 shadow-sm border border-amber-100 relative overflow-hidden">'
-                + '<div class="absolute top-0 right-0 p-3 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-bl-2xl shadow-sm animate-pulse">HÔM NAY</div>'
+            const cardBorderCls = isBeingUsed ? 'border-green-200' : 'border-amber-100';
+            const badgeBg       = isBeingUsed ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800';
+            const badgeLabel    = isBeingUsed ? '🛏️ ĐANG DÙNG' : 'HÔM NAY';
+
+            activeContent = '<div id="active-card" class="bg-white rounded-2xl p-5 shadow-sm border ' + cardBorderCls + ' relative overflow-hidden">'
+                + '<div class="absolute top-0 right-0 p-3 ' + badgeBg + ' text-[10px] font-bold rounded-bl-2xl shadow-sm animate-pulse">' + badgeLabel + '</div>'
                 + '<div class="mb-4">'
                 + '<p class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">📅 ' + h.date + '</p>'
                 + '<p class="text-3xl font-black text-[#1e3932] tracking-tight">' + h.start + '</p>'
@@ -3127,8 +3144,8 @@ function openHistory() {
                 + changeInfoHtml
                 + '</div>'
                 + '<div class="flex gap-2">'
-                + '<button onclick="openRescheduleModal(\'' + h.key + '\')" class="' + reschedClass + '">' + reschedLabel + '</button>'
-                + '<button onclick="cancelBooking(\'' + h.key + '\')" class="' + cancelClass + '">' + cancelLabel + '</button>'
+                + '<button ' + (reschedFinalDisabled ? '' : 'onclick="openRescheduleModal(\'' + h.key + '\')"') + ' class="' + reschedClass + '">' + reschedLabel + '</button>'
+                + '<button ' + cancelOnclick + ' class="' + cancelClass + '">' + cancelLabel + '</button>'
                 + '</div>'
                 + '</div>';
         } else {
@@ -3151,14 +3168,18 @@ function openHistory() {
                 const isDone      = st.includes('xong');
                 const isCancelled = st.includes('hủy');
                 const hasFee      = h.hasPenalty === true && (h.penaltyAmount || 0) > 0;
+                // Đang sử dụng: có bedId thật + chưa xong/hủy
+                const isUsing = !isDone && !isCancelled && h.bedId && h.bedId !== 'WAITING';
 
                 let cardBg = '#fff', cardBorder = '1px solid #f3f4f6', cardShadow = '0 1px 4px rgba(0,0,0,0.05)';
-                if (hasFee) { cardBg = '#fff8f0'; cardBorder = '1px solid #fed7aa'; cardShadow = '0 2px 8px rgba(234,88,12,0.08)'; }
+                if (hasFee)   { cardBg = '#fff8f0'; cardBorder = '1px solid #fed7aa'; cardShadow = '0 2px 8px rgba(234,88,12,0.08)'; }
+                if (isUsing)  { cardBg = '#f0fdf4'; cardBorder = '1px solid #bbf7d0'; cardShadow = '0 2px 8px rgba(22,163,74,0.08)'; }
 
                 let chipBg = '#f3f4f6', chipColor = '#6b7280', chipTxt = h.status || '---';
-                if (isDone)      { chipBg = '#f0fdf4'; chipColor = '#16a34a'; chipTxt = 'Hoàn thành'; }
-                if (isCancelled) { chipBg = '#fef2f2'; chipColor = '#ef4444'; chipTxt = 'Đã hủy'; }
-                if (!isDone && !isCancelled) { chipBg = '#fffbeb'; chipColor = '#d97706'; chipTxt = 'Đặt trước'; }
+                if (isDone)               { chipBg = '#f0fdf4'; chipColor = '#16a34a'; chipTxt = 'Hoàn thành'; }
+                if (isCancelled)          { chipBg = '#fef2f2'; chipColor = '#ef4444'; chipTxt = 'Đã hủy'; }
+                if (!isDone && !isCancelled && !isUsing) { chipBg = '#fffbeb'; chipColor = '#d97706'; chipTxt = 'Đặt trước'; }
+                if (isUsing)              { chipBg = '#dcfce7'; chipColor = '#15803d'; chipTxt = '🛏️ Đang dùng'; }
 
                 const bedTxt = isCancelled ? '' : (h.bedId ? 'Bed ' + h.bedId : 'Chờ xếp bed');
 
