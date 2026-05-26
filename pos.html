@@ -1731,6 +1731,7 @@ luv u</textarea>
             </div>
             <div class="w-[20%] flex flex-col gap-3">
                 <button onclick="openBookingModal()" class="w-full bg-[#006241] hover:bg-[#004f32] text-white py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1"><span class="text-xs uppercase tracking-wider">Đặt Mới</span></button>
+                <button id="btn-check-lich" onclick="openCheckLichModal()" class="w-full py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1" style="background:#1d4ed8; color:white;"><span class="text-xs uppercase tracking-wider font-black">🔍 Check Lịch</span></button>
                 <button onclick="openReputationModal()" id="btn-reputation" class="w-full py-4 rounded-[20px] font-bold shadow-md transform active:scale-95 transition-all flex flex-col items-center justify-center gap-1 relative" style="background:#9b2335; color:white;">
                     <span class="text-xs uppercase tracking-wider font-black">Reputation</span>
                     <span id="rep-alert-dot" class="hidden absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-yellow-300 animate-pulse"></span>
@@ -2222,6 +2223,7 @@ luv u</textarea>
 </div>
 
                 <input type="hidden" id="final_duration_minutes" value="60">
+                <input type="hidden" id="override_start_time" value="">
             </div>
         </div>
 
@@ -5463,6 +5465,10 @@ function handleMobileBedOrder(bookingId) {
     activeOrderingBedId = booking.bedId || "WAITING";
     pendingBedOrder = booking;
 
+    // Reset flag nợ trước khi order — tránh bị block từ lần trước
+    _pendingDebtAdded = false;
+    _pendingDebtPhone = null;
+
     // Nếu có pre-order chưa load → hiện modal xem trước, không vào menu thẳng
     if (_hasActivePreorder(booking)) {
         showPreorderModal(booking, bookingId);
@@ -5583,6 +5589,10 @@ function _applyBonusToCart(opts) {
 }
 
 function _doShowBedDetail(booking, bedId) {
+    // Reset flag nợ trước khi mở bed mới — tránh bị block từ lần order trước
+    _pendingDebtAdded = false;
+    _pendingDebtPhone = null;
+
    if (booking.phone) {
         scanAndAddDebtWithRetry(booking.phone);
     }
@@ -5608,7 +5618,12 @@ function _doShowBedDetail(booking, bedId) {
         var phone = booking.phone;
         var key = typeof normalizePhone === 'function' ? normalizePhone(phone||'') : (phone||'');
         var cust = customerMap && customerMap[key];
-        var hasDebt = cust && cust.pendingFee > 0;
+        var hasDebt = cust && (
+            (parseInt(cust.pendingFee) > 0) ||
+            (parseInt(cust.pendingCleanFee) > 0) ||
+            (parseInt(cust.pendingCancelFee) > 0) ||
+            (parseInt(cust.pendingBedPickFee) > 0)
+        );
         if (hasDebt) {
             _onModalClose = function() { showBonusPopup(booking); };
         } else {
@@ -5756,10 +5771,10 @@ function finalizeBedCheckIn(bedId) {
         }
     });
 }
-function openBookingModal() { document.getElementById('modal-add-booking').classList.remove('hidden'); document.getElementById('new_cust_name').value = "Khách vãng lai"; document.getElementById('new_cust_phone').value = ""; document.getElementById('new_cust_phone').focus(); switchTimeMode('duration');
+function openBookingModal() { var _ost=document.getElementById('override_start_time'); if(_ost) _ost.value=''; document.getElementById('modal-add-booking').classList.remove('hidden'); document.getElementById('new_cust_name').value = "Khách vãng lai"; document.getElementById('new_cust_phone').value = ""; document.getElementById('new_cust_phone').focus(); switchTimeMode('duration');
         if (typeof syncToCustomerDisplay === 'function') {
         syncToCustomerDisplay('input_phone');  } }
-function closeBookingModal() { document.getElementById('modal-add-booking').classList.add('hidden'); if (typeof syncToCustomerDisplay === 'function') {
+function closeBookingModal() { var _ost=document.getElementById('override_start_time'); if(_ost) _ost.value=''; document.getElementById('modal-add-booking').classList.add('hidden'); if (typeof syncToCustomerDisplay === 'function') {
         syncToCustomerDisplay('idle'); }  }
 function autoFillCustomer() {
     var phoneInput = document.getElementById('new_cust_phone');
@@ -5816,20 +5831,39 @@ function submitNewBooking() {
 
         if (!hh || !mm) return alert("Vui lòng nhập đầy đủ giờ và phút về!");
 
-        var end = new Date();
-        end.setHours(parseInt(hh), parseInt(mm), 0);
+        // [Bug fix #1+#3] Tính duration từ override_start nếu có, không phải từ now
+        var overrideStartVal = (document.getElementById('override_start_time') || {}).value || '';
+        var baseForDur = new Date();
+        if (overrideStartVal) {
+            var osp = overrideStartVal.split(':');
+            baseForDur.setHours(parseInt(osp[0]), parseInt(osp[1]), 0, 0);
+        }
+        var end = new Date(baseForDur);
+        end.setHours(parseInt(hh), parseInt(mm), 0, 0);
 
-        if (end <= now) return alert("Giờ về phải lớn hơn giờ hiện tại!");
-        durationMinutes = Math.floor((end - now) / 60000);
+        if (end <= baseForDur) return alert("Giờ về phải lớn hơn giờ bắt đầu!");
+        durationMinutes = Math.floor((end - baseForDur) / 60000);
     }
 
     var btn = document.querySelector('button[onclick="submitNewBooking()"]');
     if(btn) { btn.innerHTML = "⏳ Đang tạo..."; btn.disabled = true; }
 
+    // [Bug fix #1] Dùng override_start_time làm startStr nếu có
+    var overrideStart = (document.getElementById('override_start_time') || {}).value || '';
     const dateStr = now.toLocaleDateString('en-GB');
-    const startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
-    const endObj = new Date(now.getTime() + durationMinutes * 60000);
-    const endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    var startStr, endStr;
+    if (overrideStart) {
+        startStr = overrideStart;
+        var osp2 = overrideStart.split(':');
+        var startBase = new Date();
+        startBase.setHours(parseInt(osp2[0]), parseInt(osp2[1]), 0, 0);
+        var endObj = new Date(startBase.getTime() + durationMinutes * 60000);
+        endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    } else {
+        startStr = now.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+        var endObj = new Date(now.getTime() + durationMinutes * 60000);
+        endStr = endObj.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+    }
 
     let cleanPhone = normalizePhone(phone);
     if(cleanPhone) {
@@ -5990,26 +6024,43 @@ function switchTimeMode(mode) {
         if(typeof calculateDurationFromTime === 'function') calculateDurationFromTime();
     }
 }
+// ── Check Lịch: Time utility helpers ──────────────────────────────────────────
+function toMins(hhmm) {
+    var parts = String(hhmm).split(':');
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+}
+function minsToHHMM(mins) {
+    var h = Math.floor(mins / 60);
+    var m = mins % 60;
+    return ('0' + h).slice(-2) + ':' + ('0' + m).slice(-2);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 function calculateDurationFromTime() {
     var h = document.getElementById('custom-hour').value;
     var m = document.getElementById('custom-minute').value;
-
     if (!h || !m) return;
 
-    var now = new Date();
-    var end = new Date();
-    end.setHours(parseInt(h), parseInt(m), 0);
+    // [Bug fix #4] Nếu có override_start_time, dùng đó làm base thay vì new Date()
+    var overrideStart = (document.getElementById('override_start_time') || {}).value || '';
+    var baseDate = new Date();
+    if (overrideStart) {
+        var sp = overrideStart.split(':');
+        baseDate.setHours(parseInt(sp[0]), parseInt(sp[1]), 0, 0);
+    }
 
-    var diffMins = Math.floor((end - now) / 60000);
+    var endDate = new Date(baseDate);
+    endDate.setHours(parseInt(h), parseInt(m), 0, 0);
+
+    var diffMins = Math.floor((endDate - baseDate) / 60000);
+    var hintEl = document.getElementById('calculated-time-hint');
+    var durEl  = document.getElementById('final_duration_minutes');
 
     if (diffMins <= 0) {
-        document.getElementById('calculated-time-hint').innerText = "⚠️ Giờ về phải sau giờ hiện tại";
-        document.getElementById('calculated-time-hint').className = "text-center text-[10px] font-bold text-red-500 mt-3 uppercase tracking-widest";
-        document.getElementById('final_duration_minutes').value = 0;
+        if (hintEl) { hintEl.innerText = '⚠️ Giờ về phải sau giờ bắt đầu'; hintEl.className = 'text-center text-[10px] font-bold text-red-500 mt-3 uppercase tracking-widest'; }
+        if (durEl) durEl.value = 0;
     } else {
-        document.getElementById('calculated-time-hint').innerText = `Tổng cộng: ${Math.floor(diffMins/60)}h ${diffMins%60}p`;
-        document.getElementById('calculated-time-hint').className = "text-center text-[10px] font-bold text-gray-400 mt-3 uppercase tracking-widest";
-        document.getElementById('final_duration_minutes').value = diffMins;
+        if (hintEl) { hintEl.innerText = 'Tổng cộng: ' + Math.floor(diffMins/60) + 'h ' + (diffMins%60) + 'p'; hintEl.className = 'text-center text-[10px] font-bold text-gray-400 mt-3 uppercase tracking-widest'; }
+        if (durEl) durEl.value = diffMins;
     }
 }
 
@@ -6361,6 +6412,226 @@ function saveBedClosingTime() {
     document.getElementById('modal-bed-closing').classList.add('hidden');
     if (typeof showAppModal === 'function') showAppModal('Đã lưu', 'Giờ đóng cửa Bed: ' + newTime, null);
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CHECK LỊCH TRỐNG BED
+// ══════════════════════════════════════════════════════════════════════════════
+
+function findGaps(busySlots, openTime, closeTime) {
+    var open   = toMins(openTime);
+    var close  = toMins(closeTime);
+    var gaps   = [];
+    var cursor = open;
+    busySlots.forEach(function(slot) {
+        var s = toMins(slot.start);
+        var e = toMins(slot.end);
+        if (s > cursor) gaps.push({ start: minsToHHMM(cursor), end: minsToHHMM(s) });
+        cursor = Math.max(cursor, e);
+    });
+    if (cursor < close) gaps.push({ start: minsToHHMM(cursor), end: minsToHHMM(close) });
+    return gaps;
+}
+
+function openCheckLichModal() {
+    var now = new Date();
+    var hh = ('0' + now.getHours()).slice(-2);
+    var mm = ('0' + now.getMinutes()).slice(-2);
+    document.getElementById('ck-start').value = hh + ':' + mm;
+    document.getElementById('ck-end').value = '';
+    document.getElementById('ck-result-best').classList.add('hidden');
+    document.getElementById('ck-result-list').classList.add('hidden');
+    document.getElementById('ck-no-slot').classList.add('hidden');
+    document.getElementById('modal-check-lich').classList.remove('hidden');
+    setTimeout(function() { document.getElementById('ck-end').focus(); }, 100);
+}
+
+function closeCheckLichModal() {
+    document.getElementById('modal-check-lich').classList.add('hidden');
+}
+
+function runCheckLich() {
+    var ckStart = (document.getElementById('ck-start').value || '').trim();
+    var ckEnd   = (document.getElementById('ck-end').value   || '').trim();
+
+    if (!ckStart || !ckEnd) return alert('Vui lòng nhập đầy đủ giờ bắt đầu và giờ kết thúc!');
+
+    var ckStartMins = toMins(ckStart);
+    var ckEndMins   = toMins(ckEnd);
+
+    if (ckEndMins <= ckStartMins) return alert('Giờ kết thúc phải sau giờ bắt đầu!');
+
+    var bedClosingEl = document.getElementById('bed-closing-display');
+    var bedClosingTime = bedClosingEl ? bedClosingEl.innerText.trim() : '20:50';
+    var bedClosingMins = toMins(bedClosingTime);
+
+    // Tự động cắt nếu ckEnd vượt giờ đóng bed
+    if (ckEndMins > bedClosingMins) {
+        ckEndMins = bedClosingMins;
+        ckEnd = bedClosingTime;
+        document.getElementById('ck-end').value = ckEnd;
+        alert('Giờ kết thúc đã được điều chỉnh về ' + bedClosingTime + ' (giờ đóng bed)');
+    }
+
+    // Tự động set ckStart = giờ hiện tại nếu nhỏ hơn
+    var nowDate = new Date();
+    var nowMins = nowDate.getHours() * 60 + nowDate.getMinutes();
+    if (ckStartMins < nowMins) {
+        ckStartMins = nowMins;
+        ckStart = minsToHHMM(nowMins);
+        document.getElementById('ck-start').value = ckStart;
+    }
+
+    var duration = ckEndMins - ckStartMins;
+
+    // Lấy bookings active hôm nay
+    var todayStr = nowDate.toLocaleDateString('en-GB');
+    var activeBookings = (globalAllBookings || []).filter(function(b) {
+        if (b.displayDate !== todayStr) return false;
+        var s = b.status || '';
+        return !s.includes('đã xong') && !s.includes('đã hủy');
+    });
+
+    // [Bug fix #2] Nhận diện booking chưa xếp bed bằng bedId, không phải status string
+    var waitingBookings = activeBookings.filter(function(b) {
+        return !b.bedId || b.bedId === '' || b.bedId === 'WAITING';
+    });
+
+    // [Bug fix #4] Lấy danh sách bed từ globalAllBookings, fallback về [1,2,3,4]
+    var activeBedIds = [];
+    activeBookings.forEach(function(b) {
+        if (b.bedId && b.bedId !== '' && b.bedId !== 'WAITING') {
+            if (activeBedIds.indexOf(String(b.bedId)) === -1) activeBedIds.push(String(b.bedId));
+        }
+    });
+    if (activeBedIds.length === 0) activeBedIds = ['1','2','3','4'];
+
+    var allSlots = [];
+
+    activeBedIds.forEach(function(bedId) {
+        var busySlots = activeBookings
+            .filter(function(b) { return String(b.bedId) === String(bedId); })
+            .map(function(b) { return { start: b.start, end: b.end }; })
+            .sort(function(a, b) { return toMins(a.start) - toMins(b.start); });
+
+        var gaps = findGaps(busySlots, '07:00', bedClosingTime);
+
+        gaps.forEach(function(gap) {
+            var gapStartM = toMins(gap.start);
+            var gapEndM   = toMins(gap.end);
+            if (gapEndM <= ckStartMins || gapStartM >= ckEndMins) return;
+
+            var slotStartM = Math.max(gapStartM, ckStartMins);
+            var slotEndM   = Math.min(gapEndM, ckEndMins);
+            if (slotEndM - slotStartM <= 0) return;
+
+            // Đếm waiting booking giao với gap này
+            var waitingCount = waitingBookings.filter(function(b) {
+                return toMins(b.start) < gapEndM && toMins(b.end) > gapStartM;
+            }).length;
+
+            allSlots.push({
+                bedId:         bedId,
+                gapStart:      gap.start,
+                gapEnd:        gap.end,
+                slotStartMins: slotStartM,
+                slotEndMins:   slotEndM,
+                slotStart:     minsToHHMM(slotStartM),
+                slotEnd:       minsToHHMM(slotEndM),
+                slotDur:       slotEndM - slotStartM,
+                waitingInGap:  waitingCount,
+            });
+        });
+    });
+
+    // Lọc slot thực sự khả dụng sau khi trừ waiting
+    var availableSlots = allSlots.filter(function(slot) {
+        var bedsWithGap = allSlots.filter(function(s) {
+            return s.slotStartMins < slot.slotEndMins && s.slotEndMins > slot.slotStartMins;
+        }).length;
+        return bedsWithGap > slot.waitingInGap;
+    });
+
+    var bestSlotEl  = document.getElementById('ck-result-best');
+    var listEl      = document.getElementById('ck-result-list');
+    var noSlotEl    = document.getElementById('ck-no-slot');
+
+    if (availableSlots.length === 0) {
+        bestSlotEl.classList.add('hidden');
+        listEl.classList.add('hidden');
+        noSlotEl.classList.remove('hidden');
+        return;
+    }
+    noSlotEl.classList.add('hidden');
+
+    // Tìm đề xuất tốt nhất: ưu tiên đủ duration, rồi start gần ckStart nhất
+    var bestSlot = availableSlots.slice().sort(function(a, b) {
+        var aFull = a.slotDur >= duration ? 1 : 0;
+        var bFull = b.slotDur >= duration ? 1 : 0;
+        if (bFull !== aFull) return bFull - aFull;
+        return Math.abs(a.slotStartMins - ckStartMins) - Math.abs(b.slotStartMins - ckStartMins);
+    })[0];
+
+    // Render phần B — Đề xuất gần nhất
+    var diffStart = bestSlot.slotStartMins - ckStartMins;
+    var badge = diffStart === 0 ? '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:0.05em;">ĐÚNG GIỜ ✓</span>'
+                                : '<span style="background:#dbeafe;color:#1e40af;font-size:10px;font-weight:900;padding:2px 8px;border-radius:99px;letter-spacing:0.05em;">GẦN NHẤT</span>';
+    var waitLabel = diffStart > 0 ? ' · Bắt đầu sau ' + diffStart + ' phút' : '';
+    var bestHtml = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+        + '<div>'
+        + badge + ' '
+        + '<span style="font-weight:900;font-size:14px;color:#1e3932;">Bed 0' + bestSlot.bedId + ' &nbsp;·&nbsp; ' + bestSlot.slotStart + ' – ' + bestSlot.slotEnd + waitLabel + '</span>'
+        + '</div>'
+        + '<button onclick="selectSlotAndBook(' + bestSlot.bedId + ',\'' + bestSlot.slotStart + '\',\'' + bestSlot.slotEnd + '\')" style="background:#006241;color:white;font-weight:900;font-size:12px;padding:6px 16px;border-radius:99px;border:none;cursor:pointer;">Chọn</button>'
+        + '</div>';
+    document.getElementById('ck-best-content').innerHTML = bestHtml;
+    bestSlotEl.classList.remove('hidden');
+
+    // Render phần C — Tất cả slot
+    var listHtml = '';
+    availableSlots.forEach(function(slot) {
+        var durStr = slot.slotDur >= 60
+            ? Math.floor(slot.slotDur/60) + ' tiếng ' + (slot.slotDur%60 > 0 ? slot.slotDur%60 + ' phút' : '')
+            : slot.slotDur + ' phút';
+        var durBadge = slot.slotDur >= duration
+            ? '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:900;padding:2px 8px;border-radius:99px;">ĐỦ GIỜ ✓</span>'
+            : '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:900;padding:2px 8px;border-radius:99px;">NGẮN HƠN ' + (duration - slot.slotDur) + ' phút</span>';
+        listHtml += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px dashed #f1f3f5;flex-wrap:wrap;">'
+            + '<div style="display:flex;flex-direction:column;gap:3px;">'
+            + '<span style="font-weight:900;color:#1e3932;font-size:13px;">Bed 0' + slot.bedId + ' &nbsp;·&nbsp; ' + slot.slotStart + ' – ' + slot.slotEnd + '</span>'
+            + '<div style="display:flex;gap:6px;align-items:center;">' + durBadge + ' <span style="font-size:11px;color:#6b7280;">' + durStr.trim() + '</span></div>'
+            + '</div>'
+            + '<button onclick="selectSlotAndBook(' + slot.bedId + ',\'' + slot.slotStart + '\',\'' + slot.slotEnd + '\')" style="background:#f0fdf4;color:#006241;border:2px solid #006241;font-weight:900;font-size:12px;padding:5px 14px;border-radius:99px;cursor:pointer;">Chọn</button>'
+            + '</div>';
+    });
+    document.getElementById('ck-list-content').innerHTML = listHtml;
+    listEl.classList.remove('hidden');
+}
+
+function selectSlotAndBook(bedId, slotStart, slotEnd) {
+    // Đóng modal check lịch
+    closeCheckLichModal();
+
+    // [Bug fix #1] Set override_start_time TRƯỚC khi mở modal
+    var overrideEl = document.getElementById('override_start_time');
+    if (overrideEl) overrideEl.value = slotStart;
+
+    // Mở modal đặt booking
+    openBookingModal();
+
+    // [Bug fix #2] Set giờ SAU khi toggleTimeMode vì toggleTimeMode tự ghi now+90p
+    setTimeout(function() {
+        toggleTimeMode('end-time');
+        var parts = String(slotEnd).split(':');
+        var elH = document.getElementById('custom-hour');
+        var elM = document.getElementById('custom-minute');
+        if (elH) elH.value = parts[0];
+        if (elM) elM.value = parts[1];
+        // override_start đã set → calculateDurationFromTime sẽ tính đúng từ slotStart
+        if (typeof calculateDurationFromTime === 'function') calculateDurationFromTime();
+    }, 120);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 
 function startBedAutoStopTimer() {
     if (_bedCloseTimer) clearInterval(_bedCloseTimer);
@@ -6858,8 +7129,7 @@ function setCleaningFee(phone, amount, bookingId) {
     if (!phone) return alert("Không tìm thấy SĐT khách!");
 
     fstore.collection('customers').doc(normalizePhone(phone)).update({
-        pendingFee: amount,
-        pendingFeeReason: "Phí vệ sinh nệm (Lần trước)"
+        pendingCleanFee: amount
     }).then(() => {
         let statusEl = document.getElementById(`fee-status-${bookingId}`);
         if(statusEl) {
@@ -6904,8 +7174,7 @@ function setCleaningFee(phone, amount, bookingId) {
     document.getElementById('loading-overlay').style.display = 'flex';
 
     fstore.collection('customers').doc(normalizePhone(phone)).update({
-        pendingFee: amount,
-        pendingFeeReason: "Phí vệ sinh nệm"
+        pendingCleanFee: amount
     }).then(() => {
         var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
         var _doUpdate = _bk
@@ -6929,8 +7198,7 @@ function deletePenalty(phone, bookingId) {
         document.getElementById('loading-overlay').style.display = 'flex';
 
         fstore.collection('customers').doc(normalizePhone(phone)).update({
-            pendingFee: 0,
-            pendingFeeReason: '',
+            pendingCleanFee: 0
         }).catch(e => console.warn('deletePenalty:', e));
 
         var _bk = (globalAllBookings || []).find(function(b){ return (b.id || b.key) === bookingId; });
@@ -9508,39 +9776,88 @@ function scanAndAddDebt(phone, onlyAlert) {
     if (!phone || phone.length < 3) return;
     var key = normalizePhone(phone);
     var cust = customerMap[key];
-    if (cust && cust.pendingFee > 0) {
-        var fee = cust.pendingFee;
-        var reason = cust.pendingFeeReason || "Phí chưa thanh toán";
+    if (!cust) return;
 
-        if (!onlyAlert) {
-            if (_pendingDebtAdded && _pendingDebtPhone === key) {
-                if (typeof showAppModal === 'function') {
-                    showAppModal("⚠️ CẢNH BÁO NỢ CŨ",
-                        "Khách <b>" + cust.name + "</b> đang nợ: <b class=\"text-red-500\">" + fee.toLocaleString() + "đ</b><br>Lý do: " + reason + "<br>Đã tự động thêm vào bill.",
-                        "💰");
-                }
-                return;
+    // Thu thập tất cả các khoản phí riêng lẻ
+    var fees = [];
+
+    var legacyFee = parseInt(cust.pendingFee) || 0;
+    var legacyReason = (cust.pendingFeeReason || '').trim();
+    // Legacy pendingFee: chỉ đọc nếu KHÔNG phải phí vệ sinh/hủy/chọn bed
+    // (tránh đọc trùng khi đã migrate sang field riêng)
+    var isLegacyCovered = legacyReason.toLowerCase().indexOf('vệ sinh') >= 0
+        || legacyReason.toLowerCase().indexOf('hủy') >= 0
+        || legacyReason.toLowerCase().indexOf('bed') >= 0;
+    if (legacyFee > 0 && !isLegacyCovered) {
+        fees.push({ name: 'Nợ cũ: ' + (legacyReason || 'Phí chưa thanh toán'), amount: legacyFee, field: 'legacy' });
+    }
+
+    var cleanFee = parseInt(cust.pendingCleanFee) || 0;
+    if (cleanFee > 0) {
+        fees.push({ name: 'Nợ cũ: Phí vệ sinh', amount: cleanFee, field: 'pendingCleanFee' });
+    }
+
+    var cancelFee = parseInt(cust.pendingCancelFee) || 0;
+    if (cancelFee > 0) {
+        fees.push({ name: 'Nợ cũ: Phí hủy muộn', amount: cancelFee, field: 'pendingCancelFee' });
+    }
+
+    var bedPickFee = parseInt(cust.pendingBedPickFee) || 0;
+    if (bedPickFee > 0) {
+        fees.push({ name: 'Nợ cũ: Phí chọn ô Bed', amount: bedPickFee, field: 'pendingBedPickFee' });
+    }
+
+    if (fees.length === 0) return;
+
+    var totalFee = fees.reduce(function(s, f) { return s + f.amount; }, 0);
+
+    if (!onlyAlert) {
+        if (_pendingDebtAdded && _pendingDebtPhone === key) {
+            // Đã add rồi → chỉ hiện cảnh báo lại
+            if (typeof showAppModal === 'function') {
+                var lines = fees.map(function(f) {
+                    return '<b>' + f.name.replace('Nợ cũ: ', '') + '</b>: <span style="color:#ef4444;">' + f.amount.toLocaleString() + 'đ</span>';
+                }).join('<br>');
+                showAppModal("⚠️ CẢNH BÁO NỢ CŨ",
+                    "Khách <b>" + cust.name + "</b> đang nợ tổng <b class=\"text-red-500\">" + totalFee.toLocaleString() + "đ</b>:<br>" + lines + "<br>Đã tự động thêm vào bill.",
+                    "💰");
             }
-            cart = cart.filter(function(i) { return !(i.name && i.name.indexOf("Nợ cũ:") === 0); });
-            cart.push({ name: "Nợ cũ: " + reason, size: "Phí", price: fee, qty: 1 });
-            renderCart();
-            _pendingDebtPhone = key;
-            _pendingDebtAdded = true;
+            return;
         }
 
-        if (typeof showAppModal === 'function') {
-            showAppModal("⚠️ CẢNH BÁO NỢ CŨ",
-                "Khách <b>" + cust.name + "</b> đang nợ: <b class=\"text-red-500\">" + fee.toLocaleString() + "đ</b><br>Lý do: " + reason + "<br>" + (onlyAlert ? "Vui lòng thu tiền!" : "Đã tự động thêm vào bill."),
-                "💰");
-        } else {
-            alert("CẢNH BÁO: Khách " + cust.name + " đang nợ " + fee.toLocaleString() + "đ");
-        }
+        // Xóa các item nợ cũ đang có trong cart (tránh trùng khi gọi lại)
+        cart = cart.filter(function(i) { return !(i.name && i.name.indexOf('Nợ cũ:') === 0); });
+
+        // Add từng khoản phí riêng vào cart
+        fees.forEach(function(f) {
+            cart.push({ name: f.name, size: 'Phí', price: f.amount, qty: 1 });
+        });
+        renderCart();
+        _pendingDebtPhone = key;
+        _pendingDebtAdded = true;
+    }
+
+    if (typeof showAppModal === 'function') {
+        var lines = fees.map(function(f) {
+            return '<b>' + f.name.replace('Nợ cũ: ', '') + '</b>: <span style="color:#ef4444;">' + f.amount.toLocaleString() + 'đ</span>';
+        }).join('<br>');
+        showAppModal("⚠️ CẢNH BÁO NỢ CŨ",
+            "Khách <b>" + cust.name + "</b> đang nợ tổng <b class=\"text-red-500\">" + totalFee.toLocaleString() + "đ</b>:<br>" + lines + "<br>" + (onlyAlert ? "Vui lòng thu tiền!" : "Đã tự động thêm vào bill."),
+            "💰");
+    } else {
+        alert("CẢNH BÁO: Khách " + cust.name + " đang nợ " + totalFee.toLocaleString() + "đ");
     }
 }
 
 function clearDebtAfterPayment() {
     if (_pendingDebtPhone && _pendingDebtAdded) {
-        fstore.collection('customers').doc(_pendingDebtPhone).update({ pendingFee: 0, pendingFeeReason: '' }).catch(e => console.warn('clearDebt:', e));
+        fstore.collection('customers').doc(_pendingDebtPhone).update({
+            pendingFee: 0,
+            pendingFeeReason: '',
+            pendingCleanFee: 0,
+            pendingCancelFee: 0,
+            pendingBedPickFee: 0
+        }).catch(e => console.warn('clearDebt:', e));
     }
     _pendingDebtPhone = null;
     _pendingDebtAdded = false;
@@ -9557,7 +9874,14 @@ function scanAndAddDebtWithRetry(phone) {
     // Lần 2: thử lại sau 1.5s — phòng snapshot Firestore chưa kịp về lần 1
     setTimeout(function() {
         var cust = customerMap[key];
-        if (!cust || !(cust.pendingFee > 0)) return; // không có nợ → bỏ qua
+        // Kiểm tra có bất kỳ khoản phí nào chưa
+        var hasAnyFee = cust && (
+            (parseInt(cust.pendingFee) > 0) ||
+            (parseInt(cust.pendingCleanFee) > 0) ||
+            (parseInt(cust.pendingCancelFee) > 0) ||
+            (parseInt(cust.pendingBedPickFee) > 0)
+        );
+        if (!hasAnyFee) return; // không có nợ → bỏ qua
         if (_pendingDebtAdded && _pendingDebtPhone === key) return; // đã add rồi → bỏ qua
         // Lần 1 bị miss (snapshot chưa về) → reset guard và thử lại
         _pendingDebtAdded = false;
@@ -13203,6 +13527,55 @@ function keypadConfirm() {
         <div class="px-7 pb-7 flex gap-3">
             <button onclick="closeEditBookingModal()" class="flex-1 py-4 rounded-[1.2rem] bg-gray-100 text-gray-500 font-black text-[14px] uppercase active:scale-95 transition-transform">Hủy</button>
             <button onclick="saveEditBooking()" class="flex-[2] py-4 rounded-[1.2rem] bg-[#006241] text-white font-black text-[14px] uppercase shadow-lg shadow-[#006241]/20 active:scale-95 transition-transform">💾 Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Check Lịch Trống Bed -->
+<div id="modal-check-lich" class="hidden fixed inset-0 z-[10002] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onclick="if(event.target===this)closeCheckLichModal()">
+    <div class="bg-white w-full max-w-lg rounded-[2rem] overflow-hidden shadow-2xl flex flex-col" style="max-height:90vh;">
+        <!-- Header -->
+        <div class="px-7 pt-7 pb-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+            <div>
+                <p class="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-0.5">Cafe In Bed</p>
+                <h3 class="text-xl font-black text-[#1e3932]">🔍 Check Lịch Trống</h3>
+            </div>
+            <button onclick="closeCheckLichModal()" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 active:scale-90 transition-transform">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+        <!-- Phần A: Input -->
+        <div class="px-7 py-5 border-b border-gray-50 shrink-0">
+            <div class="flex gap-3 items-end">
+                <div class="flex-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Giờ bắt đầu</label>
+                    <input id="ck-start" type="time" class="w-full border-2 border-gray-100 rounded-[1rem] px-4 py-3 text-[15px] font-bold text-gray-800 outline-none focus:border-[#1d4ed8] transition-colors">
+                </div>
+                <div class="flex-1">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Giờ kết thúc</label>
+                    <input id="ck-end" type="time" class="w-full border-2 border-gray-100 rounded-[1rem] px-4 py-3 text-[15px] font-bold text-gray-800 outline-none focus:border-[#1d4ed8] transition-colors">
+                </div>
+                <button onclick="runCheckLich()" class="py-3 px-6 rounded-[1rem] font-black text-sm uppercase active:scale-95 transition-transform text-white shadow-md" style="background:#1d4ed8;">Kiểm tra</button>
+            </div>
+        </div>
+        <!-- Kết quả (scrollable) -->
+        <div class="overflow-y-auto flex-1 px-7 py-5 flex flex-col gap-4">
+            <!-- Phần B: Đề xuất gần nhất -->
+            <div id="ck-result-best" class="hidden">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Đề xuất tốt nhất</p>
+                <div id="ck-best-content" class="bg-blue-50 border border-blue-100 rounded-[1.2rem] px-5 py-4"></div>
+            </div>
+            <!-- Phần C: Tất cả slot -->
+            <div id="ck-result-list" class="hidden">
+                <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Tất cả slot trống</p>
+                <div id="ck-list-content" class="bg-white border border-gray-100 rounded-[1.2rem] px-5 py-1"></div>
+            </div>
+            <!-- Không có slot -->
+            <div id="ck-no-slot" class="hidden text-center py-8">
+                <p class="text-3xl mb-3">😴</p>
+                <p class="font-black text-gray-700 text-base">Không còn slot phù hợp</p>
+                <p class="text-sm text-gray-400 mt-1">Hôm nay đã kín lịch trong khung giờ này.<br>Gợi ý đặt lịch qua app.</p>
+            </div>
         </div>
     </div>
 </div>
