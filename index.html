@@ -1604,6 +1604,9 @@ function submitRegister() {
                 compPhone:        '',
                 pendingFee:       0,
                 pendingFeeReason: '',
+                pendingCleanFee:  0,
+                pendingCancelFee: 0,
+                pendingBedPickFee: 0,
                 myGifts:          {},
             }).then(() => {
                 localStorage.setItem('member_phone', phone);
@@ -2671,15 +2674,14 @@ function handleBooking() {
                         if (err) { clearTimeout(safetyTimer); loading.classList.add('hidden'); alert('Lỗi ghi booking: ' + err.message); return; }
                         _poBookingKey = realKey; // lưu key thực để pre-order dùng
 
-                        // Ghi pendingFee nếu có phí chọn bed
+                        // Ghi pendingBedPickFee riêng nếu có phí chọn ô bed yêu thích
                         var writePromises = [];
                         if (finalPreferBedFee > 0) {
                             writePromises.push(
                                 fstore.collection('customers').doc(curPhone).get().then(function(cs) {
-                                    const existing = (cs.exists && cs.data().pendingFee) ? cs.data().pendingFee : 0;
+                                    const existing = (cs.exists && cs.data().pendingBedPickFee) ? parseInt(cs.data().pendingBedPickFee) : 0;
                                     return fstore.collection('customers').doc(curPhone).update({
-                                        pendingFee: existing + finalPreferBedFee,
-                                        pendingFeeReason: 'Phí chọn ô bed ' + finalPreferredBed
+                                        pendingBedPickFee: existing + finalPreferBedFee
                                     });
                                 })
                             );
@@ -3319,11 +3321,14 @@ function showLateCancelModal(key, timeMsg) {
                 return alert("Lỗi: " + err.message);
             }
             // Ghi phí phạt vào hồ sơ khách → POS đọc khi check-in lần tới
+            // Dùng pendingCancelFee riêng (không ghi đè pendingFee/phí vệ sinh)
             if (phone) {
-                fstore.collection('customers').doc(normalizePhone(phone)).update({
-                    pendingFee: 10000,
-                    pendingFeeReason: 'Hủy lịch bed muộn (dưới 5 phút trước giờ bắt đầu)'
-                }).catch(e => console.warn('pendingFee cancel:', e));
+                fstore.collection('customers').doc(normalizePhone(phone)).get().then(function(cs) {
+                    var existing = (cs.exists && cs.data().pendingCancelFee) ? parseInt(cs.data().pendingCancelFee) : 0;
+                    return fstore.collection('customers').doc(normalizePhone(phone)).update({
+                        pendingCancelFee: existing + 10000
+                    });
+                }).catch(e => console.warn('pendingCancelFee cancel:', e));
             }
             document.getElementById('loading-overlay').classList.add('hidden');
             showAppModal("Đã hủy", "Lịch đã bị hủy.<br>Lần đặt tiếp theo tính thêm <b>10.000đ</b>.", "⚠️");
