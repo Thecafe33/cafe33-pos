@@ -989,12 +989,10 @@ async function loadAttendance() {
 }
 
 async function saveRecord(record) {
-  if (record.id) {
-    await attCollection().doc(record.id).set(record, { merge: true });
-  } else {
-    const ref = await attCollection().add(record);
-    record.id = ref.id;
-  }
+  // Dùng date làm document ID cố định, tránh tạo duplicate
+  const docId = record.date;
+  await attCollection().doc(docId).set(record, { merge: true });
+  record.id = docId;
 }
 
 //  Login 
@@ -1080,6 +1078,10 @@ function renderCheckinPanel() {
   const coDisp  = document.getElementById('checkout-display');
   const durEl   = document.getElementById('today-duration');
 
+  // Reset button state mỗi lần render
+  btnEl.style.opacity = '';
+  btnEl.disabled = false;
+
   if (!today) {
     badge.className = 'status-badge out';
     document.getElementById('status-text').textContent = 'Chưa làm';
@@ -1147,26 +1149,40 @@ function renderCheckinPanel() {
 
 //  Check-in / Check-out action 
 async function doCheckAction() {
+  const btnEl = document.getElementById('main-btn');
+  if (btnEl.disabled) return; // chặn double-tap
+  btnEl.disabled = true;
+
   const key = todayKey();
   let today = attendanceRecords.find(r => r.date === key);
 
-  if (!today) {
-    // Check-in
-    today = { date: key, checkIn: new Date().toISOString(), checkOut: null, minutes: 0 };
-    attendanceRecords.unshift(today);
-    await saveRecord(today);
-    showToast(' Check-in lúc ' + formatTime(today.checkIn));
-  } else if (today.checkIn && !today.checkOut) {
-    // Check-out
-    today.checkOut = new Date().toISOString();
-    today.minutes = Math.round((new Date(today.checkOut) - new Date(today.checkIn)) / 60000);
-    clearInterval(durationInterval);
-    await saveRecord(today);
-    showToast(' Check-out · Đã làm ' + fmtH(today.minutes));
+  try {
+    if (!today) {
+      // Check-in
+      today = { date: key, checkIn: new Date().toISOString(), checkOut: null, minutes: 0 };
+      attendanceRecords.unshift(today);
+      renderCheckinPanel(); // cập nhật UI ngay lập tức trước khi chờ Firebase
+      await saveRecord(today);
+      showToast('Check-in lúc ' + formatTime(today.checkIn));
+    } else if (today.checkIn && !today.checkOut) {
+      // Check-out
+      today.checkOut = new Date().toISOString();
+      today.minutes = Math.round((new Date(today.checkOut) - new Date(today.checkIn)) / 60000);
+      clearInterval(durationInterval);
+      renderCheckinPanel(); // cập nhật UI ngay lập tức
+      await saveRecord(today);
+      showToast('Check-out · Đã làm ' + fmtH(today.minutes));
+    }
+  } catch(e) {
+    showToast('Loi ket noi Firebase, thu lai!');
+    console.error(e);
   }
 
   renderCheckinPanel();
   renderOverview();
+  // Chỉ enable lại nếu chưa xong ca (tránh enable nút đã bị disable do hết ca)
+  const rec = attendanceRecords.find(r => r.date === key);
+  if (!rec || !rec.checkOut) btnEl.disabled = false;
 }
 
 //  Overview 
