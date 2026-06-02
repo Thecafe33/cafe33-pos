@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Part-time · Xolifa</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a0f;
+  --bg2: #111118;
+  --surface: rgba(255,255,255,0.06);
+  --surface-hover: rgba(255,255,255,0.10);
+  --glass: rgba(255,255,255,0.07);
+  --glass-border: rgba(255,255,255,0.12);
+  --glass-strong: rgba(255,255,255,0.11);
+  --accent: #0a84ff;
+  --accent2: #30d158;
+  --accent3: #ff9f0a;
+  --accent4: #ff453a;
+  --text: #f2f2f7;
+  --text2: rgba(242,242,247,0.60);
+  --text3: rgba(242,242,247,0.35);
+  --radius-xl: 28px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+  --blur: blur(24px) saturate(180%);
+  --shadow-glow-blue: 0 0 40px rgba(10,132,255,0.18);
+  --shadow-glow-green: 0 0 40px rgba(48,209,88,0.18);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: 'Outfit', -apple-system, sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── BACKGROUND ── */
+.bg-orbs {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+}
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.18;
+}
+.orb1 { width: 480px; height: 480px; background: #0a84ff; top: -120px; right: -100px; animation: orbFloat 14s ease-in-out infinite; }
+.orb2 { width: 360px; height: 360px; background: #30d158; bottom: 60px; left: -80px; animation: orbFloat 18s ease-in-out infinite reverse; }
+.orb3 { width: 240px; height: 240px; background: #bf5af2; top: 40%; left: 40%; animation: orbFloat 10s ease-in-out infinite 3s; }
+
+@keyframes orbFloat {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(30px,-40px) scale(1.05); }
+  66% { transform: translate(-20px,20px) scale(0.97); }
+}
+
+/* ── LOGIN ── */
+#login-screen {
+  position: relative; z-index: 10;
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+
+.login-card {
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: 48px 36px 40px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6), var(--shadow-glow-blue);
+  animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+@keyframes slideUp {
+  from { opacity:0; transform: translateY(32px) scale(0.97); }
+  to   { opacity:1; transform: translateY(0) scale(1); }
+}
+
+.login-icon {
+  width: 64px; height: 64px;
+  background: linear-gradient(135deg, rgba(10,132,255,0.3), rgba(10,132,255,0.1));
+  border: 1px solid rgba(10,132,255,0.4);
+  border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 8px 32px rgba(10,132,255,0.2);
+}
+
+.login-title {
+  font-size: 28px; font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+  background: linear-gradient(135deg, #f2f2f7, rgba(242,242,247,0.7));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.login-sub {
+  font-size: 14px; color: var(--text2); font-weight: 400;
+  margin-bottom: 36px; line-height: 1.5;
+}
+
+.field-wrap { margin-bottom: 14px; }
+
+.field-label {
+  display: block;
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 8px;
+}
+
+.field-input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px; font-weight: 400;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.field-input::placeholder { color: var(--text3); }
+
+.field-input:focus {
+  border-color: rgba(10,132,255,0.6);
+  background: rgba(10,132,255,0.05);
+  box-shadow: 0 0 0 3px rgba(10,132,255,0.12);
+}
+
+.btn-primary {
+  width: 100%; padding: 16px;
+  background: linear-gradient(135deg, #0a84ff, #0070e0);
+  border: none; border-radius: var(--radius-md);
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px; font-weight: 600;
+  color: #fff; cursor: pointer;
+  margin-top: 8px;
+  box-shadow: 0 8px 24px rgba(10,132,255,0.3);
+  transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.01em;
+}
+.btn-primary:hover { opacity: 0.9; box-shadow: 0 12px 32px rgba(10,132,255,0.4); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+.login-error {
+  background: rgba(255,69,58,0.12);
+  border: 1px solid rgba(255,69,58,0.3);
+  color: #ff6b62;
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  font-size: 13px; font-weight: 500;
+  margin-top: 12px; display: none;
+}
+
+/* ── APP ── */
+#app-screen { display: none; position: relative; z-index: 10; min-height: 100vh; padding-bottom: 90px; }
+
+/* Top bar */
+.top-bar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(10,10,15,0.7);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-bottom: 1px solid var(--glass-border);
+  padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.topbar-brand { display: flex; align-items: center; gap: 10px; }
+
+.brand-dot {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, #0a84ff, #30d158);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+}
+
+.brand-name {
+  font-size: 17px; font-weight: 700;
+  background: linear-gradient(135deg, #f2f2f7, rgba(242,242,247,0.8));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.user-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 100px;
+  padding: 5px 12px 5px 6px;
+  backdrop-filter: blur(12px);
+}
+
+.user-avatar {
+  width: 26px; height: 26px;
+  background: linear-gradient(135deg, #0a84ff, #30d158);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; color: #fff;
+}
+
+.user-name { font-size: 13px; font-weight: 600; color: var(--text2); }
+
+.btn-logout {
+  background: rgba(255,69,58,0.12);
+  border: 1px solid rgba(255,69,58,0.2);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px; font-weight: 600;
+  color: #ff6b62; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-logout:hover { background: rgba(255,69,58,0.2); }
+
+/* Content */
+.content-wrap {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px 16px;
+}
+
+/* ── TAB PANELS ── */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fadeIn 0.3s ease both; }
+
+@keyframes fadeIn {
+  from { opacity:0; transform: translateY(10px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+/* ── CHECK IN/OUT PANEL ── */
+.clock-section {
+  text-align: center;
+  padding: 28px 0 20px;
+}
+
+.clock-time {
+  font-size: 68px; font-weight: 300;
+  letter-spacing: -3px; line-height: 1;
+  background: linear-gradient(135deg, #f2f2f7 60%, rgba(242,242,247,0.5));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clock-date {
+  font-size: 14px; font-weight: 400; color: var(--text2);
+  letter-spacing: 0.02em;
+}
+
+/* Status card */
+.status-glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  padding: 24px;
+  margin-bottom: 16px;
+  position: relative; overflow: hidden;
+}
+
+.status-glass::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.status-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.status-label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); }
+
+.status-badge {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px;
+  border-radius: 100px;
+  font-size: 12px; font-weight: 600;
+}
+
+.status-badge.out {
+  background: rgba(255,69,58,0.12);
+  border: 1px solid rgba(255,69,58,0.25);
+  color: #ff6b62;
+}
+
+.status-badge.in {
+  background: rgba(48,209,88,0.12);
+  border: 1px solid rgba(48,209,88,0.25);
+  color: #30d158;
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  animation: pulse 2s ease infinite;
+}
+
+.status-badge.out .status-dot { background: #ff453a; }
+.status-badge.in  .status-dot { background: #30d158; }
+
+@keyframes pulse {
+  0%,100% { opacity:1; transform: scale(1); }
+  50% { opacity:0.5; transform: scale(0.8); }
+}
+
+.time-slots {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-bottom: 20px;
+}
+
+.time-slot {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.time-slot-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+
+.time-slot-value {
+  font-size: 22px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+.time-slot.checkin-slot .time-slot-value { color: var(--accent2); }
+.time-slot.checkout-slot .time-slot-value { color: #ff9f0a; }
+.time-slot-value.empty { color: var(--text3); font-size: 18px; font-weight: 400; }
+
+/* Duration badge */
+.duration-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.duration-label { font-size: 12px; color: var(--text2); font-weight: 500; }
+
+.duration-value {
+  font-size: 15px; font-weight: 700;
+  background: linear-gradient(135deg, #0a84ff, #30d158);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+/* Big check-in button */
+.checkin-btn-wrap { padding: 4px 0 20px; }
+
+.btn-checkin {
+  width: 100%;
+  padding: 20px;
+  border: none; border-radius: var(--radius-xl);
+  font-family: 'Outfit', sans-serif;
+  font-size: 17px; font-weight: 700;
+  color: #fff; cursor: pointer;
+  position: relative; overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.01em;
+}
+
+.btn-checkin:active { transform: scale(0.98); }
+
+.btn-checkin.do-checkin {
+  background: linear-gradient(135deg, #1a5f2e, #30d158, #1a7a38);
+  background-size: 200% 200%;
+  animation: gradShift 4s ease infinite;
+  box-shadow: 0 12px 40px rgba(48,209,88,0.3);
+}
+
+.btn-checkin.do-checkout {
+  background: linear-gradient(135deg, #7a2a1a, #ff453a, #c0392b);
+  background-size: 200% 200%;
+  animation: gradShift 4s ease infinite;
+  box-shadow: 0 12px 40px rgba(255,69,58,0.3);
+}
+
+@keyframes gradShift {
+  0%,100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.btn-checkin-icon { font-size: 24px; margin-bottom: 4px; display: block; }
+.btn-checkin-text { display: block; }
+.btn-checkin-sub { display: block; font-size: 12px; font-weight: 400; opacity: 0.8; margin-top: 2px; }
+
+/* History section */
+.section-title {
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.history-list { display: flex; flex-direction: column; gap: 10px; }
+
+.history-item {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.history-date { font-size: 14px; font-weight: 600; color: var(--text); }
+.history-sub  { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+.history-right { text-align: right; }
+.history-hours { font-size: 16px; font-weight: 700; color: var(--accent2); }
+.history-times { font-size: 11px; color: var(--text3); margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+.history-incomplete { 
+  font-size: 11px; font-weight: 500;
+  color: #ff9f0a;
+  background: rgba(255,159,10,0.1);
+  border: 1px solid rgba(255,159,10,0.2);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.empty-state {
+  text-align: center; padding: 40px 20px;
+  color: var(--text3); font-size: 14px; font-weight: 400;
+}
+.empty-icon { font-size: 36px; margin-bottom: 12px; display: block; opacity: 0.5; }
+
+/* ── OVERVIEW PANEL ── */
+.overview-header {
+  padding: 20px 0 10px;
+}
+
+.ov-greeting { font-size: 13px; color: var(--text3); font-weight: 400; margin-bottom: 4px; }
+
+.ov-title {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #f2f2f7, rgba(242,242,247,0.7));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 20px;
+}
+
+.kpi-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 12px; margin-bottom: 16px;
+}
+
+.kpi-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: 20px 18px;
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  position: relative; overflow: hidden;
+  transition: transform 0.15s;
+}
+
+.kpi-card:active { transform: scale(0.98); }
+
+.kpi-card::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  border-radius: 2px 2px 0 0;
+}
+
+.kpi-card.blue::after  { background: linear-gradient(90deg, #0a84ff, transparent); }
+.kpi-card.green::after { background: linear-gradient(90deg, #30d158, transparent); }
+.kpi-card.amber::after { background: linear-gradient(90deg, #ff9f0a, transparent); }
+.kpi-card.purple::after { background: linear-gradient(90deg, #bf5af2, transparent); }
+
+.kpi-icon { font-size: 20px; margin-bottom: 10px; display: block; }
+.kpi-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+.kpi-value { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; line-height: 1; }
+.kpi-value.blue   { color: #0a84ff; }
+.kpi-value.green  { color: #30d158; }
+.kpi-value.amber  { color: #ff9f0a; }
+.kpi-value.purple { color: #bf5af2; }
+.kpi-sub { font-size: 11px; color: var(--text3); margin-top: 5px; }
+
+/* Wage card */
+.wage-card {
+  background: linear-gradient(135deg, rgba(10,132,255,0.15), rgba(48,209,88,0.08));
+  border: 1px solid rgba(10,132,255,0.2);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  margin-bottom: 16px;
+  position: relative; overflow: hidden;
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+}
+
+.wage-card::before {
+  content: '';
+  position: absolute; top: -50%; right: -20%;
+  width: 280px; height: 280px;
+  background: radial-gradient(circle, rgba(10,132,255,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.wage-label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: rgba(10,132,255,0.7); margin-bottom: 8px;
+}
+
+.wage-amount {
+  font-size: 42px; font-weight: 700;
+  letter-spacing: -2px; line-height: 1;
+  background: linear-gradient(135deg, #0a84ff, #30d158);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+}
+
+.wage-note {
+  font-size: 12px; color: var(--text2); font-weight: 400;
+}
+
+.wage-rate-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.wage-rate-chip {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 100px;
+  padding: 4px 12px;
+  font-size: 12px; font-weight: 600; color: var(--text2);
+}
+
+/* Weekly sections */
+.week-section {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  margin-bottom: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.week-header {
+  padding: 16px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.week-header:hover { background: rgba(255,255,255,0.03); }
+
+.week-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.week-range { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+.week-right { text-align: right; }
+.week-hours { font-size: 15px; font-weight: 700; color: var(--accent2); }
+.week-wage  { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+.week-settled {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(48,209,88,0.12);
+  border: 1px solid rgba(48,209,88,0.2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 10px; font-weight: 600; color: #30d158;
+}
+
+.week-pending {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(255,159,10,0.12);
+  border: 1px solid rgba(255,159,10,0.2);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 10px; font-weight: 600; color: #ff9f0a;
+}
+
+.week-days { padding: 8px 0; }
+
+.week-day-row {
+  padding: 10px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.week-day-row:last-child { border-bottom: none; }
+
+.day-name { font-size: 13px; font-weight: 500; color: var(--text2); min-width: 60px; }
+.day-times { font-size: 12px; color: var(--text3); font-variant-numeric: tabular-nums; }
+.day-duration { font-size: 13px; font-weight: 600; color: var(--accent); }
+
+/* Settings chip */
+.rate-input-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(12px);
+}
+
+.rate-input-label { font-size: 13px; font-weight: 500; color: var(--text2); flex: 1; }
+
+.rate-input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px; font-weight: 600;
+  color: var(--accent);
+  text-align: right; width: 130px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.rate-input:focus { border-color: rgba(10,132,255,0.5); }
+
+/* ── BOTTOM BAR ── */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,10,15,0.8);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-top: 1px solid var(--glass-border);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  display: flex; gap: 8px;
+}
+
+.bottom-tab {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: var(--radius-md);
+  border: none; background: transparent;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  font-family: 'Outfit', sans-serif;
+}
+
+.bottom-tab:active { transform: scale(0.95); }
+
+.bottom-tab.active {
+  background: rgba(10,132,255,0.15);
+  border: 1px solid rgba(10,132,255,0.2);
+}
+
+.tab-icon { font-size: 22px; transition: transform 0.2s; }
+.bottom-tab.active .tab-icon { transform: scale(1.1); }
+
+.tab-label {
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--text3);
+  transition: color 0.2s;
+}
+
+.bottom-tab.active .tab-label { color: #0a84ff; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: rgba(30,30,36,0.95);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  border-radius: 100px;
+  padding: 12px 22px;
+  font-size: 13px; font-weight: 600; color: var(--text);
+  z-index: 200;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+
+<!-- ══ LOGIN ════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-icon">⏱</div>
+    <div class="login-title">Part-time</div>
+    <div class="login-sub">Chấm công và theo dõi lương theo tuần của bạn</div>
+
+    <div class="field-wrap">
+      <label class="field-label">Tài khoản</label>
+      <input class="field-input" type="text" id="inp-user" placeholder="Nhập tên đăng nhập" autocomplete="username">
+    </div>
+
+    <div class="field-wrap">
+      <label class="field-label">Mật khẩu</label>
+      <input class="field-input" type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
+    <button class="btn-primary" id="btn-login" onclick="doLogin()">Đăng nhập</button>
+    <div class="login-error" id="login-error">Tài khoản hoặc mật khẩu không đúng.</div>
+  </div>
+</div>
+
+<!-- ══ APP ═════════════════════════════════════════════ -->
+<div id="app-screen">
+  <div class="top-bar">
+    <div class="topbar-brand">
+      <div class="brand-dot">🌿</div>
+      <div class="brand-name">Xolifa · Part-time</div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-pill">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-name" id="user-display-name">--</div>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Đăng xuất</button>
+    </div>
+  </div>
+
+  <div class="content-wrap">
+    <!-- ── CHECK IN/OUT TAB ── -->
+    <div class="tab-panel active" id="panel-checkin">
+      <div class="clock-section">
+        <div class="clock-time" id="live-clock">--:--:--</div>
+        <div class="clock-date" id="live-date">--</div>
+      </div>
+
+      <div class="status-glass">
+        <div class="status-row">
+          <span class="status-label">Trạng thái hôm nay</span>
+          <div class="status-badge out" id="status-badge">
+            <span class="status-dot"></span>
+            <span id="status-text">Chưa làm</span>
+          </div>
+        </div>
+
+        <div class="time-slots">
+          <div class="time-slot checkin-slot">
+            <div class="time-slot-label">Check-in</div>
+            <div class="time-slot-value" id="checkin-display">
+              <span class="empty">--:--</span>
+            </div>
+          </div>
+          <div class="time-slot checkout-slot">
+            <div class="time-slot-label">Check-out</div>
+            <div class="time-slot-value" id="checkout-display">
+              <span class="empty">--:--</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="duration-row">
+          <span class="duration-label">Thời gian làm hôm nay</span>
+          <span class="duration-value" id="today-duration">-- giờ --p</span>
+        </div>
+      </div>
+
+      <div class="checkin-btn-wrap">
+        <button class="btn-checkin do-checkin" id="main-btn" onclick="doCheckAction()">
+          <span class="btn-checkin-icon" id="btn-icon">✅</span>
+          <span class="btn-checkin-text" id="btn-text">Check-in ngay</span>
+          <span class="btn-checkin-sub" id="btn-sub">Bắt đầu ca làm việc</span>
+        </button>
+      </div>
+
+      <div class="section-title">Lịch sử gần đây</div>
+      <div class="history-list" id="history-list">
+        <div class="empty-state"><span class="empty-icon">📋</span>Chưa có lịch sử chấm công</div>
+      </div>
+    </div>
+
+    <!-- ── OVERVIEW TAB ── -->
+    <div class="tab-panel" id="panel-overview">
+      <div class="overview-header">
+        <div class="ov-greeting">Tổng quan</div>
+        <div class="ov-title" id="ov-name">Xin chào!</div>
+      </div>
+
+      <div class="rate-input-row">
+        <div>
+          <div class="rate-input-label">Lương mỗi giờ</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">Chỉnh để tính lương tự động</div>
+        </div>
+        <input class="rate-input" type="number" id="hourly-rate" placeholder="25000" min="0" step="1000"
+          onchange="saveRate(); renderOverview()">
+      </div>
+
+      <div class="wage-card" id="wage-card">
+        <div class="wage-label">💸 Lương tuần này (dự kiến)</div>
+        <div class="wage-amount" id="week-wage">0đ</div>
+        <div class="wage-note" id="week-wage-note">Kết lương vào Chủ nhật hàng tuần</div>
+        <div class="wage-rate-row">
+          <div class="wage-rate-chip" id="week-hours-chip">0 giờ làm việc</div>
+          <div class="wage-rate-chip" id="total-hours-chip">Tổng: 0 giờ</div>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card blue">
+          <span class="kpi-icon">⏱</span>
+          <div class="kpi-label">Tuần này</div>
+          <div class="kpi-value blue" id="kpi-week-hours">0h</div>
+          <div class="kpi-sub" id="kpi-week-days">0 ngày làm</div>
+        </div>
+        <div class="kpi-card green">
+          <span class="kpi-icon">📅</span>
+          <div class="kpi-label">Tháng này</div>
+          <div class="kpi-value green" id="kpi-month-hours">0h</div>
+          <div class="kpi-sub" id="kpi-month-days">0 ngày làm</div>
+        </div>
+        <div class="kpi-card amber">
+          <span class="kpi-icon">💰</span>
+          <div class="kpi-label">Lương tháng này</div>
+          <div class="kpi-value amber" id="kpi-month-wage">0đ</div>
+          <div class="kpi-sub">Dự kiến</div>
+        </div>
+        <div class="kpi-card purple">
+          <span class="kpi-icon">🏆</span>
+          <div class="kpi-label">Tổng đã làm</div>
+          <div class="kpi-value purple" id="kpi-total-hours">0h</div>
+          <div class="kpi-sub">Tất cả thời gian</div>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:4px">Lịch sử theo tuần</div>
+      <div id="weeks-list">
+        <div class="empty-state"><span class="empty-icon">📊</span>Chưa có dữ liệu</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <div class="bottom-bar">
+    <button class="bottom-tab active" id="tab-ci" onclick="switchTab('checkin')">
+      <span class="tab-icon">⏰</span>
+      <span class="tab-label">Chấm công</span>
+    </button>
+    <button class="bottom-tab" id="tab-ov" onclick="switchTab('overview')">
+      <span class="tab-icon">📊</span>
+      <span class="tab-label">Tổng quan</span>
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Firebase ─────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:      "AIzaSyCNh1-16gYZ0P30Fkd-2tB-O89PXkPX9Lc",
+  authDomain:  "the-cafe-33.firebaseapp.com",
+  databaseURL: "https://the-cafe-33-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:   "the-cafe-33",
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const fstore = firebase.firestore();
+
+// ── State ─────────────────────────────────────────────
+let currentUser = null;
+let currentTab = 'checkin';
+let attendanceRecords = []; // { date, checkIn, checkOut, minutes }
+let clockInterval = null;
+let durationInterval = null;
+
+const fmt = n => Number(Math.round(n)).toLocaleString('vi-VN') + 'đ';
+const fmtH = m => {
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  if (h === 0) return `${min}p`;
+  if (min === 0) return `${h}h`;
+  return `${h}h${String(min).padStart(2,'0')}p`;
+};
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDate(key) {
+  const [y,m,d] = key.split('-');
+  const days = ['CN','T2','T3','T4','T5','T6','T7'];
+  const dt = new Date(+y, +m-1, +d);
+  return `${days[dt.getDay()]}, ${d}/${m}/${y}`;
+}
+
+function formatTime(iso) {
+  if (!iso) return '--:--';
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function getWeekKey(dateKey) {
+  const [y,m,d] = dateKey.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  const dow = dt.getDay(); // 0=Sun
+  const mon = new Date(dt); mon.setDate(d - (dow === 0 ? 6 : dow - 1));
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const fk = k => `${k.getFullYear()}-${String(k.getMonth()+1).padStart(2,'0')}-${String(k.getDate()).padStart(2,'0')}`;
+  return `${fk(mon)}_${fk(sun)}`;
+}
+
+// ── Session ───────────────────────────────────────────
+function saveSession(u) { sessionStorage.setItem('pt_user', JSON.stringify(u)); }
+function loadSession()  { const r = sessionStorage.getItem('pt_user'); return r ? JSON.parse(r) : null; }
+function clearSession() { sessionStorage.removeItem('pt_user'); }
+
+function saveRate() {
+  const v = document.getElementById('hourly-rate').value;
+  localStorage.setItem('pt_rate_' + (currentUser?.username || ''), v);
+}
+
+function loadRate() {
+  return parseFloat(localStorage.getItem('pt_rate_' + (currentUser?.username || '')) || '0') || 0;
+}
+
+// ── Firebase attendance CRUD ──────────────────────────
+function attCollection() {
+  return fstore.collection('xolifa_parttime').doc(currentUser.username).collection('attendance');
+}
+
+async function loadAttendance() {
+  const snap = await attCollection().orderBy('date','desc').limit(60).get();
+  attendanceRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return attendanceRecords;
+}
+
+async function saveRecord(record) {
+  if (record.id) {
+    await attCollection().doc(record.id).set(record, { merge: true });
+  } else {
+    const ref = await attCollection().add(record);
+    record.id = ref.id;
+  }
+}
+
+// ── Login ─────────────────────────────────────────────
+async function doLogin() {
+  const user = document.getElementById('inp-user').value.trim();
+  const pass = document.getElementById('inp-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('btn-login');
+  errEl.style.display = 'none';
+  if (!user || !pass) { errEl.textContent = 'Vui lòng nhập đầy đủ.'; errEl.style.display='block'; return; }
+  btn.disabled = true; btn.textContent = 'Đang đăng nhập...';
+  try {
+    const doc = await fstore.collection('xolifa_luong').doc('accounts').get();
+    if (!doc.exists) throw new Error('no_accounts');
+    const accounts = doc.data().list || [];
+    const match = accounts.find(a => a.username === user && a.password === pass);
+    if (!match) throw new Error('wrong');
+    currentUser = match;
+    saveSession(match);
+    await showApp();
+  } catch(e) {
+    errEl.textContent = (e.message === 'wrong' || e.message === 'no_accounts')
+      ? 'Tài khoản hoặc mật khẩu không đúng.' : 'Lỗi kết nối. Thử lại sau.';
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false; btn.textContent = 'Đăng nhập';
+}
+
+function doLogout() {
+  clearSession(); currentUser = null;
+  clearInterval(clockInterval); clearInterval(durationInterval);
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('inp-user').value = '';
+  document.getElementById('inp-pass').value = '';
+}
+
+// ── Show App ──────────────────────────────────────────
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+
+  const initials = (currentUser.hoTen || currentUser.username).charAt(0).toUpperCase();
+  document.getElementById('user-avatar').textContent = initials;
+  document.getElementById('user-display-name').textContent = currentUser.hoTen || currentUser.username;
+  document.getElementById('ov-name').textContent = `Xin chào, ${currentUser.hoTen || currentUser.username}!`;
+
+  const rate = loadRate();
+  document.getElementById('hourly-rate').value = rate || '';
+
+  startClock();
+  await loadAttendance();
+  renderCheckinPanel();
+  renderOverview();
+}
+
+// ── Clock ─────────────────────────────────────────────
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('live-clock').textContent =
+      `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const days = ['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
+    document.getElementById('live-date').textContent =
+      `${days[now.getDay()]}, ${now.getDate()}/${now.getMonth()+1}/${now.getFullYear()}`;
+  }
+  tick();
+  clockInterval = setInterval(tick, 1000);
+}
+
+// ── Render Check-in Panel ─────────────────────────────
+function renderCheckinPanel() {
+  const key = todayKey();
+  const today = attendanceRecords.find(r => r.date === key);
+
+  // Status badge + button state
+  const badge   = document.getElementById('status-badge');
+  const btnEl   = document.getElementById('main-btn');
+  const btnIcon = document.getElementById('btn-icon');
+  const btnText = document.getElementById('btn-text');
+  const btnSub  = document.getElementById('btn-sub');
+  const ciDisp  = document.getElementById('checkin-display');
+  const coDisp  = document.getElementById('checkout-display');
+  const durEl   = document.getElementById('today-duration');
+
+  if (!today) {
+    badge.className = 'status-badge out';
+    document.getElementById('status-text').textContent = 'Chưa làm';
+    ciDisp.innerHTML = '<span class="empty">--:--</span>';
+    coDisp.innerHTML = '<span class="empty">--:--</span>';
+    durEl.textContent = '-- giờ --p';
+    btnEl.className = 'btn-checkin do-checkin';
+    btnIcon.textContent = '✅';
+    btnText.textContent = 'Check-in ngay';
+    btnSub.textContent = 'Bắt đầu ca làm việc';
+  } else if (today.checkIn && !today.checkOut) {
+    badge.className = 'status-badge in';
+    document.getElementById('status-text').textContent = 'Đang làm việc';
+    ciDisp.textContent = formatTime(today.checkIn);
+    coDisp.innerHTML = '<span class="empty">--:--</span>';
+    btnEl.className = 'btn-checkin do-checkout';
+    btnIcon.textContent = '🏁';
+    btnText.textContent = 'Check-out';
+    btnSub.textContent = 'Kết thúc ca làm việc';
+    // Live duration
+    clearInterval(durationInterval);
+    durationInterval = setInterval(() => {
+      const mins = Math.floor((Date.now() - new Date(today.checkIn).getTime()) / 60000);
+      durEl.textContent = fmtH(mins);
+    }, 5000);
+    const mins = Math.floor((Date.now() - new Date(today.checkIn).getTime()) / 60000);
+    durEl.textContent = fmtH(mins);
+  } else if (today.checkIn && today.checkOut) {
+    badge.className = 'status-badge out';
+    document.getElementById('status-text').textContent = 'Đã xong';
+    ciDisp.textContent = formatTime(today.checkIn);
+    coDisp.textContent = formatTime(today.checkOut);
+    const mins = today.minutes || 0;
+    durEl.textContent = fmtH(mins);
+    btnEl.className = 'btn-checkin do-checkin';
+    btnEl.style.opacity = '0.4';
+    btnEl.disabled = true;
+    btnIcon.textContent = '✔️';
+    btnText.textContent = 'Đã hoàn thành hôm nay';
+    btnSub.textContent = `Làm được ${fmtH(mins)}`;
+  }
+
+  // History (last 7 excluding today)
+  const hist = attendanceRecords.filter(r => r.date !== key).slice(0,7);
+  const histEl = document.getElementById('history-list');
+  if (hist.length === 0) {
+    histEl.innerHTML = '<div class="empty-state"><span class="empty-icon">📋</span>Chưa có lịch sử chấm công</div>';
+    return;
+  }
+  histEl.innerHTML = hist.map((r, i) => `
+    <div class="history-item" style="animation-delay:${i*0.05}s">
+      <div>
+        <div class="history-date">${formatDate(r.date)}</div>
+        <div class="history-sub">${r.checkIn ? formatTime(r.checkIn) + ' → ' + (r.checkOut ? formatTime(r.checkOut) : '...') : 'Không có dữ liệu'}</div>
+      </div>
+      <div class="history-right">
+        ${r.checkOut
+          ? `<div class="history-hours">${fmtH(r.minutes || 0)}</div>`
+          : `<div class="history-incomplete">Chưa checkout</div>`}
+        <div class="history-times">${r.checkIn ? formatTime(r.checkIn) : '--'} – ${r.checkOut ? formatTime(r.checkOut) : '--'}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Check-in / Check-out action ───────────────────────
+async function doCheckAction() {
+  const key = todayKey();
+  let today = attendanceRecords.find(r => r.date === key);
+
+  if (!today) {
+    // Check-in
+    today = { date: key, checkIn: new Date().toISOString(), checkOut: null, minutes: 0 };
+    attendanceRecords.unshift(today);
+    await saveRecord(today);
+    showToast('✅ Check-in lúc ' + formatTime(today.checkIn));
+  } else if (today.checkIn && !today.checkOut) {
+    // Check-out
+    today.checkOut = new Date().toISOString();
+    today.minutes = Math.round((new Date(today.checkOut) - new Date(today.checkIn)) / 60000);
+    clearInterval(durationInterval);
+    await saveRecord(today);
+    showToast('🏁 Check-out · Đã làm ' + fmtH(today.minutes));
+  }
+
+  renderCheckinPanel();
+  renderOverview();
+}
+
+// ── Overview ──────────────────────────────────────────
+function renderOverview() {
+  const rate = loadRate();
+  const now = new Date();
+  const thisWeekKey = getWeekKey(todayKey());
+
+  // Aggregate
+  let weekMinutes = 0, weekDays = 0;
+  let monthMinutes = 0, monthDays = 0;
+  let totalMinutes = 0;
+
+  // Group by week
+  const weekMap = {};
+
+  attendanceRecords.forEach(r => {
+    if (!r.checkOut || !r.minutes) return;
+    const [y,m] = r.date.split('-').map(Number);
+    if (y === now.getFullYear() && m === now.getMonth()+1) {
+      monthMinutes += r.minutes; monthDays++;
+    }
+    totalMinutes += r.minutes;
+
+    const wk = getWeekKey(r.date);
+    if (!weekMap[wk]) weekMap[wk] = { records: [], minutes: 0, days: 0, key: wk };
+    weekMap[wk].records.push(r);
+    weekMap[wk].minutes += r.minutes;
+    weekMap[wk].days++;
+
+    if (wk === thisWeekKey) {
+      weekMinutes += r.minutes; weekDays++;
+    }
+  });
+
+  // KPI cards
+  document.getElementById('kpi-week-hours').textContent = (weekMinutes/60).toFixed(1) + 'h';
+  document.getElementById('kpi-week-days').textContent = weekDays + ' ngày làm';
+  document.getElementById('kpi-month-hours').textContent = (monthMinutes/60).toFixed(1) + 'h';
+  document.getElementById('kpi-month-days').textContent = monthDays + ' ngày làm';
+  document.getElementById('kpi-total-hours').textContent = (totalMinutes/60).toFixed(1) + 'h';
+
+  // Wage
+  const weekWage = rate ? Math.round((weekMinutes/60) * rate) : 0;
+  const monthWage = rate ? Math.round((monthMinutes/60) * rate) : 0;
+  document.getElementById('week-wage').textContent = fmt(weekWage);
+  document.getElementById('week-hours-chip').textContent = (weekMinutes/60).toFixed(1) + ' giờ tuần này';
+  document.getElementById('total-hours-chip').textContent = 'Tổng: ' + (totalMinutes/60).toFixed(1) + 'h';
+  document.getElementById('kpi-month-wage').textContent = fmt(monthWage);
+
+  // Weeks list
+  const sortedWeeks = Object.values(weekMap).sort((a,b) => b.key.localeCompare(a.key));
+  const weeksEl = document.getElementById('weeks-list');
+
+  if (sortedWeeks.length === 0) {
+    weeksEl.innerHTML = '<div class="empty-state"><span class="empty-icon">📊</span>Chưa có dữ liệu</div>';
+    return;
+  }
+
+  weeksEl.innerHTML = sortedWeeks.map((wk, i) => {
+    const [monKey, sunKey] = wk.key.split('_');
+    const sunDate = new Date(sunKey + 'T00:00:00');
+    const isSettled = sunDate < now; // past Sunday = settled
+    const isCurrent = wk.key === thisWeekKey;
+    const wage = rate ? Math.round((wk.minutes/60)*rate) : 0;
+
+    const [ym, mm, dm] = monKey.split('-');
+    const [ys, ms, ds] = sunKey.split('-');
+    const rangeStr = `${+dm}/${+mm} – ${+ds}/${+ms}`;
+
+    const dayRows = wk.records.sort((a,b) => b.date.localeCompare(a.date)).map(r => {
+      const [ry,rm,rd] = r.date.split('-');
+      const dt = new Date(+ry,+rm-1,+rd);
+      const dayNames = ['CN','T2','T3','T4','T5','T6','T7'];
+      return `
+        <div class="week-day-row">
+          <div class="day-name">${dayNames[dt.getDay()]} ${+rd}/${+rm}</div>
+          <div class="day-times">${formatTime(r.checkIn)} – ${formatTime(r.checkOut)}</div>
+          <div class="day-duration">${fmtH(r.minutes)}</div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="week-section" style="animation-delay:${i*0.06}s">
+        <div class="week-header" onclick="toggleWeek(this)">
+          <div>
+            <div class="week-title">${isCurrent ? '⭐ Tuần này' : `Tuần ${rangeStr}`}</div>
+            <div class="week-range">${rangeStr} · ${wk.days} ngày làm
+              ${isSettled && !isCurrent ? '<span class="week-settled">✓ Đã kết lương</span>' : '<span class="week-pending">⏳ Đang tính</span>'}
+            </div>
+          </div>
+          <div class="week-right">
+            <div class="week-hours">${(wk.minutes/60).toFixed(1)}h</div>
+            <div class="week-wage">${rate ? fmt(wage) : 'Chưa cấu hình'}</div>
+          </div>
+        </div>
+        <div class="week-days" style="display:none">${dayRows}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleWeek(el) {
+  const days = el.nextElementSibling;
+  days.style.display = days.style.display === 'none' ? 'block' : 'none';
+}
+
+// ── Tab switching ─────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bottom-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + (tab === 'checkin' ? 'checkin' : 'overview')).classList.add('active');
+  document.getElementById('tab-' + (tab === 'checkin' ? 'ci' : 'ov')).classList.add('active');
+}
+
+// ── Toast ─────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Init ──────────────────────────────────────────────
+(async function init() {
+  const session = loadSession();
+  if (session) {
+    currentUser = session;
+    await showApp();
+  }
+})();
+</script>
+</body>
+</html>
