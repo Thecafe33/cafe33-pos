@@ -54,21 +54,50 @@ trong code — có thể Ctrl+F tìm `[HIDDEN-CHANGE]` để định vị nhanh.
 - **Sau:** `let _curMenuTab = 'togo';`
 - **Muốn phục hồi:** đổi lại thành `'normal'`
 
+## 6. Ẩn tab "Quản lý Ví" trong menu cài đặt (sidebar)
+- **Vị trí:** `<div class="sdi" onclick="closeSdb();showScreen('walletScreen');loadWalletAdminUI()">`
+- **Đã thêm:** `style="display:none;"` vào div này (không xoá onclick, không xoá
+  màn `#walletScreen`, không xoá hàm `loadWalletAdminUI()`, không đụng dữ liệu ví)
+- **Muốn phục hồi:** xoá `style="display:none;"` khỏi div này
+
+## 7. Ẩn tab "Đồng giá" trong menu cài đặt (sidebar)
+- **Vị trí:** `<div class="sdi" onclick="closeSdb();showScreen('dgscreen')">`
+- **Đã thêm:** `style="display:none;"` vào div này (không xoá onclick, không xoá
+  màn `#dgscreen`, không xoá hàm `loadDgAdminUI()`/`toggleDg()`, không đụng
+  Firebase node `donggia_config`)
+- **Muốn phục hồi:** xoá `style="display:none;"` khỏi div này
+
+## 8. Khoá mật khẩu cho tab "Doanh thu"
+- **Vị trí:** nút sidebar `<div class="sdi" onclick="...">` có `sdit` = "Doanh thu"
+- **Trước:** `onclick="closeSdb();showScreen('rv')"` — bấm là vào thẳng
+- **Sau:** `onclick="openRevenueScreen()"` — hàm mới, hỏi mật khẩu bằng `prompt()`,
+  đúng `3337` mới `closeSdb(); showScreen('rv');`, sai thì `toast('❌ Sai mật khẩu')`
+  và không vào màn hình
+- **Hàm mới thêm** (đặt ngay sau `function closeSdb()`): `openRevenueScreen()`
+- **Lưu ý bảo mật:** đây là khoá ở mức giao diện (che màn hình khỏi người không
+  biết mật khẩu), **không phải bảo mật thật sự** — mật khẩu nằm ngay trong mã
+  nguồn (`pass !== '3337'`), ai xem được file .html đều đọc được. Không dùng
+  cách này để bảo vệ dữ liệu nhạy cảm thật sự.
+- **Muốn phục hồi (bỏ khoá):** đổi `onclick` của nút sidebar về lại
+  `"closeSdb();showScreen('rv')"`
+
 ## Những gì KHÔNG bị đụng tới (cố tình giữ nguyên)
 - Node/collection Firebase: `menu_gieogieo` (menu tại quán) — vẫn còn nguyên dữ liệu,
   chỉ là không còn tab nào trong UI trỏ vào nó theo mặc định.
 - Toàn bộ hàm liên quan Tại quán: `switchMnTab('normal',...)`, `toggleTogo()`,
   field `priceTogo` trên từng món, v.v. — chưa xoá gì cả.
-- Tính năng Wallet (Ví) — **chưa đụng tới trong lần sửa này**, để xử lý riêng sau
-  (xem lại kế hoạch xoá Wallet đã trao đổi trước đó, còn vướng vấn đề số dư
-  khách hàng cần xử lý trước khi gỡ hẳn).
+- Tính năng Wallet (Ví) và Đồng giá — chỉ ẩn tab truy cập, code/màn hình/dữ liệu
+  Firebase (`wallets_gieogieo`, `donggia_config`, ...) vẫn nguyên vẹn phía sau.
 
-## Cách phục hồi nhanh (nếu muốn bán lại tại quán)
+## Cách phục hồi nhanh (nếu muốn bán lại tại quán / mở lại Ví, Đồng giá)
 1. Đổi `isToGo` về `false` (mục 1)
 2. Đổi `resetTogoToggle()` về lại như mục 2
 3. Xoá `display:none;` ở nút toggle góc phải (mục 3)
 4. Xoá `display:none;` ở tab `#mn-tab-normal` (mục 4)
 5. Đổi `_curMenuTab` về `'normal'` (mục 5)
+6. Xoá `display:none;` ở tab sidebar "Quản lý Ví" (mục 6)
+7. Xoá `display:none;` ở tab sidebar "Đồng giá" (mục 7)
+8. Đổi `onclick` nút sidebar "Doanh thu" về lại không cần mật khẩu (mục 8)
 ================================================================================
 -->
 <meta charset="UTF-8">
@@ -517,7 +546,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
   </div>
   <span id="sdb-update-sub" style="display:none;"></span>
   <div class="sdm" style="padding-top: 24px;">
-    <div class="sdi" onclick="closeSdb();showScreen('rv')">
+    <div class="sdi" onclick="openRevenueScreen()">
       <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" fill="#C22B49"/><rect x="10" y="7" width="4" height="14" rx="1" fill="#C22B49"/><rect x="17" y="3" width="4" height="18" rx="1" fill="#C22B49" opacity=".5"/></svg></div>
       <div style="flex:1"><div class="sdit">Doanh thu</div><div class="sdid">Báo cáo tổng quan</div></div>
       <span class="sdar">›</span>
@@ -542,7 +571,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <div style="flex:1"><div class="sdit">To Go</div><div class="sdid">KM mang về &amp; bán qua app</div></div>
       <span class="sdar">›</span>
     </div>
-    <div class="sdi" onclick="closeSdb();showScreen('dgscreen')">
+    <div class="sdi" onclick="closeSdb();showScreen('dgscreen')" style="display:none;"><!-- [HIDDEN-CHANGE] ẩn tab Đồng giá, xem ghi chú ẩn cuối file -->
       <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C22B49" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div>
       <div style="flex:1"><div class="sdit">Đồng giá</div><div class="sdid">Khuyến mãi đồng giá theo giờ</div></div>
       <span id="dg-sidebar-badge" style="display:none;background:#e74c3c;color:#fff;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;">LIVE</span>
@@ -553,7 +582,7 @@ body{font-family:'Google Sans',sans-serif;background:var(--bg);max-width:430px;m
       <div style="flex:1"><div class="sdit">Màn hình phụ</div><div class="sdid">Slideshow & Menu ảnh kiosk</div></div>
       <span class="sdar">›</span>
     </div>
-    <div class="sdi" onclick="closeSdb();showScreen('walletScreen');loadWalletAdminUI()">
+    <div class="sdi" onclick="closeSdb();showScreen('walletScreen');loadWalletAdminUI()" style="display:none;"><!-- [HIDDEN-CHANGE] ẩn tab Quản lý Ví, xem ghi chú ẩn cuối file -->
       <div class="sdic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#C22B49" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5" fill="#C22B49"/></svg></div>
       <div style="flex:1"><div class="sdit">Quản lý Ví</div><div class="sdid">Nạp tiền, mở ví, thanh toán</div></div>
       <span class="sdar">›</span>
@@ -2796,6 +2825,14 @@ function showScreen(id) {
 }
 function openSdb() { document.getElementById('sdb').classList.add('open'); document.getElementById('ov').classList.add('show'); }
 function closeSdb() { document.getElementById('sdb').classList.remove('open'); document.getElementById('ov').classList.remove('show'); }
+// [HIDDEN-CHANGE] Khoá mật khẩu tab Doanh thu — xem ghi chú ẩn trong <head>
+function openRevenueScreen() {
+  const pass = prompt('Nhập mật khẩu để xem Doanh thu:');
+  if (pass === null) return; // bấm Huỷ — không làm gì cả
+  if (pass !== '3337') { toast('❌ Sai mật khẩu'); return; }
+  closeSdb();
+  showScreen('rv');
+}
 function manualCheckUpdate(btn) {
   const label = document.getElementById('sdb-update-label');
   const reset = (txt) => {
